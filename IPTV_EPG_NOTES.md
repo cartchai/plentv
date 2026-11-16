@@ -166,7 +166,7 @@ New "EPG / TV guide" section on the IPTV settings screen
   not building from scratch. `isUpdateCheckEnabled` requires the
   `ENABLE_UPDATE_CHECK` dart-define (default false) and `codemagic.yaml`
   did NOT pass it, so the section was compiled out of shipped builds.
-- Changes: `_githubRepo` `'edde746/plezy'` → `'cartchai/plezy-tv'`;
+- Changes: `_githubRepo` `'edde746/plezy'` → `'cartchai/pleztv'`;
   public `releasesUrl`; `useNativeUpdater` forced `false` (the fork has
   no appcast; the upstream jsdelivr feed would offer upstream Plezy
   builds); removed now-unused `_isHomebrewInstall` / `_isWingetInstall` /

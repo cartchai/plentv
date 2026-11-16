@@ -5,7 +5,7 @@ answers "to change X, look at Y". Practical, not an essay.
 
 - **What this is:** PlezTV, a fork of [Plezy](https://github.com/edde746/plezy)
   (Flutter client for Plex / Jellyfin / Emby) with M3U + Xtream Codes import
-  added. Fork repo: https://github.com/cartchai/plezy-tv, branch `main`.
+  added. Fork repo: https://github.com/cartchai/pleztv, branch `main`.
 - **Upstream base:** tag **2.25.0**, commit `c304934`. **This doc's HEAD:**
   `3c900c61a` (PlezTV v2.25.2, build #6) **plus uncommitted build #7 work**
   in the working tree — where a feature exists only uncommitted, it says so.
@@ -884,7 +884,7 @@ Upstream Plezy already had a full `UpdateService` + an Updates section
 directly above About; the fork repointed it. `isUpdateCheckEnabled`
 requires the `ENABLE_UPDATE_CHECK` dart-define (default false);
 `codemagic.yaml` passes `--dart-define=ENABLE_UPDATE_CHECK=true`, without
-which the section is compiled out. `_githubRepo = 'cartchai/plezy-tv'`
+which the section is compiled out. `_githubRepo = 'cartchai/pleztv'`
 (:30), public `releasesUrl` (:33). `useNativeUpdater` forced `false` (no
 appcast; the upstream jsdelivr feed would offer upstream Plezy builds).
 `_performUpdateCheck` hits
@@ -1075,8 +1075,8 @@ actually browsed (virtualized rows) — never the whole 55k catalog.
   `PlezTV.v2.25.2.apk`). Create via the API with a PAT; asset upload needs
   an explicit `Content-Length` header with a streamed file body (without it
   GitHub returns 400). v2.25.1:
-  https://github.com/cartchai/plezy-tv/releases/tag/v2.25.1; v2.25.2:
-  https://github.com/cartchai/plezy-tv/releases/tag/v2.25.2 (id 436387278).
+  https://github.com/cartchai/pleztv/releases/tag/v2.25.1; v2.25.2:
+  https://github.com/cartchai/pleztv/releases/tag/v2.25.2 (id 436387278).
   A release without an APK makes the updater say plainly there is no APK.
 
 ### 7.2 Tests
@@ -1381,7 +1381,7 @@ collide conceptually (the fork's `fetchSchedule` deliberately returns `[]`
 
 ### 9.6 Group E — Update service (commit `3c900c61a`)
 
-**Modified:** `lib/services/update_service.dart` (repo → `cartchai/plezy-tv`,
+**Modified:** `lib/services/update_service.dart` (repo → `cartchai/pleztv`,
 `useNativeUpdater` forced false, `_extractVersion`, `_apkAsset`,
 null-safety hardening), `lib/utils/update_dialog.dart` (APK download flow),
 `lib/screens/settings/settings_screen.dart` ("View releases on GitHub"

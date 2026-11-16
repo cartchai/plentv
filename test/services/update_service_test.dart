@@ -122,7 +122,7 @@ void main() {
   test('a "PlezTV vX.Y.Z" tag parses and compares as newer', () async {
     final info = await checkRelease({
       'tag_name': 'PlezTV v1.0.1',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.1',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.1',
       'name': 'PlezTV v1.0.1',
       'body': '• Fixed the thing',
       'published_at': '2026-11-06T00:00:00Z',
@@ -139,18 +139,18 @@ void main() {
   test('a release carrying a dotted .apk asset exposes its download URL', () async {
     final info = await checkRelease({
       'tag_name': 'v1.0.1',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.1',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.1',
       'published_at': '2026-11-06T00:00:00Z',
       // GitHub rewrites spaces to dots in stored asset names.
       'assets': [
-        {'name': 'PlezTV.v1.0.1.apk', 'browser_download_url': 'https://github.com/cartchai/plezy-tv/releases/download/v1.0.1/PlezTV.v1.0.1.apk'},
+        {'name': 'PlezTV.v1.0.1.apk', 'browser_download_url': 'https://github.com/cartchai/pleztv/releases/download/v1.0.1/PlezTV.v1.0.1.apk'},
         {'name': 'Source code (zip)', 'browser_download_url': 'https://example.com/source.zip'},
       ],
     });
 
     expect(info, isNotNull);
     expect(info!['apkAssetName'], 'PlezTV.v1.0.1.apk');
-    expect(info['apkAssetUrl'], 'https://github.com/cartchai/plezy-tv/releases/download/v1.0.1/PlezTV.v1.0.1.apk');
+    expect(info['apkAssetUrl'], 'https://github.com/cartchai/pleztv/releases/download/v1.0.1/PlezTV.v1.0.1.apk');
   });
 
   test('a release carrying a dotted .apk asset exposes its size for the in-app download check', () async {
@@ -158,12 +158,12 @@ void main() {
     // the release asset size, so the size must ride along with the URL.
     final info = await checkRelease({
       'tag_name': 'v1.0.1',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.1',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.1',
       'published_at': '2026-11-06T00:00:00Z',
       'assets': [
         {
           'name': 'PlezTV.v1.0.1.apk',
-          'browser_download_url': 'https://github.com/cartchai/plezy-tv/releases/download/v1.0.1/PlezTV.v1.0.1.apk',
+          'browser_download_url': 'https://github.com/cartchai/pleztv/releases/download/v1.0.1/PlezTV.v1.0.1.apk',
           'size': 361550680,
         },
       ],
@@ -176,7 +176,7 @@ void main() {
   test('a release with no .apk asset still reports the update, with no download URL', () async {
     final info = await checkRelease({
       'tag_name': 'v1.0.1',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.1',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.1',
       'published_at': '2026-11-06T00:00:00Z',
       'assets': [
         {'name': 'Source code (zip)', 'browser_download_url': 'https://example.com/source.zip'},
@@ -232,7 +232,7 @@ void main() {
     mockCurrentVersion('2.25.13');
     final info = await checkRelease({
       'tag_name': 'v1.0.0-2.25.0',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.0-2.25.0',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.0-2.25.0',
       'published_at': '2026-11-08T00:00:00Z',
       'assets': [],
     });
@@ -247,7 +247,7 @@ void main() {
     mockCurrentVersion('2.25.13');
     final info = await checkRelease({
       'tag_name': '1.0.0-2.25.0',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.0-2.25.0',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.0-2.25.0',
       'published_at': '2026-11-08T00:00:00Z',
       'assets': [],
     });
@@ -260,7 +260,7 @@ void main() {
     mockCurrentVersion('2.25.13');
     final info = await checkRelease({
       'tag_name': 'PlezTV v1.0.0-2.25.0',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.0-2.25.0',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.0-2.25.0',
       'published_at': '2026-11-08T00:00:00Z',
       'assets': [],
     });
@@ -273,7 +273,7 @@ void main() {
     mockCurrentVersion('2.25.13');
     final info = await checkRelease({
       'tag_name': 'v2.25.13',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v2.25.13',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v2.25.13',
       'published_at': '2026-11-08T00:00:00Z',
       'assets': [],
     });
@@ -285,7 +285,7 @@ void main() {
     mockCurrentVersion('1.0.0-2.25.0');
     final info = await checkRelease({
       'tag_name': 'v1.0.0-2.25.0',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.0-2.25.0',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.0-2.25.0',
       'published_at': '2026-11-08T00:00:00Z',
       'assets': [],
     });
@@ -297,7 +297,7 @@ void main() {
     mockCurrentVersion('1.0.0-2.25.0');
     final info = await checkRelease({
       'tag_name': 'v1.0.1-2.25.0',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.1-2.25.0',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.1-2.25.0',
       'published_at': '2026-11-09T00:00:00Z',
       'assets': [],
     });
@@ -310,7 +310,7 @@ void main() {
     mockCurrentVersion('1.0.0-2.25.0');
     final info = await checkRelease({
       'tag_name': 'v1.0.0-2.25.1',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.0-2.25.1',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.0-2.25.1',
       'published_at': '2026-11-09T00:00:00Z',
       'assets': [],
     });
@@ -323,7 +323,7 @@ void main() {
     mockCurrentVersion('1.0.0-2.25.0');
     final info = await checkRelease({
       'tag_name': 'v2.25.14',
-      'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v2.25.14',
+      'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v2.25.14',
       'published_at': '2026-11-09T00:00:00Z',
       'assets': [],
     });
@@ -531,7 +531,7 @@ void main() {
         respectCooldown: false,
         client: releaseClient({
           'tag_name': 'v1.2.21-2.25.0',
-          'html_url': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.2.21-2.25.0',
+          'html_url': 'https://github.com/cartchai/pleztv/releases/tag/v1.2.21-2.25.0',
           'published_at': '2026-11-16T00:00:00Z',
           'assets': [
             {

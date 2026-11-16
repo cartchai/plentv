@@ -45,10 +45,10 @@ void main() {
   }) => {
     'currentVersion': '2.25.5',
     'latestVersion': latestVersion,
-    'releaseUrl': 'https://github.com/cartchai/plezy-tv/releases/tag/v2.25.6',
+    'releaseUrl': 'https://github.com/cartchai/pleztv/releases/tag/v2.25.6',
     'releaseNotes': '• Fixed the thing',
     'apkAssetUrl': hasApkAsset
-        ? 'https://github.com/cartchai/plezy-tv/releases/download/v2.25.6/PlezTV.v2.25.6.apk'
+        ? 'https://github.com/cartchai/pleztv/releases/download/v2.25.6/PlezTV.v2.25.6.apk'
         : null,
     'apkAssetName': hasApkAsset ? 'PlezTV.v2.25.6.apk' : null,
     'apkAssetSize': hasApkAsset ? (apkAssetSize ?? 1000) : null,
@@ -306,7 +306,7 @@ void main() {
     await tester.tap(find.text(t.update.downloadApk));
     await tester.pumpAndSettle();
 
-    expect(launched, ['https://github.com/cartchai/plezy-tv/releases/download/v2.25.6/PlezTV.v2.25.6.apk']);
+    expect(launched, ['https://github.com/cartchai/pleztv/releases/download/v2.25.6/PlezTV.v2.25.6.apk']);
     debugDefaultTargetPlatformOverride = null;
   });
 }

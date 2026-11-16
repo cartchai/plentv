@@ -247,7 +247,7 @@ Applied everywhere the app name appears to the user:
 - Dart package name `plezy` + `package:plezy/...` imports (changing = ~1,000 edits).
 - `com.edde746.plezy.libass` internal package + its JNI names.
 - `plezy://` deep-link scheme; Android package id `com.pleztv.app`
-  (data must carry over); GitHub repo `cartchai/plezy-tv`; Codemagic app name.
+  (data must carry over); GitHub repo `cartchai/pleztv`; Codemagic app name.
 - `MethodChannel('com.plezy/theme')` in `lib/main.dart` (internal channel name).
 - `PlezyActivity` / `PlezyWidgetsBinding` class names (internal).
 - Code comments mentioning Plezy.

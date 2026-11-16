@@ -648,12 +648,12 @@ void main() {
     'update available opens the dialog with version, notes and a Download APK button',
     (tester) async {
       const apkUrl =
-          'https://github.com/cartchai/plezy-tv/releases/download/v1.0.1/PlezTV.v1.0.1.apk';
+          'https://github.com/cartchai/pleztv/releases/download/v1.0.1/PlezTV.v1.0.1.apk';
       UpdateService.debugCheckForUpdatesOverride = () async => <String, dynamic>{
         'hasUpdate': true,
         'currentVersion': '1.0.0',
         'latestVersion': '1.0.1',
-        'releaseUrl': 'https://github.com/cartchai/plezy-tv/releases/tag/v1.0.1',
+        'releaseUrl': 'https://github.com/cartchai/pleztv/releases/tag/v1.0.1',
         'releaseName': 'PlezTV v1.0.1',
         'releaseNotes': '• Fixed the thing',
         'publishedAt': '2026-11-06T00:00:00Z',

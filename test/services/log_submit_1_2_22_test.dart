@@ -34,7 +34,7 @@ import '../test_helpers/prefs.dart';
 const _testPassword = 'pa' 'ss';
 const _createdAtMs = 1700000000000;
 const _workerEndpoint = 'https://worker.example.test/submit';
-const _issueUrl = 'https://github.com/cartchai/plezy-tv/issues/123';
+const _issueUrl = 'https://github.com/cartchai/pleztv/issues/123';
 
 MediaServerHttpClient _fakeClient({
   required void Function(http.Request request) onRequest,

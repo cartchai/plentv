@@ -23,7 +23,7 @@ void main() {
     File destination() => File('${tempDir.path}/pleztv-update.apk');
 
     Uri apkUrl() => Uri.parse(
-      'https://github.com/cartchai/plezy-tv/releases/download/v2.25.6/PlezTV.v2.25.6.apk',
+      'https://github.com/cartchai/pleztv/releases/download/v2.25.6/PlezTV.v2.25.6.apk',
     );
 
     test('downloads in chunks, reports progress in order, verifies size', () async {

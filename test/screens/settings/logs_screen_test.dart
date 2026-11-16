@@ -112,7 +112,7 @@ void main() {
   });
 
   testWidgets('long submit capability displays and copies at narrow width', (tester) async {
-    const issueUrl = 'https://github.com/cartchai/plezy-tv/issues/123';
+    const issueUrl = 'https://github.com/cartchai/pleztv/issues/123';
     String? submittedBody;
     http.Request? submittedRequest;
     String? clipboardText;

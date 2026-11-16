@@ -47,7 +47,7 @@ Plezy is a modern client for Plex, Jellyfin, and Emby on desktop, mobile, and TV
 
 PlezTV is **not on any app store** — no Google Play, App Store, F-Droid, or Amazon listing exists, and there is nothing to download from a store.
 
-- **Android:** APKs are published as [GitHub Releases](https://github.com/cartchai/plezy-tv/releases). The in-app updater offers new versions and installs them over the top.
+- **Android:** APKs are published as [GitHub Releases](https://github.com/cartchai/pleztv/releases). The in-app updater offers new versions and installs them over the top.
 - PlezTV installs alongside the original Plezy (package `com.pleztv.app`), so your Plezy install is untouched.
 
 ## Building
@@ -55,8 +55,8 @@ PlezTV is **not on any app store** — no Google Play, App Store, F-Droid, or Am
 Prerequisites: Flutter SDK 3.47.9, and Java 17 for the Android build. Releases are built by GitHub Actions (`.github/workflows/android-release.yml`) — push a tag like `v1.1-2.25.0` and the workflow builds the APK and creates the release. Codemagic is the backup builder — see [codemagic.yaml](codemagic.yaml).
 
 ```bash
-git clone https://github.com/cartchai/plezy-tv.git
-cd plezy-tv
+git clone https://github.com/cartchai/pleztv.git
+cd pleztv
 flutter pub get
 scripts/codegen.sh
 flutter build apk --debug
