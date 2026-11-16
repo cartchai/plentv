@@ -1,0 +1,264 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
+
+import '../../i18n/app_locale_utils.dart';
+import '../../i18n/strings.g.dart';
+import '../../media/iptv_live_tv.dart';
+import '../../models/livetv_channel.dart';
+import '../../services/iptv/iptv_epg_sources.dart';
+import '../../utils/formatters.dart';
+import '../../utils/snackbar_helper.dart';
+import '../../widgets/app_icon.dart';
+import '../settings/iptv_epg_assign_screen.dart';
+
+/// One channel's EPG details (§3.2, the "see my assigned EPG" view):
+/// which source serves it, which XMLTV id matched and how, programmes
+/// in the window, when it was fetched and when it expires — or, when
+/// it has nothing, why. Opened from the guide's long-press menu.
+Future<void> showEpgChannelDetailSheet(
+  BuildContext context, {
+  required IptvLiveTvSupport support,
+  required LiveTvChannel channel,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => _EpgChannelDetailSheet(support: support, channel: channel),
+  );
+}
+
+class _EpgChannelDetailSheet extends StatefulWidget {
+  final IptvLiveTvSupport support;
+  final LiveTvChannel channel;
+
+  const _EpgChannelDetailSheet({required this.support, required this.channel});
+
+  @override
+  State<_EpgChannelDetailSheet> createState() => _EpgChannelDetailSheetState();
+}
+
+class _EpgChannelDetailSheetState extends State<_EpgChannelDetailSheet> {
+  IptvChannelEpgDetail? _detail;
+  IptvEpgMapping? _assignment;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final detail = await widget.support.channelEpgDetail(widget.channel.key);
+    final assignment = await widget.support.epgAssignmentFor(widget.channel.key);
+    if (!mounted) return;
+    setState(() {
+      _detail = detail;
+      _assignment = assignment;
+      _loading = false;
+    });
+  }
+
+  String _formatTime(DateTime time) =>
+      '${DateFormat.MMMd(LocaleSettings.currentLocale.intlLocaleName).format(time.toLocal())} · '
+      '${formatClockTime(time.toLocal(), is24Hour: MediaQuery.alwaysUse24HourFormatOf(context))}';
+
+  String _matchMethodLabel(String? method) {
+    return switch (method) {
+      'tvg-id' => t.iptv.epgMatchMethodTvgId,
+      'name' => t.iptv.epgMatchMethodName,
+      'name-loose' => t.iptv.epgMatchMethodNameLoose,
+      'manual' => t.iptv.epgMatchMethodManual,
+      _ => '—',
+    };
+  }
+
+  /// Which source served the programmes (1.2.8 F8): the short-EPG
+  /// lookup or the downloaded feed. '—' when nothing served the
+  /// channel.
+  String _sourceLabel(IptvEpgSource? source) {
+    return switch (source) {
+      IptvEpgSource.shortEpg => t.iptv.epgSourceShort,
+      IptvEpgSource.feedById || IptvEpgSource.feedByName => t.iptv.epgSourceFeed,
+      IptvEpgSource.mixed => t.iptv.epgSourceMixedDetail,
+      _ => '—',
+    };
+  }
+
+  String _reasonLabel(IptvEpgNoGuideReason reason) {
+    return switch (reason) {
+      IptvEpgNoGuideReason.noSource => t.iptv.epgNoGuideReasonNoSource,
+      IptvEpgNoGuideReason.noMatch => t.iptv.epgNoGuideReasonNoMatch,
+      IptvEpgNoGuideReason.sourceFailed => t.iptv.epgNoGuideReasonSourceFailed,
+      IptvEpgNoGuideReason.notLoaded => t.iptv.epgNoGuideReasonNotLoaded,
+      IptvEpgNoGuideReason.ambiguous => t.iptv.epgNoGuideReasonAmbiguous,
+      IptvEpgNoGuideReason.foreign => t.iptv.epgNoGuideReasonForeign,
+      IptvEpgNoGuideReason.matchedButNoPrograms => t.iptv.epgNoGuideReasonMatchedButNoPrograms,
+    };
+  }
+
+  Future<void> _assign() async {
+    final assigned = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => IptvEpgAssignScreen(
+          support: widget.support,
+          channelKey: widget.channel.key,
+          channelName: widget.channel.title ?? widget.channel.key,
+        ),
+      ),
+    );
+    if (assigned == true && mounted) {
+      setState(() => _loading = true);
+      await _load();
+    }
+  }
+
+  Future<void> _clear() async {
+    await widget.support.clearEpgAssignment(widget.channel.key);
+    if (!mounted) return;
+    showSuccessSnackBar(context, t.iptv.epgAssignmentCleared);
+    setState(() => _loading = true);
+    await _load();
+  }
+
+  /// 1.2.22 §64.6 (ask-first): a loose match is a guess, so the fetch
+  /// never persists it — the user keeps it by hand, from this sheet.
+  /// Only shown for a loose match with no assignment yet; the one-line
+  /// flip to auto-persist would be a `saveMapping` call in the loose
+  /// branch of the match chain, deliberately not made.
+  Future<void> _keepLooseMatch() async {
+    final detail = _detail;
+    final xmltvId = detail?.matchedXmltvId;
+    final sourceId = detail?.sourceId;
+    if (xmltvId == null || sourceId == null) return;
+    await widget.support.assignEpg(widget.channel.key, xmltvId: xmltvId, sourceId: sourceId);
+    if (!mounted) return;
+    showSuccessSnackBar(context, t.iptv.epgAssigned);
+    setState(() => _loading = true);
+    await _load();
+  }
+
+  Future<void> _refresh() async {
+    final now = DateTime.now();
+    await widget.support.fetchEpgForChannel(
+      widget.channel.key,
+      from: now,
+      to: now.add(const Duration(hours: 6)),
+      force: true,
+      // 1.2.12: the detail sheet shows one channel the user explicitly
+      // opened — the feed loads even when the gate is closed.
+      bypassFeedGate: true,
+    );
+    if (!mounted) return;
+    setState(() => _loading = true);
+    await _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final detail = _detail;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.channel.title ?? widget.channel.key, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(t.iptv.epgDetailsTitle, style: theme.textTheme.bodySmall),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (detail != null) ...[
+              _Row(label: t.iptv.epgDetailsSource, value: detail.sourceName ?? '—'),
+              // 1.2.8 F8: which source served the programmes — the
+              // quick lookup or the downloaded guide.
+              _Row(label: t.iptv.epgDetailsGuideSource, value: _sourceLabel(detail.epgSource)),
+              _Row(label: t.iptv.epgDetailsMatchedId, value: detail.matchedXmltvId ?? '—'),
+              _Row(label: t.iptv.epgDetailsMatchMethod, value: _matchMethodLabel(detail.matchMethod)),
+              _Row(
+                label: t.iptv.epgDetailsPrograms,
+                value: t.iptv.epgDetailsProgramsCount(n: detail.programCount),
+              ),
+              if (detail.lastFetch != null)
+                _Row(label: t.iptv.epgDetailsLastFetch, value: _formatTime(detail.lastFetch!)),
+              if (detail.nextFetch != null)
+                _Row(label: t.iptv.epgDetailsNextFetch, value: _formatTime(detail.nextFetch!)),
+              if (!detail.hasGuide && detail.noGuideReason != null)
+                _Row(label: t.iptv.epgDetailsWhyNoMatch, value: _reasonLabel(detail.noGuideReason!)),
+            ],
+            const SizedBox(height: 16),
+            // 1.2.22 §64.6: keep a loose match by hand. A loose match
+            // is a guess — it is never saved automatically, so the
+            // button only appears for one, with nothing assigned yet.
+            if (!_loading &&
+                detail?.matchMethod == 'name-loose' &&
+                _assignment == null &&
+                detail?.matchedXmltvId != null &&
+                detail?.sourceId != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => unawaited(_keepLooseMatch()),
+                    icon: const AppIcon(Symbols.bookmark_add_rounded),
+                    label: Text(t.iptv.epgKeepLooseMatch),
+                  ),
+                ),
+              ),
+            Row(
+              children: [
+                FilledButton.icon(
+                  onPressed: _loading ? null : () => unawaited(_assign()),
+                  icon: const AppIcon(Symbols.edit_rounded),
+                  label: Text(t.iptv.epgAssignTitle),
+                ),
+                const SizedBox(width: 8),
+                if (_assignment != null)
+                  OutlinedButton(
+                    onPressed: _loading ? null : () => unawaited(_clear()),
+                    child: Text(t.iptv.epgClearAssignment),
+                  ),
+                const Spacer(),
+                IconButton(
+                  icon: const AppIcon(Symbols.refresh_rounded),
+                  tooltip: t.iptv.epgDetailsRefresh,
+                  onPressed: _loading ? null : () => unawaited(_refresh()),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Row extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _Row({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: '$label: ', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+            TextSpan(text: value, style: theme.textTheme.bodyMedium),
+          ],
+        ),
+      ),
+    );
+  }
+}

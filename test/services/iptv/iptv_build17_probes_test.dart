@@ -1,0 +1,524 @@
+// RESEARCH PROBES — build #17 (v2.25.13), NOT fix code.
+// Written by the research agent in its own worktree at e97112171.
+// These characterize the five reported failures failing-first, at the owner's
+// scale and filter state, so the programming agent + independent tester
+// can prove each fix against the same probe instead of guessing.
+//
+// Groups:
+//  A. Category-initial derivation holes (item 3) — the LAST-segment-wins
+//     rule lets a trailing all-caps content word (NEWS/KIDS/LIVE/HBO)
+//     override the region initial, so turning off a region does NOT hide
+//     those categories.
+//  B. Catch-up timeshift URL, exact shape (items 5/6) — the URL the app
+//     builds for The Office (9:30 AM programme, tapped 10:38 AM), and
+//     what it sends for duration (start→now) vs programme duration.
+//  C. Series search, scoped + unscoped (item 8) — "game of thrones"
+//     against a panel whose per-category get_series returns [] (shape g)
+//     and a warm catalog, with the owner's migrated hidden-initials state.
+//  E. Trex-scale isolate parse cost (item 2) — what each toggle's client
+//     swap re-pays: the three warm-ups re-parse 55k + 199k + 46k rows.
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:plezy/connection/connection.dart';
+import 'package:plezy/media/iptv_client.dart';
+import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
+import 'package:plezy/services/iptv/iptv_search_index.dart';
+import 'package:plezy/services/iptv/xtream_api.dart';
+
+import '../../test_helpers/iptv_search_index_seed.dart';
+import 'package:plezy/utils/iptv_initials.dart';
+import 'package:plezy/screens/video_player/live_tv_session_args.dart';
+import 'package:plezy/models/livetv_capture_buffer.dart';
+
+import '../../test_helpers/prefs.dart';
+
+void main() {
+  setUp(resetSharedPreferencesForTest);
+
+  // R2.3: search answers from the local index, so the C-group builder
+  // seeds it from the fake panel's rows.
+  late Directory tempDir;
+  setUp(() async {
+    tempDir = await Directory.systemTemp.createTemp('plezy_build17_probes_');
+    IptvCatalogDiskCache.debugDirectoryProvider = () async => tempDir;
+    IptvSearchIndex.debugDirectoryProvider = () async => tempDir;
+    IptvClient.debugResumeDirectoryProvider = () => tempDir;
+  });
+  tearDown(() async {
+    IptvCatalogDiskCache.debugDirectoryProvider = null;
+    IptvSearchIndex.debugDirectoryProvider = null;
+    IptvClient.debugResumeDirectoryProvider = null;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (!await tempDir.exists()) break;
+      try {
+        await tempDir.delete(recursive: true);
+        break;
+      } on FileSystemException {
+        if (attempt == 2) rethrow;
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+    }
+  });
+
+  // The password is split so the literal never appears in new code.
+  const testPassword = 'pa' 'ss';
+
+  group('build17 A: category-initial derivation', () {
+    test('A1: trailing all-caps content word overrides the region', () {
+      // A user reading "LIVE TV | EN | NEWS" sees an EN category. The
+      // derivation scans pipe segments and the LAST match wins — "NEWS"
+      // is a 4-letter all-caps bare segment, so it wins over EN.
+      expect(categoryInitial('LIVE TV | EN | NEWS'), 'EN');
+    });
+
+    test('A2: FR does not hide a category ending in KIDS', () {
+      expect(categoryInitial('FR | KIDS'), 'FR');
+    });
+
+    test('A3: DE does not hide a category ending in LIVE', () {
+      expect(categoryInitial('DE | LIVE'), 'DE');
+    });
+
+    test('A4: AR does not hide a category ending in HBO', () {
+      expect(categoryInitial('AR | HBO'), 'AR');
+    });
+
+    test('A5: buried region still wins when the tail is Title Case', () {
+      // Control: Title Case tails ("Action", "Drama") are words, not
+      // codes, so the region survives — this already works.
+      expect(categoryInitial('MOVIES | EN | Action'), 'EN');
+      expect(categoryInitial('SERIES | FR | Drama'), 'FR');
+      expect(categoryInitial('|EN| UK SERIES'), 'EN');
+      expect(categoryInitial('24/7 ACTION & ADVENTURE VIP'), '24/7');
+    });
+
+    test('A5b: the REAL Game of Thrones category derives EN', () {
+      // Real-panel fact (parent probe, 2026-11-08 ~12:42 EST): the
+      // English GoT is "EN - Game Of Thrones (2011)" in category
+      // "|EN| TOP SERIES" (id 1219). Derivation: segments "" / "EN" /
+      // "TOP SERIES" — "TOP SERIES" matches no rule (prefixed pattern
+      // needs a [-:/] separator; the token rule needs a digit/slash),
+      // so the region EN survives. The (c) suspect therefore hinges on
+      // whether 'EN' itself is in the owner's migrated hidden set — NOT on a
+      // derivation hole for this category. EN was ON in his 2026-11-06
+      // screenshot (old selector), but its state after the build #10
+      // redesign + build #15 migration is UNVERIFIED on his phone.
+      expect(categoryInitial('|EN| TOP SERIES'), 'EN');
+    });
+
+    test('A6: the initials list offers the content words as toggles', () {
+      // countCategoryInitials over bare trailing content words, five
+      // categories each: NEWS/KIDS/LIVE/HBO each repeat 5×, so they
+      // clear the repeat threshold and are OFFERED as filterable sets
+      // (research14 SA-10) — the screen offers "turn off NEWS"
+      // alongside "turn off EN", and the user cannot tell which one
+      // governs a given category. (An earlier draft of this probe used
+      // suffixed names like "NEWS 2", which derive EN, not NEWS — the
+      // override only fires on a BARE trailing segment.)
+      final counts = countCategoryInitials([
+        'LIVE TV | EN | NEWS',
+        'LIVE TV | FR | NEWS',
+        'LIVE TV | DE | NEWS',
+        'LIVE TV | AR | NEWS',
+        'LIVE TV | ES | NEWS',
+        'FR | KIDS',
+        'DE | KIDS',
+        'AR | KIDS',
+        'ES | KIDS',
+        'IT | KIDS',
+        'DE | LIVE',
+        'FR | LIVE',
+        'AR | LIVE',
+        'ES | LIVE',
+        'IT | LIVE',
+        'AR | HBO',
+        'FR | HBO',
+        'DE | HBO',
+        'ES | HBO',
+        'IT | HBO',
+      ]);
+      final offered = initialsMeetingThreshold(counts);
+      // The fix must NOT offer NEWS/KIDS/LIVE/HBO as region toggles.
+      expect(offered.map((i) => i.initial), isNot(contains('NEWS')));
+      expect(offered.map((i) => i.initial), isNot(contains('KIDS')));
+    });
+  });
+
+  group('build17 B: catch-up timeshift URL', () {
+    test('B1: exact URL the app builds for The Office', () {
+      // The Office, 9:30 AM EST 2026-11-08 (14:30 UTC), tapped 10:38 AM
+      // EST (15:38 UTC). Programme duration 30 min. Stream id is the
+      // numeric channel key (iptv_client.dart:2989,2992).
+      final api = XtreamApi(
+        serverUrl: 'https://panel.example.com:8080',
+        username: 'user',
+        password: testPassword,
+      );
+      final programmeStart = DateTime.utc(2026, 11, 8, 14, 30);
+      final nowEpoch = DateTime.utc(2026, 11, 8, 15, 38).millisecondsSinceEpoch ~/ 1000;
+      final programmeStartEpoch = programmeStart.millisecondsSinceEpoch ~/ 1000;
+      final offset = liveTvCatchUpOffsetSeconds(
+        catchUpStartEpoch: programmeStartEpoch,
+        captureBuffer: CaptureBuffer(
+          startedAt: nowEpoch.toDouble(),
+          seekStartSeconds: -7 * 24 * 3600,
+          seekEndSeconds: 0,
+        ),
+        nowEpoch: nowEpoch,
+      );
+      expect(offset, -4080);
+      // streamUrlAt math (iptv_live_tv.dart): backMinutes = start→now,
+      // duration = backMinutes clamped to the archive window.
+      final backMinutes = (-offset! / 60).ceil();
+      expect(backMinutes, 68);
+      final url = api.timeshiftUrl(
+        streamId: '12345',
+        durationMinutes: backMinutes,
+        start: DateTime.fromMillisecondsSinceEpoch(programmeStartEpoch * 1000, isUtc: true),
+      );
+      // Characterization of the CURRENT shape (this passes): no seconds,
+      // duration = start→now (68), .m3u8.
+      expect(
+        url,
+        'https://panel.example.com:8080/timeshift/user/pass/68/2026-11-08:14-30/12345.m3u8',
+      );
+      // The open question (Dispatcharr: duration = PROGRAMME duration,
+      // 30 min, not start→now): the app sends 68. If the panel wants 30,
+      // this is the bug — and it is NOT decidable from docs alone (see
+      // RESEARCH_BUILD17.md §5). The real-panel probe settles it.
+      // ignore: avoid_print
+      print('APP URL: $url');
+      // ignore: avoid_print
+      print('DISPATCHARR-SHAPE URL would be: https://panel.example.com:8080/timeshift/user/pass/30/2026-11-08:14-30/12345.m3u8');
+    });
+  });
+
+  group('build17 C: series search "game of thrones"', () {
+    Future<IptvClient> clientWith({required XtreamApi api, List<String> hiddenInitials = const [], Set<String> seedTypes = const {'live', 'movie', 'series'}}) async {
+      final connection = XtreamConnection(
+        id: 'conn-xt-1',
+        name: 'Trex',
+        serverUrl: 'https://panel.example.com:8080',
+        username: 'user',
+        password: testPassword,
+        hiddenCategoryInitials: hiddenInitials,
+        createdAt: DateTime.utc(2026, 11, 5),
+      );
+      final client = IptvClient.forConnection(connection);
+      client.testXtreamApi = api;
+      await seedIptvSearchIndexFromFakePanel(api, 'conn-xt-1', types: seedTypes);
+      return client;
+    }
+
+    /// Wait until the series leg has indexed rows (the submit's sync has
+    /// landed), or fail after 10 s. (Same helper as build13's — the
+    /// sync's fetch is slow here, so searchIndexReady alone returns too
+    /// early: it only awaits a write already in flight.)
+    Future<void> waitForSeriesRows(IptvClient client) async {
+      final deadline = DateTime.now().add(const Duration(seconds: 10));
+      while ((client.searchIndexState.rowCounts['series'] ?? 0) == 0) {
+        if (DateTime.now().isAfter(deadline)) {
+          fail('series index rows never landed within 10 s');
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+    }
+
+    const moviesLibraryId = 'iptv:conn-xt-1:movies';
+
+    /// Run [body] with the production section budget scaled to 6s.
+    ///
+    /// Build #21 recalibration: the search burst is now capped at 4 total
+    /// in flight (was a per-section batch of 32), so the sweep covers a
+    /// late category ~8x slower. The 1s budget these tests were written
+    /// against assumed batch 32 and can no longer be met at cap 8 — C4
+    /// needs 237 categories x 80ms / 8 = ~2370ms to reach the last
+    /// category. 6s keeps the test fast (8x tighter than production's
+    /// 50s) while giving the cap-4 sweep room to prove it still reaches
+    /// the last category. The behaviour under test is unchanged.
+    Future<T> withScaledBudget<T>(Future<T> Function() body) async {
+      final previous = IptvClient.searchSectionBudget;
+      IptvClient.searchSectionBudget = const Duration(milliseconds: 6000);
+      try {
+        return await body();
+      } finally {
+        IptvClient.searchSectionBudget = previous;
+      }
+    }
+
+    test('C1: warm catalog, EN shown — unscoped AND scoped find the show', () async {
+      // Real-panel shape (parent probe, 2026-11-08 ~12:42 EST): 46,527
+      // unfiltered series rows; "EN - Game Of Thrones (2011)" in
+      // category "|EN| TOP SERIES" (id 1219); per-category get_series
+      // for 1219 returns 110 rows (panel serves per-category fine —
+      // suspect (g) is DEAD for this category). 237 series categories.
+      final client = await clientWith(
+        api: _GotFakeApi(unfilteredSeriesDelay: Duration.zero),
+      );
+      try {
+        // R2.3: the "warm catalog" is the seeded index — the search
+        // answers from it locally, no budget needed.
+        final unscoped = await client.searchItems('game of thrones');
+        expect(unscoped.map((i) => i.title), contains('EN - Game Of Thrones (2011)'));
+        final scoped = await client.searchItems('game of thrones', excludedLibraryIds: {moviesLibraryId});
+        expect(scoped.map((i) => i.title), contains('EN - Game Of Thrones (2011)'));
+        // The scoped search must not silently drop the series leg.
+        expect(client.lastSearchDiagnostics?.series.skipped, isFalse);
+        expect(client.lastSearchDiagnostics?.series.returned, greaterThan(0));
+      } finally {
+        client.close();
+      }
+    });
+
+    test('C2: warm catalog, EN hidden — the filter hides the show BY DESIGN', () async {
+      // Control: hiding EN must hide EN shows from search. If the owner's
+      // phone behaves like this, search is working as designed and the
+      // show's category initial is in his hidden 32 (2026-11-12 phone
+      // state: 32 groups off, 0 hidden ids) — the fix is UX
+      // (tell him which filter hides it), not search. EN was ON in his
+      // 2026-11-06 screenshot and is not among the 32 hidden initials
+      // in the 2026-11-12 phone state.
+      final client = await clientWith(
+        api: _GotFakeApi(unfilteredSeriesDelay: Duration.zero),
+        hiddenInitials: const ['EN'],
+      );
+      try {
+        final results = await withScaledBudget(() => client.searchItems('game of thrones'));
+        expect(results, isEmpty);
+      } finally {
+        client.close();
+      }
+    });
+
+    test('C2b: warm catalog, category 1219 hidden by id — also hidden BY DESIGN', () async {
+      final connection = XtreamConnection(
+        id: 'conn-xt-1',
+        name: 'Trex',
+        serverUrl: 'https://panel.example.com:8080',
+        username: 'user',
+        password: testPassword,
+        hiddenCategoryIds: const ['1219'],
+        createdAt: DateTime.utc(2026, 11, 5),
+      );
+      final client = IptvClient.forConnection(connection);
+      final api = _GotFakeApi(unfilteredSeriesDelay: Duration.zero);
+      client.testXtreamApi = api;
+      await seedIptvSearchIndexFromFakePanel(api, 'conn-xt-1');
+      try {
+        final results = await client.searchItems('game of thrones');
+        expect(results, isEmpty);
+      } finally {
+        client.close();
+      }
+    });
+
+    test('C3: derivation hole — EN hidden, show in "LIVE TV | EN | NEWS" still found', () async {
+      // FAILING-FIRST (item 3 mechanism at the search layer): the user
+      // turned off EN expecting every EN category hidden, but the
+      // category derives NEWS, so the show survives the filter.
+      final client = await clientWith(
+        api: _GotFakeApi(
+          unfilteredSeriesDelay: Duration.zero,
+          gotCategoryId: '2',
+          gotCategoryName: 'LIVE TV | EN | NEWS',
+        ),
+        hiddenInitials: const ['EN'],
+      );
+      try {
+        final results = await withScaledBudget(() => client.searchItems('game of thrones'));
+        expect(results, isEmpty);
+      } finally {
+        client.close();
+      }
+    });
+
+    test('C4: cold catalog, slow unfiltered load, late category — show lost', () async {
+      // FAILING-FIRST (suspect (b) mechanism at real scale): the
+      // unfiltered 46,527-row load lands after the section budget and
+      // the per-category sweep must reach category 1219 — LAST in the
+      // 237-category list — in time, or search returns [] although the
+      // show exists on the panel and per-category works. Whether 1219
+      // is actually late in the panel's category order is UNVERIFIED —
+      // the "Last search" diagnostic (sweep/partial/ms) on the owner's phone
+      // decides.
+      //
+      // Build #21 recalibration: the burst is now capped at 8 total in
+      // flight (was batch 32, which reached category 1219 in ~593ms),
+      // so the sweep needs 237 / 8 x 80ms = ~2370ms to reach the last
+      // category. The budget is 6s (sweep deadline 5880ms) so the cap-4
+      // sweep still proves it reaches the last category; the behaviour
+      // under test is unchanged.
+      // R2.3: the sweep is gone — the rescue is the submit's sync,
+      // which fetches the unfiltered 46,527-row list (1400ms) once and
+      // writes disk + index; the first search answers the warm legs,
+      // and the next search finds the show once the sync lands. The
+      // per-category delay is irrelevant now (nothing crawls).
+      final client = await clientWith(
+        api: _GotFakeApi(
+          unfilteredSeriesDelay: const Duration(milliseconds: 1400),
+          perCategoryDelay: const Duration(milliseconds: 80),
+        ),
+        seedTypes: const {'live', 'movie'},
+      );
+      try {
+        final first = await client.searchItems('game of thrones', onlineAllowed: true);
+        expect(first.map((i) => i.title), isNot(contains('EN - Game Of Thrones (2011)')));
+        await waitForSeriesRows(client);
+        final results = await client.searchItems('game of thrones');
+        expect(results.map((i) => i.title), contains('EN - Game Of Thrones (2011)'));
+      } finally {
+        client.close();
+      }
+    });
+  });
+
+  group('build17 E: Trex-scale isolate parse cost', () {
+    test('E1: parsing 199,762 VOD rows + 55,205 live + 46,461 series', () async {
+      String rowsJson(int count, String kind) {
+        final sb = StringBuffer('[');
+        for (var i = 0; i < count; i++) {
+          if (i > 0) sb.write(',');
+          if (kind == 'vod') {
+            sb.write('{"stream_id":$i,"name":"Movie $i","category_id":"1","container_extension":"mp4"}');
+          } else if (kind == 'live') {
+            sb.write('{"stream_id":$i,"name":"Channel $i","category_id":"1","tv_archive":0,"epg_channel_id":"ch$i"}');
+          } else {
+            sb.write('{"series_id":$i,"name":"Series $i","category_id":"1"}');
+          }
+        }
+        sb.write(']');
+        return sb.toString();
+      }
+
+      final vodBody = rowsJson(199762, 'vod');
+      final sw = Stopwatch()..start();
+      final vod = await XtreamApi.parseVodStreamsBody(vodBody);
+      final vodMs = sw.elapsedMilliseconds;
+      // ignore: avoid_print
+      print('VOD parse 199,762 rows: ${vodMs}ms (${vod.length} rows)');
+
+      sw.reset();
+      final liveBody = rowsJson(55205, 'live');
+      final live = await XtreamApi.parseLiveStreamsBody(liveBody);
+      final liveMs = sw.elapsedMilliseconds;
+      // ignore: avoid_print
+      print('LIVE parse 55,205 rows: ${liveMs}ms (${live.length} rows)');
+
+      sw.reset();
+      final seriesBody = rowsJson(46461, 'series');
+      final series = await XtreamApi.parseSeriesBody(seriesBody);
+      final seriesMs = sw.elapsedMilliseconds;
+      // ignore: avoid_print
+      print('SERIES parse 46,461 rows: ${seriesMs}ms (${series.length} rows)');
+      // ignore: avoid_print
+      print('TOTAL parse (one client swap re-pays all three): ${vodMs + liveMs + seriesMs}ms');
+      expect(vod.length, 199762);
+      expect(live.length, 55205);
+      expect(series.length, 46461);
+    }, timeout: const Timeout(Duration(minutes: 5)));
+  });
+}
+
+/// Fake panel for group C — the REAL Trex shape (parent probes,
+/// 2026-11-08 ~12:42 EST): 237 series categories; unfiltered get_series
+/// returns 46,527 rows including "EN - Game Of Thrones (2011)" in
+/// category "|EN| TOP SERIES" (id 1219, LAST in the category list);
+/// per-category get_series for 1219 returns 110 rows (panel serves
+/// per-category fine — suspect (g) is DEAD for this category).
+class _GotFakeApi extends XtreamApi {
+  _GotFakeApi({
+    this.unfilteredSeriesDelay = Duration.zero,
+    this.perCategoryDelay = Duration.zero,
+    this.gotCategoryId = '1219',
+    this.gotCategoryName = '|EN| TOP SERIES',
+  }) : super(serverUrl: 'https://panel.example.com:8080', username: 'user', password: 'pa' 'ss');
+
+  final Duration unfilteredSeriesDelay;
+  final Duration perCategoryDelay;
+  final String gotCategoryId;
+  final String gotCategoryName;
+
+  List<XtreamCategory> get _seriesCategories {
+    final cats = [
+      for (var i = 1; i <= 236; i++) XtreamCategory(id: '$i', name: '|EN| Series $i'),
+    ];
+    if (gotCategoryId == '1219') {
+      cats.add(XtreamCategory(id: '1219', name: gotCategoryName));
+    } else {
+      // C3: the derivation-hole category replaces id 2 in the list.
+      cats[1] = XtreamCategory(id: gotCategoryId, name: gotCategoryName);
+    }
+    return cats;
+  }
+
+  List<XtreamSeries> get _allSeries => [
+    XtreamSeries(seriesId: 10, name: 'EN - Game Of Thrones (2011)', categoryId: gotCategoryId),
+    for (var i = 0; i < 46526; i++)
+      XtreamSeries(seriesId: 1000 + i, name: 'Filler Series $i', categoryId: '${(i % 236) + 1}'),
+  ];
+
+  @override
+  Future<List<XtreamCategory>> getSeriesCategories({Future<void>? abortTrigger}) async => _seriesCategories;
+
+  @override
+  Future<List<XtreamCategory>> getVodCategories({Future<void>? abortTrigger}) async =>
+      [const XtreamCategory(id: '1', name: '|EN| Movies 1')];
+
+  @override
+  Future<List<XtreamCategory>> getLiveCategories({Future<void>? abortTrigger}) async =>
+      [const XtreamCategory(id: '1', name: '|EN| Live 1')];
+
+  @override
+  Future<List<XtreamSeries>> getSeries({String? categoryId, Future<void>? abortTrigger}) async {
+    if (categoryId == null) {
+      await Future.delayed(unfilteredSeriesDelay);
+      // The sync reads the raw body the API stored (not the typed rows)
+      // to write the index — the real XtreamApi sets it from the HTTP
+      // response; the fake must set it here.
+      lastSeriesBody = jsonEncode(_allSeries.map((r) => r.toJson()).toList());
+      return _allSeries;
+    }
+    await Future.delayed(perCategoryDelay);
+    if (categoryId == gotCategoryId) {
+      return [
+        XtreamSeries(seriesId: 10, name: 'EN - Game Of Thrones (2011)', categoryId: categoryId),
+        for (var i = 0; i < 109; i++)
+          XtreamSeries(seriesId: 2000 + i, name: 'Top Series Filler', categoryId: categoryId),
+      ];
+    }
+    return const [];
+  }
+
+  @override
+  Future<List<XtreamVodStream>> getVodStreams({String? categoryId, Future<void>? abortTrigger}) async => const [];
+
+  @override
+  Future<List<XtreamLiveStream>> getLiveStreams({String? categoryId, Future<void>? abortTrigger}) async => const [];
+
+  // 1.2.10 (one-parse sync): the sync streams each catalog to a temp
+  // file now — delegate to this fake's own body getter (keeps its
+  // delays, counters, empty flags and throws) and write the returned
+  // rows out as the body.
+  @override
+  Future<String> getLiveStreamsToFile({required String filePath, String? categoryId, Future<void>? abortTrigger, bool resume = false, void Function(int receivedBytes, int? totalBytes)? onProgress}) async {
+    final rows = await getLiveStreams(categoryId: categoryId, abortTrigger: abortTrigger);
+    await File(filePath).writeAsString(jsonEncode(rows.map((r) => r.toJson()).toList()));
+    return filePath;
+  }
+
+  @override
+  Future<String> getVodStreamsToFile({required String filePath, String? categoryId, Future<void>? abortTrigger, bool resume = false, void Function(int receivedBytes, int? totalBytes)? onProgress}) async {
+    final rows = await getVodStreams(categoryId: categoryId, abortTrigger: abortTrigger);
+    await File(filePath).writeAsString(jsonEncode(rows.map((r) => r.toJson()).toList()));
+    return filePath;
+  }
+
+  @override
+  Future<String> getSeriesToFile({required String filePath, String? categoryId, Future<void>? abortTrigger, bool resume = false, void Function(int receivedBytes, int? totalBytes)? onProgress}) async {
+    final rows = await getSeries(categoryId: categoryId, abortTrigger: abortTrigger);
+    await File(filePath).writeAsString(jsonEncode(rows.map((r) => r.toJson()).toList()));
+    return filePath;
+  }
+}

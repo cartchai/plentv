@@ -1,0 +1,88 @@
+# PlezTV — GitHub Actions release build (added 2026-11-11, see FORK_MAINTENANCE §27)
+#
+# Why: Codemagic's artifact downloads kept failing — its signed URLs
+# expire in ~2 min and the 345 MB file never survived the transfer to
+# this VM (5 failed browser captures for v1.0.10; direct curl 401;
+# authenticated API calls hang with 0 bytes). The APK file only existed
+# on Codemagic, so no GitHub Release could be created. Building here puts
+# the APK straight onto the Release the in-app updater reads.
+#
+# Mirrors codemagic.yaml exactly: Flutter 3.47.9, Java 17, RELEASE APK,
+# ENABLE_UPDATE_CHECK=true. The debug signing key is the committed
+# android/app/debug.keystore (see android/app/build.gradle.kts), so this
+# APK installs over the top of Codemagic-built ones. Release since 1.2.19
+# (L-1): the shipped APK was a --debug build until 1.2.18 — no R8, no
+# resource shrinking, no Dart AOT. --obfuscate is deliberately NOT used:
+# it would rename Dart symbols in the emergency saver's Last-crash stack
+# traces, the phone-verdict surface. --split-debug-info keeps the symbol
+# map in CI for symbolizing any release stack trace.
+#
+# How to ship: push a tag vX.Y.Z-2.25.0 to main. The workflow builds the
+# APK and creates the Release with PlezTV.vX.Y.Z-2.25.0.apk attached.
+# workflow_dispatch builds only (no release) and uploads the APK as a
+# workflow artifact instead. Codemagic stays as a backup builder.
+#
+# Split-per-ABI since 1.2.19 (L-9): --split-per-abi ships one APK per
+# ABI (arm64-v8a / armeabi-v7a / x86_64) instead of one fat APK — the
+# 32-bit Hisense no longer downloads the 64-bit code and vice versa.
+# Asset names carry the ABI (PlezTV.<tag>-arm64-v8a.apk, …) because the
+# in-app updater matches on it (UpdateService.selectApkAsset: the asset
+# whose name contains the device ABI wins, first .apk asset is the
+# fallback). Codemagic stays a single fat release APK: it is the manual
+# backup path and the updater never reads it.
+
+name: Android release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter 3.47.9
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+
+      - name: Get Flutter packages
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release --split-per-abi --split-debug-info=build/app/outputs/symbols --dart-define=ENABLE_UPDATE_CHECK=true --dart-define=PLEZTV_LOG_SUBMIT_URL=${{ vars.PLEZTV_LOG_WORKER_URL }} --dart-define=PLEZTV_MAL_CLIENT_ID=${{ vars.PLEZTV_MAL_CLIENT_ID }} --dart-define=PLEZTV_ANILIST_CLIENT_ID=${{ vars.PLEZTV_ANILIST_CLIENT_ID }} --dart-define=PLEZTV_ANILIST_CLIENT_SECRET=${{ secrets.PLEZTV_ANILIST_CLIENT_SECRET }}
+
+      - name: Name the APKs for the release
+        run: |
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "PlezTV.${{ github.ref_name }}-arm64-v8a.apk"
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "PlezTV.${{ github.ref_name }}-armeabi-v7a.apk"
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk "PlezTV.${{ github.ref_name }}-x86_64.apk"
+
+      - name: Upload APKs as workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlezTV-${{ github.ref_name }}
+          path: PlezTV.${{ github.ref_name }}-*.apk
+          if-no-files-found: error
+
+      - name: Create GitHub Release with the APKs
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: PlezTV.${{ github.ref_name }}-*.apk

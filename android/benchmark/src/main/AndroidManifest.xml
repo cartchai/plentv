@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Baseline-profile benchmark module (L-25). The `com.android.test`
+     plugin + self-instrumenting flag generate the instrumentation
+     entry; this manifest stays minimal on purpose. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+</manifest>

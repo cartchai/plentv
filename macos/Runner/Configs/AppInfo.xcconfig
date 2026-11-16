@@ -1,0 +1,6 @@
+
+PRODUCT_NAME = PlezTV
+
+PRODUCT_BUNDLE_IDENTIFIER = com.pleztv.app
+
+PRODUCT_COPYRIGHT = Copyright © 2025 edde746

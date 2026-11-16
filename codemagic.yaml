@@ -1,0 +1,34 @@
+# PlezTV — Codemagic cloud build (codemagic.yaml)
+#
+# Why this file exists (2026-11-05): the local Gradle build is blocked
+# (the daemon dies after ~10 min with "The first result from the daemon
+# was empty"), so the fork builds in the cloud via Codemagic, the same
+# route proven for TVmagic. The Workflow Editor has NO Java version
+# setting, so this YAML pins the whole build: Flutter 3.47.9 and Java 17
+# (Plezy uses Java 17, NOT 21 — do NOT raise it). Pick the
+# "Android Release" workflow (not the editor's Default).
+# The file must live in the repo root.
+# Release since 1.2.19 (L-1): the shipped APK was a --debug build until
+# 1.2.18. The workflow key stays `android-debug` on purpose — Codemagic
+# identifies the workflow by its key, and renaming it would orphan the
+# configured workflow in the dashboard. Only the display name changed.
+workflows:
+  android-debug:
+    name: Android Release
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: 3.47.9
+      java: 17
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Build release APK
+        # ENABLE_UPDATE_CHECK turns on the Settings → Updates section
+        # (in-app check against the fork's GitHub Releases). Without it the
+        # section is compiled out and the update row never renders.
+        # Release since 1.2.19 (L-1). No --obfuscate: it would rename Dart
+        # symbols in the emergency saver's Last-crash stack traces.
+        script: flutter build apk --release --split-debug-info=build/app/outputs/symbols --dart-define=ENABLE_UPDATE_CHECK=true
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk

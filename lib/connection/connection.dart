@@ -1,0 +1,627 @@
+import '../media/media_backend.dart';
+import '../media/media_browser_dialect.dart';
+import '../models/plex/plex_home_user.dart';
+import '../services/plex_auth_service.dart';
+import '../utils/json_utils.dart';
+import '../utils/url_utils.dart';
+
+/// A media server connection — a unit of authentication the user added.
+///
+/// A `PlexAccountConnection` carries one Plex account + its discovered servers + an
+/// optional active Home profile. A `JellyfinConnection` is a single server +
+/// user. Most users only ever add one connection.
+sealed class Connection {
+  String get id;
+  MediaBackend get kind;
+  String get displayName;
+  DateTime get createdAt;
+  DateTime? get lastAuthenticatedAt;
+
+  /// Alias for [kind] kept for UI call sites that read "backend"
+  /// (badges, etc.).
+  MediaBackend get backend => kind;
+
+  /// Primary label shown in connection-list UIs. Plex shows the active
+  /// profile/account name; Jellyfin shows the server name.
+  String get displayLabel;
+
+  /// Secondary line shown beneath [displayLabel] in connection-list UIs.
+  /// Plex: server count; Jellyfin: `userName · baseUrl`. May be null when
+  /// no useful subtitle exists.
+  String? get displaySubtitle;
+
+  /// Backend-specific config payload, persisted as JSON. Each subclass
+  /// defines the schema.
+  Map<String, Object?> toConfigJson();
+}
+
+/// A Plex account connection.
+///
+/// Fields here mirror what [PlexAuthService] gathers during PIN OAuth: an
+/// account token (long-lived), the per-device client identifier (so plex.tv
+/// doesn't see a "new device" each launch), and the optional Home user the
+/// user has switched into.
+class PlexAccountConnection extends Connection {
+  @override
+  final String id;
+
+  @override
+  final DateTime createdAt;
+
+  @override
+  final DateTime? lastAuthenticatedAt;
+
+  /// plex.tv account access token.
+  final String accountToken;
+
+  /// Per-device client identifier. Stable across launches.
+  final String clientIdentifier;
+
+  /// Display name shown for this connection (typically the Plex account email
+  /// or username, fallback "Plex").
+  final String accountLabel;
+
+  /// Active Home user, or `null` for the main account.
+  final PlexHomeUser? activeProfile;
+
+  /// Servers discovered for this account (cached). Populated by the auth
+  /// flow and refreshed periodically.
+  final List<PlexServer> servers;
+
+  PlexAccountConnection({
+    required this.id,
+    required this.accountToken,
+    required this.clientIdentifier,
+    required this.accountLabel,
+    this.activeProfile,
+    this.servers = const [],
+    required this.createdAt,
+    this.lastAuthenticatedAt,
+  });
+
+  @override
+  MediaBackend get kind => MediaBackend.plex;
+
+  @override
+  String get displayName => activeProfile != null && activeProfile!.title.isNotEmpty
+      ? '${activeProfile!.title} · $accountLabel'
+      : accountLabel;
+
+  @override
+  String get displayLabel => displayName;
+
+  @override
+  String? get displaySubtitle => servers.length == 1 ? '1 Plex server' : '${servers.length} Plex servers';
+
+  PlexAccountConnection copyWith({
+    String? id,
+    String? accountToken,
+    String? clientIdentifier,
+    String? accountLabel,
+    PlexHomeUser? activeProfile,
+    bool clearActiveProfile = false,
+    List<PlexServer>? servers,
+    DateTime? createdAt,
+    DateTime? lastAuthenticatedAt,
+  }) {
+    return PlexAccountConnection(
+      id: id ?? this.id,
+      accountToken: accountToken ?? this.accountToken,
+      clientIdentifier: clientIdentifier ?? this.clientIdentifier,
+      accountLabel: accountLabel ?? this.accountLabel,
+      activeProfile: clearActiveProfile ? null : (activeProfile ?? this.activeProfile),
+      servers: servers ?? this.servers,
+      createdAt: createdAt ?? this.createdAt,
+      lastAuthenticatedAt: lastAuthenticatedAt ?? this.lastAuthenticatedAt,
+    );
+  }
+
+  @override
+  Map<String, Object?> toConfigJson() {
+    return {
+      'accountToken': accountToken,
+      'clientIdentifier': clientIdentifier,
+      'accountLabel': accountLabel,
+      'activeProfile': activeProfile?.toJson(),
+      'servers': servers.map((s) => s.toJson()).toList(),
+    };
+  }
+
+  factory PlexAccountConnection.fromConfigJson({
+    required String id,
+    required Map<String, Object?> json,
+    required DateTime createdAt,
+    DateTime? lastAuthenticatedAt,
+  }) {
+    final profileJson = json['activeProfile'];
+    final activeProfile = profileJson is Map<String, dynamic> ? PlexHomeUser.fromJson(profileJson) : null;
+    final serversJson = json['servers'];
+    final servers = serversJson is List
+        ? serversJson.whereType<Map<String, dynamic>>().map(PlexServer.fromJson).toList()
+        : <PlexServer>[];
+    return PlexAccountConnection(
+      id: id,
+      accountToken: json['accountToken'] as String? ?? '',
+      clientIdentifier: json['clientIdentifier'] as String? ?? '',
+      accountLabel: json['accountLabel'] as String? ?? 'Plex',
+      activeProfile: activeProfile,
+      servers: servers,
+      createdAt: createdAt,
+      lastAuthenticatedAt: lastAuthenticatedAt,
+    );
+  }
+}
+
+/// A single-server connection to a MediaBrowser-family server — Jellyfin or its
+/// Emby ancestor. [dialect] selects which of the two wire dialects this
+/// connection speaks; every other field has the same meaning on both.
+class JellyfinConnection extends Connection {
+  @override
+  final String id;
+
+  @override
+  final DateTime createdAt;
+
+  @override
+  final DateTime? lastAuthenticatedAt;
+
+  /// Which MediaBrowser dialect this server speaks. Drives [kind], [backend]
+  /// and every route/capability delta in [JellyfinClient].
+  final MediaBrowserDialect dialect;
+
+  /// Active server base URL, no trailing slash. e.g. `https://jellyfin.home.lan`.
+  final String baseUrl;
+
+  /// Candidate server URLs for this server, with [baseUrl] first.
+  /// Existing installs only have [baseUrl]; deserialization backfills this.
+  final List<String> baseUrls;
+
+  /// Server's reported name (System/Info).
+  final String serverName;
+
+  /// Server's machine identifier (System/Info `Id`).
+  final String serverMachineId;
+
+  /// Authenticated user id. A UUID on Jellyfin, an opaque hex string on Emby.
+  final String userId;
+
+  final String userName;
+
+  /// Long-lived access token from `/Users/AuthenticateByName`.
+  final String accessToken;
+
+  /// Per-device client identifier (same value sent in the
+  /// `Authorization: MediaBrowser DeviceId="..."` header).
+  final String deviceId;
+
+  /// Whether this user is a server admin (`/Users/{id}.Policy.IsAdministrator`).
+  /// Captured at auth time so the UI can gate admin-only entries (delete,
+  /// match/unmatch, edit metadata) without an extra round-trip.
+  final bool isAdministrator;
+
+  /// The authenticated user's `PrimaryImageTag`, or `null` when they have no
+  /// profile picture. The server omits the key entirely in that case, and the
+  /// tag is `MD5(imagePath + lastModified)` so it changes on every upload —
+  /// which makes the derived avatar URL self-invalidating. Captured at auth
+  /// time and refreshed by [JellyfinClient.checkHealth].
+  final String? primaryImageTag;
+
+  JellyfinConnection({
+    required this.id,
+    required String baseUrl,
+    List<String>? baseUrls,
+    required this.serverName,
+    required this.serverMachineId,
+    required this.userId,
+    required this.userName,
+    required this.accessToken,
+    required this.deviceId,
+    this.dialect = MediaBrowserDialect.jellyfin,
+    this.isAdministrator = false,
+    this.primaryImageTag,
+    required this.createdAt,
+    this.lastAuthenticatedAt,
+  }) : baseUrl = canonicalizeBaseUrl(baseUrl),
+       baseUrls = _normalizeBaseUrls(baseUrl, baseUrls);
+
+  @override
+  MediaBackend get kind => dialect.backend;
+
+  @override
+  String get displayName => '$userName · $serverName';
+
+  @override
+  String get displayLabel => serverName;
+
+  @override
+  String? get displaySubtitle {
+    final extraCount = baseUrls.length - 1;
+    final suffix = extraCount > 0 ? ' +$extraCount' : '';
+    return '$userName · ${_truncateUrl(baseUrl)}$suffix';
+  }
+
+  static String _truncateUrl(String url) {
+    if (url.length <= 40) return url;
+    return '${url.substring(0, 37)}…';
+  }
+
+  static List<String> _normalizeBaseUrls(String activeBaseUrl, List<String>? urls) {
+    final result = <String>[];
+    final seen = <String>{};
+
+    void add(String url) {
+      final normalized = canonicalizeBaseUrl(url);
+      if (normalized.isEmpty || !seen.add(normalized)) return;
+      result.add(normalized);
+    }
+
+    add(activeBaseUrl);
+    for (final url in urls ?? const <String>[]) {
+      add(url);
+    }
+    return List.unmodifiable(result);
+  }
+
+  JellyfinConnection copyWith({
+    String? id,
+    String? baseUrl,
+    List<String>? baseUrls,
+    String? serverName,
+    String? serverMachineId,
+    String? userId,
+    String? userName,
+    String? accessToken,
+    String? deviceId,
+    MediaBrowserDialect? dialect,
+    bool? isAdministrator,
+    String? primaryImageTag,
+
+    /// Deleting a profile picture drops `PrimaryImageTag` from the user DTO, so
+    /// a refresh must be able to null the cached value — a bare
+    /// `primaryImageTag: null` is indistinguishable from "unchanged".
+    bool clearPrimaryImageTag = false,
+    DateTime? createdAt,
+    DateTime? lastAuthenticatedAt,
+  }) {
+    final nextBaseUrl = baseUrl ?? this.baseUrl;
+    return JellyfinConnection(
+      id: id ?? this.id,
+      baseUrl: nextBaseUrl,
+      baseUrls: baseUrls ?? this.baseUrls,
+      serverName: serverName ?? this.serverName,
+      serverMachineId: serverMachineId ?? this.serverMachineId,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      accessToken: accessToken ?? this.accessToken,
+      deviceId: deviceId ?? this.deviceId,
+      dialect: dialect ?? this.dialect,
+      isAdministrator: isAdministrator ?? this.isAdministrator,
+      primaryImageTag: clearPrimaryImageTag ? null : (primaryImageTag ?? this.primaryImageTag),
+      createdAt: createdAt ?? this.createdAt,
+      lastAuthenticatedAt: lastAuthenticatedAt ?? this.lastAuthenticatedAt,
+    );
+  }
+
+  /// The persisted payload deliberately omits [dialect]: the `connections.kind`
+  /// column is the authoritative, indexed discriminator and
+  /// [JellyfinConnection.fromConfigJson] receives it from there.
+  @override
+  Map<String, Object?> toConfigJson() {
+    return {
+      'baseUrl': baseUrl,
+      'baseUrls': baseUrls,
+      'serverName': serverName,
+      'serverMachineId': serverMachineId,
+      'userId': userId,
+      'userName': userName,
+      'accessToken': accessToken,
+      'deviceId': deviceId,
+      'isAdministrator': isAdministrator,
+      'primaryImageTag': primaryImageTag,
+    };
+  }
+
+  factory JellyfinConnection.fromConfigJson({
+    required String id,
+    required Map<String, Object?> json,
+    required DateTime createdAt,
+    DateTime? lastAuthenticatedAt,
+    MediaBrowserDialect dialect = MediaBrowserDialect.jellyfin,
+  }) {
+    final rawBaseUrls = json['baseUrls'];
+    final baseUrls = rawBaseUrls is List ? rawBaseUrls.whereType<String>().toList(growable: false) : const <String>[];
+    final rawBaseUrl = json['baseUrl'] as String?;
+    final baseUrl = rawBaseUrl != null && rawBaseUrl.isNotEmpty
+        ? rawBaseUrl
+        : (baseUrls.isNotEmpty ? baseUrls.first : '');
+    return JellyfinConnection(
+      id: id,
+      baseUrl: baseUrl,
+      baseUrls: baseUrls,
+      dialect: dialect,
+      serverName: json['serverName'] as String? ?? dialect.productName,
+      serverMachineId: json['serverMachineId'] as String? ?? '',
+      userId: json['userId'] as String? ?? '',
+      userName: json['userName'] as String? ?? '',
+      accessToken: json['accessToken'] as String? ?? '',
+      deviceId: json['deviceId'] as String? ?? '',
+      isAdministrator: json['isAdministrator'] as bool? ?? false,
+      primaryImageTag: normalizePrimaryImageTag(json['primaryImageTag']),
+      createdAt: createdAt,
+      lastAuthenticatedAt: lastAuthenticatedAt,
+    );
+  }
+
+  /// Tolerant read of a Jellyfin user DTO's `PrimaryImageTag`.
+  ///
+  /// The tag is decorative — a fork or a drifted scalar type must never brick
+  /// sign-in — so this coerces through [readStringField] rather than casting,
+  /// and collapses absent/blank to `null` ("no picture").
+  static String? readPrimaryImageTag(Map<String, Object?> userDto) =>
+      normalizePrimaryImageTag(readStringField(userDto, 'PrimaryImageTag'));
+
+  static String? normalizePrimaryImageTag(Object? raw) {
+    final tag = raw?.toString().trim();
+    return tag == null || tag.isEmpty ? null : tag;
+  }
+}
+
+/// Read a string list from [json] under [newKey], falling back to [oldKey].
+/// Build #15, item 5: the one-time migration from the build #6–#14 keys
+/// (`disabledCategoryIds` / `disabledInitials`) to the new keys
+/// (`hiddenCategoryIds` / `hiddenCategoryInitials`). The old keys are never
+/// written again — the next save stores only the new keys — so after one
+/// load + save the migration is done and the old keys are dead.
+List<String> _migratedStringList(Map<String, Object?> json, String newKey, String oldKey) {
+  final raw = json[newKey] ?? json[oldKey];
+  return raw is List ? raw.whereType<String>().toList(growable: false) : const <String>[];
+}
+
+/// An M3U playlist connection — a user-supplied playlist URL.
+///
+/// Live TV channels and on-demand items come from the playlist itself.
+/// The user gives the library a [name] at import time; that name becomes
+/// the library title. [hiddenCategoryIds] is the country/region filter:
+/// category ids the user turned off are hidden from Live TV and Library.
+class M3uConnection extends Connection {
+  @override
+  final String id;
+
+  @override
+  final DateTime createdAt;
+
+  @override
+  final DateTime? lastAuthenticatedAt;
+
+  /// User-given library name (chosen at import). Shown as the library title.
+  final String name;
+
+  /// The M3U playlist URL.
+  final String playlistUrl;
+
+  /// Optional XMLTV guide URL for EPG (M3U alone has no guide).
+  final String? epgUrl;
+
+  /// Category ids the user turned off (country/region filter). Hidden from
+  /// Live TV and Library.
+  final List<String> hiddenCategoryIds;
+
+  /// Category initials the user turned off (build #8 Task 4, redesigned
+  /// build #10 — the repeating "EN", "24/7", "NF" style prefixes of
+  /// CATEGORY names). Categories carrying a disabled initial — and
+  /// everything in them — are hidden from Live TV and Library, like a
+  /// disabled category. Item names are never filtered.
+  final List<String> hiddenCategoryInitials;
+
+  M3uConnection({
+    required this.id,
+    required this.name,
+    required this.playlistUrl,
+    this.epgUrl,
+    this.hiddenCategoryIds = const [],
+    this.hiddenCategoryInitials = const [],
+    required this.createdAt,
+    this.lastAuthenticatedAt,
+  });
+
+  @override
+  MediaBackend get kind => MediaBackend.m3u;
+
+  @override
+  String get displayName => name;
+
+  @override
+  String get displayLabel => name;
+
+  @override
+  String? get displaySubtitle => 'M3U · ${_truncateUrl(playlistUrl)}';
+
+  static String _truncateUrl(String url) {
+    if (url.length <= 40) return url;
+    return '${url.substring(0, 37)}…';
+  }
+
+  M3uConnection copyWith({
+    String? id,
+    String? name,
+    String? playlistUrl,
+    String? epgUrl,
+    bool clearEpgUrl = false,
+    List<String>? hiddenCategoryIds,
+    List<String>? hiddenCategoryInitials,
+    DateTime? createdAt,
+    DateTime? lastAuthenticatedAt,
+  }) {
+    return M3uConnection(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      playlistUrl: playlistUrl ?? this.playlistUrl,
+      epgUrl: clearEpgUrl ? null : (epgUrl ?? this.epgUrl),
+      hiddenCategoryIds: hiddenCategoryIds ?? this.hiddenCategoryIds,
+      hiddenCategoryInitials: hiddenCategoryInitials ?? this.hiddenCategoryInitials,
+      createdAt: createdAt ?? this.createdAt,
+      lastAuthenticatedAt: lastAuthenticatedAt ?? this.lastAuthenticatedAt,
+    );
+  }
+
+  @override
+  Map<String, Object?> toConfigJson() {
+    return {
+      'name': name,
+      'playlistUrl': playlistUrl,
+      'epgUrl': epgUrl,
+      'hiddenCategoryIds': hiddenCategoryIds,
+      'hiddenCategoryInitials': hiddenCategoryInitials,
+    };
+  }
+
+  factory M3uConnection.fromConfigJson({
+    required String id,
+    required Map<String, Object?> json,
+    required DateTime createdAt,
+    DateTime? lastAuthenticatedAt,
+  }) {
+    // Build #15, item 5: new keys, one-time migration from the old ones.
+    final hidden = _migratedStringList(json, 'hiddenCategoryIds', 'disabledCategoryIds');
+    final initials = _migratedStringList(json, 'hiddenCategoryInitials', 'disabledInitials');
+    return M3uConnection(
+      id: id,
+      name: json['name'] as String? ?? 'M3U',
+      playlistUrl: json['playlistUrl'] as String? ?? '',
+      epgUrl: json['epgUrl'] as String?,
+      hiddenCategoryIds: hidden,
+      hiddenCategoryInitials: initials,
+      createdAt: createdAt,
+      lastAuthenticatedAt: lastAuthenticatedAt,
+    );
+  }
+}
+
+/// An Xtream Codes connection — server URL + username + password.
+///
+/// Live TV, VOD and series come from the Xtream `player_api.php` API.
+/// The user gives the library a [name] at import time; that name becomes
+/// the library title. [hiddenCategoryIds] is the country/region filter:
+/// category ids the user turned off are hidden from Live TV and Library.
+/// The password is persisted via the registry's encrypted config JSON, the
+/// same protection Jellyfin access tokens get.
+class XtreamConnection extends Connection {
+  @override
+  final String id;
+
+  @override
+  final DateTime createdAt;
+
+  @override
+  final DateTime? lastAuthenticatedAt;
+
+  /// User-given library name (chosen at import). Shown as the library title.
+  final String name;
+
+  /// Xtream server base URL, no trailing slash.
+  final String serverUrl;
+
+  /// Xtream username.
+  final String username;
+
+  /// Xtream password (encrypted at rest by the connection registry).
+  final String password;
+
+  /// Category ids the user turned off (country/region filter). Hidden from
+  /// Live TV and Library.
+  final List<String> hiddenCategoryIds;
+
+  /// Category initials the user turned off (build #8 Task 4, redesigned
+  /// build #10 — the repeating "EN", "24/7", "NF" style prefixes of
+  /// CATEGORY names). Categories carrying a disabled initial — and
+  /// everything in them — are hidden from Live TV and Library, like a
+  /// disabled category. Item names are never filtered.
+  final List<String> hiddenCategoryInitials;
+
+  XtreamConnection({
+    required this.id,
+    required this.name,
+    required String serverUrl,
+    required this.username,
+    required this.password,
+    this.hiddenCategoryIds = const [],
+    this.hiddenCategoryInitials = const [],
+    required this.createdAt,
+    this.lastAuthenticatedAt,
+  }) : serverUrl = canonicalizeBaseUrl(serverUrl);
+
+  @override
+  MediaBackend get kind => MediaBackend.xtream;
+
+  @override
+  String get displayName => name;
+
+  @override
+  String get displayLabel => name;
+
+  @override
+  String? get displaySubtitle => '$username · ${_truncateUrl(serverUrl)}';
+
+  static String _truncateUrl(String url) {
+    if (url.length <= 40) return url;
+    return '${url.substring(0, 37)}…';
+  }
+
+  XtreamConnection copyWith({
+    String? id,
+    String? name,
+    String? serverUrl,
+    String? username,
+    String? password,
+    List<String>? hiddenCategoryIds,
+    List<String>? hiddenCategoryInitials,
+    DateTime? createdAt,
+    DateTime? lastAuthenticatedAt,
+  }) {
+    return XtreamConnection(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      serverUrl: serverUrl ?? this.serverUrl,
+      username: username ?? this.username,
+      password: password ?? this.password,
+      hiddenCategoryIds: hiddenCategoryIds ?? this.hiddenCategoryIds,
+      hiddenCategoryInitials: hiddenCategoryInitials ?? this.hiddenCategoryInitials,
+      createdAt: createdAt ?? this.createdAt,
+      lastAuthenticatedAt: lastAuthenticatedAt ?? this.lastAuthenticatedAt,
+    );
+  }
+
+  @override
+  Map<String, Object?> toConfigJson() {
+    return {
+      'name': name,
+      'serverUrl': serverUrl,
+      'username': username,
+      'password': password,
+      'hiddenCategoryIds': hiddenCategoryIds,
+      'hiddenCategoryInitials': hiddenCategoryInitials,
+    };
+  }
+
+  factory XtreamConnection.fromConfigJson({
+    required String id,
+    required Map<String, Object?> json,
+    required DateTime createdAt,
+    DateTime? lastAuthenticatedAt,
+  }) {
+    // Build #15, item 5: new keys, one-time migration from the old ones.
+    final hidden = _migratedStringList(json, 'hiddenCategoryIds', 'disabledCategoryIds');
+    final initials = _migratedStringList(json, 'hiddenCategoryInitials', 'disabledInitials');
+    return XtreamConnection(
+      id: id,
+      name: json['name'] as String? ?? 'Xtream',
+      serverUrl: json['serverUrl'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      password: json['password'] as String? ?? '',
+      hiddenCategoryIds: hidden,
+      hiddenCategoryInitials: initials,
+      createdAt: createdAt,
+      lastAuthenticatedAt: lastAuthenticatedAt,
+    );
+  }
+}
