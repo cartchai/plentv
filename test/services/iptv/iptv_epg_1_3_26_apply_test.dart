@@ -158,7 +158,8 @@ void main() {
   test('apply writes the gained pairs as manual mappings (provider source)', () async {
     final result = await diagnoseWithGain();
     final applied = await support.applyM3uTvgIds(result.gainedIds);
-    expect(applied, 1);
+    expect(applied.applied, 1);
+    expect(applied.skippedHandAssigned, 0);
     final mapping = await support.epgAssignmentFor('101');
     expect(mapping, isNotNull);
     expect(mapping!.xmltvId, 'bbc.uk');
@@ -183,13 +184,15 @@ void main() {
 
   test('apply with nothing gained writes nothing and returns 0', () async {
     final applied = await support.applyM3uTvgIds(const {});
-    expect(applied, 0);
+    expect(applied.applied, 0);
+    expect(applied.skippedHandAssigned, 0);
     expect(await support.epgAssignmentFor('101'), isNull);
   });
 
   test('apply skips empty ids instead of writing blank mappings', () async {
     final applied = await support.applyM3uTvgIds({'101': 'bbc.uk', '102': '   '});
-    expect(applied, 1);
+    expect(applied.applied, 1);
+    expect(applied.skippedHandAssigned, 0);
     expect((await support.epgAssignmentFor('101'))?.xmltvId, 'bbc.uk');
     expect(await support.epgAssignmentFor('102'), isNull);
   });

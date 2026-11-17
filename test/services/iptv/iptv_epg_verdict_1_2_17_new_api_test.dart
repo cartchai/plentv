@@ -161,6 +161,18 @@ void main() {
       final to = now.add(const Duration(hours: 6));
       final programs = await support.fetchEpgForChannel('100', from: from, to: to);
       expect(programs, isEmpty, reason: 'first paint gives up fast');
+      // 1.3.27 §P0-4: the first-paint timeout sends the fetch to the
+      // feed fallback, and a FRESH feed load bumps the whole-guide
+      // version once — that bump belongs to the feed generation move,
+      // not to the late short-EPG heal. Pin the version here, after
+      // the fallback has run, so the assertions below test the heal
+      // alone: the late answer must not move the version further.
+      final versionAfterFirstPaint = support.epgVersion;
+      expect(
+        versionAfterFirstPaint,
+        versionBefore + 1,
+        reason: 'the fresh feed fallback bumps the whole-guide version once',
+      );
       var healed = false;
       for (var i = 0; i < 100 && !healed; i++) {
         final file = channelFile('100');
@@ -169,10 +181,10 @@ void main() {
       }
       expect(healed, isTrue, reason: 'the late short-EPG answer must heal the row');
       expect(support.lastEpgBumpChannelKey, '100');
-      expect(support.epgVersion, versionBefore);
+      expect(support.epgVersion, versionAfterFirstPaint);
       await support.clearEpgCache();
       expect(support.lastEpgBumpChannelKey, isNull);
-      expect(support.epgVersion, versionBefore + 1);
+      expect(support.epgVersion, versionAfterFirstPaint + 1);
     } finally {
       IptvLiveTvSupport.shortEpgFirstPaintTimeout = const Duration(seconds: 15);
     }

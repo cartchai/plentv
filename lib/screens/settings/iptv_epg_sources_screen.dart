@@ -89,6 +89,14 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
   Timer? _reloadProgressTimer;
   ({int received, int? totalBytes})? _feedProgress;
   bool _pendingFeedResume = false;
+  // 1.3.27 §P0-1/§P0-3: live playlist-download progress while a check
+  // runs (polled from the support — the Check row shows bytes instead
+  // of a bare spinner) and the last check's one-line verdict, carried
+  // into the next Reload report so the dialog reads as a per-source
+  // verdict (feed matched / short-EPG coverage / button result).
+  Timer? _m3uCheckProgressTimer;
+  ({int received, int? totalBytes, int resumedFromBytes})? _m3uCheckProgress;
+  String? _lastM3uCheckSummary;
   int _updateIntervalHours = 24;
 
   IptvLiveTvSupport? _boundSupport() {
@@ -111,6 +119,7 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
   @override
   void dispose() {
     _stopReloadProgress();
+    _stopM3uCheckProgress();
     super.dispose();
   }
 
@@ -119,6 +128,13 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
   void _stopReloadProgress() {
     _reloadProgressTimer?.cancel();
     _reloadProgressTimer = null;
+  }
+
+  /// Stop the Check progress poll (1.3.27 §P0-1) — called on every
+  /// Check exit path and in [dispose].
+  void _stopM3uCheckProgress() {
+    _m3uCheckProgressTimer?.cancel();
+    _m3uCheckProgressTimer = null;
   }
 
   Future<void> _load() async {
@@ -425,6 +441,12 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
     _stopReloadProgress();
     setState(() => _reloading = false);
     final lines = <String>[];
+    // 1.3.27 §P0-3 (C3): the last playlist check's verdict, first —
+    // the Reload dialog reads as a per-source verdict (feed matched /
+    // short-EPG coverage / button result), not a single count.
+    if (_lastM3uCheckSummary != null) {
+      lines.add(_lastM3uCheckSummary!);
+    }
     if (result.channelListFailureKind != null) {
       lines.add(
         t.iptv.epgReloadChannelListFailed(
@@ -518,26 +540,34 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
       // simply had never been opened yet.
       final sample = result.guideCoverageSample;
       if (sample != null && sample.sampled > 0) {
-        // 1.2.20 (d): the scope label says which rows the sample
-        // describes — the rows on screen, the matched channels, or
-        // the first rows in guide order when the guide was not opened.
-        final scopeLabel = switch (sample.scope) {
-          IptvGuideSampleScope.visible => t.iptv.epgReloadGuideCoverageScopeVisible,
-          IptvGuideSampleScope.matched => t.iptv.epgReloadGuideCoverageScopeMatched,
-          IptvGuideSampleScope.guideOrder => t.iptv.epgReloadGuideCoverageScopeGuideOrder,
-        };
-        lines.add(
-          t.iptv.epgReloadGuideCoverageSample(
-            withPrograms: sample.withPrograms,
-            sampled: sample.sampled,
-            scopeLabel: scopeLabel,
-            shortEpg: sample.fromShortEpg,
-            feed: sample.fromFeedById + sample.fromFeedByName,
-            mixed: sample.fromMixed,
-            none: sample.none,
-            notFetched: sample.notFetched,
-          ),
-        );
+        // 1.3.27 §P0-3: when the guide was never opened, every sampled
+        // row is never-fetched — the numeric line ("0 of 6 ... never
+        // fetched: 6") reads as an empty guide, so say plainly that
+        // short-EPG coverage is unknown until the guide is opened.
+        if (sample.notFetched == sample.sampled) {
+          lines.add(t.iptv.epgReloadGuideCoverageNotOpened);
+        } else {
+          // 1.2.20 (d): the scope label says which rows the sample
+          // describes — the rows on screen, the matched channels, or
+          // the first rows in guide order when the guide was not opened.
+          final scopeLabel = switch (sample.scope) {
+            IptvGuideSampleScope.visible => t.iptv.epgReloadGuideCoverageScopeVisible,
+            IptvGuideSampleScope.matched => t.iptv.epgReloadGuideCoverageScopeMatched,
+            IptvGuideSampleScope.guideOrder => t.iptv.epgReloadGuideCoverageScopeGuideOrder,
+          };
+          lines.add(
+            t.iptv.epgReloadGuideCoverageSample(
+              withPrograms: sample.withPrograms,
+              sampled: sample.sampled,
+              scopeLabel: scopeLabel,
+              shortEpg: sample.fromShortEpg,
+              feed: sample.fromFeedById + sample.fromFeedByName,
+              mixed: sample.fromMixed,
+              none: sample.none,
+              notFetched: sample.notFetched,
+            ),
+          );
+        }
       }
       // 1.2.20 (b): whether the Reload's end-of-load slide put the
       // visible rows' programmes into the window. 'no-feed' and the
@@ -645,18 +675,39 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
 
   /// 1.2.15 R2: run the one-time M3U tvg-id check and show its report.
   /// A failed playlist fetch still lands as a report (the error line),
-  /// never as silence — the tap always ends in an answer.
+  /// never as silence — the tap always ends in an answer. 1.3.27
+  /// §P0-1/§P0-3: the Check row shows live byte progress while the
+  /// check runs, and the check's one-line verdict is kept for the next
+  /// Reload report; a zero-gain completion is reported as a finding
+  /// (the playlist carries no ids the feed doesn't already have), not
+  /// as a failure.
   Future<void> _checkM3uTvgIds() async {
     final support = _boundSupport();
     if (support == null || _checkingM3uTvgIds) return;
-    setState(() => _checkingM3uTvgIds = true);
+    setState(() {
+      _checkingM3uTvgIds = true;
+      _m3uCheckProgress = null;
+    });
+    // 1.3.27 §P0-1: poll the in-flight playlist progress while the
+    // check runs — the Check row shows live bytes instead of a bare
+    // spinner. Stopped on every exit path below and in dispose.
+    _m3uCheckProgressTimer?.cancel();
+    _m3uCheckProgressTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (!mounted) return;
+      final progress = support.m3uTvgIdCheckProgress;
+      if (progress != _m3uCheckProgress) setState(() => _m3uCheckProgress = progress);
+    });
     IptvM3uTvgIdDiagnostic result;
     try {
       result = await support.diagnoseM3uTvgIds();
     } catch (e) {
       // diagnoseM3uTvgIds never throws by contract — belt and braces.
       if (!mounted) return;
-      setState(() => _checkingM3uTvgIds = false);
+      _stopM3uCheckProgress();
+      setState(() {
+        _checkingM3uTvgIds = false;
+        _m3uCheckProgress = null;
+      });
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
@@ -668,7 +719,19 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
       return;
     }
     if (!mounted) return;
-    setState(() => _checkingM3uTvgIds = false);
+    _stopM3uCheckProgress();
+    // 1.3.27 §P0-3 (C1/C3): keep the check's verdict for the next
+    // Reload report — a gain, a zero-gain finding, or the failure.
+    final summary = result.error != null
+        ? t.iptv.epgReloadCheckFailed(reason: result.error!)
+        : result.gained > 0
+            ? t.iptv.epgReloadCheckGained(gained: result.gained, inFeed: result.gainedInFeed)
+            : t.iptv.epgReloadCheckNoGain;
+    setState(() {
+      _checkingM3uTvgIds = false;
+      _m3uCheckProgress = null;
+      _lastM3uCheckSummary = summary;
+    });
     final lines = <String>[];
     if (result.error != null) {
       lines.add(t.iptv.epgM3uTvgIdFailed(reason: result.error!));
@@ -684,6 +747,13 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
           inFeed: result.gainedInFeed,
         ),
       );
+      // 1.3.27 §P0-3 (C1): a zero-gain completion is a finding — the
+      // playlist carries no guide IDs the feed doesn't already have —
+      // not a failure, and the rows' fate then rests on the guide
+      // open, not on this button.
+      if (result.gained == 0) {
+        lines.add(t.iptv.epgM3uTvgIdNoGain);
+      }
       if (result.samples.isNotEmpty) {
         lines.add(
           t.iptv.epgM3uTvgIdSample(
@@ -719,8 +789,30 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
     if (apply != true || !mounted) return;
     final applied = await support.applyM3uTvgIds(result.gainedIds);
     if (!mounted) return;
-    showSuccessSnackBar(context, t.iptv.epgM3uTvgIdApplied(applied: applied));
+    // 1.3.27 §P0-2: say when Apply kept existing assignments instead
+    // of overwriting them.
+    showSuccessSnackBar(
+      context,
+      applied.skippedHandAssigned > 0
+          ? t.iptv.epgM3uTvgIdAppliedSkipped(applied: applied.applied, skipped: applied.skippedHandAssigned)
+          : t.iptv.epgM3uTvgIdApplied(applied: applied.applied),
+    );
     await _reloadTvDetails();
+  }
+
+  /// Live playlist-download progress for the Check row (1.3.27 §P0-1):
+  /// "Downloading playlist — 12.4 MB of 88.0 MB (14%)", or bytes
+  /// received when the server declared no total. A resumed download
+  /// also names how many bytes came from the previous partial.
+  String _m3uCheckProgressLine(({int received, int? totalBytes, int resumedFromBytes}) progress) {
+    final received = _humanBytes(progress.received);
+    final total = progress.totalBytes;
+    final resumed = progress.resumedFromBytes > 0 ? ' · resumed from ${_humanBytes(progress.resumedFromBytes)}' : '';
+    if (total == null || total <= 0) {
+      return '${t.iptv.epgM3uTvgIdProgressNoTotal(received: received)}$resumed';
+    }
+    final percent = (progress.received * 100 / total).clamp(0, 100).round();
+    return '${t.iptv.epgM3uTvgIdProgressWithTotal(received: received, total: _humanBytes(total), percent: percent)}$resumed';
   }
 
   @override
@@ -843,10 +935,14 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
                   // channels without a guide ID gain one from it. A
                   // diagnostic only: it never changes matching, and it
                   // never runs on its own (the playlist is tens of MB).
+                  // 1.3.27 §P0-1: while a check runs the subtitle shows
+                  // live bytes instead of the static description.
                   SettingNavigationTile(
                     icon: Symbols.fact_check_rounded,
                     title: t.iptv.epgM3uTvgIdCheck,
-                    subtitle: t.iptv.epgM3uTvgIdCheckDescription,
+                    subtitle: _checkingM3uTvgIds && _m3uCheckProgress != null
+                        ? _m3uCheckProgressLine(_m3uCheckProgress!)
+                        : t.iptv.epgM3uTvgIdCheckDescription,
                     trailing: _checkingM3uTvgIds
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : null,

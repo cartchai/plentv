@@ -3869,6 +3869,12 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2313 => [
+		'Fixed: the \'Check M3U guide IDs\' button no longer gives up after 150 seconds — it shows live progress, keeps going while the playlist downloads, and picks up where it stopped after a stall',
+		'Fixed: applying the guide IDs from the playlist no longer overwrites a guide ID you assigned by hand',
+		'The Reload report now says plainly how many channels matched from the provider feed, and what the short guide showed — or that the guide was never opened',
+		'Fixed: a guide row that was blank and then gains a guide ID now fills in without leaving and reopening the guide',
+	];
 	List<String> get changelog2312 => [
 		'Fixed: the \'Check M3U guide IDs\' button no longer fails on the big playlist — it reads the playlist in pieces, skips turned-off categories, and can now apply the guide IDs it finds',
 		'Fixed: a channel whose name matches more than one guide channel now picks the first one instead of staying blank',
@@ -7408,8 +7414,8 @@ class Translations$iptv$en {
 	/// en: 'Re-fetch the channel list and the guide, and report what loaded'
 	String get epgReloadTvDetailsDescription => 'Re-fetch the channel list and the guide, and report what loaded';
 
-	/// en: '${channels} channels · ${withGuide} with guide · ${withoutGuide} without guide'
-	String epgReloadTvDetailsResult({required Object channels, required Object withGuide, required Object withoutGuide}) => '${channels} channels · ${withGuide} with guide · ${withoutGuide} without guide';
+	/// en: '${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match'
+	String epgReloadTvDetailsResult({required Object channels, required Object withGuide, required Object withoutGuide}) => '${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match';
 
 	/// en: 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}'
 	String epgReloadMatchBreakdown({required Object manual, required Object tvgId, required Object name, required Object loose}) => 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}';
@@ -7432,8 +7438,8 @@ class Translations$iptv$en {
 	/// en: 'Matched but no programmes — feed declares the channel but schedules nothing: ${declared}; programmes exist outside the window: ${outsideWindow}'
 	String epgReloadNoProgrammesSplit({required Object declared, required Object outsideWindow}) => 'Matched but no programmes — feed declares the channel but schedules nothing: ${declared}; programmes exist outside the window: ${outsideWindow}';
 
-	/// en: 'All channels (including hidden): ${withGuide} with guide of ${total}'
-	String epgReloadAllChannels({required Object withGuide, required Object total}) => 'All channels (including hidden): ${withGuide} with guide of ${total}';
+	/// en: 'All channels (including hidden): ${withGuide} of ${total} matched from the provider feed'
+	String epgReloadAllChannels({required Object withGuide, required Object total}) => 'All channels (including hidden): ${withGuide} of ${total} matched from the provider feed';
 
 	/// en: '${source} download: ${detail}'
 	String epgReloadFeedDownload({required Object source, required Object detail}) => '${source} download: ${detail}';
@@ -7449,6 +7455,18 @@ class Translations$iptv$en {
 
 	/// en: 'rows in guide order — guide not opened'
 	String get epgReloadGuideCoverageScopeGuideOrder => 'rows in guide order — guide not opened';
+
+	/// en: 'Guide not opened — short-EPG coverage unknown (rows fill in as you open the guide)'
+	String get epgReloadGuideCoverageNotOpened => 'Guide not opened — short-EPG coverage unknown (rows fill in as you open the guide)';
+
+	/// en: 'Playlist check: gained ${gained} guide IDs (${inFeed} of those are in the guide)'
+	String epgReloadCheckGained({required Object gained, required Object inFeed}) => 'Playlist check: gained ${gained} guide IDs (${inFeed} of those are in the guide)';
+
+	/// en: 'Playlist check: the playlist adds no guide IDs'
+	String get epgReloadCheckNoGain => 'Playlist check: the playlist adds no guide IDs';
+
+	/// en: 'Playlist check failed: ${reason}'
+	String epgReloadCheckFailed({required Object reason}) => 'Playlist check failed: ${reason}';
 
 	/// en: 'Guide rows ready: ${count} channels'
 	String epgReloadWindowSlideReady({required Object count}) => 'Guide rows ready: ${count} channels';
@@ -7491,6 +7509,27 @@ class Translations$iptv$en {
 
 	/// en: 'Applied ${applied} guide IDs — reloading the guide…'
 	String epgM3uTvgIdApplied({required Object applied}) => 'Applied ${applied} guide IDs — reloading the guide…';
+
+	/// en: 'Applied ${applied} guide IDs — ${skipped} kept their hand-assigned guide ID — reloading the guide…'
+	String epgM3uTvgIdAppliedSkipped({required Object applied, required Object skipped}) => 'Applied ${applied} guide IDs — ${skipped} kept their hand-assigned guide ID — reloading the guide…';
+
+	/// en: 'The playlist carries no guide IDs the feed doesn't already have'
+	String get epgM3uTvgIdNoGain => 'The playlist carries no guide IDs the feed doesn\'t already have';
+
+	/// en: 'the playlist download stalled — ${received} received, ${kept} kept, tap the check again to resume from there'
+	String epgM3uTvgIdStalled({required Object received, required Object kept}) => 'the playlist download stalled — ${received} received, ${kept} kept, tap the check again to resume from there';
+
+	/// en: 'the playlist could not be reached — check the connection and try again'
+	String get epgM3uTvgIdUnreachable => 'the playlist could not be reached — check the connection and try again';
+
+	/// en: 'the playlist downloaded but reading it timed out — try again'
+	String get epgM3uTvgIdParseTimedOut => 'the playlist downloaded but reading it timed out — try again';
+
+	/// en: 'Downloading playlist — ${received} of ${total} (${percent}%)'
+	String epgM3uTvgIdProgressWithTotal({required Object received, required Object total, required Object percent}) => 'Downloading playlist — ${received} of ${total} (${percent}%)';
+
+	/// en: 'Downloading playlist — ${received} received'
+	String epgM3uTvgIdProgressNoTotal({required Object received}) => 'Downloading playlist — ${received} received';
 
 	/// en: 'Channel list could not be re-fetched — ${reason}'
 	String epgReloadChannelListFailed({required Object reason}) => 'Channel list could not be re-fetched — ${reason}';
@@ -11400,6 +11439,10 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2313.0' => 'Fixed: the \'Check M3U guide IDs\' button no longer gives up after 150 seconds — it shows live progress, keeps going while the playlist downloads, and picks up where it stopped after a stall',
+			'about.changelog2313.1' => 'Fixed: applying the guide IDs from the playlist no longer overwrites a guide ID you assigned by hand',
+			'about.changelog2313.2' => 'The Reload report now says plainly how many channels matched from the provider feed, and what the short guide showed — or that the guide was never opened',
+			'about.changelog2313.3' => 'Fixed: a guide row that was blank and then gains a guide ID now fills in without leaving and reopening the guide',
 			'about.changelog2312.0' => 'Fixed: the \'Check M3U guide IDs\' button no longer fails on the big playlist — it reads the playlist in pieces, skips turned-off categories, and can now apply the guide IDs it finds',
 			'about.changelog2312.1' => 'Fixed: a channel whose name matches more than one guide channel now picks the first one instead of staying blank',
 			'about.changelog2312.2' => 'Fixed: guide rows that loaded empty are now retried, so they can fill in instead of staying blank',
@@ -11542,12 +11585,12 @@ extension on Translations {
 			'about.changelog2255.3' => 'The live scrubber now covers the show you\'re watching, or the hour block when there\'s no guide info',
 			'about.changelog2255.4' => 'Fixed the catch-up window so it reaches back days, not seconds',
 			'about.changelog2254.0' => 'Search finds TV shows again — a query matching lots of movies no longer hides the series',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2254.1' => 'Search results are grouped into Movies, TV Shows, Live TV and other libraries, with chips to jump between them',
 			'about.changelog2254.2' => 'The TV guide now shows Loading guide… while it loads, and a tap-to-retry message when it fails',
 			'about.changelog2254.3' => 'The guide loads the quick per-channel data first while the big guide file downloads in the background',
 			'about.changelog2254.4' => 'Name initials can be turned off in IPTV settings — repeating initials like EN, ES or NF, grouped with the categories',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2253.0' => 'IPTV favourites: one favourites screen for channels, movies and TV shows — favourites now stick',
 			'about.changelog2253.1' => 'Movies and TV libraries have a Categories tab with the provider\'s own categories',
 			'about.changelog2253.2' => 'Movies can be downloaded now',
@@ -12056,12 +12099,12 @@ extension on Translations {
 			'music.instantMixEmpty' => 'The instant mix came back with no tracks',
 			'music.noAudioUrl' => ({required Object track}) => 'No audio URL is available for ${track}',
 			'music.discography.singlesAndEps' => 'Singles & EPs',
+			_ => null,
+		} ?? switch (path) {
 			'music.discography.live' => 'Live',
 			'music.discography.compilations' => 'Compilations',
 			'watchTogether.title' => 'Watch Together',
 			'watchTogether.description' => 'Watch content in sync with friends and family',
-			_ => null,
-		} ?? switch (path) {
 			'watchTogether.createRoom' => 'Create Room',
 			'watchTogether.creatingRoom' => 'Creating room...',
 			'watchTogether.joinRoom' => 'Join Room',
@@ -12570,12 +12613,12 @@ extension on Translations {
 			'metadataEdit.useOriginalTitle' => 'Use Original Title',
 			'metadataEdit.preferredAudioLanguage' => 'Preferred Audio Language',
 			'metadataEdit.preferredSubtitleLanguage' => 'Preferred Subtitle Language',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.subtitleMode' => 'Auto-Select Subtitle Mode',
 			'metadataEdit.manuallySelected' => 'Manually selected',
 			'metadataEdit.shownWithForeignAudio' => 'Shown with foreign audio',
 			'metadataEdit.alwaysEnabled' => 'Always enabled',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.tags' => 'Tags',
 			'metadataEdit.addTag' => 'Add tag',
 			'metadataEdit.genre' => 'Genre',
@@ -12916,7 +12959,7 @@ extension on Translations {
 			'iptv.epgTimeShift' => 'Time shift',
 			'iptv.epgReloadTvDetails' => 'Reload TV details',
 			'iptv.epgReloadTvDetailsDescription' => 'Re-fetch the channel list and the guide, and report what loaded',
-			'iptv.epgReloadTvDetailsResult' => ({required Object channels, required Object withGuide, required Object withoutGuide}) => '${channels} channels · ${withGuide} with guide · ${withoutGuide} without guide',
+			'iptv.epgReloadTvDetailsResult' => ({required Object channels, required Object withGuide, required Object withoutGuide}) => '${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match',
 			'iptv.epgReloadMatchBreakdown' => ({required Object manual, required Object tvgId, required Object name, required Object loose}) => 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}',
 			'iptv.epgReloadUnmatchedBreakdown' => ({required Object ambiguous, required Object foreign, required Object noTvgId, required Object tvgIdNotInFeed, required Object matchedButNoProgrammes}) => 'No match — ambiguous: ${ambiguous}, foreign: ${foreign}, no tvg-id: ${noTvgId}, tvg-id not in feed: ${tvgIdNotInFeed}, matched but no programmes: ${matchedButNoProgrammes}',
 			'iptv.epgReloadFeedSample' => ({required Object samples}) => 'Feed sample: ${samples}',
@@ -12924,12 +12967,16 @@ extension on Translations {
 			'iptv.epgReloadEpgChannelIds' => ({required Object withId, required Object total}) => '${withId} of ${total} live channels carry a non-empty epg_channel_id',
 			'iptv.epgReloadFeedStats' => ({required Object source, required Object channels, required Object withProgrammes, required Object parsed, required Object retained}) => '${source}: ${channels} feed channels (${withProgrammes} with programmes), ${parsed} programmes before the window filter, ${retained} kept',
 			'iptv.epgReloadNoProgrammesSplit' => ({required Object declared, required Object outsideWindow}) => 'Matched but no programmes — feed declares the channel but schedules nothing: ${declared}; programmes exist outside the window: ${outsideWindow}',
-			'iptv.epgReloadAllChannels' => ({required Object withGuide, required Object total}) => 'All channels (including hidden): ${withGuide} with guide of ${total}',
+			'iptv.epgReloadAllChannels' => ({required Object withGuide, required Object total}) => 'All channels (including hidden): ${withGuide} of ${total} matched from the provider feed',
 			'iptv.epgReloadFeedDownload' => ({required Object source, required Object detail}) => '${source} download: ${detail}',
 			'iptv.epgReloadGuideCoverageSample' => ({required Object withPrograms, required Object sampled, required Object scopeLabel, required Object shortEpg, required Object feed, required Object mixed, required Object none, required Object notFetched}) => 'Guide rows already showing programmes before this reload: ${withPrograms} of ${sampled} ${scopeLabel} (short guide: ${shortEpg} · feed: ${feed} · mixed: ${mixed} · no data: ${none} · never fetched: ${notFetched})',
 			'iptv.epgReloadGuideCoverageScopeVisible' => 'sampled rows on screen',
 			'iptv.epgReloadGuideCoverageScopeMatched' => 'matched channels',
 			'iptv.epgReloadGuideCoverageScopeGuideOrder' => 'rows in guide order — guide not opened',
+			'iptv.epgReloadGuideCoverageNotOpened' => 'Guide not opened — short-EPG coverage unknown (rows fill in as you open the guide)',
+			'iptv.epgReloadCheckGained' => ({required Object gained, required Object inFeed}) => 'Playlist check: gained ${gained} guide IDs (${inFeed} of those are in the guide)',
+			'iptv.epgReloadCheckNoGain' => 'Playlist check: the playlist adds no guide IDs',
+			'iptv.epgReloadCheckFailed' => ({required Object reason}) => 'Playlist check failed: ${reason}',
 			'iptv.epgReloadWindowSlideReady' => ({required Object count}) => 'Guide rows ready: ${count} channels',
 			'iptv.epgReloadWindowSlideSkipped' => ({required Object reason}) => 'Guide rows will fill in as you scroll (slide skipped: ${reason})',
 			'iptv.epgReloadWindowSlideReasonStoreUnavailable' => 'store not built yet',
@@ -12944,6 +12991,13 @@ extension on Translations {
 			'iptv.epgM3uTvgIdApply' => 'Apply these guide IDs',
 			'iptv.epgM3uTvgIdApplyNote' => ({required Object gained}) => 'Applying gives ${gained} channels a guide ID, then reloads the guide so they can match',
 			'iptv.epgM3uTvgIdApplied' => ({required Object applied}) => 'Applied ${applied} guide IDs — reloading the guide…',
+			'iptv.epgM3uTvgIdAppliedSkipped' => ({required Object applied, required Object skipped}) => 'Applied ${applied} guide IDs — ${skipped} kept their hand-assigned guide ID — reloading the guide…',
+			'iptv.epgM3uTvgIdNoGain' => 'The playlist carries no guide IDs the feed doesn\'t already have',
+			'iptv.epgM3uTvgIdStalled' => ({required Object received, required Object kept}) => 'the playlist download stalled — ${received} received, ${kept} kept, tap the check again to resume from there',
+			'iptv.epgM3uTvgIdUnreachable' => 'the playlist could not be reached — check the connection and try again',
+			'iptv.epgM3uTvgIdParseTimedOut' => 'the playlist downloaded but reading it timed out — try again',
+			'iptv.epgM3uTvgIdProgressWithTotal' => ({required Object received, required Object total, required Object percent}) => 'Downloading playlist — ${received} of ${total} (${percent}%)',
+			'iptv.epgM3uTvgIdProgressNoTotal' => ({required Object received}) => 'Downloading playlist — ${received} received',
 			'iptv.epgReloadChannelListFailed' => ({required Object reason}) => 'Channel list could not be re-fetched — ${reason}',
 			'iptv.epgReloadUnexpectedFailure' => ({required Object reason}) => 'Reload failed unexpectedly — ${reason}',
 			'iptv.epgFeedOutcomeLoaded' => ({required Object source, required Object matched, required Object channels}) => '${source}: loaded — ${matched} of ${channels} channels have guide data',
@@ -13073,6 +13127,8 @@ extension on Translations {
 			'iptv.miniPlayerWatchLive' => 'Watch live',
 			'iptv.groupsOff' => ({required Object count}) => '${count} groups off',
 			'iptv.refusalsTitle' => 'Connection refusals',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.refusalsDescription' => 'Every time the provider refuses a request — what it answered and when. No usernames or passwords are stored here.',
 			'iptv.refusalsEmpty' => 'No refusals recorded yet.',
 			'iptv.refusalsCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 refusal recorded', other: '${n} refusals recorded', ), 
@@ -13088,8 +13144,6 @@ extension on Translations {
 			'iptv.refusalsHeaders' => 'Response headers',
 			'iptv.refusalsBody' => 'Response body',
 			'iptv.refusalsNoStatus' => 'No HTTP status',
-			_ => null,
-		} ?? switch (path) {
 			'iptvCategories.title' => ({required Object name}) => '${name} categories',
 			'iptvCategories.intro' => 'Turn off a category to hide its channels and on-demand titles. Changes apply right away.',
 			'iptvCategories.hiddenTotal' => ({required Object count}) => '${count} categories hidden',

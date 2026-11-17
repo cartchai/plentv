@@ -879,6 +879,27 @@ Future<_CachedXmltvGuide> _parseXmltvFeedFile(_XmltvFeedParseRequest request) as
   );
 }
 
+/// One playlist stage failure with its own accounting (1.3.27 §P0-1):
+/// the reason is already formatted for the dialog, plus the bytes that
+/// arrived, the resume offset, and which budget fired — so the check
+/// logs the facts instead of collapsing every timeout into "the
+/// connection timed out".
+class _M3uCheckFailure implements Exception {
+  const _M3uCheckFailure({required this.reason, required this.bytesReceived, required this.resumeOffset, required this.budget});
+
+  /// Already formatted for the dialog (a t.iptv.epgM3uTvgId* string).
+  final String reason;
+
+  /// Total bytes held when the failure fired (including resumed bytes).
+  final int bytesReceived;
+
+  /// The byte offset this attempt resumed from (0 on a fresh download).
+  final int resumeOffset;
+
+  /// Which budget fired: 'stall' (silence) or 'parse'.
+  final String budget;
+}
+
 class IptvLiveTvSupport implements LiveTvSupport {
   final IptvClient _client;
   final FavoriteChannelsRepository _favoritesRepository;
@@ -1122,6 +1143,13 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// settings window ([now - pastDays, now + daysToLoad]) so scrolling the
   /// guide re-uses them until the update interval elapses.
   final Map<String, _CachedChannelEpg> _epgCache = {};
+
+  /// Channel keys whose cached EPG was invalidated by a mapping write
+  /// (1.3.27 §P0-4): a stale persisted file must not resurrect the
+  /// entry before its fire-and-forget delete lands, so
+  /// [_readPersistedEpg] returns null for these keys. Cleared by
+  /// [_putEpgCache] when a fresh entry is written.
+  final Set<String> _epgInvalidatedKeys = {};
 
   /// Parsed XMLTV files, keyed by EPG URL (M3U) or by a sentinel for the
   /// Xtream login's `xmltv.php` feed (see [_fetchFeedPrograms]).
@@ -1408,6 +1436,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// nothing — the persisted per-channel file is the backing store,
   /// so an evicted channel re-reads from disk on its next fetch.
   void _putEpgCache(String key, _CachedChannelEpg entry) {
+    _epgInvalidatedKeys.remove(key);
     _epgCache.remove(key);
     _epgCache[key] = entry;
     while (_epgCache.length > _maxEpgCacheEntries) {
@@ -1945,6 +1974,10 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // the awaited real async file check below never completes in
     // testWidgets fake-async and the fetch hangs before short-EPG.
     if (debugDisablePersistedEpg) return null;
+    // 1.3.27 §P0-4: an invalidated key reads as a miss — its persisted
+    // file is being deleted, and a stale read would resurrect the
+    // empty entry the mapping write just dropped.
+    if (_epgInvalidatedKeys.contains(channelKey)) return null;
     try {
       final file = await _epgCacheFile(channelKey);
       if (!await file.exists()) return null;
@@ -3009,6 +3042,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
         anyLoaded = true;
         if (loadedFresh) {
           await _recordSourceSuccess(attempt, guide, started);
+          // 1.3.27 §P0-4: the feed just moved to a new generation
+          // mid-guide-open — rows that completed empty against the
+          // old generation must refetch instead of serving their
+          // loaded-empty marks until the next open. The whole-guide
+          // bump clears the tab's loaded-empty marks; the fresh feed
+          // is in-memory, so the refetch serves from cache (no loop:
+          // the next fetch finds loadedFresh false).
+          _bumpEpgVersion();
         }
       } on _EpgFeedDeferred {
         sawDeferred = true;
@@ -5757,55 +5798,224 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// the Xtream-only path never breaks. The feeds load when they are
   /// not loaded — the user tapped the check, so the load is the point,
   /// not a surprise.
-  /// 1.2.22 §63.4: the overall bound for the M3U tvg-id check's playlist
-  /// stage (download + parse). The download has its own 120 s per-gap
-  /// timeout and the parse has none — without this, a stalled playlist
+  /// 1.2.22 §63.4, repurposed 1.3.27 §P0-1: the SILENCE budget for one
+  /// M3U tvg-id check attempt (download) and for the parse. A slice
+  /// elapsing with no progress is a stall — the attempt aborts and
+  /// retries from the resume point. A download that keeps delivering
+  /// runs to completion however long it takes: the 1.3.26 total cap
+  /// (150 s for download + parse) killed slow-but-delivering downloads
+  /// on the phone. The download has its own 120 s per-gap timeout and
+  /// the parse has this bound — without a bound, a stalled playlist
   /// hangs the check forever (the 1.2.19 log's "Future not completed").
   /// Tests lower it; production leaves it at 150 s.
   @visibleForTesting
   static Duration m3uTvgIdDiagnosticTimeout = const Duration(seconds: 150);
 
-  /// Download the M3U playlist to [tempPath] and collect its live
-  /// tvg-ids in an isolate (1.3.26 §69): the download is exempt from
-  /// the hostile-response cap ([XtreamApi.getM3uToFile] with
-  /// `ignoreCatalogCap` — the playlist streams to a file and the
-  /// parser reads it line by line, so the cap guards nothing) and the
-  /// parse is the streaming collector, so the 300 MB playlist is
-  /// never held as a String or a 300k-entry list. The whole stage is
-  /// bounded by [m3uTvgIdDiagnosticTimeout] — a stalled download or a
-  /// stuck parse throws a [TimeoutException] instead of hanging the
-  /// check — and the timeout now CANCELS the download (the abort
-  /// trigger) instead of orphaning it in the background while the
-  /// temp dir is deleted out from under it (1.2.22 §63.4's wart). A
-  /// late error after the timeout is swallowed: the diagnostic already
-  /// returned, and nobody awaits this future then.
-  Future<Map<int, String>> _fetchAndParseM3uPlaylist(String tempPath, Set<String> hiddenGroupTitles) {
-    // 1.3.26 §69: completing this aborts the in-flight download at
-    // the socket when the stage times out.
-    final abort = Completer<void>();
-    final fetchFuture = () async {
-      await _client.xtreamApi.getM3uToFile(
-        filePath: tempPath,
-        ignoreCatalogCap: true,
-        abortTrigger: abort.future,
-      );
-      return compute(
-        collectM3uLiveTvgIds,
-        (path: tempPath, hiddenGroupTitles: hiddenGroupTitles),
-      );
-    }();
-    unawaited(fetchFuture.then<void>((_) {}, onError: (_) {}));
-    return fetchFuture.timeout(
-      m3uTvgIdDiagnosticTimeout,
-      onTimeout: () {
-        if (!abort.isCompleted) abort.complete();
-        throw TimeoutException(
-          'M3U tvg-id check timed out after ${m3uTvgIdDiagnosticTimeout.inSeconds} s',
-          m3uTvgIdDiagnosticTimeout,
+  /// 1.3.27 §P0-1: stall retries per check — the initial attempt plus
+  /// three retries, then the check reports the stall with the bytes
+  /// received instead of timing out silently.
+  static const int m3uTvgIdCheckMaxAttempts = 4;
+
+  /// Live byte progress of the in-flight M3U tvg-id check, or null when
+  /// no check is running (1.3.27 §P0-1 — the Check row polls this, the
+  /// way the Reload row polls feedDownloadProgress).
+  ({int received, int? totalBytes, int resumedFromBytes})? get m3uTvgIdCheckProgress => _m3uTvgIdCheckProgress;
+  ({int received, int? totalBytes, int resumedFromBytes})? _m3uTvgIdCheckProgress;
+
+  /// Human-readable byte count for a check line (same shape as the
+  /// settings screen's feed progress line).
+  static String _humanBytes(int bytes) {
+    if (bytes >= 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes >= 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '$bytes bytes';
+  }
+
+/// Stable resume path for the M3U playlist (1.3.27 §P0-1 — port of
+/// the feed download's `.resume` claim/restore): the partial playlist
+/// lives here between checks, next to the persisted feed file. The
+/// `.resume` suffix keeps [_pruneStaleXmltvTempFiles] (which prunes
+/// only `*.tmp`) from ever deleting it. The name is stable across
+/// runs. Sync file I/O once the directory is resolved — the check
+/// runs under widget tests, where real async disk I/O never completes
+/// inside fake async. NOT gated on [debugDisablePersistedEpg]: the
+/// resume point is a download artifact, not a cached guide entry, and
+/// the harness needs it.
+Future<File> _m3uResumeFile() async {
+  final dir = await _epgCacheDir();
+  return File('${dir.path}/playlist.m3u.resume');
+}
+
+/// A unique temp file for one check attempt, next to the stable
+/// resume path (mirrors [_xmltvTempFeedFile]). The directory is
+/// created first — the base code relied on createTempSync creating
+/// it, and the download's openWrite fails on a missing folder.
+Future<File> _m3uTempFile() async {
+  final dir = await _epgCacheDir();
+  dir.createSync(recursive: true);
+  final unique = '${DateTime.now().microsecondsSinceEpoch}_${_xmltvTempFeedSequence++}';
+  return File('${dir.path}/playlist_$unique.tmp');
+}
+
+/// Claim a previous partial playlist download for the next check:
+/// rename the stable `.resume` file to a unique temp file (1.2.17 R4
+/// — concurrent loads must never share one file) and return it, or
+/// null when there is no partial worth resuming (missing or empty).
+/// The claim is exclusive — once renamed, no other check can claim
+/// the same partial.
+Future<File?> _claimM3uResumeFile() async {
+  try {
+    final resumeFile = await _m3uResumeFile();
+    if (!resumeFile.existsSync() || resumeFile.lengthSync() == 0) return null;
+    final claimed = await _m3uTempFile();
+    return resumeFile.renameSync(claimed.path);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Move a (partial) playlist file to the stable resume path, keeping
+/// the LONGER of the two when a resume file already exists. A
+/// zero-byte file is never kept as the resume point — it is deleted.
+/// The directory is created first — a concurrent clear can delete it
+/// between the claim and this restore, and the rename would fail on
+/// the missing folder.
+Future<void> _restoreM3uResumeFile(File file) async {
+  try {
+    final resumeFile = await _m3uResumeFile();
+    if (!file.existsSync()) return;
+    if (file.lengthSync() == 0) {
+      file.deleteSync();
+      return;
+    }
+    resumeFile.parent.createSync(recursive: true);
+    if (resumeFile.existsSync()) {
+      if (resumeFile.lengthSync() >= file.lengthSync()) {
+        file.deleteSync();
+        return;
+      }
+      resumeFile.deleteSync();
+    }
+    file.renameSync(resumeFile.path);
+  } catch (_) {
+    // Best-effort: a lost resume point just means a fresh download.
+  }
+}
+
+/// Delete the stable resume file (a successful check leaves no
+/// partial behind).
+Future<void> _deleteM3uResumeFile() async {
+  try {
+    final resumeFile = await _m3uResumeFile();
+    if (resumeFile.existsSync()) resumeFile.deleteSync();
+  } catch (_) {
+    // Best-effort.
+  }
+}
+
+/// Download the M3U playlist to [tempPath] and collect its live
+/// tvg-ids in an isolate (1.3.26 §69, 1.3.27 §P0-1): the download is
+/// exempt from the hostile-response cap ([XtreamApi.getM3uToFile] with
+/// `ignoreCatalogCap` — the playlist streams to a file and the
+/// parser reads it line by line, so the cap guards nothing) and the
+/// parse is the streaming collector, so the 300 MB playlist is
+/// never held as a String or a 300k-entry list. The download runs
+/// with `resume: true` against the stable partial at [tempPath] and
+/// is bounded by a SILENCE watchdog, not a total cap — a slice of
+/// [m3uTvgIdDiagnosticTimeout] with no progress is a stall, while a
+/// delivering download runs to completion however long it takes. The
+/// parse keeps its own [m3uTvgIdDiagnosticTimeout] bound. A stall
+/// throws [_M3uCheckFailure] (budget 'stall'); a parse timeout throws
+/// it with budget 'parse'; a transport error surfaces as-is for the
+/// caller to classify. [onProgress] reports (received, total,
+/// resumedFrom) for the live progress getter.
+Future<Map<int, String>> _fetchAndParseM3uPlaylist(
+  String tempPath,
+  Set<String> hiddenGroupTitles, {
+  required void Function(int receivedBytes, int? totalBytes, int resumedFromBytes) onProgress,
+}) async {
+  // 1.3.27 §P0-1: the attempt resumes from the stable partial's length.
+  var resumedFromBytes = 0;
+  try {
+    resumedFromBytes = File(tempPath).lengthSync();
+  } catch (_) {
+    resumedFromBytes = 0;
+  }
+  var bytesReceived = resumedFromBytes;
+  // 1.3.26 §69: completing this aborts the in-flight download at
+  // the socket when the stage times out.
+  final abort = Completer<void>();
+  // The race: the download's completion, or the silence watchdog.
+  final done = Completer<void>();
+  Timer? watchdog;
+  void rearmWatchdog() {
+    watchdog?.cancel();
+    watchdog = Timer(m3uTvgIdDiagnosticTimeout, () {
+      // A whole silence budget with no progress: the download stalled.
+      if (!abort.isCompleted) abort.complete();
+      if (!done.isCompleted) {
+        final receivedThisAttempt = bytesReceived - resumedFromBytes;
+        done.completeError(
+          _M3uCheckFailure(
+            reason: t.iptv.epgM3uTvgIdStalled(
+              received: _humanBytes(receivedThisAttempt < 0 ? 0 : receivedThisAttempt),
+              kept: _humanBytes(bytesReceived),
+            ),
+            bytesReceived: bytesReceived,
+            resumeOffset: resumedFromBytes,
+            budget: 'stall',
+          ),
         );
+      }
+    });
+  }
+
+  final downloadFuture = () async {
+    await _client.xtreamApi.getM3uToFile(
+      filePath: tempPath,
+      ignoreCatalogCap: true,
+      abortTrigger: abort.future,
+      resume: true,
+      onProgress: (received, total) {
+        bytesReceived = received;
+        onProgress(received, total, resumedFromBytes);
+        rearmWatchdog();
       },
     );
+  }();
+  // The download's own error ends the race; a late error after the
+  // race ended is swallowed: the diagnostic already moved on, and
+  // nobody awaits this future then.
+  unawaited(
+    downloadFuture.then<void>(
+      (_) {
+        if (!done.isCompleted) done.complete();
+      },
+      onError: (Object e) {
+        if (!done.isCompleted) done.completeError(e);
+      },
+    ),
+  );
+  rearmWatchdog();
+  try {
+    await done.future;
+  } finally {
+    watchdog?.cancel();
   }
+  // The download landed — parse it, bounded by its own timeout (the
+  // parse of a 300 MB playlist is the slow part after the download).
+  return compute(
+    collectM3uLiveTvgIds,
+    (path: tempPath, hiddenGroupTitles: hiddenGroupTitles),
+  ).timeout(
+    m3uTvgIdDiagnosticTimeout,
+    onTimeout: () => throw _M3uCheckFailure(
+      reason: t.iptv.epgM3uTvgIdParseTimedOut,
+      bytesReceived: bytesReceived,
+      resumeOffset: resumedFromBytes,
+      budget: 'parse',
+    ),
+  );
+}
 
   Future<IptvM3uTvgIdDiagnostic> diagnoseM3uTvgIds() async {
     if (!_isXtream) {
@@ -5843,37 +6053,162 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // movies and series, entries with no tvg-id, and hidden
     // group-titles, so the map is already the live-only map the old
     // whole-file loop used to build.
-    Map<int, String> tvgIdsByStreamId;
+    // 1.3.27 §P0-1: the playlist streams to ONE stable path (port of
+    // the feed download's .resume claim/restore, see
+    // [_claimXmltvResumeFile]): a stalled attempt keeps its partial,
+    // and the next attempt resumes from it instead of restarting from
+    // byte 0. Sync file I/O is deliberate (see [_loadXmltvGuide]):
+    // real async disk I/O never completes inside testWidgets fake
+    // async. The stable file is deleted on success; on final failure
+    // it is restored so the next check resumes from the bytes kept.
+    Map<int, String>? tvgIdsByStreamId;
+    String? failureReason;
+    var failureBytes = 0;
+    var failureBudget = '';
+    var failureResumeOffset = 0;
+    var failureType = '';
+    _m3uTvgIdCheckProgress = null;
+    File? target;
     try {
-      // 1.2.19 (A2): the playlist streams to a temp file and parses
-      // from the file in an isolate — the main isolate never holds the
-      // tens-of-MB playlist text. Sync temp-dir I/O is deliberate (see
-      // [_loadXmltvGuide]): real async disk I/O never completes inside
-      // testWidgets fake async.
-      final tempDir = Directory.systemTemp.createTempSync('plezy_m3u_');
-      final tempPath = '${tempDir.path}/playlist.m3u';
-      try {
-        tvgIdsByStreamId = await _fetchAndParseM3uPlaylist(tempPath, hiddenGroupTitles);
-      } finally {
+      target = await _claimM3uResumeFile() ?? await _m3uTempFile();
+      for (var attempt = 1; attempt <= m3uTvgIdCheckMaxAttempts; attempt++) {
+        var firstReportReceived = -1;
+        var restartLogged = false;
+        var resumedLogged = false;
         try {
-          tempDir.deleteSync(recursive: true);
-        } catch (_) {
-          // Best-effort; the OS cleans the system temp dir.
+          tvgIdsByStreamId = await _fetchAndParseM3uPlaylist(
+            target.path,
+            hiddenGroupTitles,
+            onProgress: (received, total, resumedFrom) {
+              _m3uTvgIdCheckProgress = (received: received, totalBytes: total, resumedFromBytes: resumedFrom);
+              // C2: the first report of an attempt says whether the
+              // server honoured Range — a count that restarts below
+              // the partial it resumed from means the server ignored
+              // it and the download restarted from byte 0.
+              if (firstReportReceived < 0) {
+                firstReportReceived = received;
+                if (resumedFrom > 0 && received < resumedFrom && !restartLogged) {
+                  restartLogged = true;
+                  appLogger.i(
+                    'IPTV M3U tvg-id check: playlist download restarted from byte 0 — the server ignored the resume point (${_humanBytes(resumedFrom)} discarded)',
+                  );
+                } else if (resumedFrom > 0 && received > resumedFrom && !resumedLogged) {
+                  resumedLogged = true;
+                  appLogger.i('IPTV M3U tvg-id check: playlist download resumed from ${_humanBytes(resumedFrom)}');
+                }
+              }
+            },
+          );
+          break;
+        } on _M3uCheckFailure catch (f) {
+          // A stall (silence) retries from the resume point while
+          // attempts remain. A parse timeout does not: the download
+          // already landed, so report it.
+          if (f.budget == 'parse' || attempt >= m3uTvgIdCheckMaxAttempts) {
+            failureReason = f.reason;
+            failureBytes = f.bytesReceived;
+            failureBudget = f.budget;
+            failureResumeOffset = f.resumeOffset;
+            failureType = f.runtimeType.toString();
+            break;
+          }
+          appLogger.i(
+            'IPTV M3U tvg-id check: playlist download stalled (${_humanBytes(f.bytesReceived)} received) — retrying from the resume point (attempt $attempt of $m3uTvgIdCheckMaxAttempts)',
+          );
+        } on MediaServerHttpException catch (e) {
+          // Transient transport errors retry; a refusal (401/403), a
+          // cap error, or a cancellation reports immediately. Zero
+          // bytes received means the playlist could not be reached at
+          // all — that is the connect reason, not a stall. A timeout
+          // after bytes arrived IS a stall: the download was delivering
+          // and then went silent, so the check names the stall and how
+          // much arrived instead of the bare "the connection timed
+          // out" that erases which budget fired.
+          final received = _m3uTvgIdCheckProgress?.received ?? 0;
+          final resumedFrom = _m3uTvgIdCheckProgress?.resumedFromBytes ?? 0;
+          if (!e.isTransient || e.isCancellation || attempt >= m3uTvgIdCheckMaxAttempts) {
+            final isTimeout =
+                e.type == MediaServerHttpErrorType.connectionTimeout || e.type == MediaServerHttpErrorType.receiveTimeout;
+            if (received == 0 && resumedFrom == 0) {
+              failureReason = t.iptv.epgM3uTvgIdUnreachable;
+              failureBudget = 'transport';
+            } else if (isTimeout) {
+              final receivedThisAttempt = received - resumedFrom;
+              failureReason = t.iptv.epgM3uTvgIdStalled(
+                received: _humanBytes(receivedThisAttempt < 0 ? 0 : receivedThisAttempt),
+                kept: _humanBytes(received),
+              );
+              failureBudget = 'stall';
+            } else {
+              failureReason = epgFeedErrorReason(e);
+              failureBudget = 'transport';
+            }
+            failureBytes = received;
+            failureResumeOffset = resumedFrom;
+            failureType = e.runtimeType.toString();
+            break;
+          }
+          appLogger.i(
+            'IPTV M3U tvg-id check: playlist download failed transiently (${e.type.name}, ${_humanBytes(received)} received) — retrying from the resume point (attempt $attempt of $m3uTvgIdCheckMaxAttempts)',
+          );
+        } on TimeoutException {
+          // A raw timeout with no progress is a stall; it retries from
+          // the resume point while attempts remain.
+          final received = _m3uTvgIdCheckProgress?.received ?? 0;
+          final resumedFrom = _m3uTvgIdCheckProgress?.resumedFromBytes ?? 0;
+          final receivedThisAttempt = received - resumedFrom;
+          if (attempt >= m3uTvgIdCheckMaxAttempts) {
+            failureReason = t.iptv.epgM3uTvgIdStalled(
+              received: _humanBytes(receivedThisAttempt < 0 ? 0 : receivedThisAttempt),
+              kept: _humanBytes(received),
+            );
+            failureBytes = received;
+            failureBudget = 'stall';
+            failureResumeOffset = resumedFrom;
+            failureType = 'TimeoutException';
+            break;
+          }
+          appLogger.i(
+            'IPTV M3U tvg-id check: playlist download timed out (${_humanBytes(received)} received) — retrying from the resume point (attempt $attempt of $m3uTvgIdCheckMaxAttempts)',
+          );
         }
       }
     } catch (e) {
+      // Unexpected (the claim/temp-file helpers failing, a compute
+      // isolate error): report it as-is instead of collapsing it.
+      failureReason = epgFeedErrorReason(e);
+      failureBytes = _m3uTvgIdCheckProgress?.received ?? 0;
+      failureBudget = 'unexpected';
+      failureResumeOffset = _m3uTvgIdCheckProgress?.resumedFromBytes ?? 0;
+      failureType = e.runtimeType.toString();
+    } finally {
+      _m3uTvgIdCheckProgress = null;
+    }
+    if (tvgIdsByStreamId == null) {
+      // 1.3.27 §P0-1: restore the partial so the next check resumes
+      // from the bytes kept instead of starting over.
+      if (target != null) await _restoreM3uResumeFile(target);
       final result = IptvM3uTvgIdDiagnostic(
         checked: 0,
         noId: 0,
         gained: 0,
         gainedInFeed: 0,
         feedLoaded: false,
-        error: epgFeedErrorReason(e),
+        error: failureReason ?? t.iptv.epgM3uTvgIdUnreachable,
         samples: const [],
       );
-      appLogger.i('IPTV M3U tvg-id check: playlist fetch failed (${e.runtimeType}: ${result.error})');
+      appLogger.i(
+        'IPTV M3U tvg-id check: playlist fetch failed ($failureType: ${result.error}) — $failureBytes bytes received, budget $failureBudget, resumed from ${_humanBytes(failureResumeOffset)}',
+      );
       return result;
     }
+    // Success: the parse landed, so the temp and stable files go.
+    try {
+      target?.deleteSync();
+    } catch (_) {
+      // Best-effort; the next claim overwrites the stale file.
+    }
+    await _deleteM3uResumeFile();
     final channels = await _client.iptvChannels();
     final settings = await _readEpgSettings();
     final ttl = settings.updateIntervalHours <= 0 ? null : Duration(hours: settings.updateIntervalHours);
@@ -5930,24 +6265,77 @@ class IptvLiveTvSupport implements LiveTvSupport {
   }
 
   /// Apply the gained guide IDs from a completed M3U tvg-id check
-  /// (1.3.26 §69): every pair becomes a manual mapping (provider
-  /// source, tier 1 — the matcher consults it before the byId/byName
-  /// chain), written in one bulk store save. Returns the number
-  /// actually written. The caller triggers a Reload after applying —
-  /// the mappings take effect when the rows re-resolve, not on write.
-  Future<int> applyM3uTvgIds(Map<String, String> gainedIds) async {
-    if (gainedIds.isEmpty) return 0;
+  /// (1.3.26 §69, 1.3.27 §P0-2/§P0-4): every pair WITHOUT an existing
+  /// mapping becomes a manual mapping (provider source, tier 1 — the
+  /// matcher consults it before the byId/byName chain), written in
+  /// one bulk store save. A channel that already has a mapping keeps
+  /// it — the playlist must never overwrite a hand assignment (the
+  /// 1.3.26 wart: Apply wrote every pair unconditionally) — and the
+  /// skipped count is reported so the dialog can say so. Returns the
+  /// applied and skipped counts. Every applied key whose cached entry
+  /// is empty or absent is invalidated (see
+  /// [_invalidateEpgForChannel]), so a row that already completed
+  /// empty heals inside the same guide open instead of waiting for
+  /// the next one. The caller triggers a Reload after applying — the
+  /// mappings take effect when the rows re-resolve, not on write.
+  Future<({int applied, int skippedHandAssigned})> applyM3uTvgIds(Map<String, String> gainedIds) async {
+    if (gainedIds.isEmpty) return (applied: 0, skippedHandAssigned: 0);
     final mappings = await _epgStore.loadMappings();
     var applied = 0;
+    var skipped = 0;
+    final healedKeys = <String>[];
     for (final entry in gainedIds.entries) {
       final tvgId = entry.value.trim();
       if (tvgId.isEmpty) continue;
+      if (mappings.containsKey(entry.key)) {
+        // 1.3.27 §P0-2: a mapping already exists — hand-assigned via
+        // Assign, or applied by an earlier check — and the playlist
+        // does not get to overwrite it.
+        skipped++;
+        continue;
+      }
       mappings[entry.key] = IptvEpgMapping(xmltvId: tvgId, sourceId: IptvEpgSourceConfig.providerId);
       applied++;
+      healedKeys.add(entry.key);
     }
     if (applied > 0) await _epgStore.saveMappings(mappings);
-    appLogger.i('IPTV M3U tvg-id check: applied $applied guide IDs from the playlist');
-    return applied;
+    appLogger.i('IPTV M3U tvg-id check: applied $applied guide IDs from the playlist ($skipped kept their existing guide ID)');
+    // 1.3.27 §P0-4: invalidate the empty/absent cached entries for
+    // the applied keys, so their rows can refill in this guide open.
+    for (final key in healedKeys) {
+      _invalidateEpgForChannel(key);
+    }
+    return (applied: applied, skippedHandAssigned: skipped);
+  }
+
+  /// Invalidate one channel's cached EPG so its row refetches (1.3.27
+  /// §P0-4): only an empty or absent entry is dropped — a row already
+  /// showing programmes keeps serving. The in-memory drop, the
+  /// tombstone, and the bump happen synchronously together; the
+  /// persisted delete is fire-and-forget, and the tombstone stops a
+  /// stale persisted read from resurrecting the entry before the
+  /// delete lands. The channel-scoped bump makes the guide tab heal
+  /// the row (drop its loaded-empty marks and re-fetch).
+  void _invalidateEpgForChannel(String channelKey) {
+    final cached = _epgCache[channelKey];
+    if (cached != null && cached.programs.isNotEmpty) return;
+    _epgCache.remove(channelKey);
+    _epgInvalidatedKeys.add(channelKey);
+    unawaited(_deletePersistedEpgFile(channelKey));
+    _bumpEpgVersion(channelKey: channelKey);
+  }
+
+  /// Delete one channel's persisted EPG file (per-channel, unlike
+  /// [_deletePersistedEpg], which deletes the whole directory).
+  Future<void> _deletePersistedEpgFile(String channelKey) async {
+    try {
+      final file = await _epgCacheFile(channelKey);
+      if (file.existsSync()) file.deleteSync();
+    } catch (_) {
+      // Best-effort: the in-memory entry and the tombstone are gone,
+      // so the next fetch re-matches; a stale persisted file is only
+      // re-read when the in-memory entry is missing.
+    }
   }
 
   /// Resolve one channel against the loaded feeds in priority order

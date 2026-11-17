@@ -297,7 +297,11 @@ void main() {
     final support = await listedSupport();
     final result = await support.diagnoseM3uTvgIds();
     expect(result.error, isNotNull);
-    expect(result.error, 'the connection timed out');
+    // 1.3.27 §P0-1 (deliberate change): a timeout is no longer the
+    // generic "the connection timed out" — the check retries, then
+    // reports the stall with the bytes received (0 here: the fake
+    // throws before delivering a byte).
+    expect(result.error, t.iptv.epgM3uTvgIdStalled(received: '0 bytes', kept: '0 bytes'));
     expect(result.error, isNot(contains('Future not completed')));
   });
 
@@ -529,6 +533,18 @@ void main() {
       final to = now.add(const Duration(hours: 6));
       final programs = await support.fetchEpgForChannel('100', from: from, to: to);
       expect(programs, isEmpty, reason: 'first paint gives up fast');
+      // 1.3.27 §P0-4: the first-paint timeout sends the fetch to the
+      // feed fallback, and a FRESH feed load bumps the whole-guide
+      // version once — that bump belongs to the feed generation move,
+      // not to the late short-EPG heal. Pin the version here, after
+      // the fallback has run, so the assertions below test the heal
+      // alone: the late answer must not move the version further.
+      final versionAfterFirstPaint = support.epgVersion;
+      expect(
+        versionAfterFirstPaint,
+        versionBefore + 1,
+        reason: 'the fresh feed fallback bumps the whole-guide version once',
+      );
       // The late answer lands (~2 s): the row heals. Poll the persisted
       // file — polling fetchEpgForChannel would start a second panel
       // request, which is exactly what must not happen.
@@ -545,12 +561,12 @@ void main() {
       expect(api.shortEpgCalls['100'], 1, reason: 'the heal comes from the background request, not a re-fetch');
       expect(
         support.epgVersion,
-        versionBefore,
+        versionAfterFirstPaint,
         reason: 'a channel-scoped bump must not bust the whole guide version',
       );
       // A whole-guide bump still moves the version.
       await support.clearEpgCache();
-      expect(support.epgVersion, versionBefore + 1);
+      expect(support.epgVersion, versionAfterFirstPaint + 1);
     } finally {
       IptvLiveTvSupport.shortEpgFirstPaintTimeout = const Duration(seconds: 15);
     }

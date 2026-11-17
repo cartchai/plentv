@@ -401,7 +401,11 @@ class XtreamApi {
   /// partial — a hostile body must never be resumed. [onProgress] fires
   /// after every chunk with the total bytes held (including resumed
   /// bytes) and the expected total when the server declares one.
-  Future<void> _fetchBodyToFile(
+  /// Returns the resume outcome (1.3.27 §P0-1, C2): whether the
+  /// download continued from a partial, from which byte, and whether
+  /// the server honoured the Range the caller sent — the M3U check
+  /// logs that, so the phone log says 206 (resumed) or 200 (restarted).
+  Future<({bool resumed, int resumedFromBytes, bool? serverHonouredRange})> _fetchBodyToFile(
     Uri uri,
     String filePath, {
     Duration timeout = const Duration(seconds: 120),
@@ -423,6 +427,9 @@ class XtreamApi {
       }
       if (existingBytes < 0) existingBytes = 0;
     }
+    // 1.3.27 §P0-1 (C2): whether a Range was actually sent — captured
+    // before the 416-restart below can reset existingBytes to 0.
+    final rangeRequested = resume && existingBytes > 0;
     Future<http.StreamedResponse> send({required int fromBytes}) async {
       final request = http.AbortableRequest('GET', uri, abortTrigger: abortTrigger);
       request.headers['User-Agent'] = _effectiveUserAgent;
@@ -532,6 +539,14 @@ class XtreamApi {
         }
       }
     }
+    // 1.3.27 §P0-1 (C2): the resume outcome — [append] is true only
+    // when the server actually resumed (206 from the byte asked for);
+    // a 200/416 restart leaves resumed false with the Range verdict.
+    return (
+      resumed: append,
+      resumedFromBytes: append ? existingBytes : 0,
+      serverHonouredRange: rangeRequested ? streamed.statusCode == 206 : null,
+    );
   }
 
   /// Parse the start byte out of a `Content-Range: bytes <start>-<end>/<total>`
@@ -863,7 +878,7 @@ class XtreamApi {
     bool ignoreCatalogCap = false,
     void Function(int receivedBytes, int? totalBytes)? onProgress,
   }) async {
-    await _fetchBodyToFile(
+    final outcome = await _fetchBodyToFile(
       Uri.parse('$serverUrl/get.php').replace(
         queryParameters: {'username': username, 'password': password, 'type': type, 'output': output},
       ),
@@ -874,6 +889,16 @@ class XtreamApi {
       ignoreCatalogCap: ignoreCatalogCap,
       onProgress: onProgress,
     );
+    // 1.3.27 §P0-1 (C2): the phone log must say whether the server
+    // honoured Range — a 200 answer restarts the playlist from byte 0
+    // on every stall, and the user must be told that, not left to
+    // guess why the check never finishes. Never logs the URI
+    // (credentials in the query string).
+    if (outcome.resumedFromBytes > 0) {
+      appLogger.i('IPTV: M3U playlist download resumed from ${outcome.resumedFromBytes} bytes (HTTP 206)');
+    } else if (outcome.serverHonouredRange == false) {
+      appLogger.i('IPTV: M3U playlist download restarted from byte 0 — server ignored Range (HTTP 200)');
+    }
     return filePath;
   }
 

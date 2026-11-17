@@ -168,11 +168,16 @@ void main() {
     stopwatch.stop();
 
     expect(stopwatch.elapsed, lessThan(const Duration(seconds: 10)), reason: 'the check returns instead of hanging');
-    expect(result.error, t.errors.reasonTimedOut);
+    // 1.3.27 §P0-1 (deliberate change): a stall is no longer the
+    // generic timeout phrase — the check retries from the resume
+    // point, then reports the stall with the bytes received (0 here:
+    // the hang fake never delivers a byte).
+    expect(result.error, t.iptv.epgM3uTvgIdStalled(received: '0 bytes', kept: '0 bytes'));
     expect(result.checked, 0);
     final lines = MemoryLogOutput.getLogs().where((e) => e.message.contains('M3U tvg-id check: playlist fetch failed')).toList();
     expect(lines, isNotEmpty);
-    expect(lines.first.message, contains('TimeoutException'), reason: 'the log names the error runtimeType for the next diagnosis');
+    expect(lines.first.message, contains('budget stall'), reason: 'the log names which budget fired for the next diagnosis');
+    expect(lines.first.message, contains('0 bytes received'));
   });
 
   test('4c a failed playlist fetch logs its runtimeType and still returns', () async {
