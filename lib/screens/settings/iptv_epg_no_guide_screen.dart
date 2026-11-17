@@ -33,10 +33,42 @@ class _IptvEpgNoGuideScreenState extends State<IptvEpgNoGuideScreen> {
   /// throw from initState that leaves the spinner up forever.
   String? _error;
 
+  /// 1.3.26 §69: search + reason filter over the in-memory list —
+  /// the list is thousands long, so scrolling to a channel by name
+  /// was the whole complaint. The controller (and the query) survives
+  /// the post-assign reload — _load() never touches them, so the
+  /// search stays put after an Assign.
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  IptvEpgNoGuideReason? _selectedReason;
+
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(() {
+      if (mounted) setState(() => _searchQuery = _searchController.text);
+    });
     unawaited(_load());
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// The in-memory list filtered by the search query (normalized
+  /// name substring, same normalization as the matcher) and the
+  /// selected reason (null = all). Grouping by reason happens after
+  /// filtering, in build.
+  List<IptvChannelWithoutGuide> get _filteredChannels {
+    final channels = _channels ?? const <IptvChannelWithoutGuide>[];
+    final query = normalizeEpgChannelName(_searchQuery);
+    return channels.where((channel) {
+      if (_selectedReason != null && channel.reason != _selectedReason) return false;
+      if (query.isEmpty) return true;
+      return normalizeEpgChannelName(channel.channelName).contains(query);
+    }).toList();
   }
 
   Future<void> _load() async {
@@ -105,8 +137,9 @@ class _IptvEpgNoGuideScreenState extends State<IptvEpgNoGuideScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final channels = _channels ?? const <IptvChannelWithoutGuide>[];
+    final filtered = _filteredChannels;
     final grouped = <IptvEpgNoGuideReason, List<IptvChannelWithoutGuide>>{};
-    for (final channel in channels) {
+    for (final channel in filtered) {
       grouped.putIfAbsent(channel.reason, () => []).add(channel);
     }
     return FocusedScrollScaffold(
@@ -115,7 +148,55 @@ class _IptvEpgNoGuideScreenState extends State<IptvEpgNoGuideScreen> {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           sliver: SliverToBoxAdapter(
-            child: Text(t.iptv.epgNoGuideDescription, style: theme.textTheme.bodyMedium),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.iptv.epgNoGuideDescription, style: theme.textTheme.bodyMedium),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: t.iptv.epgNoGuideSearchHint,
+                    prefixIcon: const AppIcon(Symbols.search_rounded),
+                    suffixIcon: _searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const AppIcon(Symbols.close_rounded),
+                            onPressed: _searchController.clear,
+                          ),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ChoiceChip(
+                        label: Text(t.iptv.epgNoGuideReasonAll),
+                        selected: _selectedReason == null,
+                        onSelected: (_) => setState(() => _selectedReason = null),
+                      ),
+                      for (final reason in _reasonOrder) ...[
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: Text(_reasonLabel(reason)),
+                          selected: _selectedReason == reason,
+                          onSelected: (_) => setState(() => _selectedReason = reason),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (!_loading && _error == null && channels.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    t.iptv.epgNoGuideSearchCount(shown: filtered.length, total: channels.length),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
         if (_loading)

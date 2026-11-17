@@ -617,6 +617,95 @@ Set<String> epgFeedChannelCountries(String feedId, List<String> displayNames) {
   return out;
 }
 
+/// Rank guide-channel candidates for the Assign EPG picker by
+/// relevance to the channel being assigned (1.3.26 §69) — best
+/// matches at the top, never alphabetical. The owner opened Assign
+/// for a US FOX 2 and saw NL/AU/ISR/PL/FR channels first, in plain
+/// alphabetical order, nothing to do with FOX 2.
+///
+/// The sort key, in order: (1) channel-id match — a guide channel
+/// whose tvg-id matches the channel's id (exact, or a shared prefix
+/// of at least 3 chars) ranks highest; (2) region correctness — a
+/// candidate from the channel's country ranks above one from a
+/// different country, and a candidate whose region cannot be
+/// determined sits between them (neutral, not demoted); (3) name
+/// word overlap — shared words between the channel name and the
+/// candidate's display names + id; (4) xmltvId ascending, so the
+/// order is deterministic.
+///
+/// Region sits above name even though the owner listed name second:
+/// his own rule is that a candidate from the WRONG region must rank
+/// below a region-matching candidate even if its name is closer — a
+/// NL "FOX 2" with more shared words must never top a US "FOX 2".
+/// An exact id match still beats region (the feed id IS the
+/// channel's declared id). The channel country comes from its name
+/// tag first, then its epg_channel_id / tvg-id suffix; when neither
+/// carries a country, region is neutral for every candidate and the
+/// ranking falls back to id + name words.
+@visibleForTesting
+List<IptvEpgFeedChannel> rankEpgFeedChannels({
+  required List<IptvEpgFeedChannel> entries,
+  required String channelName,
+  String? channelEpgId,
+  String? channelTvgId,
+}) {
+  final channelCountry =
+      epgChannelCountry(channelName) ??
+      epgFeedIdCountry(channelEpgId ?? '') ??
+      epgFeedIdCountry(channelTvgId ?? '');
+  final nameWords = epgChannelNameWords(channelName).toSet();
+  int idScore(IptvEpgFeedChannel entry) {
+    final entryId = entry.xmltvId.toLowerCase();
+    for (final id in [channelEpgId, channelTvgId]) {
+      if (id == null || id.isEmpty) continue;
+      final lower = id.toLowerCase();
+      if (entryId == lower) return 2;
+      if (_epgSharedPrefixLength(entryId, lower) >= 3) return 1;
+    }
+    return 0;
+  }
+
+  int regionScore(IptvEpgFeedChannel entry) {
+    if (channelCountry == null) return 0;
+    final countries = epgFeedChannelCountries(entry.xmltvId, entry.displayNames);
+    if (countries.isEmpty) return 0;
+    return countries.contains(channelCountry) ? 1 : -1;
+  }
+
+  int nameScore(IptvEpgFeedChannel entry) {
+    final words = <String>{};
+    for (final name in entry.displayNames) {
+      words.addAll(epgChannelNameWords(name));
+    }
+    words.addAll(epgChannelNameWords(entry.xmltvId));
+    return words.intersection(nameWords).length;
+  }
+
+  final ranked = entries.toList(growable: false);
+  ranked.sort((a, b) {
+    final id = idScore(b).compareTo(idScore(a));
+    if (id != 0) return id;
+    final region = regionScore(b).compareTo(regionScore(a));
+    if (region != 0) return region;
+    final name = nameScore(b).compareTo(nameScore(a));
+    if (name != 0) return name;
+    return a.xmltvId.toLowerCase().compareTo(b.xmltvId.toLowerCase());
+  });
+  return ranked;
+}
+
+/// The length of the shared prefix of two lowercased ids, in code
+/// units. Used by the Assign ranking: a guide channel whose id shares
+/// at least 3 leading chars with the channel's id is a prefix match.
+int _epgSharedPrefixLength(String a, String b) {
+  var shared = 0;
+  final length = a.length < b.length ? a.length : b.length;
+  while (shared < length && a.codeUnitAt(shared) == b.codeUnitAt(shared)) {
+    shared++;
+  }
+  return shared;
+}
+
 /// True when the names are one channel's (jellyfin-tentacle
 /// `_one_channel`): the same after identity reduction, or one ending
 /// the other ("HISTORY" / "DISCOVERY HISTORY" is a brand prefix).
@@ -1477,7 +1566,13 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // superseded is stale even though its own clock is fresh — fall
     // through to a refetch, which re-maps from the new feed. The old
     // entry is kept so a failed refetch can still serve it (below).
-    final servable = cached != null && cached.covers(from, to) && cached.isFresh(ttl) && !forceRefresh;
+    // 1.3.26 §69: an explicit retry (force) bypasses the servable
+    // cache too — a loaded-empty row's retry must actually re-ask
+    // short-EPG + feed instead of serving the cached [] straight
+    // back. Only two callers pass force (the detail sheet's explicit
+    // refresh and the guide tab's retry), both of which want fresh
+    // data; the player passes no force and is unaffected.
+    final servable = cached != null && cached.covers(from, to) && cached.isFresh(ttl) && !forceRefresh && !force;
     final generationStale = servable && _isFeedGenerationStale(cached);
     // 1.2.3 RC3: a stored entry with ZERO programmes and NO feed
     // generations is a pre-1.2.1 poisoned empty entry (1.1.1's D1
@@ -1738,6 +1833,9 @@ class IptvLiveTvSupport implements LiveTvSupport {
     _noteEpgUpdated(now);
     // 1.2.17: scoped bump — only this channel healed, no whole-guide
     // version move (see [_bumpEpgVersion]).
+    // 1.3.26 §69: per-channel fetch-outcome logging — a heal that
+    // lands after the export is otherwise invisible in the log.
+    appLogger.i('IPTV EPG $channelKey: late short-epg healed with ${programs.length} programmes');
     _bumpEpgVersion(channelKey: channelKey);
   }
 
@@ -2886,6 +2984,11 @@ class IptvLiveTvSupport implements LiveTvSupport {
     var anyLoaded = false;
     Object? lastError;
     StackTrace? lastStackTrace;
+    // 1.3.26 §69: the first loaded feed's block, for the per-channel
+    // outcome log (same rule as _resolveChannelAcrossFeeds — the
+    // first feed that serves wins, otherwise the first feed's block
+    // is what the diagnostics name).
+    _GuideResolution? firstBlocked;
     // D7: the feed generations consulted for this channel (cache key ->
     // that guide's fetch time), so the per-channel entry can be stamped
     // with the generation it was mapped from.
@@ -2939,10 +3042,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
         offsetMinutes: attempt.config.timeShiftMinutes,
         loadRows: true,
       );
+      firstBlocked ??= match;
       if (match.matchedXmltvId == null) continue;
+      // 1.3.26 §69: per-channel fetch-outcome logging — the next
+      // phone log must name the cause per row.
+      appLogger.i('IPTV EPG $channelKey: feed matched ${match.matchedXmltvId} via ${match.matchMethod}');
       return (
         programs: match.programs,
-        source: match.matchMethod == 'name' || match.matchMethod == 'name-loose'
+        source: match.matchMethod == 'name' || match.matchMethod == 'name-loose' || match.matchMethod == 'name-guess'
             ? IptvEpgSource.feedByName
             : IptvEpgSource.feedById,
         feedDeferred: false,
@@ -2973,6 +3080,15 @@ class IptvLiveTvSupport implements LiveTvSupport {
         );
       }
       if (lastError != null) Error.throwWithStackTrace(lastError, lastStackTrace ?? StackTrace.empty);
+    }
+    // 1.3.26 §69: per-channel fetch-outcome logging — no source
+    // matched, so the first feed's block is the reason.
+    if (firstBlocked != null && firstBlocked.blockedReason != null) {
+      final candidates = firstBlocked.blockedCandidates;
+      appLogger.i(
+        'IPTV EPG $channelKey: feed blocked ${firstBlocked.blockedReason}'
+        '${candidates.isEmpty ? '' : ' (${candidates.join(', ')})'}',
+      );
     }
     return (
       programs: const <LiveTvProgram>[],
@@ -3125,10 +3241,11 @@ class IptvLiveTvSupport implements LiveTvSupport {
       }
     }
     // 5. Name, against the feed's display names and ids (Fix 2/7):
-    // the name is only a match when it names exactly one feed channel
-    // — never a guess. A channel from another country blocks with
-    // 'foreign'; more than one in-country namesake blocks with
-    // 'ambiguous'. A "+1" timeshift copy loses to the plain channel.
+    // the name is a match when it names exactly one feed channel —
+    // and since 1.3.26 §69, when it names more than one, the first
+    // sorted candidate is picked instead of blocking ('name-guess').
+    // A channel from another country blocks with 'foreign'. A "+1"
+    // timeshift copy loses to the plain channel.
     if (channelName != null && channelName.isNotEmpty) {
       final key = normalizeEpgChannelName(channelName);
       if (key.isNotEmpty) {
@@ -3152,8 +3269,9 @@ class IptvLiveTvSupport implements LiveTvSupport {
               // in-country copy — so the country gate would block
               // this channel forever. Keep all same-key candidates
               // and let the uniqueness gate below decide: exactly one
-              // serving copy still matches by name, several stay
-              // ambiguous — never a guess. Do NOT record foreign.
+              // serving copy still matches by name, several are now
+              // guessed by the first-sorted rule (1.3.26 §69) instead
+              // of staying ambiguous. Do NOT record foreign.
             } else {
               // 1.2.22 §64.2 (F1): do NOT return here — the return
               // skipped the loose tier entirely, so a UK channel whose
@@ -3192,9 +3310,10 @@ class IptvLiveTvSupport implements LiveTvSupport {
           // CNN.us and CNN.us2) AND exactly one candidate has
           // programmes in the window, that candidate is the live feed
           // — the other copy's programmes are all outside the window.
-          // Several in-window holders stay ambiguous: two live feeds
-          // both claiming the name is a guess, and the 1.2.5
-          // uniqueness gate (cnn-a/cnn-b) must keep holding.
+          // Several in-window holders no longer stay ambiguous
+          // (1.3.26 §69): the guess below picks the first sorted one
+          // — the 1.2.5 uniqueness gate (cnn-a/cnn-b) no longer holds
+          // for names.
           if (pick.length > 1) {
             final exact = pick.where((id) {
               final names = guide.displayNames[id] ?? const <String>[];
@@ -3219,8 +3338,23 @@ class IptvLiveTvSupport implements LiveTvSupport {
             if (hasInWindow(feedId)) return matched(programsFor(feedId), feedId, 'name');
             identifiedButEmpty.add(feedId);
           } else {
+            // 1.3.26 §69: ambiguous names GUESS — the first candidate
+            // in the existing sorted order. The owner decided filling
+            // rows matters more than never guessing (other IPTV apps
+            // pick one too); some picks will be the wrong guide. The
+            // guess only fires after the F6A/F6B narrowing and the
+            // country gate, never for foreign twins, and tiers 1–4
+            // (manual, tvg-id) still win over it — a manual
+            // assignment or a real tvg-id always beats a guessed name
+            // match. The sort is lexicographic by feed id:
+            // deterministic for a given feed, not semantically
+            // ranked. When the first pick has no programmes in the
+            // window it joins identifiedButEmpty and the loose tier
+            // still runs, exactly like the single-pick path.
             final sorted = pick.toList(growable: false)..sort();
-            return blocked('ambiguous', sorted);
+            final feedId = sorted.first;
+            if (hasInWindow(feedId)) return matched(programsFor(feedId), feedId, 'name-guess');
+            identifiedButEmpty.add(feedId);
           }
         }
       }
@@ -3581,9 +3715,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
       // listings are the late future's job now. A non-empty answer here
       // is the request landing inside the first-paint budget.
       if (latePrograms != null) {
+        // 1.3.26 §69: per-channel fetch-outcome logging — the next
+        // phone log must name the cause per row (the 1.3.24 log's
+        // "zero short-EPG activity" was a logging gap, not proof).
+        appLogger.i('IPTV EPG $channelKey: short-epg timed-out (late answer pending)');
         return (programs: const <LiveTvProgram>[], atLimit: false, timedOut: true, latePrograms: latePrograms);
       }
       final programs = _mapShortEpgListings(listings, channelKey, settings, from, to);
+      appLogger.i('IPTV EPG $channelKey: short-epg ${programs.isEmpty ? 'empty' : 'answered ${programs.length}'}');
       return (programs: programs, atLimit: listings.length == _shortEpgLimit, timedOut: false, latePrograms: null);
     } finally {
       _releaseShortEpgSlot();
@@ -5510,6 +5649,21 @@ class IptvLiveTvSupport implements LiveTvSupport {
     return out;
   }
 
+  /// The Assign EPG picker's candidate list, ranked by relevance to
+  /// the channel being assigned (1.3.26 §69) instead of the
+  /// alphabetical order [epgFeedChannels] returns. The picker's
+  /// search box still filters, but the DEFAULT unfiltered list is
+  /// relevance-ranked, and the filter preserves the ranked order.
+  Future<List<IptvEpgFeedChannel>> rankedEpgFeedChannelsFor(String channelKey, String channelName) async {
+    final entries = await epgFeedChannels();
+    return rankEpgFeedChannels(
+      entries: entries,
+      channelName: channelName,
+      channelEpgId: _client.epgChannelIdForChannelKey(channelKey),
+      channelTvgId: _client.tvgIdForChannelKey(channelKey),
+    );
+  }
+
   /// Every channel with no EPG (§3.2, the "see my assigned EPGs per
   /// channel" overview), grouped by reason by the caller. A channel
   /// counts as having guide when its per-channel cache holds programmes
@@ -5595,12 +5749,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// the app already holds), build a stream-id → `tvg-id` map, and
   /// report how many channels with no `epg_channel_id` gain a `tvg-id`
   /// from it — and how many of those ids are declared in the loaded
-  /// feeds. It never runs automatically (the playlist is tens of MB)
-  /// and never changes matching: the numbers decide whether a matching
-  /// fix is worth building. A failed playlist fetch returns an error
-  /// result instead of throwing, so the Xtream-only path never breaks.
-  /// The feeds load when they are not loaded — the user tapped the
-  /// check, so the load is the point, not a surprise.
+  /// feeds. It never runs automatically (the playlist is tens of MB).
+  /// The result also carries the gained pairs ([IptvM3uTvgIdDiagnostic.gainedIds])
+  /// so the dialog's Apply can write them as manual mappings (1.3.26
+  /// §69) — the check is a repair now, not just a report. A failed
+  /// playlist fetch returns an error result instead of throwing, so
+  /// the Xtream-only path never breaks. The feeds load when they are
+  /// not loaded — the user tapped the check, so the load is the point,
+  /// not a surprise.
   /// 1.2.22 §63.4: the overall bound for the M3U tvg-id check's playlist
   /// stage (download + parse). The download has its own 120 s per-gap
   /// timeout and the parse has none — without this, a stalled playlist
@@ -5609,24 +5765,45 @@ class IptvLiveTvSupport implements LiveTvSupport {
   @visibleForTesting
   static Duration m3uTvgIdDiagnosticTimeout = const Duration(seconds: 150);
 
-  /// Download the M3U playlist to [tempPath] and parse it in an isolate
-  /// (1.2.22 §63.4): the whole stage is bounded by
-  /// [m3uTvgIdDiagnosticTimeout] — a stalled download or a stuck parse
-  /// throws a [TimeoutException] instead of hanging the check. A late
-  /// error after the timeout is swallowed: the diagnostic already
+  /// Download the M3U playlist to [tempPath] and collect its live
+  /// tvg-ids in an isolate (1.3.26 §69): the download is exempt from
+  /// the hostile-response cap ([XtreamApi.getM3uToFile] with
+  /// `ignoreCatalogCap` — the playlist streams to a file and the
+  /// parser reads it line by line, so the cap guards nothing) and the
+  /// parse is the streaming collector, so the 300 MB playlist is
+  /// never held as a String or a 300k-entry list. The whole stage is
+  /// bounded by [m3uTvgIdDiagnosticTimeout] — a stalled download or a
+  /// stuck parse throws a [TimeoutException] instead of hanging the
+  /// check — and the timeout now CANCELS the download (the abort
+  /// trigger) instead of orphaning it in the background while the
+  /// temp dir is deleted out from under it (1.2.22 §63.4's wart). A
+  /// late error after the timeout is swallowed: the diagnostic already
   /// returned, and nobody awaits this future then.
-  Future<List<M3uEntry>> _fetchAndParseM3uPlaylist(String tempPath) {
+  Future<Map<int, String>> _fetchAndParseM3uPlaylist(String tempPath, Set<String> hiddenGroupTitles) {
+    // 1.3.26 §69: completing this aborts the in-flight download at
+    // the socket when the stage times out.
+    final abort = Completer<void>();
     final fetchFuture = () async {
-      await _client.xtreamApi.getM3uToFile(filePath: tempPath);
-      return compute(parseM3uFile, tempPath);
+      await _client.xtreamApi.getM3uToFile(
+        filePath: tempPath,
+        ignoreCatalogCap: true,
+        abortTrigger: abort.future,
+      );
+      return compute(
+        collectM3uLiveTvgIds,
+        (path: tempPath, hiddenGroupTitles: hiddenGroupTitles),
+      );
     }();
     unawaited(fetchFuture.then<void>((_) {}, onError: (_) {}));
     return fetchFuture.timeout(
       m3uTvgIdDiagnosticTimeout,
-      onTimeout: () => throw TimeoutException(
-        'M3U tvg-id check timed out after ${m3uTvgIdDiagnosticTimeout.inSeconds} s',
-        m3uTvgIdDiagnosticTimeout,
-      ),
+      onTimeout: () {
+        if (!abort.isCompleted) abort.complete();
+        throw TimeoutException(
+          'M3U tvg-id check timed out after ${m3uTvgIdDiagnosticTimeout.inSeconds} s',
+          m3uTvgIdDiagnosticTimeout,
+        );
+      },
     );
   }
 
@@ -5642,7 +5819,31 @@ class IptvLiveTvSupport implements LiveTvSupport {
         samples: [],
       );
     }
-    List<M3uEntry> entries;
+    // 1.3.26 §69: the channel loop already skips hidden categories
+    // ([iptvChannels] drops them), so the counts never include them —
+    // but the parse used to build all ~300k entries anyway. The
+    // streaming parser drops live entries whose group-title is a
+    // hidden category before they reach the map, so the map holds
+    // visible rows only. Resolved from the live category table, the
+    // same inputs [_isHiddenCategory] uses — the playlist carries
+    // group titles (names), not category ids. Best-effort: a failed
+    // category load falls back to no drop rather than failing the
+    // whole check.
+    final hiddenGroupTitles = <String>{};
+    try {
+      for (final category in await _client.liveCategories()) {
+        if (_client.isCategoryHidden(category.id, category.name)) {
+          hiddenGroupTitles.add(category.name);
+        }
+      }
+    } catch (e) {
+      appLogger.w('IPTV M3U tvg-id check: live categories unavailable, hidden categories will not be skipped in the parse', error: e);
+    }
+    // Stream id -> tvg-id, live entries only: the collector drops
+    // movies and series, entries with no tvg-id, and hidden
+    // group-titles, so the map is already the live-only map the old
+    // whole-file loop used to build.
+    Map<int, String> tvgIdsByStreamId;
     try {
       // 1.2.19 (A2): the playlist streams to a temp file and parses
       // from the file in an isolate — the main isolate never holds the
@@ -5652,7 +5853,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
       final tempDir = Directory.systemTemp.createTempSync('plezy_m3u_');
       final tempPath = '${tempDir.path}/playlist.m3u';
       try {
-        entries = await _fetchAndParseM3uPlaylist(tempPath);
+        tvgIdsByStreamId = await _fetchAndParseM3uPlaylist(tempPath, hiddenGroupTitles);
       } finally {
         try {
           tempDir.deleteSync(recursive: true);
@@ -5673,16 +5874,6 @@ class IptvLiveTvSupport implements LiveTvSupport {
       appLogger.i('IPTV M3U tvg-id check: playlist fetch failed (${e.runtimeType}: ${result.error})');
       return result;
     }
-    // Stream id -> tvg-id, live entries only: the playlist also lists
-    // movies and series, whose ids are not live stream ids.
-    final tvgIdsByStreamId = <int, String>{};
-    for (final entry in entries) {
-      final tvgId = entry.tvgId;
-      if (tvgId == null || tvgId.isEmpty) continue;
-      final streamId = _liveStreamIdFromM3uUrl(entry.url);
-      if (streamId == null) continue;
-      tvgIdsByStreamId[streamId] = tvgId;
-    }
     final channels = await _client.iptvChannels();
     final settings = await _readEpgSettings();
     final ttl = settings.updateIntervalHours <= 0 ? null : Duration(hours: settings.updateIntervalHours);
@@ -5695,6 +5886,9 @@ class IptvLiveTvSupport implements LiveTvSupport {
     var noId = 0;
     var gained = 0;
     var gainedInFeed = 0;
+    // 1.3.26 §69: the gained pairs (channelKey -> tvgId) the dialog's
+    // Apply writes as manual mappings.
+    final gainedIds = <String, String>{};
     final samples = <({String channelName, int streamId, String tvgId, bool inFeed})>[];
     for (final channel in channels) {
       final epgChannelId = _client.epgChannelIdForChannelKey(channel.key);
@@ -5705,6 +5899,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
       final tvgId = tvgIdsByStreamId[streamId];
       if (tvgId == null) continue;
       gained++;
+      gainedIds[channel.key] = tvgId;
       final inFeed = feedIds.contains(tvgId);
       if (inFeed) gainedInFeed++;
       if (samples.length < 5) {
@@ -5724,6 +5919,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
       feedLoaded: outcome.loaded.isNotEmpty,
       error: null,
       samples: samples,
+      gainedIds: gainedIds,
     );
     appLogger.i(
       'IPTV M3U tvg-id check: ${result.checked} channels, ${result.noId} without a guide ID, '
@@ -5733,24 +5929,25 @@ class IptvLiveTvSupport implements LiveTvSupport {
     return result;
   }
 
-  /// The live stream id in an M3U entry URL
-  /// (`{server}/live/{user}/{pass}/{streamId}.m3u8` or `.ts`), or null
-  /// when the URL is not a live stream (movie/series entries and
-  /// anything unparseable). Only the first path segment is trusted:
-  /// a `live` segment anywhere else is a channel name, not a route.
-  static int? _liveStreamIdFromM3uUrl(String url) {
-    Uri? uri;
-    try {
-      uri = Uri.parse(url);
-    } catch (_) {
-      return null;
+  /// Apply the gained guide IDs from a completed M3U tvg-id check
+  /// (1.3.26 §69): every pair becomes a manual mapping (provider
+  /// source, tier 1 — the matcher consults it before the byId/byName
+  /// chain), written in one bulk store save. Returns the number
+  /// actually written. The caller triggers a Reload after applying —
+  /// the mappings take effect when the rows re-resolve, not on write.
+  Future<int> applyM3uTvgIds(Map<String, String> gainedIds) async {
+    if (gainedIds.isEmpty) return 0;
+    final mappings = await _epgStore.loadMappings();
+    var applied = 0;
+    for (final entry in gainedIds.entries) {
+      final tvgId = entry.value.trim();
+      if (tvgId.isEmpty) continue;
+      mappings[entry.key] = IptvEpgMapping(xmltvId: tvgId, sourceId: IptvEpgSourceConfig.providerId);
+      applied++;
     }
-    final segments = uri.pathSegments;
-    if (segments.isEmpty || segments.first != 'live') return null;
-    final last = segments.last;
-    final dot = last.lastIndexOf('.');
-    final idText = dot > 0 ? last.substring(0, dot) : last;
-    return int.tryParse(idText);
+    if (applied > 0) await _epgStore.saveMappings(mappings);
+    appLogger.i('IPTV M3U tvg-id check: applied $applied guide IDs from the playlist');
+    return applied;
   }
 
   /// Resolve one channel against the loaded feeds in priority order
@@ -5944,6 +6141,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
           case 'manual':
             manualMatches++;
           case 'name':
+          case 'name-guess':
             nameMatches++;
           case 'name-loose':
             looseNameMatches++;

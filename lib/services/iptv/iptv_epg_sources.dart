@@ -369,6 +369,9 @@ class IptvGuideCoverageSample {
 /// this — the numbers decide whether one is worth building. [error]
 /// is set when the playlist fetch itself failed; [feedLoaded] is false
 /// when no feed was loaded to check the ids against.
+/// [gainedIds] (1.3.26 §69) carries the gained pairs (channelKey ->
+/// tvgId) so the dialog's Apply can write them as manual mappings —
+/// without it the check could only report, never repair.
 class IptvM3uTvgIdDiagnostic {
   final int checked;
   final int noId;
@@ -377,6 +380,7 @@ class IptvM3uTvgIdDiagnostic {
   final bool feedLoaded;
   final String? error;
   final List<({String channelName, int streamId, String tvgId, bool inFeed})> samples;
+  final Map<String, String> gainedIds;
 
   const IptvM3uTvgIdDiagnostic({
     required this.checked,
@@ -386,6 +390,7 @@ class IptvM3uTvgIdDiagnostic {
     required this.feedLoaded,
     required this.error,
     required this.samples,
+    this.gainedIds = const {},
   });
 }
 

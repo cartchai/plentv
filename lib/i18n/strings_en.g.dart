@@ -3869,6 +3869,12 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2312 => [
+		'Fixed: the \'Check M3U guide IDs\' button no longer fails on the big playlist — it reads the playlist in pieces, skips turned-off categories, and can now apply the guide IDs it finds',
+		'Fixed: a channel whose name matches more than one guide channel now picks the first one instead of staying blank',
+		'Fixed: guide rows that loaded empty are now retried, so they can fill in instead of staying blank',
+		'New: search in \'Channels without guide\' — type a channel name to jump straight to it, and the Assign list now puts the best-matching guide channels first',
+	];
 	List<String> get changelog2311 => [
 		'Fixed: signing in to Plex no longer hides your IPTV channels — they stay visible under every profile',
 		'Fixed: Log out now says it deletes everything in the app before you confirm — and you can sign out of just one Plex account instead',
@@ -7477,6 +7483,15 @@ class Translations$iptv$en {
 	/// en: 'The playlist check failed: ${reason}'
 	String epgM3uTvgIdFailed({required Object reason}) => 'The playlist check failed: ${reason}';
 
+	/// en: 'Apply these guide IDs'
+	String get epgM3uTvgIdApply => 'Apply these guide IDs';
+
+	/// en: 'Applying gives ${gained} channels a guide ID, then reloads the guide so they can match'
+	String epgM3uTvgIdApplyNote({required Object gained}) => 'Applying gives ${gained} channels a guide ID, then reloads the guide so they can match';
+
+	/// en: 'Applied ${applied} guide IDs — reloading the guide…'
+	String epgM3uTvgIdApplied({required Object applied}) => 'Applied ${applied} guide IDs — reloading the guide…';
+
 	/// en: 'Channel list could not be re-fetched — ${reason}'
 	String epgReloadChannelListFailed({required Object reason}) => 'Channel list could not be re-fetched — ${reason}';
 
@@ -7591,6 +7606,15 @@ class Translations$iptv$en {
 	/// en: 'Candidates: ${candidates}'
 	String epgNoGuideCandidates({required Object candidates}) => 'Candidates: ${candidates}';
 
+	/// en: 'Search channels'
+	String get epgNoGuideSearchHint => 'Search channels';
+
+	/// en: '${shown} of ${total} channels'
+	String epgNoGuideSearchCount({required Object shown, required Object total}) => '${shown} of ${total} channels';
+
+	/// en: 'All reasons'
+	String get epgNoGuideReasonAll => 'All reasons';
+
 	/// en: 'Assign EPG'
 	String get epgAssignTitle => 'Assign EPG';
 
@@ -7653,6 +7677,9 @@ class Translations$iptv$en {
 
 	/// en: 'Loose name match'
 	String get epgMatchMethodNameLoose => 'Loose name match';
+
+	/// en: 'Name (best guess)'
+	String get epgMatchMethodNameGuess => 'Name (best guess)';
 
 	/// en: 'Update time'
 	String get epgUpdateTime => 'Update time';
@@ -11373,6 +11400,10 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2312.0' => 'Fixed: the \'Check M3U guide IDs\' button no longer fails on the big playlist — it reads the playlist in pieces, skips turned-off categories, and can now apply the guide IDs it finds',
+			'about.changelog2312.1' => 'Fixed: a channel whose name matches more than one guide channel now picks the first one instead of staying blank',
+			'about.changelog2312.2' => 'Fixed: guide rows that loaded empty are now retried, so they can fill in instead of staying blank',
+			'about.changelog2312.3' => 'New: search in \'Channels without guide\' — type a channel name to jump straight to it, and the Assign list now puts the best-matching guide channels first',
 			'about.changelog2311.0' => 'Fixed: signing in to Plex no longer hides your IPTV channels — they stay visible under every profile',
 			'about.changelog2311.1' => 'Fixed: Log out now says it deletes everything in the app before you confirm — and you can sign out of just one Plex account instead',
 			'about.changelog2311.2' => 'Fixed: a Plex profile that asks for a PIN no longer blanks your libraries when the app checks it in the background',
@@ -11515,12 +11546,12 @@ extension on Translations {
 			'about.changelog2254.2' => 'The TV guide now shows Loading guide… while it loads, and a tap-to-retry message when it fails',
 			'about.changelog2254.3' => 'The guide loads the quick per-channel data first while the big guide file downloads in the background',
 			'about.changelog2254.4' => 'Name initials can be turned off in IPTV settings — repeating initials like EN, ES or NF, grouped with the categories',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2253.0' => 'IPTV favourites: one favourites screen for channels, movies and TV shows — favourites now stick',
 			'about.changelog2253.1' => 'Movies and TV libraries have a Categories tab with the provider\'s own categories',
 			'about.changelog2253.2' => 'Movies can be downloaded now',
 			'about.changelog2253.3' => 'The TV guide is saved on the phone, so it loads faster and survives a restart',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2253.4' => 'The guide now comes from your login, like TiviMate',
 			'about.changelog2253.5' => 'Search finds IPTV movies and shows again',
 			'about.changelog2253.6' => 'Movies browse loads again, and series titles no longer carry the category tag',
@@ -12029,12 +12060,12 @@ extension on Translations {
 			'music.discography.compilations' => 'Compilations',
 			'watchTogether.title' => 'Watch Together',
 			'watchTogether.description' => 'Watch content in sync with friends and family',
+			_ => null,
+		} ?? switch (path) {
 			'watchTogether.createRoom' => 'Create Room',
 			'watchTogether.creatingRoom' => 'Creating room...',
 			'watchTogether.joinRoom' => 'Join Room',
 			'watchTogether.joiningRoom' => 'Joining room...',
-			_ => null,
-		} ?? switch (path) {
 			'watchTogether.connecting' => 'Connecting...',
 			'watchTogether.relayPublic' => 'Rooms use the public Open Watch Party relays.',
 			'watchTogether.relayCustom' => ({required Object url}) => 'Rooms use your relay at ${url}.',
@@ -12543,12 +12574,12 @@ extension on Translations {
 			'metadataEdit.manuallySelected' => 'Manually selected',
 			'metadataEdit.shownWithForeignAudio' => 'Shown with foreign audio',
 			'metadataEdit.alwaysEnabled' => 'Always enabled',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.tags' => 'Tags',
 			'metadataEdit.addTag' => 'Add tag',
 			'metadataEdit.genre' => 'Genre',
 			'metadataEdit.director' => 'Director',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.writer' => 'Writer',
 			'metadataEdit.producer' => 'Producer',
 			'metadataEdit.country' => 'Country',
@@ -12910,6 +12941,9 @@ extension on Translations {
 			'iptv.epgM3uTvgIdSample' => ({required Object samples}) => 'Examples: ${samples}',
 			'iptv.epgM3uTvgIdFeedNotLoaded' => 'The guide feed was not loaded, so the in-guide count could not be checked — reload the TV details first',
 			'iptv.epgM3uTvgIdFailed' => ({required Object reason}) => 'The playlist check failed: ${reason}',
+			'iptv.epgM3uTvgIdApply' => 'Apply these guide IDs',
+			'iptv.epgM3uTvgIdApplyNote' => ({required Object gained}) => 'Applying gives ${gained} channels a guide ID, then reloads the guide so they can match',
+			'iptv.epgM3uTvgIdApplied' => ({required Object applied}) => 'Applied ${applied} guide IDs — reloading the guide…',
 			'iptv.epgReloadChannelListFailed' => ({required Object reason}) => 'Channel list could not be re-fetched — ${reason}',
 			'iptv.epgReloadUnexpectedFailure' => ({required Object reason}) => 'Reload failed unexpectedly — ${reason}',
 			'iptv.epgFeedOutcomeLoaded' => ({required Object source, required Object matched, required Object channels}) => '${source}: loaded — ${matched} of ${channels} channels have guide data',
@@ -12948,6 +12982,9 @@ extension on Translations {
 			'iptv.epgSourceMixed' => 'Mixed',
 			'iptv.epgSourceMixedDetail' => 'Short EPG + feed',
 			'iptv.epgNoGuideCandidates' => ({required Object candidates}) => 'Candidates: ${candidates}',
+			'iptv.epgNoGuideSearchHint' => 'Search channels',
+			'iptv.epgNoGuideSearchCount' => ({required Object shown, required Object total}) => '${shown} of ${total} channels',
+			'iptv.epgNoGuideReasonAll' => 'All reasons',
 			'iptv.epgAssignTitle' => 'Assign EPG',
 			'iptv.epgKeepLooseMatch' => 'Keep this guide for this channel',
 			'iptv.epgAssignSearchHint' => 'Search guide channels',
@@ -12968,6 +13005,7 @@ extension on Translations {
 			'iptv.epgMatchMethodName' => 'Channel name',
 			'iptv.epgMatchMethodManual' => 'Assigned by hand',
 			'iptv.epgMatchMethodNameLoose' => 'Loose name match',
+			'iptv.epgMatchMethodNameGuess' => 'Name (best guess)',
 			'iptv.epgUpdateTime' => 'Update time',
 			'iptv.epgUpdateTimeDescription' => 'Time of day the guide refreshes',
 			'iptv.epgUpdateTimeOff' => 'Off',
@@ -13050,6 +13088,8 @@ extension on Translations {
 			'iptv.refusalsHeaders' => 'Response headers',
 			'iptv.refusalsBody' => 'Response body',
 			'iptv.refusalsNoStatus' => 'No HTTP status',
+			_ => null,
+		} ?? switch (path) {
 			'iptvCategories.title' => ({required Object name}) => '${name} categories',
 			'iptvCategories.intro' => 'Turn off a category to hide its channels and on-demand titles. Changes apply right away.',
 			'iptvCategories.hiddenTotal' => ({required Object count}) => '${count} categories hidden',
@@ -13061,8 +13101,6 @@ extension on Translations {
 			'iptvCategories.groupsSectionCount' => ({required Object total, required Object hidden}) => '${total} groups, ${hidden} hidden',
 			'iptvCategories.initialsHeading' => 'Turn off whole groups at once',
 			'iptvCategories.initialsSubheading' => 'These letters start a lot of category names — turning one off hides every category that starts with it, in Live TV, Movies and TV Series.',
-			_ => null,
-		} ?? switch (path) {
 			'iptvCategories.initialsSubheadingM3u' => 'These letters start a lot of group names — turning one off hides every group that starts with it.',
 			'iptvCategories.initialRow' => ({required Object initial, required Object count}) => '${initial} — ${count} categories (all types)',
 			'iptvCategories.initialRowM3u' => ({required Object initial, required Object count}) => '${initial} — ${count} groups',

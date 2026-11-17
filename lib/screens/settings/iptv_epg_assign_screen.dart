@@ -54,7 +54,10 @@ class _IptvEpgAssignScreenState extends State<IptvEpgAssignScreen> {
   }
 
   Future<void> _load() async {
-    final entries = await widget.support.epgFeedChannels();
+    // 1.3.26 §69: the candidate list is relevance-ranked for this
+    // channel, not alphabetical — the owner opened Assign for a US
+    // FOX 2 and saw NL/AU/ISR/PL/FR channels first.
+    final entries = await widget.support.rankedEpgFeedChannelsFor(widget.channelKey, widget.channelName);
     final current = await widget.support.epgAssignmentFor(widget.channelKey);
     if (!mounted) return;
     setState(() {

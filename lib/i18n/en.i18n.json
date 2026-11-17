@@ -1533,6 +1533,12 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2312": [
+      "Fixed: the 'Check M3U guide IDs' button no longer fails on the big playlist — it reads the playlist in pieces, skips turned-off categories, and can now apply the guide IDs it finds",
+      "Fixed: a channel whose name matches more than one guide channel now picks the first one instead of staying blank",
+      "Fixed: guide rows that loaded empty are now retried, so they can fill in instead of staying blank",
+      "New: search in 'Channels without guide' — type a channel name to jump straight to it, and the Assign list now puts the best-matching guide channels first"
+    ],
     "changelog2311": [
       "Fixed: signing in to Plex no longer hides your IPTV channels — they stay visible under every profile",
       "Fixed: Log out now says it deletes everything in the app before you confirm — and you can sign out of just one Plex account instead",
@@ -3312,6 +3318,9 @@
     "epgM3uTvgIdSample": "Examples: ${samples}",
     "epgM3uTvgIdFeedNotLoaded": "The guide feed was not loaded, so the in-guide count could not be checked — reload the TV details first",
     "epgM3uTvgIdFailed": "The playlist check failed: ${reason}",
+    "epgM3uTvgIdApply": "Apply these guide IDs",
+    "epgM3uTvgIdApplyNote": "Applying gives ${gained} channels a guide ID, then reloads the guide so they can match",
+    "epgM3uTvgIdApplied": "Applied ${applied} guide IDs — reloading the guide…",
     "epgReloadChannelListFailed": "Channel list could not be re-fetched — ${reason}",
     "epgReloadUnexpectedFailure": "Reload failed unexpectedly — ${reason}",
     "epgFeedOutcomeLoaded": "${source}: loaded — ${matched} of ${channels} channels have guide data",
@@ -3350,6 +3359,9 @@
     "epgSourceMixed": "Mixed",
     "epgSourceMixedDetail": "Short EPG + feed",
     "epgNoGuideCandidates": "Candidates: ${candidates}",
+    "epgNoGuideSearchHint": "Search channels",
+    "epgNoGuideSearchCount": "${shown} of ${total} channels",
+    "epgNoGuideReasonAll": "All reasons",
     "epgAssignTitle": "Assign EPG",
     "epgKeepLooseMatch": "Keep this guide for this channel",
     "epgAssignSearchHint": "Search guide channels",
@@ -3373,6 +3385,7 @@
     "epgMatchMethodName": "Channel name",
     "epgMatchMethodManual": "Assigned by hand",
     "epgMatchMethodNameLoose": "Loose name match",
+    "epgMatchMethodNameGuess": "Name (best guess)",
     "epgUpdateTime": "Update time",
     "epgUpdateTimeDescription": "Time of day the guide refreshes",
     "epgUpdateTimeOff": "Off",

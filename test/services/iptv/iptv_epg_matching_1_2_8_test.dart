@@ -366,7 +366,7 @@ void main() {
       expect(detail.matchMethod, 'name');
     });
 
-    test('F6B guard (1.2.5): two live feeds both claiming one name stay ambiguous', () async {
+    test('F6B guard (1.2.5, changed 1.3.26 §69): two live feeds both claiming one name GUESS the first sorted one', () async {
       api.liveStreams = [
         XtreamLiveStream(streamId: 500, name: 'CNN', epgChannelId: 'cnn'),
       ];
@@ -385,10 +385,16 @@ void main() {
       ]);
       await loadChannels();
       final window = windowAround(now);
-      expect(await support.fetchEpgForChannel('500', from: window.from, to: window.to), isEmpty);
+      // 1.3.26 §69: the 1.2.5 uniqueness gate (cnn-a/cnn-b) no longer
+      // holds for names — the first sorted candidate is picked and
+      // the row fills. A manual mapping or a real tvg-id still beats
+      // the guess (tiers 1–2 run first).
+      final programs = await support.fetchEpgForChannel('500', from: window.from, to: window.to);
+      expect(programs.map((p) => p.title), ['CNN A']);
       final detail = await support.channelEpgDetail('500', from: window.from, to: window.to);
-      expect(detail.hasGuide, isFalse);
-      expect(detail.noGuideReason, IptvEpgNoGuideReason.ambiguous);
+      expect(detail.hasGuide, isTrue);
+      expect(detail.matchMethod, 'name-guess');
+      expect(detail.matchedXmltvId, 'cnn-a');
     });
 
     test('F7: the unmatched sample is stratified by reason and names each reason', () async {
@@ -420,23 +426,25 @@ void main() {
       ]);
       final result = await support.reloadTvDetails();
       expect(result.channelsLoaded, 6);
-      expect(result.withGuide, 0);
-      expect(result.withoutGuide, 6);
+      // 1.3.26 §69: AMB's twins are guessed now, so it counts as
+      // with-guide and the ambiguous bucket is empty.
+      expect(result.withGuide, 1);
+      expect(result.withoutGuide, 5);
       expect(result.matchTiers.noTvgId, 2);
       expect(result.matchTiers.tvgIdNotInFeed, 2);
-      expect(result.matchTiers.ambiguous, 1);
+      expect(result.matchTiers.ambiguous, 0);
       expect(result.matchTiers.foreign, 1);
       // Stratified: first row per reason in order of first appearance
-      // (no-tvg-id, tvg-id-not-in-feed, ambiguous, foreign), then fill
-      // to 5 in channel order — the foreign row must appear, and the
-      // second tvg-id-not-in-feed row must not crowd it out.
+      // (no-tvg-id, tvg-id-not-in-feed, foreign), then fill to 5 in
+      // channel order — the foreign row must appear, and the second
+      // tvg-id-not-in-feed row must not crowd it out.
       expect(
         result.sampleUnmatched.map((e) => e.channelName),
-        ['ZZ Alpha', 'ZZ Beta', 'ZZ Gamma', 'AMB', 'UK: SKY TWO'],
+        ['ZZ Alpha', 'ZZ Beta', 'ZZ Gamma', 'ZZ Delta', 'UK: SKY TWO'],
       );
       expect(
         result.sampleUnmatched.map((e) => e.reason),
-        ['no-tvg-id', 'no-tvg-id', 'tvg-id-not-in-feed', 'ambiguous', 'foreign'],
+        ['no-tvg-id', 'no-tvg-id', 'tvg-id-not-in-feed', 'tvg-id-not-in-feed', 'foreign'],
       );
       expect(result.sampleUnmatched.last.epgChannelId, 'skytwo');
     });
@@ -532,13 +540,16 @@ void main() {
       ]);
       final result = await support.reloadTvDetails();
       expect(result.channelsLoaded, 8);
-      expect(result.withGuide, 4);
-      expect(result.withoutGuide, 4);
+      // 1.3.26 §69: HBO's twins are guessed now (first sorted 'hbo-a'),
+      // so it counts as with-guide via the name bucket and the
+      // ambiguous bucket is empty.
+      expect(result.withGuide, 5);
+      expect(result.withoutGuide, 3);
       expect(result.matchTiers.manual, 0);
       expect(result.matchTiers.tvgId, 2);
-      expect(result.matchTiers.name, 1);
+      expect(result.matchTiers.name, 2);
       expect(result.matchTiers.nameLoose, 1);
-      expect(result.matchTiers.ambiguous, 1);
+      expect(result.matchTiers.ambiguous, 0);
       expect(result.matchTiers.foreign, 1);
       expect(result.matchTiers.noTvgId, 0);
       expect(result.matchTiers.tvgIdNotInFeed, 2);
@@ -546,15 +557,15 @@ void main() {
       expect(result.matchTiers.matchedButNoProgrammesDeclared, 0);
       expect(result.matchTiers.matchedButNoProgrammesOutsideWindow, 0);
       expect(result.matchTiers.none, 0);
-      expect(result.matchTiers.matched, 4);
-      expect(result.matchTiers.unmatched, 4);
+      expect(result.matchTiers.matched, 5);
+      expect(result.matchTiers.unmatched, 3);
       expect(result.epgChannelIdCount, 8);
       expect(result.feedSamples.map((e) => e.xmltvId), ['012345', 'SkyOne.de', 'beIN 1', 'cnn.us', 'hbo-a']);
-      expect(result.sampleUnmatched.map((e) => e.channelName), ['LRT', 'HBO', 'UK: SKY ONE', 'beIN SPORTS 1 HD']);
+      expect(result.sampleUnmatched.map((e) => e.channelName), ['LRT', 'UK: SKY ONE', 'beIN SPORTS 1 HD']);
       final outcome = result.feedOutcomes.first;
       expect(outcome.kind, IptvEpgFeedOutcomeKind.loaded);
       expect(outcome.feedChannels, 8);
-      expect(outcome.matchedChannels, 4);
+      expect(outcome.matchedChannels, 5);
       expect(outcome.feedProgramsParsed, 9);
       expect(outcome.feedProgramsRetained, 8);
       expect(outcome.feedChannelsParsed, 9);

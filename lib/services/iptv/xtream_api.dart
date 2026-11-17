@@ -380,7 +380,13 @@ class XtreamApi {
   /// units, ≈ bytes for JSON, which is mostly ASCII — bytes is the
   /// conservative measure for a hostile response); on oversize the
   /// partial file is deleted and [XtreamCatalogTooLargeException] is
-  /// thrown, exactly as [_fetchBody] throws it. The send is awaited
+  /// thrown, exactly as [_fetchBody] throws it. [ignoreCatalogCap]
+  /// exempts a file-streaming caller from the cap (1.3.26 §69): the
+  /// M3U playlist path streams to a file and buffers nothing in
+  /// memory, so the cap guards nothing there — the known-legitimate
+  /// 300 MB playlist would trip it — and the streaming parser bounds
+  /// memory instead. Only the M3U path passes it; the JSON catalog
+  /// syncs keep the cap. The send is awaited
   /// (headers) under [timeout]; the body then streams with a
   /// per-chunk-gap timeout (the [getXmltvFeed] shape), so a tens-of-MB
   /// catalog on a slow connection is not cut off for merely being slow.
@@ -401,6 +407,7 @@ class XtreamApi {
     Duration timeout = const Duration(seconds: 120),
     Future<void>? abortTrigger,
     bool resume = false,
+    bool ignoreCatalogCap = false,
     void Function(int receivedBytes, int? totalBytes)? onProgress,
   }) async {
     // 1.2.19 (L-4): the partial file's length is the resume point. A
@@ -492,7 +499,7 @@ class XtreamApi {
     try {
       await for (final chunk in streamed.stream.timeout(timeout)) {
         bytes += chunk.length;
-        if (bytes > maxCatalogResponseChars) {
+        if (!ignoreCatalogCap && bytes > maxCatalogResponseChars) {
           throw XtreamCatalogTooLargeException(bytes);
         }
         sink.add(chunk);
@@ -842,6 +849,10 @@ class XtreamApi {
   /// [filePath] instead of restarting it (L-3/L-4 mechanism). [timeout]
   /// is the per-chunk-gap budget (120 s default); it is a parameter so
   /// tests can prove the gap semantics with a short budget.
+  /// [ignoreCatalogCap] (1.3.26 §69) exempts this download from the
+  /// hostile-response cap: the provider playlist is ~300 MB and the
+  /// caller streams it to a file and parses it line by line, so the
+  /// cap would refuse a legitimate playlist while guarding nothing.
   Future<String> getM3uToFile({
     required String filePath,
     String type = 'm3u_plus',
@@ -849,6 +860,7 @@ class XtreamApi {
     Duration timeout = const Duration(seconds: 120),
     Future<void>? abortTrigger,
     bool resume = false,
+    bool ignoreCatalogCap = false,
     void Function(int receivedBytes, int? totalBytes)? onProgress,
   }) async {
     await _fetchBodyToFile(
@@ -859,6 +871,7 @@ class XtreamApi {
       timeout: timeout,
       abortTrigger: abortTrigger,
       resume: resume,
+      ignoreCatalogCap: ignoreCatalogCap,
       onProgress: onProgress,
     );
     return filePath;

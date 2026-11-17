@@ -280,7 +280,9 @@ void main() {
 
       expect(find.text('Channel 101'), findsOneWidget);
       expect(find.text('Channel 100'), findsNothing);
-      expect(find.text(t.iptv.epgNoGuideReasonNoMatch), findsOneWidget);
+      // 1.3.26: the reason text appears twice — once as the reason-filter
+      // chip in the header, once as the section header above the row.
+      expect(find.text(t.iptv.epgNoGuideReasonNoMatch), findsNWidgets(2));
     });
   });
 

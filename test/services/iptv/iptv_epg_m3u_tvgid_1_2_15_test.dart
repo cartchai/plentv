@@ -79,6 +79,7 @@ class _M3uTvgIdFakeApi extends XtreamApi {
     Duration timeout = const Duration(seconds: 120),
     Future<void>? abortTrigger,
     bool resume = false,
+    bool ignoreCatalogCap = false,
     void Function(int receivedBytes, int? totalBytes)? onProgress,
   }) async {
     if (failM3u) throw const FormatException('playlist unavailable');

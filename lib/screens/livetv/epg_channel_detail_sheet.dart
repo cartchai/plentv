@@ -71,6 +71,7 @@ class _EpgChannelDetailSheetState extends State<_EpgChannelDetailSheet> {
       'tvg-id' => t.iptv.epgMatchMethodTvgId,
       'name' => t.iptv.epgMatchMethodName,
       'name-loose' => t.iptv.epgMatchMethodNameLoose,
+      'name-guess' => t.iptv.epgMatchMethodNameGuess,
       'manual' => t.iptv.epgMatchMethodManual,
       _ => '—',
     };

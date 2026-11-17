@@ -9,7 +9,6 @@ import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/iptv_live_tv.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
-import 'package:plezy/services/iptv/iptv_epg_sources.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -161,7 +160,7 @@ void main() {
       expect(detail.matchedXmltvId, 'bein-sport-1.qa');
     });
 
-    test('F7: two beIN copies stay ambiguous — the relaxation never guesses', () async {
+    test('F7: two beIN copies GUESS the first sorted one (1.3.26 §69)', () async {
       api.liveStreams = [
         XtreamLiveStream(streamId: 100, name: 'AR| BEIN SPORT 01 FHD'),
       ];
@@ -180,10 +179,15 @@ void main() {
       ]);
       await loadChannels();
       final window = windowAround(now);
-      expect(await support.fetchEpgForChannel('100', from: window.from, to: window.to), isEmpty);
+      // 1.3.26 §69: ambiguous names no longer stay blank — the first
+      // sorted candidate ('bein-sport-1.qa' < 'bein-sport-1.sa') is
+      // picked, and the row fills with its programmes.
+      final programs = await support.fetchEpgForChannel('100', from: window.from, to: window.to);
+      expect(programs.map((p) => p.title), ['BeIN Match QA']);
       final detail = await support.channelEpgDetail('100', from: window.from, to: window.to);
-      expect(detail.hasGuide, isFalse);
-      expect(detail.noGuideReason, IptvEpgNoGuideReason.ambiguous);
+      expect(detail.hasGuide, isTrue);
+      expect(detail.matchMethod, 'name-guess');
+      expect(detail.matchedXmltvId, 'bein-sport-1.qa');
     });
   });
 }

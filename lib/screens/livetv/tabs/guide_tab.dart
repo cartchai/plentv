@@ -333,6 +333,17 @@ class GuideTabState extends State<GuideTab>
   final Set<String> _iptvEpgInFlight = {};
   final Set<String> _iptvEpgLoaded = {};
   final Set<String> _iptvEpgFailed = {};
+  /// 1.3.26 §69: scopeKeys whose fetch completed with zero programmes
+  /// (loaded-empty rows) — the sweep retries these once per guide
+  /// open instead of skipping them forever as "loaded". A retry that
+  /// comes back empty again re-caches the empty and rests until the
+  /// next Reload, feed-generation move, or guide open.
+  final Set<String> _iptvEpgLoadedEmpty = {};
+  /// ScopeKeys already retried as loaded-empty in this guide open —
+  /// the bound that keeps the retry from becoming a storm. Reset with
+  /// the rest of the EPG state (version bump / window change) and on
+  /// app resume.
+  final Set<String> _iptvEpgLoadedEmptyRetried = {};
   // 1.2.3: the last non-cancellation fetch error, for the denial
   // banner — the guide names the denial (403 / timeout) instead of
   // leaving hour blocks with no explanation. Cleared when any fetch
@@ -580,6 +591,7 @@ class GuideTabState extends State<GuideTab>
     if (channel == null) return;
     final scopeKey = liveTvChannelScopeKey(channel);
     _iptvEpgLoaded.remove(scopeKey);
+    _iptvEpgLoadedEmpty.remove(scopeKey);
     _mergedProgramsCache.remove(scopeKey);
     _ensureIptvEpg(channel);
   }
@@ -664,6 +676,10 @@ class GuideTabState extends State<GuideTab>
     // need neither.
     if (reason == LiveTvRefreshResumeReason.appResumed) {
       _epgSweepPassesDone = 0;
+      // 1.3.26 §69: a resume is a new retry round for loaded-empty
+      // rows — the app was away, short-EPG is live data, and the
+      // sweep budget bounds the round.
+      _iptvEpgLoadedEmptyRetried.clear();
       _scheduleEpgSweep();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() {});
@@ -1317,6 +1333,8 @@ class GuideTabState extends State<GuideTab>
       _iptvEpgVersionByServer[serverId] = support.epgVersion;
       _iptvEpgLoaded.clear();
       _iptvEpgFailed.clear();
+      _iptvEpgLoadedEmpty.clear();
+      _iptvEpgLoadedEmptyRetried.clear();
       _mergedProgramsCache.clear();
     }
     if (_iptvEpgLoaded.contains(scopeKey) || _iptvEpgInFlight.contains(scopeKey)) return;
@@ -1350,11 +1368,25 @@ class GuideTabState extends State<GuideTab>
             // in-flight entry must still be cleared, or the channel would
             // never fetch again.
             final superseded = _gridStart != requestStart || _gridEnd != requestEnd;
+            // 1.3.26 §69: set inside setState below when this fetch
+            // completed empty — the sweep re-arm itself runs after
+            // setState, never inside it.
+            var rearmSweep = false;
             setState(() {
               _iptvEpgInFlight.remove(scopeKey);
               _epgLoadingNotifier.value = _iptvEpgInFlight.isNotEmpty;
               if (superseded) return;
               _iptvEpgLoaded.add(scopeKey);
+              // 1.3.26 §69: a fetch that completed with zero programmes
+              // is a loaded-EMPTY row — the sweep retries it once
+              // instead of skipping it forever as "loaded". A fetch
+              // with programmes clears the empty mark.
+              if (programs.isEmpty) {
+                _iptvEpgLoadedEmpty.add(scopeKey);
+                rearmSweep = !_iptvEpgLoadedEmptyRetried.contains(scopeKey) && _epgSweepPassesDone < _epgSweepMaxPasses;
+              } else {
+                _iptvEpgLoadedEmpty.remove(scopeKey);
+              }
               // 1.2.3: a fetch answered — the denial (if any) is over.
               _iptvEpgLastError = null;
               _programsByChannelScope = {
@@ -1371,6 +1403,16 @@ class GuideTabState extends State<GuideTab>
               ];
               _mergedProgramsCache.remove(scopeKey);
             });
+            // 1.3.26 §69: a row that JUST became loaded-empty has work
+            // for the sweep — re-arm it, so the retry pass runs even
+            // when the last pass already decided there was nothing
+            // left to do (it ran while this row was still in-flight,
+            // so every row looked loaded or in-flight and no next pass
+            // was scheduled). Bounded: the retry is once per row per
+            // guide open (the retried set), and the 5-pass budget
+            // still caps the sweep — a row whose retry comes back
+            // empty again does not re-arm.
+            if (rearmSweep) _scheduleEpgSweep();
           })
           .catchError((Object e) {
             if (!mounted) return;
@@ -1385,6 +1427,8 @@ class GuideTabState extends State<GuideTab>
               // Fail open: the row renders hour placeholders for this
               // window instead of retrying in a loop.
               _iptvEpgFailed.add(scopeKey);
+              // 1.3.26 §69: a failed fetch is not a loaded-empty one.
+              _iptvEpgLoadedEmpty.remove(scopeKey);
               // 1.2.3: keep the error for the denial banner.
               _iptvEpgLastError = e;
               _mergedProgramsCache.remove(scopeKey);
@@ -1407,6 +1451,8 @@ class GuideTabState extends State<GuideTab>
   void _resetIptvEpgState() {
     _iptvEpgLoaded.clear();
     _iptvEpgFailed.clear();
+    _iptvEpgLoadedEmpty.clear();
+    _iptvEpgLoadedEmptyRetried.clear();
     _iptvEpgLastError = null;
     _mergedProgramsCache.clear();
     _programsByChannelScope = const {};
@@ -1423,6 +1469,7 @@ class GuideTabState extends State<GuideTab>
     final scopeKey = liveTvChannelScopeKey(channel);
     _iptvEpgFailed.remove(scopeKey);
     _iptvEpgLoaded.remove(scopeKey);
+    _iptvEpgLoadedEmpty.remove(scopeKey);
     _mergedProgramsCache.remove(scopeKey);
     _ensureIptvEpg(channel, force: true);
     if (mounted) setState(() {});
@@ -1457,7 +1504,14 @@ class GuideTabState extends State<GuideTab>
     for (final channel in widget.channels) {
       if (_iptvSupportFor(channel) == null) continue;
       final scopeKey = liveTvChannelScopeKey(channel);
-      if (_iptvEpgLoaded.contains(scopeKey) || _iptvEpgInFlight.contains(scopeKey) || _iptvEpgFailed.contains(scopeKey)) continue;
+      if (_iptvEpgInFlight.contains(scopeKey) || _iptvEpgFailed.contains(scopeKey)) continue;
+      if (_iptvEpgLoaded.contains(scopeKey)) {
+        // 1.3.26 §69: a loaded-empty row not yet retried still has
+        // work for the sweep — it counts as unfetched so the sweep
+        // re-arms for it.
+        if (_iptvEpgLoadedEmpty.contains(scopeKey) && !_iptvEpgLoadedEmptyRetried.contains(scopeKey)) return true;
+        continue;
+      }
       return true;
     }
     return false;
@@ -1493,6 +1547,22 @@ class GuideTabState extends State<GuideTab>
       if (started >= _epgSweepChannelsPerPass) break;
       final scopeKey = liveTvChannelScopeKey(channel);
       if (_iptvEpgLoaded.contains(scopeKey)) {
+        // 1.3.26 §69: a loaded-EMPTY row gets ONE retry per guide
+        // open — remove its loaded state first (exactly as
+        // _retryIptvEpg does) and re-ask with force, which now
+        // bypasses the servable cache. A retry that comes back empty
+        // rests until the next Reload / generation move / guide open.
+        // It counts against the same 24-per-pass budget as a fresh
+        // fetch, so the retry can never storm.
+        if (_iptvEpgLoadedEmpty.contains(scopeKey) && !_iptvEpgLoadedEmptyRetried.contains(scopeKey)) {
+          _iptvEpgLoadedEmptyRetried.add(scopeKey);
+          _iptvEpgLoaded.remove(scopeKey);
+          _iptvEpgLoadedEmpty.remove(scopeKey);
+          _mergedProgramsCache.remove(scopeKey);
+          _ensureIptvEpg(channel, force: true);
+          started++;
+          continue;
+        }
         skippedLoaded++;
         continue;
       }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 /// M3U / M3U8 playlist parser. Pure text in, entries out — no network.
@@ -87,4 +88,79 @@ List<M3uEntry> parseM3u(String text) {
 Future<List<M3uEntry>> parseM3uFile(String path) async {
   final text = await File(path).readAsString();
   return parseM3u(text);
+}
+
+/// The live stream id in an M3U entry URL
+/// (`{server}/live/{user}/{pass}/{streamId}.m3u8` or `.ts`), or null
+/// when the URL is not a live stream (movie/series entries and
+/// anything unparseable). Only the first path segment is trusted:
+/// a `live` segment anywhere else is a channel name, not a route.
+/// The same rule as the support's `_liveStreamIdFromM3uUrl`, kept
+/// here so the isolate parser below can use it without importing the
+/// support (which would be a circular import).
+int? liveStreamIdFromM3uUrl(String url) {
+  Uri? uri;
+  try {
+    uri = Uri.parse(url);
+  } catch (_) {
+    return null;
+  }
+  final segments = uri.pathSegments;
+  if (segments.isEmpty || segments.first != 'live') return null;
+  final last = segments.last;
+  final dot = last.lastIndexOf('.');
+  final idText = dot > 0 ? last.substring(0, dot) : last;
+  return int.tryParse(idText);
+}
+
+/// Message for [collectM3uLiveTvgIds]: the playlist file to read, and
+/// the group titles of hidden categories, whose live entries are
+/// dropped before they reach the map (1.3.26 §69 — the channel loop
+/// already skips hidden categories, so the map holds visible rows
+/// only). A record so `compute` can carry both pieces as one message.
+typedef M3uLiveTvgIdsRequest = ({String path, Set<String> hiddenGroupTitles});
+
+/// Streaming line parser for the M3U tvg-id check (1.3.26 §69):
+/// reads the playlist line by line and returns live stream-id ->
+/// tvg-id pairs only — movies and series entries are dropped, as are
+/// entries with no tvg-id and entries whose group-title is hidden.
+/// Reuses [_parseAttributes] and the `#EXTINF`-then-URL state machine
+/// of [parseM3u], so the two parsers can never disagree about what an
+/// entry is. Bounded memory regardless of playlist size: one line at
+/// a time plus one map entry per live channel with an id — the 300 MB
+/// playlist is never held as a String or a 300k-entry list. A
+/// top-level function so it can run under `compute`. Malformed UTF-8
+/// bytes become the replacement character instead of failing the
+/// whole check (the old whole-file read threw on them).
+Future<Map<int, String>> collectM3uLiveTvgIds(M3uLiveTvgIdsRequest request) async {
+  final out = <int, String>{};
+  Map<String, String>? pendingAttrs;
+  await for (final line in File(request.path)
+      .openRead()
+      .transform(const Utf8Decoder(allowMalformed: true))
+      .transform(const LineSplitter())) {
+    final trimmed = line.trim();
+    if (trimmed.isEmpty) continue;
+    if (trimmed.startsWith('#EXTINF')) {
+      pendingAttrs = _parseAttributes(trimmed);
+      continue;
+    }
+    if (trimmed.startsWith('#')) continue; // #EXTM3U, #EXTGRP, other comments
+    // A bare URL line: pairs with the preceding EXTINF, or stands alone.
+    final attrs = pendingAttrs;
+    pendingAttrs = null;
+    // 1.2.8 F1 (same rule as Xtream epg_channel_id): an empty
+    // tvg-id="" is absent, not an id.
+    final tvgId = switch (attrs?['tvg-id']) {
+      final s? when s.isNotEmpty => s,
+      _ => null,
+    };
+    if (tvgId == null) continue;
+    final groupTitle = attrs?['group-title'];
+    if (groupTitle != null && request.hiddenGroupTitles.contains(groupTitle)) continue;
+    final streamId = liveStreamIdFromM3uUrl(trimmed);
+    if (streamId == null) continue;
+    out[streamId] = tvgId;
+  }
+  return out;
 }

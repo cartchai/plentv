@@ -693,15 +693,34 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
           ),
         );
       }
+      // 1.3.26 §69: the check is a repair now, not just a report —
+      // Apply writes the gained ids as manual mappings, then a Reload
+      // makes them take effect. Offered whenever the check gained
+      // anything, feed loaded or not (the Reload loads the feed).
+      if (result.gained > 0) {
+        lines.add(t.iptv.epgM3uTvgIdApplyNote(gained: result.gained));
+      }
     }
-    await showDialog<void>(
+    final apply = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(t.iptv.epgM3uTvgIdCheck),
         content: ReloadReportContent(lines: lines),
-        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.ok))],
+        actions: [
+          if (result.error == null && result.gained > 0)
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(t.iptv.epgM3uTvgIdApply),
+            ),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t.common.ok)),
+        ],
       ),
     );
+    if (apply != true || !mounted) return;
+    final applied = await support.applyM3uTvgIds(result.gainedIds);
+    if (!mounted) return;
+    showSuccessSnackBar(context, t.iptv.epgM3uTvgIdApplied(applied: applied));
+    await _reloadTvDetails();
   }
 
   @override

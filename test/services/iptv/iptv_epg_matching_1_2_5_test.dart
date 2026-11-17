@@ -290,7 +290,11 @@ void main() {
       expect(detail.matchMethod, 'name');
     });
 
-    test('uniqueness gating (Fix 7): two feed ids displaying CNN never match', () async {
+    // 1.3.26 §69: [name]'s 04:21 EST decision — ambiguous names GUESS
+    // instead of blocking: the first sorted candidate is picked, so
+    // the twins now match via 'name-guess' (some picks will be the
+    // wrong guide; filling rows matters more, like other IPTV apps).
+    test('uniqueness gating (Fix 7, 1.3.26 guess): two feed ids displaying CNN match the first sorted candidate', () async {
       api.liveStreams = [
         XtreamLiveStream(streamId: 500, name: 'CNN', epgChannelId: 'cnn'),
       ];
@@ -309,14 +313,14 @@ void main() {
       ]);
       await loadChannels();
       final window = windowAround(now);
-      expect(await support.fetchEpgForChannel('500', from: window.from, to: window.to), isEmpty);
+      final programs = await support.fetchEpgForChannel('500', from: window.from, to: window.to);
+      expect(programs.map((p) => p.title), ['CNN A']);
       final detail = await support.channelEpgDetail('500', from: window.from, to: window.to);
-      expect(detail.hasGuide, isFalse);
-      expect(detail.noGuideReason, IptvEpgNoGuideReason.ambiguous);
+      expect(detail.hasGuide, isTrue);
+      expect(detail.matchedXmltvId, 'cnn-a');
+      expect(detail.matchMethod, 'name-guess');
       final without = await support.channelsWithoutGuide();
-      expect(without, hasLength(1));
-      expect(without.first.reason, IptvEpgNoGuideReason.ambiguous);
-      expect(without.first.candidates, ['cnn-a', 'cnn-b']);
+      expect(without, isEmpty);
     });
 
     test('foreign gating (Fix 7): UK: SKY ONE does not take the German Sky One', () async {
@@ -514,29 +518,33 @@ void main() {
           programmes: [(title: 'beIN Show', start: now, end: now.add(const Duration(hours: 1)))],
         ),
       ]);
+      // 1.3.26 §69: [name]'s 04:21 EST decision — ambiguous names GUESS.
+      // HBO's twins (hbo-a/hbo-b) now match via 'name-guess', which the
+      // reload counts in the name bucket, so withGuide/matched grow
+      // 4→5, ambiguous drops 1→0, and HBO leaves the unmatched sample.
       final result = await support.reloadTvDetails();
       expect(result.channelsLoaded, 8);
-      expect(result.withGuide, 4);
-      expect(result.withoutGuide, 4);
+      expect(result.withGuide, 5);
+      expect(result.withoutGuide, 3);
       expect(result.matchTiers.manual, 0);
       expect(result.matchTiers.tvgId, 2);
-      expect(result.matchTiers.name, 1);
+      expect(result.matchTiers.name, 2);
       expect(result.matchTiers.nameLoose, 1);
-      expect(result.matchTiers.ambiguous, 1);
+      expect(result.matchTiers.ambiguous, 0);
       expect(result.matchTiers.foreign, 1);
       expect(result.matchTiers.noTvgId, 0);
       expect(result.matchTiers.tvgIdNotInFeed, 2);
       expect(result.matchTiers.matchedButNoProgrammes, 0);
       expect(result.matchTiers.none, 0);
-      expect(result.matchTiers.matched, 4);
-      expect(result.matchTiers.unmatched, 4);
+      expect(result.matchTiers.matched, 5);
+      expect(result.matchTiers.unmatched, 3);
       expect(result.epgChannelIdCount, 8);
       expect(result.feedSamples.map((e) => e.xmltvId), ['012345', 'SkyOne.de', 'beIN 1', 'cnn.us', 'hbo-a']);
-      expect(result.sampleUnmatched.map((e) => e.channelName), ['LRT', 'HBO', 'UK: SKY ONE', 'beIN SPORTS 1 HD']);
+      expect(result.sampleUnmatched.map((e) => e.channelName), ['LRT', 'UK: SKY ONE', 'beIN SPORTS 1 HD']);
       final outcome = result.feedOutcomes.first;
       expect(outcome.kind, IptvEpgFeedOutcomeKind.loaded);
       expect(outcome.feedChannels, 8);
-      expect(outcome.matchedChannels, 4);
+      expect(outcome.matchedChannels, 5);
       expect(outcome.feedProgramsParsed, 9);
       expect(outcome.feedProgramsRetained, 8);
       expect(outcome.feedChannelsParsed, 9);

@@ -59,6 +59,12 @@ class _M3uFakeApi extends XtreamApi {
   /// The feed body (F4).
   String xmltvBody = '<?xml version="1.0" encoding="UTF-8"?><tv></tv>';
 
+  /// The live categories the fetch returns (hidden-category build).
+  List<XtreamCategory> liveCategories = const [];
+
+  @override
+  Future<List<XtreamCategory>> getLiveCategories({Future<void>? abortTrigger}) async => liveCategories;
+
   @override
   Future<String> getM3uToFile({
     required String filePath,
@@ -67,6 +73,7 @@ class _M3uFakeApi extends XtreamApi {
     Duration timeout = const Duration(seconds: 120),
     Future<void>? abortTrigger,
     bool resume = false,
+    bool ignoreCatalogCap = false,
     void Function(int receivedBytes, int? totalBytes)? onProgress,
   }) async {
     if (hangM3u) return Completer<String>().future;
