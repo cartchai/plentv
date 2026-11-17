@@ -314,6 +314,12 @@ class ActiveProfileBinder {
     _plexBindTokens.clear();
     final stopwatch = Stopwatch()..start();
     var success = false;
+    // 1.3.25 §68 (c): set when this pass fails soft (keeps the previous
+    // visible set after a failed passive rebind). The finally below must
+    // not clear the last-bound marker for such a pass — the profile is
+    // still bound, so consecutive passive rebinds must keep failing
+    // soft instead of zeroing the UI on the second one.
+    var failedSoft = false;
     _lastBindFailureConnectivityOnly = false;
     String? attemptedProfileId;
     try {
@@ -442,7 +448,35 @@ class ActiveProfileBinder {
         serverManager.removeServer(ServerId(serverId));
       }
       multiServerProvider.setExpectedVisibleServerIds(expectedServerIds);
-      multiServerProvider.setVisibleServerIds(visibleServerIds);
+      // 1.3.25 §68 (c): a failed *passive* rebind must not zero the UI.
+      // A PIN-protected Plex profile can never re-mint its token on a
+      // passive rebind (the PIN prompt is suppressed), so every passive
+      // rebind of it "fails" with an empty visible set — and publishing
+      // that empty set clears the libraries for servers that are fine.
+      // When the same profile bound successfully before and still
+      // expects servers it simply could not reach, keep the previous
+      // visible filter instead of publishing empty. The guard is narrow
+      // on purpose: a different profile (never leak the previous
+      // profile's servers), the first bind (nothing to keep), a
+      // user-initiated rebind (an explicit action gets the honest empty
+      // state so the picker can surface the error), and a profile that
+      // now expects nothing (a real removal still clears) all publish
+      // the empty set as before.
+      final keepPreviousVisibleSet =
+          !success &&
+          !userInitiated &&
+          _hasBoundOnce &&
+          _lastBoundProfileId == profile.id &&
+          visibleServerIds.isEmpty &&
+          expectedServerIds.isNotEmpty;
+      if (keepPreviousVisibleSet) {
+        failedSoft = true;
+        appLogger.i(
+          'ActiveProfileBinder: keeping previous visible servers after failed passive rebind of ${profile.displayName}',
+        );
+      } else {
+        multiServerProvider.setVisibleServerIds(visibleServerIds);
+      }
       success = (profile.isLocal && !localProfileHasJoinRows) || visibleServerIds.isNotEmpty;
       if (!success) {
         // A failed pass that expected servers, reached none (`!success`
@@ -464,7 +498,11 @@ class ActiveProfileBinder {
         _lastBoundProfileId = attemptedProfileId;
         _lastFailedProfileId = null;
       } else {
-        if (_lastBoundProfileId == attemptedProfileId) {
+        // 1.3.25 §68 (c): a fail-soft pass leaves the profile bound —
+        // its servers are still registered and visible — so keep the
+        // last-bound marker. Clearing it would let the *next* passive
+        // rebind publish the empty set (see the guard above).
+        if (_lastBoundProfileId == attemptedProfileId && !failedSoft) {
           _lastBoundProfileId = null;
         }
         _lastFailedProfileId = attemptedProfileId;
@@ -514,6 +552,17 @@ class ActiveProfileBinder {
           expected.add(id);
         case null:
           break;
+      }
+    }
+    // 1.3.25 §68 (a): IPTV connections are shared across profiles — they
+    // carry no per-profile token and no privacy boundary on this device.
+    // Every rebind expects every IPTV connection in the registry, so
+    // activating a Plex profile no longer drops the IPTV server from the
+    // runtime manager. Plex and Jellyfin stay profile-scoped: only IPTV
+    // changes, and the no-leak invariant for those servers is untouched.
+    for (final conn in connectionsById.values) {
+      if (conn is M3uConnection || conn is XtreamConnection) {
+        expected.add(conn.id);
       }
     }
     return expected;
@@ -624,6 +673,12 @@ class ActiveProfileBinder {
   /// join table). Skips Plex rows whose `connectionId` matches the parent
   /// (defensive guard — sync code shouldn't insert one, but treating it as
   /// a borrow would re-mint a redundant token).
+  ///
+  /// 1.3.25 §68 (a): IPTV connections are shared across profiles, so this
+  /// also binds every IPTV connection in the registry — not just the active
+  /// profile's join rows. A Plex profile activation therefore keeps the
+  /// IPTV client registered (and its catalog chain running) with no
+  /// profile switch. Plex and Jellyfin stay join-row-scoped.
   Future<_ProfileBindResult> _bindJoinRows(
     Profile profile, {
     required List<ProfileConnection> joinRows,
@@ -631,12 +686,6 @@ class ActiveProfileBinder {
     required bool allowPinPrompt,
     required int generation,
   }) async {
-    if (joinRows.isEmpty) {
-      if (profile.isLocal) {
-        appLogger.w('ActiveProfileBinder: ${profile.displayName} has no connections');
-      }
-      return const _ProfileBindResult.empty();
-    }
     final parentId = profile.parentConnectionId;
 
     final visible = <String>{};
@@ -668,6 +717,20 @@ class ActiveProfileBinder {
         case M3uConnection() || XtreamConnection():
           futures.add(_bindIptv(conn, profileId: profile.id, generation: generation));
       }
+    }
+    // Shared IPTV: every IPTV connection in the registry binds under
+    // every profile. Join-row IPTV is already queued above — skip it
+    // here so a connection is never bound twice in one pass.
+    for (final conn in connectionsById.values) {
+      if (conn is! M3uConnection && conn is! XtreamConnection) continue;
+      if (joinRows.any((pc) => pc.connectionId == conn.id)) continue;
+      futures.add(_bindIptv(conn, profileId: profile.id, generation: generation));
+    }
+    if (futures.isEmpty) {
+      if (profile.isLocal && joinRows.isEmpty) {
+        appLogger.w('ActiveProfileBinder: ${profile.displayName} has no connections');
+      }
+      return const _ProfileBindResult.empty();
     }
     final results = await Future.wait(futures);
     final discovered = <String, Set<String>>{};

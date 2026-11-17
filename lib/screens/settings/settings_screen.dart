@@ -1017,6 +1017,16 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           // brought connections or profiles. A bare settings restore must
           // not trigger a rebind that could pop a PIN prompt.
           if (report.connections.restored > 0 || report.profiles.restored > 0) {
+            // 1.3.25 §68 (d): the restore wrote the restored active-profile
+            // id to storage, but the in-memory provider never learned it —
+            // a bare rebind here would target the stale profile and the
+            // IPTV bind chain would never run. Re-resolve the active
+            // profile first; the rebind then targets the restored profile
+            // and its IPTV connection's bind chain starts the catalog
+            // sync on its own. Not marked user-initiated: a restore must
+            // not pop a PIN prompt.
+            await context.read<ActiveProfileProvider>().reloadFromStorage();
+            if (!mounted) return;
             await context.read<ActiveProfileBinder>().rebindActive();
             if (!mounted) return;
           }
@@ -1035,8 +1045,9 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   /// 1.2.22 §65: what the restore actually landed, in plain words —
   /// per-section counts, a line when anything was skipped, and the
   /// catalog note (the catalog was not in the backup). The button opens
-  /// the IPTV settings screen, where "Sync catalog now" lives; the sync
-  /// itself is never auto-started.
+  /// the IPTV settings screen, where "Sync catalog now" lives as the
+  /// manual fallback; the sync itself now starts on its own via the
+  /// post-restore rebind (1.3.25 §68 (d)).
   Future<void> _showForkBackupSummaryDialog(ForkBackupRestoreReport report) async {
     final lines = <String>[
       t.settings.importForkBackupSummary(

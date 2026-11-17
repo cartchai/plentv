@@ -1058,8 +1058,8 @@ class Translations$settings$en {
 	/// en: 'No active profile in the backup'
 	String get importForkBackupNoActiveProfile => 'No active profile in the backup';
 
-	/// en: 'The catalog (channels, movies and series) was not in the backup. Open Live TV settings and tap Sync catalog now to reload it.'
-	String get importForkBackupCatalogNote => 'The catalog (channels, movies and series) was not in the backup. Open Live TV settings and tap Sync catalog now to reload it.';
+	/// en: 'The catalog (channels, movies and series) was not in the backup. It reloads on its own after the restore — give it a moment.'
+	String get importForkBackupCatalogNote => 'The catalog (channels, movies and series) was not in the backup. It reloads on its own after the restore — give it a moment.';
 
 	/// en: 'Open Live TV settings'
 	String get importForkBackupOpenIptvSettings => 'Open Live TV settings';
@@ -2818,8 +2818,8 @@ class Translations$messages$en {
 	/// en: 'Failed to refresh metadata: ${error}'
 	String metadataRefreshFailed({required Object error}) => 'Failed to refresh metadata: ${error}';
 
-	/// en: 'Are you sure you want to log out?'
-	String get logoutConfirm => 'Are you sure you want to log out?';
+	/// en: 'Are you sure you want to log out? This deletes everything in the app: every connection (including IPTV), every profile, and all settings. To sign out of just one Plex account, use the Sign out entry for that account in this menu instead.'
+	String get logoutConfirm => 'Are you sure you want to log out? This deletes everything in the app: every connection (including IPTV), every profile, and all settings. To sign out of just one Plex account, use the Sign out entry for that account in this menu instead.';
 
 	/// en: 'No seasons found'
 	String get noSeasonsFound => 'No seasons found';
@@ -3129,6 +3129,9 @@ class Translations$profiles$en {
 
 	/// en: 'Otherwise they stay on this device and come back when you sign back in to this account.'
 	String get signOutPlexDeleteDownloadsDescription => 'Otherwise they stay on this device and come back when you sign back in to this account.';
+
+	/// en: 'Sign out of ${displayName}'
+	String signOutPlexAccount({required Object displayName}) => 'Sign out of ${displayName}';
 
 	/// en: 'Signed out of Plex.'
 	String get signedOutPlex => 'Signed out of Plex.';
@@ -3865,6 +3868,12 @@ class Translations$about$en {
 		'Text size on TV is now capped so large-text settings no longer break the guide layout',
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+	];
+	List<String> get changelog2311 => [
+		'Fixed: signing in to Plex no longer hides your IPTV channels — they stay visible under every profile',
+		'Fixed: Log out now says it deletes everything in the app before you confirm — and you can sign out of just one Plex account instead',
+		'Fixed: a Plex profile that asks for a PIN no longer blanks your libraries when the app checks it in the background',
+		'Fixed: after restoring a backup, the app now picks up the restored profile straight away, and its channels load on their own',
 	];
 	List<String> get changelog2310 => [
 		'Fixed: after a Reload, the guide could download its big guide file three times — it now downloads it once',
@@ -10316,7 +10325,7 @@ extension on Translations {
 			'settings.importForkBackupSkipped' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 item could not be restored', other: '${count} items could not be restored', ), 
 			'settings.importForkBackupActiveProfile' => 'Active profile restored',
 			'settings.importForkBackupNoActiveProfile' => 'No active profile in the backup',
-			'settings.importForkBackupCatalogNote' => 'The catalog (channels, movies and series) was not in the backup. Open Live TV settings and tap Sync catalog now to reload it.',
+			'settings.importForkBackupCatalogNote' => 'The catalog (channels, movies and series) was not in the backup. It reloads on its own after the restore — give it a moment.',
 			'settings.importForkBackupOpenIptvSettings' => 'Open Live TV settings',
 			'settings.shortcutsReset' => 'Shortcuts reset to defaults',
 			'settings.resetShortcutsConfirm' => 'This will replace your custom shortcuts with the defaults. Continue?',
@@ -10908,7 +10917,7 @@ extension on Translations {
 			'messages.metadataRefreshing' => ({required Object title}) => 'Refreshing metadata for "${title}"...',
 			'messages.metadataRefreshStarted' => ({required Object title}) => 'Metadata refresh started for "${title}"',
 			'messages.metadataRefreshFailed' => ({required Object error}) => 'Failed to refresh metadata: ${error}',
-			'messages.logoutConfirm' => 'Are you sure you want to log out?',
+			'messages.logoutConfirm' => 'Are you sure you want to log out? This deletes everything in the app: every connection (including IPTV), every profile, and all settings. To sign out of just one Plex account, use the Sign out entry for that account in this menu instead.',
 			'messages.noSeasonsFound' => 'No seasons found',
 			'messages.seasonsLoadFailed' => 'Couldn\'t load seasons',
 			'messages.noEpisodesFound' => 'No episodes found in first season',
@@ -11002,6 +11011,7 @@ extension on Translations {
 			'profiles.signOutPlexMessage' => ({required Object displayName}) => 'Remove ${displayName} and all Plex Home users? Sign back in anytime.',
 			'profiles.signOutPlexDeleteDownloads' => 'Also delete downloads',
 			'profiles.signOutPlexDeleteDownloadsDescription' => 'Otherwise they stay on this device and come back when you sign back in to this account.',
+			'profiles.signOutPlexAccount' => ({required Object displayName}) => 'Sign out of ${displayName}',
 			'profiles.signedOutPlex' => 'Signed out of Plex.',
 			'profiles.signOutFailed' => 'Sign out failed.',
 			'profiles.sectionTitle' => 'Profiles',
@@ -11363,6 +11373,10 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2311.0' => 'Fixed: signing in to Plex no longer hides your IPTV channels — they stay visible under every profile',
+			'about.changelog2311.1' => 'Fixed: Log out now says it deletes everything in the app before you confirm — and you can sign out of just one Plex account instead',
+			'about.changelog2311.2' => 'Fixed: a Plex profile that asks for a PIN no longer blanks your libraries when the app checks it in the background',
+			'about.changelog2311.3' => 'Fixed: after restoring a backup, the app now picks up the restored profile straight away, and its channels load on their own',
 			'about.changelog2310.0' => 'Fixed: after a Reload, the guide could download its big guide file three times — it now downloads it once',
 			'about.changelog2310.1' => 'Fixed: rows left blank because you switched apps while they were loading now refill when you come back, without downloading again',
 			'about.changelog2310.2' => 'Fixed: switching away and back no longer drops the guide you just loaded, on phones and tablets with plenty of memory',
@@ -11505,13 +11519,13 @@ extension on Translations {
 			'about.changelog2253.1' => 'Movies and TV libraries have a Categories tab with the provider\'s own categories',
 			'about.changelog2253.2' => 'Movies can be downloaded now',
 			'about.changelog2253.3' => 'The TV guide is saved on the phone, so it loads faster and survives a restart',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2253.4' => 'The guide now comes from your login, like TiviMate',
 			'about.changelog2253.5' => 'Search finds IPTV movies and shows again',
 			'about.changelog2253.6' => 'Movies browse loads again, and series titles no longer carry the category tag',
 			'about.changelog2253.7' => 'This version needs one fresh install (uninstall, then install) — after that, updates install over the top',
 			'about.changelog2252.0' => 'TV guide (EPG) now loads for IPTV channels',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2252.1' => 'EPG settings: how many days to load, how often it updates, past days to keep',
 			'about.changelog2252.2' => 'TV/Series library now loads — one bad row no longer kills the whole catalog',
 			'about.changelog2252.3' => 'Categories split into Live TV, Movies and TV/Series — each opens and closes on its own',
@@ -12019,13 +12033,13 @@ extension on Translations {
 			'watchTogether.creatingRoom' => 'Creating room...',
 			'watchTogether.joinRoom' => 'Join Room',
 			'watchTogether.joiningRoom' => 'Joining room...',
+			_ => null,
+		} ?? switch (path) {
 			'watchTogether.connecting' => 'Connecting...',
 			'watchTogether.relayPublic' => 'Rooms use the public Open Watch Party relays.',
 			'watchTogether.relayCustom' => ({required Object url}) => 'Rooms use your relay at ${url}.',
 			'watchTogether.recentRooms' => 'Recent Rooms',
 			'watchTogether.roomActions' => 'Room actions',
-			_ => null,
-		} ?? switch (path) {
 			'watchTogether.renameRoom' => 'Rename Room',
 			'watchTogether.removeRoom' => 'Remove',
 			'watchTogether.enterRoomCode' => 'Enter the 6-character code from the host.',
@@ -12533,13 +12547,13 @@ extension on Translations {
 			'metadataEdit.addTag' => 'Add tag',
 			'metadataEdit.genre' => 'Genre',
 			'metadataEdit.director' => 'Director',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.writer' => 'Writer',
 			'metadataEdit.producer' => 'Producer',
 			'metadataEdit.country' => 'Country',
 			'metadataEdit.collection' => 'Collection',
 			'metadataEdit.label' => 'Label',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.quickTag' => 'Quick Tag...',
 			'matchScreen.match' => 'Match...',
 			'matchScreen.fixMatch' => 'Fix Match...',
@@ -13047,13 +13061,13 @@ extension on Translations {
 			'iptvCategories.groupsSectionCount' => ({required Object total, required Object hidden}) => '${total} groups, ${hidden} hidden',
 			'iptvCategories.initialsHeading' => 'Turn off whole groups at once',
 			'iptvCategories.initialsSubheading' => 'These letters start a lot of category names — turning one off hides every category that starts with it, in Live TV, Movies and TV Series.',
+			_ => null,
+		} ?? switch (path) {
 			'iptvCategories.initialsSubheadingM3u' => 'These letters start a lot of group names — turning one off hides every group that starts with it.',
 			'iptvCategories.initialRow' => ({required Object initial, required Object count}) => '${initial} — ${count} categories (all types)',
 			'iptvCategories.initialRowM3u' => ({required Object initial, required Object count}) => '${initial} — ${count} groups',
 			'iptvCategories.showAll' => 'Show all',
 			'iptvCategories.hideAll' => 'Hide all',
-			_ => null,
-		} ?? switch (path) {
 			'iptvCategories.loading' => 'Loading categories…',
 			'iptvCategories.loadFailed' => 'Could not load the categories. Check the connection and try again.',
 			'iptvCategories.sectionLoadFailed' => 'Could not load this section.',

@@ -8,6 +8,7 @@ import 'package:plezy/widgets/app_icon.dart';
 import '../widgets/server_activities_button.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
+import '../connection/connection.dart';
 import '../focus/focusable_action_bar.dart';
 import '../focus/hub_vertical_navigation.dart';
 import '../focus/locked_hub_controller.dart';
@@ -67,6 +68,26 @@ import '../watch_together/watch_together.dart';
 import '../providers/companion_remote_provider.dart';
 import '../widgets/companion_remote/remote_session_dialog.dart';
 import 'companion_remote/mobile_remote_screen.dart';
+
+/// 1.3.25 §68 (b): one "Sign out of {account}" menu entry per Plex
+/// account, so a multi-account user can drop one account without the
+/// full Log out — which deletes every connection (including IPTV),
+/// every profile, and all settings. IPTV and Jellyfin connections are
+/// not Plex accounts, so they get no entry. The `signout_plex:`
+/// value is handled in [_DiscoverScreenState._handleUserMenuAction].
+/// Top-level (and annotated) so the entry list is unit-testable
+/// without pumping the whole Discover screen.
+@visibleForTesting
+List<AppMenuItem<String>> plexAccountSignOutMenuItems(Iterable<Connection> connections) {
+  return [
+    for (final account in connections.whereType<PlexAccountConnection>())
+      AppMenuItem<String>(
+        value: 'signout_plex:${account.id}',
+        icon: Symbols.logout_rounded,
+        label: t.profiles.signOutPlexAccount(displayName: account.displayLabel),
+      ),
+  ];
+}
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -749,6 +770,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   }) {
     final theme = Theme.of(context);
     final switchable = profiles.where((p) => p.id != activeProfile?.id).toList();
+    // 1.3.25 §68 (b): per-account Plex sign-out sits in this menu, right
+    // above the full Log out — the user reaches for it instead of the
+    // wipe when they only mean to drop one account.
+    final plexSignOutItems = plexAccountSignOutMenuItems(activeProvider.connectionsById.values);
 
     return [
       for (final p in switchable)
@@ -763,6 +788,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
       if (switchable.isNotEmpty) const AppMenuDivider(),
       AppMenuItem<String>(value: 'manage_profiles', icon: Symbols.group_rounded, label: t.profiles.sectionTitle),
       AppMenuItem<String>(value: 'settings', icon: Symbols.settings_rounded, label: t.common.settings),
+      if (plexSignOutItems.isNotEmpty) ...[
+        const AppMenuDivider(),
+        ...plexSignOutItems,
+      ],
       AppMenuItem<String>(value: 'logout', icon: Symbols.logout_rounded, label: t.common.logout),
     ];
   }
@@ -771,6 +800,11 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     if (_switchingProfile) return;
     if (value == 'logout') {
       unawaited(_handleLogout());
+      return;
+    }
+    if (value.startsWith('signout_plex:')) {
+      final accountId = value.substring('signout_plex:'.length);
+      unawaited(confirmAndSignOutPlexAccount(context, accountConnectionId: accountId));
       return;
     }
     if (value == 'manage_profiles') {

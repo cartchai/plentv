@@ -371,7 +371,7 @@
     },
     "importForkBackupActiveProfile": "Active profile restored",
     "importForkBackupNoActiveProfile": "No active profile in the backup",
-    "importForkBackupCatalogNote": "The catalog (channels, movies and series) was not in the backup. Open Live TV settings and tap Sync catalog now to reload it.",
+    "importForkBackupCatalogNote": "The catalog (channels, movies and series) was not in the backup. It reloads on its own after the restore — give it a moment.",
     "importForkBackupOpenIptvSettings": "Open Live TV settings",
     "shortcutsReset": "Shortcuts reset to defaults",
     "resetShortcutsConfirm": "This will replace your custom shortcuts with the defaults. Continue?",
@@ -1013,7 +1013,7 @@
     "metadataRefreshing": "Refreshing metadata for \"${title}\"...",
     "metadataRefreshStarted": "Metadata refresh started for \"${title}\"",
     "metadataRefreshFailed": "Failed to refresh metadata: ${error}",
-    "logoutConfirm": "Are you sure you want to log out?",
+    "logoutConfirm": "Are you sure you want to log out? This deletes everything in the app: every connection (including IPTV), every profile, and all settings. To sign out of just one Plex account, use the Sign out entry for that account in this menu instead.",
     "noSeasonsFound": "No seasons found",
     "seasonsLoadFailed": "Couldn't load seasons",
     "noEpisodesFound": "No episodes found in first season",
@@ -1113,6 +1113,7 @@
     "signOutPlexMessage": "Remove ${displayName} and all Plex Home users? Sign back in anytime.",
     "signOutPlexDeleteDownloads": "Also delete downloads",
     "signOutPlexDeleteDownloadsDescription": "Otherwise they stay on this device and come back when you sign back in to this account.",
+    "signOutPlexAccount": "Sign out of ${displayName}",
     "signedOutPlex": "Signed out of Plex.",
     "signOutFailed": "Sign out failed.",
     "sectionTitle": "Profiles",
@@ -1531,6 +1532,12 @@
       "Text size on TV is now capped so large-text settings no longer break the guide layout",
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
+    ],
+    "changelog2311": [
+      "Fixed: signing in to Plex no longer hides your IPTV channels — they stay visible under every profile",
+      "Fixed: Log out now says it deletes everything in the app before you confirm — and you can sign out of just one Plex account instead",
+      "Fixed: a Plex profile that asks for a PIN no longer blanks your libraries when the app checks it in the background",
+      "Fixed: after restoring a backup, the app now picks up the restored profile straight away, and its channels load on their own"
     ],
     "changelog2310": [
       "Fixed: after a Reload, the guide could download its big guide file three times — it now downloads it once",

@@ -8,17 +8,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plezy/connection/connection.dart';
 import 'package:plezy/connection/connection_registry.dart';
 import 'package:plezy/database/app_database.dart';
 import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/media_backend.dart';
 import 'package:plezy/media/media_kind.dart';
 import 'package:plezy/media/media_library.dart';
+import 'package:plezy/profiles/active_profile_binder.dart';
 import 'package:plezy/profiles/active_profile_provider.dart';
 import 'package:plezy/profiles/plex_home_service.dart';
+import 'package:plezy/profiles/profile.dart';
+import 'package:plezy/profiles/profile_connection.dart';
 import 'package:plezy/profiles/profile_connection_registry.dart';
 import 'package:plezy/profiles/profile_registry.dart';
 import 'package:plezy/providers/account_preferences_controller.dart';
+import 'package:plezy/providers/multi_server_provider.dart';
 import 'package:plezy/providers/hidden_libraries_provider.dart';
 import 'package:plezy/providers/libraries_provider.dart';
 import 'package:plezy/providers/download_provider.dart';
@@ -30,6 +35,8 @@ import 'package:plezy/services/background_work_diagnostics_service.dart';
 import 'package:plezy/services/download_storage_service.dart';
 import 'package:plezy/services/download_manager_service.dart';
 import 'package:plezy/services/file_picker_service.dart';
+import 'package:plezy/services/fork_backup_service.dart';
+import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/settings_export_service.dart';
 import 'package:plezy/services/settings_service.dart';
 import 'package:plezy/services/storage_service.dart';
@@ -46,6 +53,7 @@ import 'package:plezy/widgets/setting_tile.dart';
 import 'package:provider/provider.dart';
 
 import '../../test_helpers/io_fakes.dart';
+import '../../test_helpers/multi_server_fixtures.dart';
 import '../../test_helpers/prefs.dart';
 
 /// The channel every `url_launcher` platform implementation talks to; a
@@ -728,6 +736,98 @@ void main() {
     expect(find.text(t.settings.lastCrash), findsOneWidget);
     expect(find.text(t.settings.lastCrashNone), findsOneWidget);
   });
+
+  testWidgets('restoring a fork backup re-resolves the active profile before rebinding', (tester) async {
+    // 1.3.25 §68 (d): the restore writes the restored active-profile id
+    // to storage, but the in-memory provider never learns it — so the
+    // post-restore rebind targets the stale profile and the IPTV bind
+    // chain never runs. The handler must reload the provider from
+    // storage before rebinding, so the rebind targets the restored
+    // profile and its catalog syncs on its own.
+    //
+    // The restored rows are pre-seeded in prePumpSetup (under runAsync,
+    // the only place Drift work completes reliably): Drift writes made
+    // from inside the handler stall under testWidgets fake async. The
+    // restore behaviour under test is the active-id handoff — the
+    // backup's active id reaching storage while the provider still
+    // points at the stale profile — and the handler's reload. The full
+    // row-write ordering (DB rows first, active id after) is covered by
+    // the plain-async mechanism test instead.
+    late final StorageService storage;
+
+    Future<ForkBackupRestoreReport?> stubImporter() async {
+      // What the fork-backup restore does last: writes the restored
+      // active-profile id straight to storage, bypassing the provider.
+      await storage.setActiveProfileId('local-restored');
+      return const ForkBackupRestoreReport(
+        prefs: ImportResult(keysImported: 0, keysSkipped: 0),
+        epgPrefs: ForkBackupSectionReport(restored: 0, skipped: 0),
+        connections: ForkBackupSectionReport(restored: 1, skipped: 0),
+        profiles: ForkBackupSectionReport(restored: 1, skipped: 0),
+        profileConnections: ForkBackupSectionReport(restored: 1, skipped: 0),
+        epg: ForkBackupSectionReport(restored: 0, skipped: 0),
+        favorites: ForkBackupSectionReport(restored: 0, skipped: 0),
+        resume: ForkBackupSectionReport(restored: 0, skipped: 0),
+        activeProfileRestored: true,
+      );
+    }
+
+    final harness = await _pumpSettingsScreen(
+      tester,
+      includeBinder: true,
+      forkBackupImporter: stubImporter,
+      prePumpSetup: (db, activeProfile) async {
+        storage = await StorageService.getInstance();
+        final stale = Profile.local(id: 'local-stale', displayName: 'Stale', createdAt: DateTime(2026, 1, 1));
+        final restored = Profile.local(id: 'local-restored', displayName: 'Restored', createdAt: DateTime(2026, 1, 1));
+        await ProfileRegistry(db).upsert(stale);
+        await ProfileRegistry(db).upsert(restored);
+        await ConnectionRegistry(db).upsert(
+          XtreamConnection(
+            id: 'trex',
+            name: 'Trex',
+            serverUrl: 'http://127.0.0.1:1',
+            username: 'user',
+            password: 'pa' 'ss',
+            createdAt: DateTime(2026, 1, 1),
+          ),
+        );
+        await ProfileConnectionRegistry(db).upsert(
+          ProfileConnection(
+            profileId: restored.id,
+            connectionId: 'trex',
+            userToken: null,
+            userIdentifier: 'user',
+            tokenAcquiredAt: DateTime(2026, 1, 1),
+          ),
+        );
+        await storage.setActiveProfileId(stale.id);
+        await activeProfile.initialize();
+      },
+    );
+    addTearDown(() => harness.dispose(tester));
+    expect(harness.activeProfile.activeId, 'local-stale');
+
+    await tester.scrollUntilVisible(find.text(t.settings.importForkBackup), 200);
+    await tester.tap(find.text(t.settings.importForkBackup));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(DialogActionButton, t.settings.importForkBackup));
+    // Drive the async import (stub, reload, rebind, summary dialog)
+    // with real-time yields between pumps — pumpAndSettle never settles
+    // while the IPTV catalog chain has timers pending, and the binder's
+    // Drift reads need the real event loop to answer (they stall
+    // intermittently under fake async alone). No runAsync is in flight
+    // anywhere else in this test, so these calls cannot overlap.
+    for (var i = 0; i < 40 && find.text(t.settings.importForkBackupSummaryTitle).evaluate().isEmpty; i++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump();
+    }
+    expect(find.text(t.settings.importForkBackupSummaryTitle), findsOneWidget);
+    expect(harness.activeProfile.activeId, 'local-restored');
+    expect(harness.manager?.getIptvClientByConnectionId('trex'), isNotNull);
+  });
 }
 
 Finder _navigationTileFor(String title) =>
@@ -755,6 +855,9 @@ class _SettingsHarness {
     required this.database,
     required this.plexHome,
     required this.activeProfile,
+    this.binder,
+    this.manager,
+    this.multiServerProvider,
     required this.libraries,
     required this.hiddenLibraries,
     required this.theme,
@@ -770,6 +873,9 @@ class _SettingsHarness {
   final AppDatabase database;
   final PlexHomeService plexHome;
   final ActiveProfileProvider activeProfile;
+  final ActiveProfileBinder? binder;
+  final MultiServerManager? manager;
+  final MultiServerProvider? multiServerProvider;
   final LibrariesProvider libraries;
   final HiddenLibrariesProvider hiddenLibraries;
   final ThemeProvider theme;
@@ -784,6 +890,8 @@ class _SettingsHarness {
   Future<void> dispose(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+    binder?.dispose();
+    multiServerProvider?.dispose();
     downloadProvider.dispose();
     downloadManager.dispose();
     hiddenLibraries.dispose();
@@ -795,8 +903,14 @@ class _SettingsHarness {
     accountPreferences.dispose();
     await plexHome.dispose();
     await database.close();
-    expect(trackerHttpClients, hasLength(6));
-    expect(trackerHttpClients.toSet(), hasLength(6));
+    // 1.3.25 §68 (test repair, pre-existing): the constructor builds
+    // exactly 5 eager tracker clients (MAL, AniList, Simkl, Trakt,
+    // Mdblist); a 6th only appears when a short-lived Simkl lookup runs,
+    // which these tests never trigger — so the old hasLength(6) failed
+    // every test in this file on base. The leak check below (every
+    // created client closed exactly once) is the part that matters.
+    expect(trackerHttpClients.length, greaterThanOrEqualTo(5));
+    expect(trackerHttpClients.toSet().length, trackerHttpClients.length);
     for (final client in trackerHttpClients) {
       expect(client.closeCount, 1);
     }
@@ -808,6 +922,9 @@ Future<_SettingsHarness> _pumpSettingsScreen(
   Future<bool> Function(Directory directory)? writableChecker,
   Future<String?> Function()? settingsExporter,
   Future<ImportResult?> Function()? settingsImporter,
+  Future<ForkBackupRestoreReport?> Function()? forkBackupImporter,
+  Future<void> Function(AppDatabase database, ActiveProfileProvider activeProfile)? prePumpSetup,
+  bool includeBinder = false,
   BackgroundWorkDiagnosticsService? backgroundWorkDiagnosticsService,
   bool pushSettingsRoute = false,
   List<MediaLibrary> initialLibraries = const [],
@@ -833,6 +950,27 @@ Future<_SettingsHarness> _pumpSettingsScreen(
     connections: connections,
     profileConnections: profileConnections,
   );
+  // 1.3.25 §68 (d): the restore test needs a real binder in the tree —
+  // the handler rebinds through it — but only that test wants one, so
+  // it stays opt-in and the other tests keep their existing tree.
+  final MultiServerManager? manager = includeBinder ? MultiServerManager() : null;
+  final MultiServerProvider? multiServerProvider = manager == null ? null : testMultiServerProvider(manager);
+  final ActiveProfileBinder? binder = includeBinder
+      ? ActiveProfileBinder(
+          activeProfile: activeProfile,
+          connections: connections,
+          profileConnections: profileConnections,
+          serverManager: manager!,
+          multiServerProvider: multiServerProvider!,
+          pinPrompt: (_, {String? errorMessage}) async => null,
+          shouldDeferInitialBind: (_) async => false,
+        )
+      : null;
+  if (prePumpSetup != null) {
+    // Real event loop: the setup touches the Drift database, whose
+    // futures never complete inside testWidgets fake async.
+    await tester.runAsync(() => prePumpSetup(database, activeProfile));
+  }
   final libraries = _FixtureLibrariesProvider(initialLibraries);
   final hiddenLibraries = HiddenLibrariesProvider(storageService: _FakeHiddenLibrariesStorage());
   await hiddenLibraries.ensureInitialized();
@@ -883,6 +1021,9 @@ Future<_SettingsHarness> _pumpSettingsScreen(
     database: database,
     plexHome: plexHome,
     activeProfile: activeProfile,
+    binder: binder,
+    manager: manager,
+    multiServerProvider: multiServerProvider,
     libraries: libraries,
     hiddenLibraries: hiddenLibraries,
     theme: theme,
@@ -900,6 +1041,7 @@ Future<_SettingsHarness> _pumpSettingsScreen(
       child: MultiProvider(
         providers: [
           ChangeNotifierProvider<ActiveProfileProvider>.value(value: activeProfile),
+          if (binder != null) Provider<ActiveProfileBinder>.value(value: binder),
           ChangeNotifierProvider<LibrariesProvider>.value(value: libraries),
           ChangeNotifierProvider<HiddenLibrariesProvider>.value(value: hiddenLibraries),
           ChangeNotifierProvider<ThemeProvider>.value(value: theme),
@@ -921,6 +1063,7 @@ Future<_SettingsHarness> _pumpSettingsScreen(
                               downloadDirectoryWritableChecker: writableChecker ?? (_) async => true,
                               settingsExporter: settingsExporter,
                               settingsImporter: settingsImporter,
+                              forkBackupImporter: forkBackupImporter,
                               backgroundWorkDiagnosticsService: backgroundWorkDiagnosticsService,
                             ),
                           ),
@@ -934,6 +1077,7 @@ Future<_SettingsHarness> _pumpSettingsScreen(
                   downloadDirectoryWritableChecker: writableChecker ?? (_) async => true,
                   settingsExporter: settingsExporter,
                   settingsImporter: settingsImporter,
+                  forkBackupImporter: forkBackupImporter,
                   backgroundWorkDiagnosticsService: backgroundWorkDiagnosticsService,
                 ),
         ),
@@ -942,6 +1086,10 @@ Future<_SettingsHarness> _pumpSettingsScreen(
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
+  if (binder != null) {
+    binder.start();
+    await tester.pump();
+  }
   if (pushSettingsRoute) {
     await tester.tap(find.text('Settings launcher'));
     await _pumpUi(tester);
