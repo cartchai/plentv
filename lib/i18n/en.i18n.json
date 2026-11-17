@@ -1532,6 +1532,13 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2310": [
+      "Fixed: after a Reload, the guide could download its big guide file three times — it now downloads it once",
+      "Fixed: rows left blank because you switched apps while they were loading now refill when you come back, without downloading again",
+      "Fixed: switching away and back no longer drops the guide you just loaded, on phones and tablets with plenty of memory",
+      "The guide now fills in a few more channels whose names carry a language tag instead of a country — the Reload total moves only a little",
+      "The Reload count still won't jump: the guide file only covers about 5,700 channels, so most rows fill in as you scroll to them"
+    ],
     "changelog2309": [
       "This build installs as a new app next to the old one — back up everything on the old app first, then restore it here",
       "Signing in to MyAnimeList and AniList now goes straight to each service, instead of through the app maker's server",

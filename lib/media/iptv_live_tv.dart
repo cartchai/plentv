@@ -406,6 +406,21 @@ const _epgLanguageOnlyCodes = <String>{
   'aa', 'ab', 'ak', 'an', 'av', 'ay', 'ce', 'cs', 'da', 'dv', 'el', 'en', 'eo', 'fa', 'ff', 'fy', 'gv', 'ha', 'he', 'hi', 'ho', 'hy', 'hz', 'ia', 'ig', 'ii', 'ik', 'iu', 'ja', 'jv', 'ka', 'kj', 'kk', 'kl', 'ko', 'ks', 'ku', 'kv', 'lg', 'ln', 'lo', 'mi', 'nb', 'nd', 'nn', 'nv', 'ny', 'oc', 'oj', 'or', 'os', 'pi', 'qu', 'rm', 'rn', 'sq', 'su', 'sw', 'ta', 'te', 'ti', 'ts', 'ty', 'ur', 'vo', 'wa', 'wo', 'xh', 'yi', 'yo', 'zh', 'zu',
 };
 
+/// Country codes the provider uses as LANGUAGE tags, not countries
+/// (1.3.24 §67 F7): "AR|" is Arabic, not Argentina — 'ar' IS a valid
+/// ISO 3166-1 country code, so it is deliberately NOT in
+/// [_epgLanguageOnlyCodes] and [epgChannelCountry] still returns 'ar'
+/// for it. The tier-5 country gate relaxes for these codes only: the
+/// feed carries no in-country copy for a language-tagged channel, so
+/// gating would block it forever. Only 'ar' is observed — add another
+/// code only when a phone log proves the provider uses it as a
+/// language tag.
+const _epgProviderLanguageTags = <String>{'ar'};
+
+/// Whether [country] (lowercase, from [epgChannelCountry]) is a
+/// provider language tag rather than a real country (1.3.24 §67 F7).
+bool _epgIsProviderLanguageTag(String country) => _epgProviderLanguageTags.contains(country);
+
 /// One country, two spellings (jellyfin-tentacle `_SAME_COUNTRY`).
 const _epgSameCountry = <String, String>{'uk': 'gb', 'usa': 'us'};
 
@@ -1131,6 +1146,25 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// otherwise Clear would be undone by the guide's lazy fetch on its
   /// next row build.
   bool _epgCleared = false;
+
+  /// Feed downloads in flight (1.3.24 §67 F2): counted in
+  /// [_startXmltvDownload] so [clearEpgCache] can defer the persisted
+  /// delete instead of deleting under a feed promotion.
+  int _feedJobsInFlight = 0;
+
+  /// A persisted-EPG delete asked for while a feed job was in flight
+  /// (1.3.24 §67 F2): it waits for the jobs to settle instead of
+  /// racing the promotion.
+  bool _epgDeleteDeferred = false;
+
+  /// True when a feed job landed while [_epgDeleteDeferred] was set
+  /// (1.3.24 §67 F2): the landed feed IS the fresh state, so the
+  /// deferred delete is dropped instead of removing it.
+  bool _epgDeleteDeferredLanded = false;
+
+  /// A [refreshEpgCache] in flight (1.3.24 §67 F2): concurrent busts
+  /// join this future instead of running a second delete.
+  Future<void>? _refreshEpgCacheInFlight;
 
   /// Bumped by [clearEpgCache]; the guide watches it to reset per-channel
   /// loaded/failed state and re-fetch visible rows.
@@ -3112,14 +3146,24 @@ class IptvLiveTvSupport implements LiveTvSupport {
             return countries.isEmpty || countries.contains(country);
           }).toSet();
           if (local.isEmpty) {
-            // 1.2.22 §64.2 (F1): do NOT return here — the return
-            // skipped the loose tier entirely, so a UK channel whose
-            // only same-key twin was foreign never reached the loose
-            // match that would have found its UK copy. Record the
-            // foreign ids and fall through; tier 6 excludes them, and
-            // if nothing else matches the end reports 'foreign'.
-            foreignNameCandidates.addAll(nameCandidates);
-            nameCandidates = <String>{};
+            if (_epgIsProviderLanguageTag(country)) {
+              // 1.3.24 §67 F7: the provider uses AR| as an Arabic-
+              // language tag, not Argentina, and the feed carries no
+              // in-country copy — so the country gate would block
+              // this channel forever. Keep all same-key candidates
+              // and let the uniqueness gate below decide: exactly one
+              // serving copy still matches by name, several stay
+              // ambiguous — never a guess. Do NOT record foreign.
+            } else {
+              // 1.2.22 §64.2 (F1): do NOT return here — the return
+              // skipped the loose tier entirely, so a UK channel whose
+              // only same-key twin was foreign never reached the loose
+              // match that would have found its UK copy. Record the
+              // foreign ids and fall through; tier 6 excludes them, and
+              // if nothing else matches the end reports 'foreign'.
+              foreignNameCandidates.addAll(nameCandidates);
+              nameCandidates = <String>{};
+            }
           } else {
             nameCandidates = local;
           }
@@ -3411,6 +3455,13 @@ class IptvLiveTvSupport implements LiveTvSupport {
     _CachedXmltvGuide guide,
     DateTime started,
   ) async {
+    // 1.3.24 §67 F1: a fresh feed load certifies the "last updated"
+    // stamp — the Reload previously left it erased (clearEpgCache),
+    // so the guide tab's quiet-hour check re-downloaded the feed on
+    // first open. Every call site gates on `loadedFresh`, so this
+    // stamps data, never a stale serve.
+    _lastEpgUpdatedAt = DateTime.now();
+    _noteEpgUpdated(_lastEpgUpdatedAt!);
     final size = await _xmltvFeedFileSize(attempt.cacheKey);
     final statuses = await _epgStore.loadStatuses();
     final status = statuses[attempt.config.id] ?? IptvEpgSourceStatus.empty;
@@ -3713,6 +3764,12 @@ class IptvLiveTvSupport implements LiveTvSupport {
   }) {
     final abort = AbortController();
     _activeEpgAborts.add(abort);
+    // 1.3.24 §67 F2: count the job so clearEpgCache can defer the
+    // persisted delete instead of racing the promotion. On settle,
+    // drain a deferred delete — only once the LAST job is done, and
+    // only if no job landed while it was deferred (a landed feed IS
+    // the fresh state; deleting now would remove it).
+    _feedJobsInFlight++;
     final future = _loadXmltvGuide(
       cacheKey,
       ({bool useValidators = true}) => fetchFeed(abort.trigger, useValidators: useValidators),
@@ -3722,9 +3779,31 @@ class IptvLiveTvSupport implements LiveTvSupport {
       abortTrigger: abort.trigger,
     );
     unawaited(
-      future.then<void>((_) {}).catchError((_) {}).whenComplete(() => _activeEpgAborts.remove(abort)),
+      future
+          .then<void>((_) {
+            if (_epgDeleteDeferred) _epgDeleteDeferredLanded = true;
+          })
+          .catchError((_) {})
+          .whenComplete(() {
+            _activeEpgAborts.remove(abort);
+            _feedJobsInFlight--;
+            if (_feedJobsInFlight == 0) _drainDeferredEpgDelete();
+          }),
     );
     return future;
+  }
+
+  /// Run a persisted-EPG clear deferred while a feed job was in flight
+  /// (1.3.24 §67 F2). A landed feed is the fresh state, so the delete
+  /// is dropped; a failed or cancelled job leaves nothing fresh
+  /// behind, so the delete runs — the old clear semantics.
+  void _drainDeferredEpgDelete() {
+    if (!_epgDeleteDeferred) return;
+    final landed = _epgDeleteDeferredLanded;
+    _epgDeleteDeferred = false;
+    _epgDeleteDeferredLanded = false;
+    if (landed) return;
+    unawaited(_deletePersistedEpg());
   }
 
   Future<_CachedXmltvGuide> _xmltvGuideForKey(
@@ -4514,7 +4593,9 @@ class IptvLiveTvSupport implements LiveTvSupport {
         final name = entity.path.split(Platform.pathSeparator).last;
         if (!name.startsWith(prefix) || !name.endsWith('.tmp')) continue;
         try {
-          if (entity.lastModifiedSync().isBefore(cutoff)) entity.deleteSync();
+          if (entity.lastModifiedSync().isBefore(cutoff)) {
+            entity.deleteSync();
+          }
         } catch (_) {
           // One stale tmp that cannot be deleted is harmless.
         }
@@ -6023,7 +6104,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
       'feeds: $feedSummary; '
       'feed downloads: ${feedDownloads.map((d) => '${d.sourceName}: ${d.bytesDownloaded} bytes, SHA ${d.sha256 ?? '—'}, ${d.notModified ? '304' : '200'}, UA ${d.userAgent ?? 'none'}').join('; ')}; '
       'window slide: ${windowSlide.slid ? 'ready for ${windowSlide.channelCount} rows' : 'skipped (${windowSlide.reason ?? 'silent'})'}; '
-      'guide rows showing programmes: ${guideCoverageSample.withPrograms} of ${guideCoverageSample.sampled} sampled '
+      'guide rows showing programmes BEFORE THIS RELOAD: ${guideCoverageSample.withPrograms} of ${guideCoverageSample.sampled} sampled '
       '(quick guide ${guideCoverageSample.fromShortEpg}, big guide by id ${guideCoverageSample.fromFeedById}, by name ${guideCoverageSample.fromFeedByName}, mixed ${guideCoverageSample.fromMixed}, no data ${guideCoverageSample.none}, never fetched ${guideCoverageSample.notFetched}, scope ${guideCoverageSample.scope.name}); '
       'feed sample: ${feedSamples.map((e) => e.xmltvId).join(', ')}; '
       'unmatched sample: ${sampleUnmatched.map((e) => e.channelName).join(', ')}',
@@ -6185,18 +6266,39 @@ class IptvLiveTvSupport implements LiveTvSupport {
   Future<bool> maybeRefreshForQuietHour() async {
     final settings = await SettingsService.getInstance();
     final updateTime = settings.read(SettingsService.iptvEpgUpdateTimeMinutes);
-    if (updateTime < 0) return false;
+    if (updateTime < 0) {
+      EpgCadenceLog.recordQuietHourDecision(refreshed: false, reason: 'update-time-off');
+      return false;
+    }
     final intervalHours = settings.read(SettingsService.iptvEpgUpdateIntervalHours);
-    if (intervalHours <= 0) return false; // Manual only: never auto-refresh.
+    if (intervalHours <= 0) {
+      EpgCadenceLog.recordQuietHourDecision(refreshed: false, reason: 'manual-only');
+      return false; // Manual only: never auto-refresh.
+    }
     final now = DateTime.now();
     var boundary = DateTime(now.year, now.month, now.day, updateTime ~/ 60, updateTime % 60);
     if (now.isBefore(boundary)) boundary = boundary.subtract(const Duration(days: 1));
-    if (_quietHourRefreshedFor == boundary) return false;
+    if (_quietHourRefreshedFor == boundary) {
+      EpgCadenceLog.recordQuietHourDecision(refreshed: false, reason: 'already-refreshed');
+      return false;
+    }
     // Last data landed: this support's in-memory stamp, else the stored
     // pref (a relaunch clears the memory but not the pref).
     final stored = settings.read(SettingsService.iptvEpgLastUpdated);
     final lastData = _lastEpgUpdatedAt ?? DateTime.tryParse(stored);
-    if (lastData != null && !lastData.isBefore(boundary)) return false;
+    // 1.3.24 §67 F1: a fresh in-memory guide is proof data landed,
+    // whatever the stamp says — a Reload that just parsed the feed
+    // must not be re-downloaded by this check.
+    final freshGuide = _xmltvCache.values.any((guide) => !guide.fetchedAt.isBefore(boundary));
+    if (freshGuide) {
+      EpgCadenceLog.recordQuietHourDecision(refreshed: false, reason: 'fresh-guide-in-memory', lastData: lastData);
+      return false;
+    }
+    if (lastData != null && !lastData.isBefore(boundary)) {
+      EpgCadenceLog.recordQuietHourDecision(refreshed: false, reason: 'stamp-fresh', lastData: lastData);
+      return false;
+    }
+    EpgCadenceLog.recordQuietHourDecision(refreshed: true, reason: 'stale-or-unknown', lastData: lastData);
     _quietHourRefreshedFor = boundary;
     await refreshEpgCache();
     return true;
@@ -6251,7 +6353,20 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // Best-effort and fire-and-forget: the in-memory caches are already
     // empty and the guide is cleared, so don't gate the settings action
     // (or the guide) on the disk delete — it completes in the background.
-    unawaited(_deletePersistedEpg());
+    // 1.3.24 §67 F2: the persisted delete never runs under a feed
+    // promotion. When no feed job is in flight it is awaited, so a
+    // Reload's bust finishes before its feed download starts; while a
+    // job is in flight the delete is deferred until the job settles
+    // (and dropped if the feed lands — the promotion IS the fresh
+    // state). All callers already await this method, so the await
+    // blocks no UI thread.
+    if (_feedJobsInFlight > 0) {
+      _epgDeleteDeferred = true;
+      _epgDeleteDeferredLanded = false;
+      EpgCadenceLog.recordEpgClearDeferred(reason: 'feed-job-in-flight');
+    } else {
+      await _deletePersistedEpg();
+    }
     _bumpEpgVersion();
     _epgCleared = true;
     _lastEpgUpdatedAt = null;
@@ -6262,7 +6377,25 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// Bust the EPG cache AND force a fresh fetch on the guide's next build
   /// ("Update now"). Unlike [clearEpgCache], the guide refetches instead
   /// of staying empty.
-  Future<void> refreshEpgCache() async {
+  ///
+  /// 1.3.24 §67 F2: concurrent busts coalesce — a second bust while
+  /// the first is still running joins the same future instead of
+  /// deleting under the fresh feed. Returns the in-flight future
+  /// itself, so concurrent callers can assert identity.
+  Future<void> refreshEpgCache() {
+    final inFlight = _refreshEpgCacheInFlight;
+    if (inFlight != null) return inFlight;
+    final future = _refreshEpgCacheLocked();
+    _refreshEpgCacheInFlight = future;
+    unawaited(
+      future.then<void>((_) {}).catchError((_) {}).whenComplete(() {
+        if (identical(_refreshEpgCacheInFlight, future)) _refreshEpgCacheInFlight = null;
+      }),
+    );
+    return future;
+  }
+
+  Future<void> _refreshEpgCacheLocked() async {
     await clearEpgCache();
     _epgCleared = false;
   }

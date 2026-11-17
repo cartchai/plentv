@@ -1663,6 +1663,27 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       }
       _lastRssEviction = now;
       _lastEvictionRss = rss;
+      // 1.3.24 §67 F4: a UI-hidden trim is not pressure — on a
+      // full-tier device with comfortable RSS, drop the catalogs but
+      // keep the guide (images still evicted below). Genuinely
+      // critical trims and hot RSS take the full path underneath.
+      if (keepEpgOnTrim(
+        level: level,
+        isFullTier: !DevicePerformance.isLowEndHardware,
+        rssBytes: rss,
+        rssHotThresholdBytes: DevicePerformance.watchdogThresholdBytes,
+      )) {
+        _serverManager.dropIptvCachesFromMemoryKeepEpg();
+        final rssAfter = ProcessInfo.currentRss;
+        final iptvStats = _serverManager.iptvMemoryStats();
+        appLogger.w(
+          'Native trim level $level, dropped IPTV catalogs from memory, kept EPG '
+          '(rss ${rss >> 20}MB, rssAfter ${rssAfter >> 20}MB, '
+          '${iptvStats.entries.map((e) => '${e.key}=${e.value}').join(' ')})',
+        );
+        _evictImageCaches();
+        return;
+      }
       _serverManager.dropIptvCachesFromMemory();
       final rssAfter = ProcessInfo.currentRss;
       final iptvStats = _serverManager.iptvMemoryStats();

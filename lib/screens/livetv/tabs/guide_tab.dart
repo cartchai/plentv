@@ -27,6 +27,7 @@ import '../../../providers/multi_server_provider.dart';
 import '../../../media/iptv_live_tv.dart';
 import '../../../services/iptv/iptv_playback_activity.dart';
 import '../../../services/iptv/iptv_epg_sources.dart';
+import '../../../services/lowend/epg_cadence_log.dart';
 import '../../../media/media_server_client.dart';
 import '../../../theme/mono_tokens.dart';
 import '../../../utils/app_logger.dart';
@@ -653,6 +654,21 @@ class GuideTabState extends State<GuideTab>
   @override
   void onRefreshResumed(LiveTvRefreshResumeReason reason) {
     unawaited(_refreshScheduledRecordingKeys());
+    // 1.3.24 §67 F3+F5, app-resume only: backgrounding cancels the
+    // in-flight EPG fetches and nothing re-asked for them. Rebuild
+    // the visible rows post-frame so their builders re-run
+    // _ensureIptvEpg for rows neither loaded nor failed (a
+    // cancellation is still not a failure — build #28), and re-arm
+    // the sweep with a fresh budget so rows below the fold heal too.
+    // Tab switches and subtree shows don't cancel fetches, so they
+    // need neither.
+    if (reason == LiveTvRefreshResumeReason.appResumed) {
+      _epgSweepPassesDone = 0;
+      _scheduleEpgSweep();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    }
     // Post-frame: resume fires during tab transitions/build and the catch-up
     // may setState (reload or scroll).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1452,6 +1468,16 @@ class GuideTabState extends State<GuideTab>
     if (!mounted) return;
     if (_epgSweepPassesDone >= _epgSweepMaxPasses) return;
     if (IptvPlaybackActivity.instance.isPlaying) {
+      // 1.3.24 §67 F5: the blocked pass logs too — "ran and found
+      // nothing to do" must be distinguishable from "never ran".
+      EpgCadenceLog.recordSweepPass(
+        pass: _epgSweepPassesDone + 1,
+        started: 0,
+        skippedLoaded: 0,
+        skippedFailed: 0,
+        skippedInFlight: 0,
+        blockedByPlayback: true,
+      );
       // No pass spent: try again after another idle window. Playback
       // stopping bumps the guide version, which rebuilds the tab and
       // re-schedules the sweep anyway — the timer covers the case
@@ -1460,15 +1486,39 @@ class GuideTabState extends State<GuideTab>
       return;
     }
     var started = 0;
+    var skippedLoaded = 0;
+    var skippedFailed = 0;
+    var skippedInFlight = 0;
     for (final channel in widget.channels) {
       if (started >= _epgSweepChannelsPerPass) break;
       final scopeKey = liveTvChannelScopeKey(channel);
-      if (_iptvEpgLoaded.contains(scopeKey) || _iptvEpgInFlight.contains(scopeKey) || _iptvEpgFailed.contains(scopeKey)) continue;
+      if (_iptvEpgLoaded.contains(scopeKey)) {
+        skippedLoaded++;
+        continue;
+      }
+      if (_iptvEpgInFlight.contains(scopeKey)) {
+        skippedInFlight++;
+        continue;
+      }
+      if (_iptvEpgFailed.contains(scopeKey)) {
+        skippedFailed++;
+        continue;
+      }
       if (_iptvSupportFor(channel) == null) continue;
       _ensureIptvEpg(channel);
       started++;
     }
     _epgSweepPassesDone++;
+    // 1.3.24 §67 F5: every pass logs — a pass that finds nothing to
+    // do must be distinguishable in the log from a sweep that never ran.
+    EpgCadenceLog.recordSweepPass(
+      pass: _epgSweepPassesDone,
+      started: started,
+      skippedLoaded: skippedLoaded,
+      skippedFailed: skippedFailed,
+      skippedInFlight: skippedInFlight,
+      blockedByPlayback: false,
+    );
     if (_epgSweepPassesDone < _epgSweepMaxPasses && _hasUnfetchedEpgChannels()) {
       _scheduleEpgSweep();
     }

@@ -1803,6 +1803,17 @@ class MultiServerManager {
     }
   }
 
+  /// Drop the in-memory IPTV catalogs but KEEP the EPG guides
+  /// (1.3.24 §67 F4): the level-20 (UI-hidden) trim on a full-tier
+  /// device with comfortable RSS. The catalogs re-read from disk on
+  /// return; the guide stays in memory, so the next guide open does
+  /// not re-download the feed. Images are still evicted by the caller.
+  void dropIptvCachesFromMemoryKeepEpg() {
+    for (final client in _iptvByConnectionId.values) {
+      client.dropCatalogFromMemory();
+    }
+  }
+
   /// Aggregate IPTV memory stats across connections (1.2.18 S-4c),
   /// for the pressure breadcrumb + RSS watchdog telemetry: which
   /// memos are resident + the guide's retained programmes and

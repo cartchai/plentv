@@ -26,6 +26,29 @@ const trimMemoryRunningModerate = 5;
 /// (image caches + IPTV catalogs/EPG).
 const trimMemoryRunningLow = 10;
 
+/// The `ComponentCallbacks2` trim level at which the UI is hidden —
+/// the app was backgrounded (1.3.24 §67 F4).
+const trimMemoryUiHidden = 20;
+
+/// Whether a UI-hidden trim keeps the EPG guide (1.3.24 §67 F4).
+/// Pure decision helper — the wiring in main.dart stays review-only.
+/// Level 20 (UI hidden) is NOT memory pressure: it fires on every
+/// app-switch, and dropping the guide there means the next guide open
+/// re-downloads the feed. Keep the guide only when the device is
+/// full-tier (not low-end) and RSS is comfortable (below the watchdog
+/// threshold) — genuinely critical trims and hot RSS still drop it.
+bool keepEpgOnTrim({
+  required int level,
+  required bool isFullTier,
+  required int rssBytes,
+  required int rssHotThresholdBytes,
+}) {
+  if (level != trimMemoryUiHidden) return false;
+  if (!isFullTier) return false;
+  if (rssBytes >= rssHotThresholdBytes) return false;
+  return true;
+}
+
 NativeTrimEviction evictionForTrimLevel(int level) {
   if (level >= trimMemoryRunningLow) return NativeTrimEviction.full;
   if (level == trimMemoryRunningModerate) return NativeTrimEviction.imagesOnly;

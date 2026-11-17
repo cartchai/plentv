@@ -38,6 +38,7 @@ import '../services/base_shared_preferences_service.dart';
 import '../services/device_performance.dart';
 import '../services/iptv/iptv_catalog_cache.dart';
 import '../services/iptv/iptv_epg_sources.dart';
+import '../services/lowend/epg_cadence_log.dart';
 import '../services/iptv/panel_reachability_store.dart';
 import '../services/iptv/iptv_playback_activity.dart';
 import '../services/iptv/iptv_heavy_work_gate.dart';
@@ -91,6 +92,17 @@ class IptvCategory {
 /// so WorkManager can retry.
 class _BackgroundPlaybackActive implements Exception {
   const _BackgroundPlaybackActive();
+}
+
+/// Order-insensitive playlist fingerprint (1.3.24 §67 F6): the
+/// fingerprint names the SET of rows, not their order, so the same
+/// playlist hashed from the network path (Reload), the index path and
+/// the memo path agrees. The per-row hashes are sorted before
+/// [Object.hashAll] — the network order and the index order are
+/// unrelated, and a re-ordered playlist is not a changed playlist.
+int iptvPlaylistFingerprint(Iterable<int> rowHashes) {
+  final sorted = rowHashes.toList(growable: false)..sort();
+  return Object.hashAll(sorted);
 }
 
 class IptvClient implements MediaServerClient {
@@ -6511,7 +6523,7 @@ class IptvClient implements MediaServerClient {
             _lastGuideIndexLastSync = lastSync;
             _lastGuideIndexRowCount = rowCount;
             await _maybeRefreshEpgForPlaylistChange(
-              Object.hashAll(rows.map((r) => Object.hash(r.streamId, r.name, r.epgChannelId))),
+              iptvPlaylistFingerprint(rows.map((r) => Object.hash(r.streamId, r.name, r.epgChannelId))),
             );
           }
           // 1.2.18 C-1: cache the list + key→index map for the next
@@ -6538,7 +6550,7 @@ class IptvClient implements MediaServerClient {
       }
       if (wasFresh) {
         await _maybeRefreshEpgForPlaylistChange(
-          Object.hashAll(streams.map((s) => Object.hash(s.streamId, s.name, s.epgChannelId))),
+          iptvPlaylistFingerprint(streams.map((s) => Object.hash(s.streamId, s.name, s.epgChannelId))),
         );
       }
       return channels;
@@ -6556,7 +6568,7 @@ class IptvClient implements MediaServerClient {
     }
     if (wasFresh) {
       await _maybeRefreshEpgForPlaylistChange(
-        Object.hashAll(entries.map((e) => Object.hash(e.tvgId, e.url, e.name))),
+        iptvPlaylistFingerprint(entries.map((e) => Object.hash(e.tvgId, e.url, e.name))),
       );
     }
     return channels;
@@ -6597,7 +6609,29 @@ class IptvClient implements MediaServerClient {
         stored != fingerprint &&
         settings != null &&
         settings.read(SettingsService.iptvEpgUpdateOnPlaylistChange)) {
+      // 1.3.24 §67 F8: the decision is logged so the next phone log
+      // can say whether the playlist check fired — and with which
+      // fingerprints — instead of leaving it to be inferred.
+      EpgCadenceLog.recordFingerprintDecision(
+        refreshed: true,
+        reason: 'playlist-changed',
+        stored: stored,
+        fresh: fingerprint,
+      );
       await _liveTv.refreshEpgCache();
+    } else {
+      EpgCadenceLog.recordFingerprintDecision(
+        refreshed: false,
+        reason: stored == null
+            ? 'first-load'
+            : stored == fingerprint
+                ? 'unchanged'
+                : settings == null
+                    ? 'settings-unavailable'
+                    : 'update-on-playlist-change-off',
+        stored: stored,
+        fresh: fingerprint,
+      );
     }
     await store.saveChannelFingerprint(fingerprint);
   }
@@ -6723,7 +6757,12 @@ class IptvClient implements MediaServerClient {
       await IptvEpgSourcesStore(
         connection.id,
       ).saveChannelFingerprint(
-        Object.hashAll(rows.map((r) => Object.hash(r.streamId, r.name, r.epgChannelId))),
+        // 1.3.24 §67 F6: the saved fingerprint is over the VISIBLE
+        // rows — the set the index and memo paths actually hash
+        // (_liveStreams() returns visible-only; the index seed prunes
+        // hidden rows). Saving the all-rows hash made every Reload
+        // look like a playlist change whenever a category was hidden.
+        iptvPlaylistFingerprint(visible.map((r) => Object.hash(r.streamId, r.name, r.epgChannelId))),
       );
     } else {
       _m3uEntriesFuture = null;

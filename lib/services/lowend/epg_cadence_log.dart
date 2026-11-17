@@ -70,6 +70,69 @@ class EpgCadenceLog {
     return line;
   }
 
+  /// Record one quiet-hour decision (1.3.24 F1/F8): whether the guide
+  /// tab's quiet-hour check refreshed the feed, and why not when it
+  /// skipped. The reason is the durable evidence — a phone log that
+  /// only shows a download cannot say whether the check fired.
+  static String recordQuietHourDecision({required bool refreshed, required String reason, DateTime? lastData}) {
+    final line =
+        'EPG-CADENCE quiet-hour refreshed=$refreshed reason=$reason lastData=${lastData?.toIso8601String() ?? 'none'}';
+    try {
+      appLogger.i(line);
+    } catch (_) {
+      // Telemetry must never break the check it records.
+    }
+    return line;
+  }
+
+  /// Record one playlist-fingerprint decision (1.3.24 F6/F8): whether
+  /// the playlist-change check refreshed the feed, with the stored
+  /// and fresh fingerprints so a bust can be told from a match.
+  static String recordFingerprintDecision({required bool refreshed, required String reason, int? stored, required int fresh}) {
+    final line =
+        'EPG-CADENCE fingerprint refreshed=$refreshed reason=$reason stored=${stored?.toString() ?? 'none'} fresh=$fresh';
+    try {
+      appLogger.i(line);
+    } catch (_) {
+      // Telemetry must never break the check it records.
+    }
+    return line;
+  }
+
+  /// Record one L3 sweep pass (1.3.24 F5/F8). Every pass logs — a
+  /// pass that finds nothing to do must be distinguishable in the
+  /// log from a sweep that never ran.
+  static String recordSweepPass({
+    required int pass,
+    required int started,
+    required int skippedLoaded,
+    required int skippedFailed,
+    required int skippedInFlight,
+    required bool blockedByPlayback,
+  }) {
+    final line =
+        'EPG-CADENCE sweep pass=$pass started=$started skippedLoaded=$skippedLoaded skippedFailed=$skippedFailed skippedInFlight=$skippedInFlight blockedByPlayback=$blockedByPlayback';
+    try {
+      appLogger.i(line);
+    } catch (_) {
+      // Telemetry must never break the sweep it records.
+    }
+    return line;
+  }
+
+  /// Record a deferred persisted-EPG clear (1.3.24 F2/F8): the clear
+  /// was asked for while a feed download was in flight, so it waits
+  /// for the job to settle instead of deleting under the promotion.
+  static String recordEpgClearDeferred({required String reason}) {
+    final line = 'EPG-CADENCE epg-clear deferred reason=$reason';
+    try {
+      appLogger.i(line);
+    } catch (_) {
+      // Telemetry must never break the clear it records.
+    }
+    return line;
+  }
+
   /// Dump summary line for the session's cadence counts.
   static String summary() {
     if (_feedDownloadCount == 0 && _windowSlideCount == 0) {

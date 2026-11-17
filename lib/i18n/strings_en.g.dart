@@ -3866,6 +3866,13 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2310 => [
+		'Fixed: after a Reload, the guide could download its big guide file three times — it now downloads it once',
+		'Fixed: rows left blank because you switched apps while they were loading now refill when you come back, without downloading again',
+		'Fixed: switching away and back no longer drops the guide you just loaded, on phones and tablets with plenty of memory',
+		'The guide now fills in a few more channels whose names carry a language tag instead of a country — the Reload total moves only a little',
+		'The Reload count still won\'t jump: the guide file only covers about 5,700 channels, so most rows fill in as you scroll to them',
+	];
 	List<String> get changelog2309 => [
 		'This build installs as a new app next to the old one — back up everything on the old app first, then restore it here',
 		'Signing in to MyAnimeList and AniList now goes straight to each service, instead of through the app maker\'s server',
@@ -11356,6 +11363,11 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2310.0' => 'Fixed: after a Reload, the guide could download its big guide file three times — it now downloads it once',
+			'about.changelog2310.1' => 'Fixed: rows left blank because you switched apps while they were loading now refill when you come back, without downloading again',
+			'about.changelog2310.2' => 'Fixed: switching away and back no longer drops the guide you just loaded, on phones and tablets with plenty of memory',
+			'about.changelog2310.3' => 'The guide now fills in a few more channels whose names carry a language tag instead of a country — the Reload total moves only a little',
+			'about.changelog2310.4' => 'The Reload count still won\'t jump: the guide file only covers about 5,700 channels, so most rows fill in as you scroll to them',
 			'about.changelog2309.0' => 'This build installs as a new app next to the old one — back up everything on the old app first, then restore it here',
 			'about.changelog2309.1' => 'Signing in to MyAnimeList and AniList now goes straight to each service, instead of through the app maker\'s server',
 			'about.changelog2309.2' => 'The TV app and the Linux app now show the name PlezTV everywhere',
@@ -11498,13 +11510,13 @@ extension on Translations {
 			'about.changelog2253.6' => 'Movies browse loads again, and series titles no longer carry the category tag',
 			'about.changelog2253.7' => 'This version needs one fresh install (uninstall, then install) — after that, updates install over the top',
 			'about.changelog2252.0' => 'TV guide (EPG) now loads for IPTV channels',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2252.1' => 'EPG settings: how many days to load, how often it updates, past days to keep',
 			'about.changelog2252.2' => 'TV/Series library now loads — one bad row no longer kills the whole catalog',
 			'about.changelog2252.3' => 'Categories split into Live TV, Movies and TV/Series — each opens and closes on its own',
 			'about.changelog2252.4' => 'Channels with no guide data show tappable one-hour blocks saying No information available, with catch-up where the channel supports it',
 			'about.changelog2252.5' => 'Check for updates above About — downloads new releases from GitHub and installs over the top',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2252.6' => 'Subtle loading line under the guide while the EPG loads',
 			'about.changelog2251.0' => 'PlezTV name throughout the app',
 			'about.changelog2251.1' => 'Blue app icon',
@@ -12012,13 +12024,13 @@ extension on Translations {
 			'watchTogether.relayCustom' => ({required Object url}) => 'Rooms use your relay at ${url}.',
 			'watchTogether.recentRooms' => 'Recent Rooms',
 			'watchTogether.roomActions' => 'Room actions',
+			_ => null,
+		} ?? switch (path) {
 			'watchTogether.renameRoom' => 'Rename Room',
 			'watchTogether.removeRoom' => 'Remove',
 			'watchTogether.enterRoomCode' => 'Enter the 6-character code from the host.',
 			'watchTogether.roomCode' => 'Room Code',
 			'watchTogether.paste' => 'Paste',
-			_ => null,
-		} ?? switch (path) {
 			'watchTogether.noCodeInClipboard' => 'The clipboard doesn\'t contain a room code',
 			'watchTogether.copyCode' => 'Copy Code',
 			'watchTogether.codeCopied' => 'Room code copied',
@@ -12526,13 +12538,13 @@ extension on Translations {
 			'metadataEdit.country' => 'Country',
 			'metadataEdit.collection' => 'Collection',
 			'metadataEdit.label' => 'Label',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.quickTag' => 'Quick Tag...',
 			'matchScreen.match' => 'Match...',
 			'matchScreen.fixMatch' => 'Fix Match...',
 			'matchScreen.unmatch' => 'Unmatch',
 			'matchScreen.unmatchConfirm' => 'Clear this match? Plex treats it as unmatched until rematched.',
-			_ => null,
-		} ?? switch (path) {
 			'matchScreen.unmatchSuccess' => 'Item unmatched',
 			'matchScreen.unmatchFailed' => 'Failed to unmatch item',
 			'matchScreen.matchApplied' => 'Match applied',
@@ -13040,13 +13052,13 @@ extension on Translations {
 			'iptvCategories.initialRowM3u' => ({required Object initial, required Object count}) => '${initial} — ${count} groups',
 			'iptvCategories.showAll' => 'Show all',
 			'iptvCategories.hideAll' => 'Hide all',
+			_ => null,
+		} ?? switch (path) {
 			'iptvCategories.loading' => 'Loading categories…',
 			'iptvCategories.loadFailed' => 'Could not load the categories. Check the connection and try again.',
 			'iptvCategories.sectionLoadFailed' => 'Could not load this section.',
 			'iptvCategories.empty' => 'No categories found for this connection.',
 			'iptvCategories.retry' => 'Retry',
-			_ => null,
-		} ?? switch (path) {
 			'iptvCategories.persistFailed' => 'Could not save that change. Try again.',
 			'iptvCategories.unhiddenNeedsRefresh' => 'Those categories were cleared to save space. Refresh the catalog to bring their shows back.',
 			'iptvCategories.unhiddenRefresh' => 'Refresh',
