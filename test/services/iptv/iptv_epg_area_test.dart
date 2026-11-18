@@ -229,14 +229,18 @@ void main() {
       expect(afterRefresh.map((p) => p.title), ['beIN 2 Show']);
 
       // Clear assignment restores auto-matching — the affiliate
-      // guess, for beIN.
+      // guess, for beIN — and 1.4.2 persists that fresh guess, so the
+      // next load sticks with it instead of re-guessing.
       await support.clearEpgAssignment('200');
       await support.refreshEpgCache();
       expect(
         (await support.fetchEpgForChannel('200', from: window.from, to: window.to)).map((p) => p.title),
         ['beIN Show'],
       );
-      expect(await support.epgAssignmentFor('200'), isNull);
+      final reGuessed = await support.epgAssignmentFor('200');
+      expect(reGuessed, isNotNull, reason: '1.4.2: the fresh guess after a clear is persisted');
+      expect(reGuessed!.xmltvId, 'beIN 1');
+      expect(reGuessed.toJson()['origin'], 'guessed-affiliate');
     });
 
     test('EPG details name the affiliate guess, then the manual assignment', () async {
