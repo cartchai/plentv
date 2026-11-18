@@ -329,10 +329,11 @@ class _JsonArrayScanner {
       if (decoded is Map<String, dynamic>) {
         _objects++;
         onObject(decoded);
-      } else {
-        _dropped++;
-        onBadObject?.call(const FormatException('not a JSON object'), text);
       }
+      // A non-object entry is skipped silently — exactly like the old
+      // `flexibleMapList`, which filtered non-maps out before counting.
+      // Only a row that fails to DECODE (or fails the caller's parse)
+      // counts as dropped.
     } catch (e) {
       _dropped++;
       onBadObject?.call(e, text);

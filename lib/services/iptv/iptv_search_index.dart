@@ -13,6 +13,7 @@ import '../../utils/iptv_initials.dart';
 import '../../utils/json_utils.dart';
 import '../../utils/search_relevance.dart';
 import '../lowend/slow_op_log.dart';
+import 'iptv_streaming_json.dart';
 import 'xtream_api.dart';
 
 /// Whole-token quality markers stripped from titles at index time
@@ -1644,14 +1645,18 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
     // paths, the isolate reads the files itself — the main isolate
     // never held the bodies and `compute` copied only paths. The
     // network sync keeps passing bodies.
-    final catalogBody = params.catalogFilePath != null
-        ? await File(params.catalogFilePath!).readAsString()
-        : params.catalogBody;
-    final categoryBody = params.categoryFilePath != null
-        ? await File(params.categoryFilePath!).readAsString()
-        : params.categoryBody;
-    final decoded = _decodeJson(catalogBody);
-    final parsed = _rowsFromDecoded(params.type, decoded);
+    //
+    // 1.4 (F2): the parse streams row by row
+    // ([_parseCatalogRowsStreaming] / [_parseCategoriesStreaming]) —
+    // the whole-file `readAsString` + `jsonDecode` held the body
+    // String (~36 MB UTF-16 for VOD) plus the decoded list of maps
+    // plus the typed rows at once (256–295 MB peak in-harness). The
+    // streaming parse holds one row's map at a time; a truncated
+    // file reports incomplete and parses as empty rows, exactly the
+    // old `_decodeJson` → `[]` outcome ('empty-response', old rows
+    // kept). One syntactically-bad row drops (counted) instead of
+    // failing the whole sync — the 1.2.17 per-row forgiveness.
+    final parsed = await _parseCatalogRowsStreaming(params);
     final rows = parsed.rows;
     // 1.2.10 (one-parse sync): the typed rows survive beside the index
     // rows, so the isolate can build the visible disk file from the
@@ -1659,10 +1664,7 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
     // gone, so the visible JSON is written to disk only, never
     // returned.)
     final typedRows = parsed.typedRows;
-    final categories = <String, String>{
-      for (final c in parseFlexibleJsonList(_decodeJson(categoryBody), XtreamCategory.fromJson))
-        c.id: c.name,
-    };
+    final categories = await _parseCategoriesStreaming(params);
     final hiddenIds = params.hiddenCategoryIds.toSet();
     final hiddenInitials = params.hiddenCategoryInitials.toSet();
     // 1.2.4 (catalog memory, the owner's prune decision — supersedes the
@@ -1941,30 +1943,61 @@ int _metaRowCount(Database db, String connectionId, String type) {
   }
 }
 
-({List<IptvSearchIndexRow> rows, List<Object> typedRows, int dropped}) _rowsFromDecoded(String type, dynamic decoded) {
-  switch (type) {
+/// Stream one type's catalog rows for the sync/seed isolate job (1.4,
+/// F2): the typed rows plus their index rows, parsed row by row from
+/// the file path when the caller passed one, else from the body string.
+/// Same shape as the old whole-file `_rowsFromDecoded` — the caller
+/// keeps using `parsed.rows` / `parsed.typedRows` / `parsed.dropped`
+/// unchanged. An incomplete (truncated/corrupt) document parses as
+/// empty rows with 0 dropped — the old `_decodeJson` → `[]` outcome.
+Future<({List<IptvSearchIndexRow> rows, List<Object> typedRows, int dropped})>
+    _parseCatalogRowsStreaming(IndexWriteParams params) async {
+  Future<({List<T> rows, int dropped})> parseTyped<T>(
+    T Function(Map<String, dynamic> json) parse,
+  ) async {
+    final result = params.catalogFilePath != null
+        ? await parseJsonArrayFile<T>(params.catalogFilePath!, parse)
+        : await parseJsonArrayText<T>(params.catalogBody, parse);
+    if (!result.complete) return (rows: <T>[], dropped: 0);
+    return (rows: result.rows, dropped: result.dropped);
+  }
+
+  switch (params.type) {
     case IptvSearchIndex.typeLive:
-      final parsed = parseFlexibleJsonListCounted(decoded, XtreamLiveStream.fromJson);
+      final parsed = await parseTyped(XtreamLiveStream.fromJson);
       return (
         rows: parsed.rows.map(IptvSearchIndexRow.fromLive).toList(growable: false),
         typedRows: parsed.rows,
         dropped: parsed.dropped,
       );
     case IptvSearchIndex.typeMovie:
-      final parsed = parseFlexibleJsonListCounted(decoded, XtreamVodStream.fromJson);
+      final parsed = await parseTyped(XtreamVodStream.fromJson);
       return (
         rows: parsed.rows.map(IptvSearchIndexRow.fromMovie).toList(growable: false),
         typedRows: parsed.rows,
         dropped: parsed.dropped,
       );
     default:
-      final parsed = parseFlexibleJsonListCounted(decoded, XtreamSeries.fromJson);
+      final parsed = await parseTyped(XtreamSeries.fromJson);
       return (
         rows: parsed.rows.map(IptvSearchIndexRow.fromSeries).toList(growable: false),
         typedRows: parsed.rows,
         dropped: parsed.dropped,
       );
   }
+}
+
+/// Stream the category list for the sync/seed isolate job (1.4, F2):
+/// id → display name, from the file path when the caller passed one,
+/// else from the body string. An incomplete document parses as an
+/// empty map — the old `_decodeJson` → `[]` outcome, which the caller
+/// reports as a 'no-categories' skip.
+Future<Map<String, String>> _parseCategoriesStreaming(IndexWriteParams params) async {
+  final result = params.categoryFilePath != null
+      ? await parseJsonArrayFile<XtreamCategory>(params.categoryFilePath!, XtreamCategory.fromJson)
+      : await parseJsonArrayText<XtreamCategory>(params.categoryBody, XtreamCategory.fromJson);
+  if (!result.complete) return <String, String>{};
+  return {for (final c in result.rows) c.id: c.name};
 }
 
 /// The typed catalog row's JSON (1.2.10, one-parse sync): the disk
@@ -1975,14 +2008,6 @@ Map<String, dynamic> _typedCatalogRowToJson(String type, Object row) => switch (
       IptvSearchIndex.typeMovie => (row as XtreamVodStream).toJson(),
       _ => (row as XtreamSeries).toJson(),
     };
-
-dynamic _decodeJson(String body) {
-  try {
-    return jsonDecode(body);
-  } on FormatException {
-    return const <dynamic>[];
-  }
-}
 
 /// Per-type progress of a catalog sync, for the "refreshing Trex details"
 /// popup: which type is being fetched/written, and how many rows each

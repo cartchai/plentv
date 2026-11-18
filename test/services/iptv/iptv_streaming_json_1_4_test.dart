@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plezy/services/iptv/iptv_search_index.dart';
 import 'package:plezy/services/iptv/iptv_streaming_json.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 
@@ -245,5 +247,142 @@ void main() {
       // one chunk. 60 MB discriminates with margin on both sides.
       expect(peakDeltaMb, lessThan(60));
     }, timeout: const Timeout(Duration(minutes: 3)));
+  });
+
+  group('1.4 F2 — streaming sync parse', () {
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('plezy_stream_json_f2_');
+    });
+
+    tearDown(() async {
+      if (await tempDir.exists()) await tempDir.delete(recursive: true);
+    });
+
+    /// Four VOD categories (mov1–mov4) as the API returns them.
+    Future<String> writeCategoriesFile() async {
+      final file = File('${tempDir.path}/vod_cats.json');
+      await file.writeAsString(
+        jsonEncode([
+          for (var i = 1; i <= 4; i++)
+            {'category_id': 'mov$i', 'category_name': 'Movies $i'},
+        ]),
+      );
+      return file.path;
+    }
+
+    Future<IndexWriteResult> runSync({
+      required String catalogPath,
+      required String categoriesPath,
+      List<String> hiddenIds = const [],
+      String? diskFilePath,
+    }) {
+      return compute(
+        writeIndexTypeInBackground,
+        IndexWriteParams(
+          dbPath: '${tempDir.path}/index.db',
+          connectionId: 'conn-xt-1',
+          type: IptvSearchIndex.typeMovie,
+          catalogBody: '',
+          categoryBody: '',
+          catalogFilePath: catalogPath,
+          categoryFilePath: categoriesPath,
+          syncStampMs: DateTime.now().millisecondsSinceEpoch,
+          hiddenCategoryIds: hiddenIds,
+          diskFilePath: diskFilePath,
+        ),
+      );
+    }
+
+    test('F2-1: Trex-scale sync lands 49,941 rows under the RSS bound', () async {
+      // Same fixture as S5 (199,762 VOD rows across mov1–mov4), synced
+      // through the real isolate job with mov2/mov3/mov4 hidden: only
+      // mov1 lands (49,941 rows).
+      final catalogPath = await _writeVodFixture(tempDir, 199762);
+      final categoriesPath = await writeCategoriesFile();
+
+      final rssBefore = ProcessInfo.currentRss;
+      var peakRss = rssBefore;
+      final sampler = Timer.periodic(const Duration(milliseconds: 50), (_) {
+        final now = ProcessInfo.currentRss;
+        if (now > peakRss) peakRss = now;
+      });
+      final result = await runSync(
+        catalogPath: catalogPath,
+        categoriesPath: categoriesPath,
+        hiddenIds: const ['mov2', 'mov3', 'mov4'],
+      );
+      sampler.cancel();
+      final peakDeltaMb = (peakRss - rssBefore) / (1024 * 1024);
+      // ignore: avoid_print
+      print('STREAM-JSON-F2-1 rows=${result.rowCount} '
+          'dropped=${result.droppedRows} hiddenSkipped=${result.hiddenSkipped} '
+          'peakDelta=${peakDeltaMb.toStringAsFixed(1)}MB');
+      expect(result.skippedReason, isNull);
+      expect(result.rowCount, 49941);
+      expect(result.hiddenSkipped, 199762 - 49941);
+      // Bound: the buffered isolate peaked 206 MB on this shape
+      // (whole-file String + decoded maps + typed rows + index rows,
+      // all resident in the worker; the paper's harness saw 256–295
+      // MB); the streaming parse holds one row's map at a time and
+      // measured 103–121 MB (the typed/index row lists + the FTS
+      // build dominate that — F2 does not change them). 160 MB
+      // discriminates with margin on both sides.
+      expect(peakDeltaMb, lessThan(160));
+    }, timeout: const Timeout(Duration(minutes: 3)));
+
+    test('F2-2: small sync matches the old per-row counts', () async {
+      // 200 good rows plus 2 syntactically-broken rows (balanced
+      // braces, closed strings, invalid JSON — the scanner delivers
+      // their text, jsonDecode throws, siblings survive). mov2 hidden
+      // by id: 50 rows pruned. `fromJson` never throws, so only
+      // genuinely broken JSON exercises the drop path here.
+      final file = File('${tempDir.path}/vod_small.json');
+      final buf = StringBuffer()..write('[');
+      for (var i = 0; i < 200; i++) {
+        if (i > 0) buf.write(',');
+        buf.write(jsonEncode({
+          'stream_id': i,
+          'name': 'Movie $i',
+          'container_extension': 'mp4',
+          'category_id': 'mov${(i % 4) + 1}',
+        }));
+      }
+      buf.write(',{"stream_id": 900, "name": "Broken", "category_id": }');
+      buf.write(',{"stream_id": 901, "bad": }');
+      buf.write(']');
+      await file.writeAsString(buf.toString());
+      final categoriesPath = await writeCategoriesFile();
+      final result = await runSync(
+        catalogPath: file.path,
+        categoriesPath: categoriesPath,
+        hiddenIds: const ['mov2'],
+      );
+      expect(result.skippedReason, isNull);
+      // Visible: mov1 + mov3 + mov4 (150); the 2 broken rows drop.
+      expect(result.rowCount, 150);
+      expect(result.droppedRows, 2);
+      expect(result.hiddenSkipped, 50);
+      expect(result.fetchedCount, 200);
+    });
+
+    test('F2-3: a truncated catalog lands nothing (empty-response)', () async {
+      // Truncated mid-row: the old whole-file decode threw and the
+      // sync kept the old rows with an 'empty-response' skip. The
+      // streaming parse reports incomplete and must do exactly that.
+      final file = File('${tempDir.path}/vod_trunc.json');
+      await file.writeAsString(
+        '[{"stream_id": 0, "name": "Movie 0", "category_id": "mov1"}, '
+        '{"stream_id": 1, "name": "Mov',
+      );
+      final categoriesPath = await writeCategoriesFile();
+      final result = await runSync(
+        catalogPath: file.path,
+        categoriesPath: categoriesPath,
+      );
+      expect(result.skippedReason, 'empty-response');
+      expect(result.rowCount, 0);
+    });
   });
 }
