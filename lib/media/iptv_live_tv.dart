@@ -1298,6 +1298,15 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// Xtream login's `xmltv.php` feed (see [_fetchFeedPrograms]).
   final Map<String, _CachedXmltvGuide> _xmltvCache = {};
 
+  /// Per-generation shared guide metadata (1.4 F1), keyed by feed
+  /// cacheKey + store generation fingerprint (see
+  /// [_readFeedRowsFromStore]). One entry per feed generation: the raw
+  /// metadata maps + the ten derived indexes, shared by every slide
+  /// of that generation. Dropped with [_xmltvCache] by the relief
+  /// valve ([dropEpgFromMemory]) and [clearEpgCache] — it is
+  /// rebuildable cache data, a few MB per generation.
+  final Map<String, _XmltvGuideMetadata> _guideMetadataCache = {};
+
   /// In-flight XMLTV fetches, keyed like [_xmltvCache]: the guide opens
   /// many channels at once, and they must share ONE `xmltv.php` download
   /// instead of each pulling the multi-megabyte file. The entry is removed
@@ -1472,6 +1481,19 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// code never sets this; reset it in tearDown when a test does.
   @visibleForTesting
   static Future<Directory> Function()? debugEpgCacheDirectoryProvider;
+
+  /// 1.4 F1: how many times the guide's derived indexes have been built
+  /// in this process (test seam — the harness asserts a slide does not
+  /// raise it). Production code never reads this.
+  @visibleForTesting
+  static int get xmltvGuideIndexBuildCount => _XmltvGuideIndexes.buildCount;
+
+  /// 1.4 F1: reset the index-build count (test seam — call in setUp so
+  /// each test measures only its own slides).
+  @visibleForTesting
+  static void resetXmltvGuideIndexBuildCount() {
+    _XmltvGuideIndexes.buildCount = 0;
+  }
 
   /// Test-only: when true, the persisted EPG side is skipped entirely
   /// (mirrors `IptvCatalogDiskCache.debugDisableDisk` — real disk I/O hangs
@@ -3044,6 +3066,31 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// expected SHA is the last download's SHA when known (a new
   /// download invalidates the old store); the XML stat is read fresh
   /// so a replaced file invalidates it too.
+  /// 1.4 F1 test seam: drive one store-backed window slide and report
+  /// the window size, its titles (in channel-id order), and the
+  /// index-build count, so the harness can assert a slide neither
+  /// rebuilds the indexes nor returns the wrong rows. Production code
+  /// never calls this.
+  @visibleForTesting
+  Future<({int windowProgramCount, List<String> windowTitles, int indexBuildCount})> debugSlideGuideFromStore(
+    String cacheKey,
+    Set<String> retainIds,
+  ) async {
+    final guide = await _readFeedRowsFromStore(cacheKey, retainIds: retainIds);
+    final titles = <String>[];
+    if (guide != null) {
+      final ids = guide.windowByChannel.keys.toList()..sort();
+      for (final id in ids) {
+        titles.addAll(guide.windowByChannel[id]!.map((p) => p.title));
+      }
+    }
+    return (
+      windowProgramCount: guide?.windowProgramCount ?? -1,
+      windowTitles: titles,
+      indexBuildCount: _XmltvGuideIndexes.buildCount,
+    );
+  }
+
   Future<_CachedXmltvGuide?> _readFeedRowsFromStore(
     String cacheKey, {
     required Set<String> retainIds,
@@ -3059,26 +3106,48 @@ class IptvLiveTvSupport implements LiveTvSupport {
       final xmlFile = await _xmltvFeedFile(cacheKey);
       final dbPath = IptvFeedRowStore.dbPathForXmlPath(xmlFile.path);
       final window = _epgParseWindow(DateTime.now());
-      final read = await IptvFeedRowStore.readGuide(
+      final fetchedAtValue = fetchedAt ?? xmlFile.lastModifiedSync();
+      final expectedSha = _lastFeedDownloads[cacheKey]?.sha256;
+      // 1.4 F1: the window-only read first. When this generation's
+      // metadata is cached, a slide is one indexed range query plus a
+      // shared-indexes guide construction — no 5,583-row re-read, no
+      // ten-index rebuild (40.7 s of CPU in the 1.3.29 Fold session).
+      final windowRead = await IptvFeedRowStore.readWindowRows(
         dbPath: dbPath,
         xmlPath: xmlFile.path,
-        expectedSha256: _lastFeedDownloads[cacheKey]?.sha256,
+        expectedSha256: expectedSha,
         retainIds: retainIds,
         windowFromEpoch: window.fromEpoch,
         windowToEpoch: window.toEpoch,
-        fetchedAt: fetchedAt ?? xmlFile.lastModifiedSync(),
+      );
+      if (windowRead != null) {
+        final cached = _guideMetadataCache['$cacheKey|${windowRead.generationKey}'];
+        if (cached != null) {
+          return cached.guide(
+            fetchedAt: fetchedAtValue,
+            windowByChannel: windowRead.windowByChannel,
+          );
+        }
+      }
+      // Cache miss (or no window read): the full read, which also
+      // populates the metadata cache for the next slide of this
+      // generation. Stale-generation entries for this feed are dropped
+      // — one generation per feed is held, never a history.
+      final read = await IptvFeedRowStore.readGuide(
+        dbPath: dbPath,
+        xmlPath: xmlFile.path,
+        expectedSha256: expectedSha,
+        retainIds: retainIds,
+        windowFromEpoch: window.fromEpoch,
+        windowToEpoch: window.toEpoch,
+        fetchedAt: fetchedAtValue,
       );
       if (read == null) return null;
-      return _CachedXmltvGuide(
+      final metadata = _XmltvGuideMetadata.fromRead(read);
+      _guideMetadataCache.removeWhere((key, _) => key.startsWith('$cacheKey|'));
+      _guideMetadataCache['$cacheKey|${read.generationKey}'] = metadata;
+      return metadata.guide(
         fetchedAt: read.fetchedAt,
-        displayNames: read.displayNames,
-        programsParsed: read.programsParsed,
-        channelsParsed: read.channelsParsed,
-        channelIdsSeen: read.channelIdsSeen,
-        programCountByChannel: read.programCountByChannel,
-        programSlotsByChannel: read.programSlotsByChannel,
-        slotOriginEpoch: read.slotOriginEpoch,
-        totalProgramCount: read.totalProgramCount,
         windowByChannel: read.windowByChannel,
       );
     } catch (_) {
@@ -7348,6 +7417,9 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
   void dropEpgFromMemory() {
     _epgCache.clear();
     _xmltvCache.clear();
+    // 1.4 F1: the shared guide metadata is rebuildable cache data —
+    // the valve drops it with the guides it derives from.
+    _guideMetadataCache.clear();
     _bumpEpgVersion();
   }
 
@@ -7361,6 +7433,8 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
   Future<void> clearEpgCache() async {
     _epgCache.clear();
     _xmltvCache.clear();
+    // 1.4 F1: a clear is a fresh start for the shared metadata too.
+    _guideMetadataCache.clear();
     _lastXmltvFeedChannelIds = 0;
     // A clear is an explicit retry: forget a failed feed too, so the next
     // guide visit downloads instead of hitting the negative cache.
@@ -7835,6 +7909,178 @@ typedef XmltvFeedFetcher = Future<XmltvFeedFetch> Function(
 ///   [maxWindowFeedIds] ids.
 ///
 /// The persisted feed file IS the store: a window slide re-parses it
+/// The ten derived lookup indexes of a [_CachedXmltvGuide] (1.4 F1).
+/// They depend only on the feed generation's metadata — the ids with
+/// programmes plus the display names — never on the window rows. One
+/// generation builds them once and every slide shares the reference,
+/// instead of each slide rebuilding all ten over all 5,583 feed ids
+/// (40.7 s of CPU in the 1.3.29 Fold session).
+///
+/// [buildCount] is the test seam: the 1.4 harness asserts a slide does
+/// not raise it (reset via
+/// [IptvLiveTvSupport.resetXmltvGuideIndexBuildCount]).
+class _XmltvGuideIndexes {
+  /// How many times the indexes have been built in this process.
+  static int buildCount = 0;
+
+  _XmltvGuideIndexes._({
+    required this.foldedChannelIds,
+    required this.numericChannelIds,
+    required this.displayNameChannels,
+    required this.normalizedNameChannels,
+    required this.looseNameChannels,
+    required this.wordChannels,
+    required this.feedWordsById,
+    required this.feedCountriesById,
+    required this.mixedChannelIds,
+    required this.looseMixedChannelIds,
+  });
+
+  /// Build the indexes from a generation's metadata. The builders are
+  /// [_CachedXmltvGuide]'s static helpers (same library) — they are
+  /// only ever called from here and from the old constructor path.
+  factory _XmltvGuideIndexes.build(
+    Iterable<String> idsWithPrograms,
+    Map<String, List<String>> displayNames,
+  ) {
+    buildCount++;
+    return _XmltvGuideIndexes._(
+      foldedChannelIds: _CachedXmltvGuide._foldedChannelIds(idsWithPrograms),
+      numericChannelIds: _CachedXmltvGuide._numericChannelIds(idsWithPrograms),
+      displayNameChannels: _CachedXmltvGuide._channelsByDisplayName(displayNames),
+      normalizedNameChannels: _CachedXmltvGuide._channelsByNormalizedName(idsWithPrograms),
+      looseNameChannels: _CachedXmltvGuide._channelsByLooseName(idsWithPrograms, displayNames),
+      mixedChannelIds: _CachedXmltvGuide._mixedChannelIds(displayNames),
+      looseMixedChannelIds: _CachedXmltvGuide._mixedChannelIds(displayNames, loose: true),
+      wordChannels: _CachedXmltvGuide._channelsByWord(idsWithPrograms, displayNames),
+      feedWordsById: _CachedXmltvGuide._wordsByFeedId(idsWithPrograms, displayNames),
+      feedCountriesById: _CachedXmltvGuide._countriesByFeedId(idsWithPrograms, displayNames),
+    );
+  }
+
+  /// Fold -> raw feed id, for folds naming exactly one id (tier 3).
+  final Map<String, String> foldedChannelIds;
+
+  /// Numeric id -> raw feed id, for ids that parse as integers and
+  /// name exactly one feed id (tier 4, the `streamId` lookup).
+  final Map<int, String> numericChannelIds;
+
+  /// Normalized display-name key -> feed ids carrying that display
+  /// name (tier 5, F6A). Built from [displayNames] as before.
+  final Map<String, Set<String>> displayNameChannels;
+
+  /// Normalized feed-id key -> feed ids with programmes (tier 5).
+  /// Built from the ids with programmes, as the old programme-derived
+  /// index was.
+  final Map<String, Set<String>> normalizedNameChannels;
+
+  /// Loose-normalized key -> feed ids (tier 6, F5). The id side comes
+  /// from the ids with programmes; the name side from [displayNames],
+  /// as before.
+  final Map<String, Set<String>> looseNameChannels;
+
+  /// Word -> serving feed ids carrying that word in their id or in a
+  /// display name (tier 5.5, the 1.3.29 affiliate guess). Built from
+  /// the ids with programmes only, so a word lookup never returns a
+  /// feed id with nothing to serve.
+  final Map<String, Set<String>> wordChannels;
+
+  /// Serving feed id -> the words its id and display names carry
+  /// (tier 5.5 ranking: overlap and extra words). Precomputed at
+  /// parse time so the tier does set arithmetic, not re-tokenizing,
+  /// per channel — the Reload resolves ~26k channels against it.
+  final Map<String, Set<String>> feedWordsById;
+
+  /// Serving feed id -> the countries its id suffix or display-name
+  /// tags name (tier 5.5 region gate). Precomputed for the same
+  /// reason as [feedWordsById].
+  final Map<String, Set<String>> feedCountriesById;
+
+  /// Feed ids whose declared display names are NOT all one channel
+  /// (F6B, 1.2.8).
+  final Set<String> mixedChannelIds;
+  final Set<String> looseMixedChannelIds;
+}
+
+/// One feed generation's shared guide metadata (1.4 F1): the raw maps
+/// the derived indexes are built from, plus the indexes themselves.
+/// Immutable per generation — a slide only swaps the window rows, so
+/// it builds a guide from this bundle instead of re-reading the whole
+/// `feed_channels` table and rebuilding all ten indexes. The bundle is
+/// keyed by feed cacheKey + store generation (see
+/// [_readFeedRowsFromStore]); a new generation replaces it, and the
+/// relief valve / [IptvLiveTvSupport.clearEpgCache] drop it.
+class _XmltvGuideMetadata {
+  _XmltvGuideMetadata._({
+    required this.displayNames,
+    required this.programsParsed,
+    required this.channelsParsed,
+    required this.channelIdsSeen,
+    required this.programCountByChannel,
+    required this.programSlotsByChannel,
+    required this.slotOriginEpoch,
+    required this.totalProgramCount,
+    required this.feedStoreBuildMs,
+    required this.feedStoreBytes,
+    required this.indexes,
+  });
+
+  /// Build the bundle from a full store read — the one read per
+  /// generation that pays the metadata cost (and builds the indexes).
+  factory _XmltvGuideMetadata.fromRead(FeedRowStoreGuide read) =>
+      _XmltvGuideMetadata._(
+        displayNames: read.displayNames,
+        programsParsed: read.programsParsed,
+        channelsParsed: read.channelsParsed,
+        channelIdsSeen: read.channelIdsSeen,
+        programCountByChannel: read.programCountByChannel,
+        programSlotsByChannel: read.programSlotsByChannel,
+        slotOriginEpoch: read.slotOriginEpoch,
+        totalProgramCount: read.totalProgramCount,
+        feedStoreBuildMs: null,
+        feedStoreBytes: null,
+        indexes: _XmltvGuideIndexes.build(
+          read.programCountByChannel.keys,
+          read.displayNames,
+        ),
+      );
+
+  final Map<String, List<String>> displayNames;
+  final int programsParsed;
+  final int channelsParsed;
+  final Set<String> channelIdsSeen;
+  final Map<String, int> programCountByChannel;
+  final Map<String, Uint8List> programSlotsByChannel;
+  final int slotOriginEpoch;
+  final int totalProgramCount;
+  final int? feedStoreBuildMs;
+  final int? feedStoreBytes;
+  final _XmltvGuideIndexes indexes;
+
+  /// A guide for this generation with [windowByChannel] as its window
+  /// — the slide's cheap construction (no metadata re-read, no index
+  /// rebuild).
+  _CachedXmltvGuide guide({
+    required DateTime fetchedAt,
+    required Map<String, List<XmltvProgram>> windowByChannel,
+  }) =>
+      _CachedXmltvGuide(
+        fetchedAt: fetchedAt,
+        displayNames: displayNames,
+        programsParsed: programsParsed,
+        channelsParsed: channelsParsed,
+        channelIdsSeen: channelIdsSeen,
+        programCountByChannel: programCountByChannel,
+        programSlotsByChannel: programSlotsByChannel,
+        slotOriginEpoch: slotOriginEpoch,
+        totalProgramCount: totalProgramCount,
+        windowByChannel: windowByChannel,
+        feedStoreBuildMs: feedStoreBuildMs,
+        feedStoreBytes: feedStoreBytes,
+        indexes: indexes,
+      );
+}
+
 /// with a new window instead of re-downloading it. The match chain
 /// resolves feed ids from the metadata (no rows needed) and only the
 /// matched id's rows are ever read, through [rowsFor].
@@ -7997,19 +8243,18 @@ class _CachedXmltvGuide {
     required this.windowByChannel,
     this.feedStoreBuildMs,
     this.feedStoreBytes,
-  })  : foldedChannelIds = _foldedChannelIds(programCountByChannel.keys),
-        numericChannelIds = _numericChannelIds(programCountByChannel.keys),
-        displayNameChannels = _channelsByDisplayName(displayNames),
-        normalizedNameChannels = _channelsByNormalizedName(programCountByChannel.keys),
-        looseNameChannels = _channelsByLooseName(programCountByChannel.keys, displayNames),
-        mixedChannelIds = _mixedChannelIds(displayNames),
-        looseMixedChannelIds = _mixedChannelIds(displayNames, loose: true),
-        wordChannels = _channelsByWord(programCountByChannel.keys, displayNames),
-        feedWordsById = _wordsByFeedId(programCountByChannel.keys, displayNames),
-        feedCountriesById = _countriesByFeedId(programCountByChannel.keys, displayNames);
+    // 1.4 F1: a pre-built index set for this generation. When null the
+    // constructor builds one (the parse path: once per download). A
+    // slide passes the cached set instead, so it never rebuilds.
+    _XmltvGuideIndexes? indexes,
+  }) : _indexes = indexes ?? _XmltvGuideIndexes.build(programCountByChannel.keys, displayNames);
+
+  /// The shared derived indexes for this guide's generation (1.4 F1).
+  final _XmltvGuideIndexes _indexes;
 
   /// Copy with a new fetchedAt (the 304 path reuses the same guide
-  /// object — metadata and window unchanged).
+  /// object — metadata and window unchanged). The shared indexes are
+  /// reused too (1.4 F1): a copy must not rebuild them.
   _CachedXmltvGuide withFetchedAt(DateTime at) => _CachedXmltvGuide(
         fetchedAt: at,
         displayNames: displayNames,
@@ -8023,50 +8268,51 @@ class _CachedXmltvGuide {
         windowByChannel: windowByChannel,
         feedStoreBuildMs: feedStoreBuildMs,
         feedStoreBytes: feedStoreBytes,
+        indexes: _indexes,
       );
 
   /// Fold -> raw feed id, for folds naming exactly one id (tier 3).
-  final Map<String, String> foldedChannelIds;
+  Map<String, String> get foldedChannelIds => _indexes.foldedChannelIds;
 
   /// Numeric id -> raw feed id, for ids that parse as integers and
   /// name exactly one feed id (tier 4, the `streamId` lookup).
-  final Map<int, String> numericChannelIds;
+  Map<int, String> get numericChannelIds => _indexes.numericChannelIds;
 
   /// Normalized display-name key -> feed ids carrying that display
   /// name (tier 5, F6A). Built from [displayNames] as before.
-  final Map<String, Set<String>> displayNameChannels;
+  Map<String, Set<String>> get displayNameChannels => _indexes.displayNameChannels;
 
   /// Normalized feed-id key -> feed ids with programmes (tier 5).
   /// Built from the ids with programmes, as the old programme-derived
   /// index was.
-  final Map<String, Set<String>> normalizedNameChannels;
+  Map<String, Set<String>> get normalizedNameChannels => _indexes.normalizedNameChannels;
 
   /// Loose-normalized key -> feed ids (tier 6, F5). The id side comes
   /// from the ids with programmes; the name side from [displayNames],
   /// as before.
-  final Map<String, Set<String>> looseNameChannels;
+  Map<String, Set<String>> get looseNameChannels => _indexes.looseNameChannels;
 
   /// Word -> serving feed ids carrying that word in their id or in a
   /// display name (tier 5.5, the 1.3.29 affiliate guess). Built from
   /// the ids with programmes only, so a word lookup never returns a
   /// feed id with nothing to serve.
-  final Map<String, Set<String>> wordChannels;
+  Map<String, Set<String>> get wordChannels => _indexes.wordChannels;
 
   /// Serving feed id -> the words its id and display names carry
   /// (tier 5.5 ranking: overlap and extra words). Precomputed at
   /// parse time so the tier does set arithmetic, not re-tokenizing,
   /// per channel — the Reload resolves ~26k channels against it.
-  final Map<String, Set<String>> feedWordsById;
+  Map<String, Set<String>> get feedWordsById => _indexes.feedWordsById;
 
   /// Serving feed id -> the countries its id suffix or display-name
   /// tags name (tier 5.5 region gate). Precomputed for the same
   /// reason as [feedWordsById].
-  final Map<String, Set<String>> feedCountriesById;
+  Map<String, Set<String>> get feedCountriesById => _indexes.feedCountriesById;
 
   /// Feed ids whose declared display names are NOT all one channel
   /// (F6B, 1.2.8).
-  final Set<String> mixedChannelIds;
-  final Set<String> looseMixedChannelIds;
+  Set<String> get mixedChannelIds => _indexes.mixedChannelIds;
+  Set<String> get looseMixedChannelIds => _indexes.looseMixedChannelIds;
 
   /// Feed ids whose display names or normalized id match [normalized]
   /// (tier 5 candidates — ids with programmes only, via the

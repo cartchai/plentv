@@ -64,6 +64,18 @@ typedef FeedRowStoreGuide = ({
   int slotOriginEpoch,
   int totalProgramCount,
   Map<String, List<XmltvProgram>> windowByChannel,
+  // 1.4 F1: the generation fingerprint of the store this guide was
+  // read from (download SHA + XML stat + DB stat). Two reads with the
+  // same key read the same metadata — a slide may share the derived
+  // indexes instead of rebuilding them.
+  String generationKey,
+});
+
+/// The window rows for one slide, plus the generation fingerprint of
+/// the store they were read from (1.4 F1 — see [FeedRowStoreGuide.generationKey]).
+typedef FeedRowStoreWindow = ({
+  Map<String, List<XmltvProgram>> windowByChannel,
+  String generationKey,
 });
 
 class IptvFeedRowStore {
@@ -132,6 +144,18 @@ class IptvFeedRowStore {
       }
     }
   }
+
+  /// Generation fingerprint for a store (1.4 F1): the download SHA and
+  /// XML stat from the store's meta, plus the DB file's own stat. A
+  /// rebuild rewrites the DB (new mtime) even when the XML is
+  /// unchanged, so the DB stat is part of the key — two reads with the
+  /// same key read the same metadata, and any rebuild changes the key.
+  static String generationKeyFor({
+    required Map<String, String> meta,
+    required FileStat dbStat,
+  }) =>
+      '${meta['sha256'] ?? ''}|${meta['xml_mtime_ms'] ?? ''}|${meta['xml_size'] ?? ''}|'
+      '${dbStat.modified.millisecondsSinceEpoch}|${dbStat.size}';
 
   /// Read a guide from the store: metadata for the whole feed plus the
   /// window rows for [retainIds] inside [windowFromEpoch, windowToEpoch].
@@ -238,6 +262,96 @@ class IptvFeedRowStore {
         slotOriginEpoch: int.parse(meta['slot_origin_epoch'] ?? '$windowFromEpoch'),
         totalProgramCount: int.parse(meta['programs_retained'] ?? '0'),
         windowByChannel: windowByChannel,
+        // 1.4 F1: the generation fingerprint, from the same meta this
+        // read already holds plus the DB file's stat.
+        generationKey: generationKeyFor(meta: meta, dbStat: File(dbPath).statSync()),
+      );
+    } catch (_) {
+      return null;
+    } finally {
+      try {
+        db?.close();
+      } catch (_) {
+        // Best-effort: the read already answered.
+      }
+    }
+  }
+
+  /// Read ONLY the window rows for [retainIds] (1.4 F1): the slide's
+  /// indexed range query, without re-reading the whole `feed_channels`
+  /// table (5,583 rows + one JSON decode per row) that [readGuide]
+  /// pays on every slide. Returns null when the store is missing,
+  /// invalid, or corrupt — the caller falls back to the full read.
+  /// The returned [FeedRowStoreWindow.generationKey] is the same
+  /// fingerprint [readGuide] returns, so the caller can tell whether
+  /// its cached metadata still matches this store.
+  static Future<FeedRowStoreWindow?> readWindowRows({
+    required String dbPath,
+    String? xmlPath,
+    String? expectedSha256,
+    required Set<String> retainIds,
+    required int windowFromEpoch,
+    required int windowToEpoch,
+  }) {
+    return Isolate.run(() {
+      try {
+        return _readWindowRowsSync(
+          dbPath: dbPath,
+          xmlPath: xmlPath,
+          expectedSha256: expectedSha256,
+          retainIds: retainIds,
+          windowFromEpoch: windowFromEpoch,
+          windowToEpoch: windowToEpoch,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
+  }
+
+  /// Synchronous window-rows read (the [Isolate.run] inner call, and
+  /// the sync path for tests that already run off the main isolate).
+  static FeedRowStoreWindow? _readWindowRowsSync({
+    required String dbPath,
+    String? xmlPath,
+    String? expectedSha256,
+    required Set<String> retainIds,
+    required int windowFromEpoch,
+    required int windowToEpoch,
+  }) {
+    Database? db;
+    try {
+      // Same validity rule as [readGuide]: a stale store never serves
+      // a slide — the caller falls back to the full read (and then to
+      // the re-parse) instead.
+      if (!isValid(dbPath: dbPath, xmlPath: xmlPath, expectedSha256: expectedSha256)) return null;
+      db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+      db.execute('PRAGMA busy_timeout = $readBusyTimeoutMs');
+      final meta = _readMeta(db);
+      final windowByChannel = <String, List<XmltvProgram>>{};
+      if (retainIds.isNotEmpty) {
+        final ids = retainIds.toList(growable: false);
+        final placeholders = List<String>.filled(ids.length, '?').join(', ');
+        final rows = db.select(
+          'SELECT channel_id, start, stop, title, description FROM feed_programs '
+          'WHERE channel_id IN ($placeholders) AND start < ? AND stop > ? '
+          'ORDER BY channel_id, start',
+          [...ids, windowToEpoch, windowFromEpoch],
+        );
+        for (final row in rows) {
+          final program = XmltvProgram(
+            channelId: row['channel_id'] as String,
+            startEpoch: row['start'] as int,
+            stopEpoch: row['stop'] as int,
+            title: row['title'] as String,
+            description: row['description'] as String,
+          );
+          (windowByChannel[program.channelId] ??= []).add(program);
+        }
+      }
+      return (
+        windowByChannel: windowByChannel,
+        generationKey: generationKeyFor(meta: meta, dbStat: File(dbPath).statSync()),
       );
     } catch (_) {
       return null;
