@@ -533,6 +533,34 @@ class PlayerNative extends PlayerBase {
       if (!play) {
         await setProperty('pause', 'yes');
       }
+
+      // 1.4.3 A1: mpv never sent the configured Xtream User-Agent.
+      // `user-agent` is a property of its own, not one of the
+      // http-header-fields, so a stream opened here carried mpv's
+      // default UA even though media.headers carries the configured
+      // one (IPTV opens pass streamHeaders, which include it). Set
+      // it from the headers when present — case-insensitive, since
+      // other media builders may spell the key differently. When
+      // the headers carry no UA, reset the property (`del` restores
+      // mpv's default): it is global, so without the reset an IPTV
+      // UA would leak into a later header-less open (a Plex file,
+      // whose headers carry no User-Agent). A refused write degrades
+      // to the current behaviour, like the 'start' default above.
+      String? userAgent;
+      final headers = media.headers;
+      if (headers != null) {
+        for (final entry in headers.entries) {
+          if (entry.key.toLowerCase() == 'user-agent') {
+            userAgent = entry.value;
+            break;
+          }
+        }
+      }
+      if (userAgent != null && userAgent.isNotEmpty) {
+        await setProperty('user-agent', userAgent);
+      } else {
+        await command(['del', 'user-agent']);
+      }
     } catch (e) {
       appLogger.w('MPV: pre-open playback defaults not applied', error: e);
     }
