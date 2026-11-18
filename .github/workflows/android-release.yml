@@ -79,6 +79,23 @@ jobs:
           path: PlezTV.${{ github.ref_name }}-*.apk
           if-no-files-found: error
 
+      # 1.4 (S2): R8 runs on every release build (the Flutter plugin
+      # enables minification; keeps live in android/app/proguard-rules.pro,
+      # e.g. the #1703 FFmpeg audio renderer). R8 renames Java/Kotlin
+      # symbols, so a release stack trace needs this map to symbolicate —
+      # Dart symbols are intact (--obfuscate stays off for the Last-crash
+      # traces). Kept as a workflow artifact, not on the public Release.
+      # The glob covers both the single-variant layout
+      # (mapping/release/mapping.txt) and the per-ABI split layout.
+      # `warn`, not `error`: a missing map must not fail the release, but
+      # the CI run must show this artifact present.
+      - name: Upload R8 mapping as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlezTV-${{ github.ref_name }}-mapping
+          path: build/app/outputs/mapping/**/mapping.txt
+          if-no-files-found: warn
+
       - name: Create GitHub Release with the APKs
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
