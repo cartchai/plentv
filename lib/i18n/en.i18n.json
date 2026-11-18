@@ -1533,6 +1533,13 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2317": [
+      "Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen",
+      "Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV",
+      "Fixed: the weekly catalog refresh now reads the lists one row at a time instead of all at once, cutting its biggest memory spike",
+      "New: when a video starts playing on a low-memory TV, the app now drops the browsing lists and posters it does not need until you come back, freeing room for playback",
+      "New: the debug log now records memory at each startup step on its own, so the next TV export shows exactly which step owns the startup peak"
+    ],
     "changelog2316": [
       "Fixed: the four bare FOX, NBC, CBS and PBS rows now fill from a local affiliate's guide — the guess now recognises affiliate names shaped like a callsign and city, not just a channel number",
       "Fixed: the US guide preset now adds cleanly — a big guide file is no longer rejected part-way through its description — and a guide with one broken programme still loads the good ones around it",

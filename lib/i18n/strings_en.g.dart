@@ -3869,6 +3869,13 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2317 => [
+		'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
+		'Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV',
+		'Fixed: the weekly catalog refresh now reads the lists one row at a time instead of all at once, cutting its biggest memory spike',
+		'New: when a video starts playing on a low-memory TV, the app now drops the browsing lists and posters it does not need until you come back, freeing room for playback',
+		'New: the debug log now records memory at each startup step on its own, so the next TV export shows exactly which step owns the startup peak',
+	];
 	List<String> get changelog2316 => [
 		'Fixed: the four bare FOX, NBC, CBS and PBS rows now fill from a local affiliate\'s guide — the guess now recognises affiliate names shaped like a callsign and city, not just a channel number',
 		'Fixed: the US guide preset now adds cleanly — a big guide file is no longer rejected part-way through its description — and a guide with one broken programme still loads the good ones around it',
@@ -11462,6 +11469,11 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
+			'about.changelog2317.1' => 'Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV',
+			'about.changelog2317.2' => 'Fixed: the weekly catalog refresh now reads the lists one row at a time instead of all at once, cutting its biggest memory spike',
+			'about.changelog2317.3' => 'New: when a video starts playing on a low-memory TV, the app now drops the browsing lists and posters it does not need until you come back, freeing room for playback',
+			'about.changelog2317.4' => 'New: the debug log now records memory at each startup step on its own, so the next TV export shows exactly which step owns the startup peak',
 			'about.changelog2316.0' => 'Fixed: the four bare FOX, NBC, CBS and PBS rows now fill from a local affiliate\'s guide — the guess now recognises affiliate names shaped like a callsign and city, not just a channel number',
 			'about.changelog2316.1' => 'Fixed: the US guide preset now adds cleanly — a big guide file is no longer rejected part-way through its description — and a guide with one broken programme still loads the good ones around it',
 			'about.changelog2316.2' => 'Fixed: the Assign guide list now puts the closest matches on top — your channel\'s own affiliate first, then other US affiliates, with other countries at the bottom',
@@ -11603,13 +11615,13 @@ extension on Translations {
 			'about.changelog2257.0' => 'Your channels, movies and shows are now saved on the phone, so they load straight away instead of downloading every time you open the app',
 			'about.changelog2257.1' => 'When the saved copy gets old, the app shows it straight away and quietly fetches the new one in the background',
 			'about.changelog2257.2' => 'Refresh playlists in IPTV settings now clears the saved copy too, so you always get fresh data',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2257.3' => 'The saved copy is per connection, so two IPTV sources never mix each other up',
 			'about.changelog2257.4' => 'Pictures and posters still load from the internet as before — only the lists are saved',
 			'about.changelog2256.0' => 'Updates now download inside the app, with an Install button when the download finishes — no browser needed',
 			'about.changelog2256.1' => 'Name initials are now Category initials: turning one off hides every category with it, so you can switch off a whole region at once',
 			'about.changelog2256.2' => 'The initials list is in alphabetical order',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2256.3' => 'Search now uses the full series list as well as the per-category sweep, so TV shows are found even when the per-category calls come back empty',
 			'about.changelog2256.4' => 'New Series catalog readout in IPTV settings shows whether the catalog loads on your phone',
 			'about.changelog2255.0' => 'Search now finds TV shows, even the first time you search after opening the app',
@@ -12117,13 +12129,13 @@ extension on Translations {
 			'music.lyrics' => 'Lyrics',
 			'music.noLyrics' => 'No lyrics available',
 			'music.sleepTimer' => 'Sleep timer',
+			_ => null,
+		} ?? switch (path) {
 			'music.sleepTimerEndOfTrack' => 'End of track',
 			'music.sleepTimerMinutes' => ({required Object n}) => '${n} minutes',
 			'music.stopPlayback' => 'Stop playback',
 			'music.previousTrack' => 'Previous track',
 			'music.nextTrack' => 'Next track',
-			_ => null,
-		} ?? switch (path) {
 			'music.repeat' => 'Repeat',
 			'music.repeatAll' => 'Repeat all',
 			'music.repeatOne' => 'Repeat one',
@@ -12631,13 +12643,13 @@ extension on Translations {
 			'metadataEdit.never' => 'Never',
 			'metadataEdit.afterADay' => 'After a day',
 			'metadataEdit.afterAWeek' => 'After a week',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.afterAMonth' => 'After a month',
 			'metadataEdit.onNextRefresh' => 'On next refresh',
 			'metadataEdit.seasons' => 'Seasons',
 			'metadataEdit.show' => 'Show',
 			'metadataEdit.hide' => 'Hide',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.episodeOrdering' => 'Episode Ordering',
 			'metadataEdit.tmdbAiring' => 'The Movie Database (Aired)',
 			'metadataEdit.tvdbAiring' => 'TheTVDB (Aired)',
@@ -13145,13 +13157,13 @@ extension on Translations {
 			'iptv.miniPlayerTitle' => 'Mini-player',
 			'iptv.miniPlayerNone' => 'No tune yet — play a channel in Live TV, then check back here.',
 			'iptv.miniPlayerChannel' => ({required Object channel, required Object backend}) => '${channel} · ${backend}',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.miniPlayerRevealEvent' => ({required Object ms}) => 'First frame: restart event · ${ms} ms',
 			'iptv.miniPlayerRevealLatch' => ({required Object ms}) => 'First frame: already rendered · ${ms} ms',
 			'iptv.miniPlayerRevealWatchdog' => ({required Object ms}) => 'First frame: watchdog reveal after ${ms} ms — no frame was reported',
 			'iptv.miniPlayerRevealNone' => 'First frame: not revealed yet',
 			'iptv.miniPlayerRestartYes' => 'Restart seen: yes',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.miniPlayerRestartNo' => 'Restart seen: no',
 			'iptv.miniPlayerRectYes' => 'Video rect sent: yes',
 			'iptv.miniPlayerRectNo' => 'Video rect sent: no',
