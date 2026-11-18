@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:xml/xml.dart';
 
 import '../connection/connection.dart';
 import '../exceptions/media_server_exceptions.dart';
@@ -424,6 +423,66 @@ bool _epgIsProviderLanguageTag(String country) => _epgProviderLanguageTags.conta
 /// One country, two spellings (jellyfin-tentacle `_SAME_COUNTRY`).
 const _epgSameCountry = <String, String>{'uk': 'gb', 'usa': 'us'};
 
+/// ISO 3166-1 alpha-2 country codes (1.3.30): a leading tag is only a
+/// country when its code is in this set. The provider also uses
+/// 2-letter codes as category prefixes — `TV|` is a category, not
+/// Tuvalu — so `tv` is deliberately NOT in this set. `uk` is included
+/// (the provider's spelling of GB; mapped by [_epgSameCountry]). A
+/// code in [_epgLanguageOnlyCodes] still counts as a language, not a
+/// country, in [epgChannelCountry]; this set only decides whether a
+/// tag is a country-shaped code at all.
+const _epgCountryCodes = <String>{
+  'ad', 'ae', 'af', 'ag', 'ai', 'al', 'am', 'ao', 'aq', 'ar', 'as', 'at', 'au', 'aw', 'ax', 'az',
+  'ba', 'bb', 'bd', 'be', 'bf', 'bg', 'bh', 'bi', 'bj', 'bl', 'bm', 'bn', 'bo', 'bq', 'br', 'bs', 'bt', 'bv', 'bw', 'by', 'bz',
+  'ca', 'cc', 'cd', 'cf', 'cg', 'ch', 'ci', 'ck', 'cl', 'cm', 'cn', 'co', 'cr', 'cu', 'cv', 'cw', 'cx', 'cy', 'cz',
+  'de', 'dj', 'dk', 'dm', 'do', 'dz',
+  'ec', 'ee', 'eg', 'eh', 'er', 'es', 'et',
+  'fi', 'fj', 'fk', 'fm', 'fo', 'fr',
+  'ga', 'gb', 'gd', 'ge', 'gf', 'gg', 'gh', 'gi', 'gl', 'gm', 'gn', 'gp', 'gq', 'gr', 'gs', 'gt', 'gu', 'gw', 'gy',
+  'hk', 'hm', 'hn', 'hr', 'ht', 'hu',
+  'id', 'ie', 'il', 'im', 'in', 'io', 'iq', 'ir', 'is', 'it',
+  'je', 'jm', 'jo', 'jp',
+  'ke', 'kg', 'kh', 'ki', 'km', 'kn', 'kp', 'kr', 'kw', 'ky', 'kz',
+  'la', 'lb', 'lc', 'li', 'lk', 'lr', 'ls', 'lt', 'lu', 'lv', 'ly',
+  'ma', 'mc', 'md', 'me', 'mf', 'mg', 'mh', 'mk', 'ml', 'mm', 'mn', 'mo', 'mp', 'mq', 'mr', 'ms', 'mt', 'mu', 'mv', 'mw', 'mx', 'my', 'mz',
+  'na', 'nc', 'ne', 'nf', 'ng', 'ni', 'nl', 'no', 'np', 'nr', 'nu', 'nz',
+  'om',
+  'pa', 'pe', 'pf', 'pg', 'ph', 'pk', 'pl', 'pm', 'pn', 'pr', 'ps', 'pt', 'pw', 'py',
+  'qa',
+  're', 'ro', 'rs', 'ru', 'rw',
+  'sa', 'sb', 'sc', 'sd', 'se', 'sg', 'sh', 'si', 'sj', 'sk', 'sl', 'sm', 'sn', 'so', 'sr', 'ss', 'st', 'sv', 'sx', 'sy', 'sz',
+  'tc', 'td', 'tf', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tr', 'tt', 'tw', 'tz',
+  'ua', 'ug', 'um', 'us', 'uy', 'uz',
+  'va', 'vc', 've', 'vg', 'vi', 'vn', 'vu',
+  'wf', 'ws',
+  'ye', 'yt',
+  'za', 'zm', 'zw',
+  'uk',
+};
+
+/// Provider category prefixes that look like 2-letter country codes
+/// but are not countries (1.3.30): `TV|` is a category prefix on
+/// channel names, never a country — without this, a US channel named
+/// `TV| ST. LOUIS, MO ...` parses its country as `tv` and every US
+/// candidate ranks as foreign.
+const _epgCategoryTagPrefixes = <String>{'tv'};
+
+/// Three-letter tags the provider uses for countries (1.3.30):
+/// `CND|` is Canada, `USA` is the United States. Mapped to the
+/// 2-letter code before any country check.
+const _epgThreeLetterCountry = <String, String>{'cnd': 'ca', 'usa': 'us'};
+
+/// US state and Canadian province/territory codes, for a trailing
+/// `, <ST>` state/province suffix on a feed id or display name
+/// (1.3.30): `loc.FOX (KMSP-DT9) Minneapolis, MN` is US,
+/// `ca.CHCH Hamilton, ON` is Canadian.
+const _epgUsStateCodes = <String>{
+  'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'dc', 'de', 'fl', 'ga', 'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh', 'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy',
+};
+const _epgCaProvinceCodes = <String>{
+  'on', 'qc', 'bc', 'ab', 'mb', 'sk', 'ns', 'nb', 'nl', 'pe', 'yt', 'nt', 'nu',
+};
+
 /// A leading country/language tag (jellyfin-tentacle `_PREFIX_RE`,
 /// extended with a dash delimiter so "US - CNN HD" strips like
 /// "US: CNN HD" does — the provider shape §5 row 2 carries).
@@ -439,14 +498,22 @@ final _epgPrefixRegExp = RegExp(
 final _epgTierTagRegExp = RegExp(r"^\s*[|\[(]?\s*(?:vip|now)\s*[|\]):]\s*");
 
 /// The country a leading tag names (jellyfin-tentacle `_COUNTRY_RE`,
-/// same dash extension as [_epgPrefixRegExp]).
+/// same dash extension as [_epgPrefixRegExp]). 1.3.30: the first code
+/// may be 3 letters (`CND|`, `USA`, `LAT|`) — the old 2-letter-only
+/// capture made every 3-letter tag invisible, so a Canadian channel
+/// carried no country at all. Whether a captured code is a country,
+/// a language, or neither is decided in [_epgTagCodes], not here.
 final _epgCountryRegExp = RegExp(
-  r"^\s*[|\[(]?\s*([a-z]{2}|usa)(?:[ /-]([a-z]{2}))?\s*(?:-\s+|[|\]):])",
+  r"^\s*[|\[(]?\s*([a-z]{2,3})(?:[ /-]([a-z]{2,3}))?\s*(?:-\s+|[|\]):])",
 );
 
 /// A trailing country suffix on a feed id (jellyfin-tentacle
 /// `_ID_COUNTRY_RE`): ".uk" / ".us" / ".de".
 final _epgIdCountryRegExp = RegExp(r'\.([a-z]{2})$');
+
+/// A trailing `, <ST>` state/province suffix on a feed id or display
+/// name (1.3.30): "Minneapolis, MN" / "Hamilton, ON".
+final _epgStateSuffixRegExp = RegExp(r',\s*([a-z]{2})\s*$');
 
 /// Words that say nothing about which channel it is when deciding
 /// whether one feed id's display names are one channel
@@ -571,7 +638,16 @@ List<String> looseEpgChannelNameWords(String name) => _epgNameWords(name, loose:
 List<String> _epgTagCodes(String name) {
   final match = _epgCountryRegExp.firstMatch(_epgFoldUnicode(name).toLowerCase());
   if (match == null) return const [];
-  return [match.group(1), match.group(2)].whereType<String>().toList(growable: false);
+  // 1.3.30: a captured code is only a tag when it is a known country,
+  // a known language, or a known 3-letter country spelling. Anything
+  // else is a brand (`FOX:`, `CNN:`), a region word (`LAT|`), or a
+  // category prefix (`TV|`) — none of those is a country, and `TV|`
+  // in particular must never parse as one.
+  return [match.group(1), match.group(2)]
+      .whereType<String>()
+      .where((code) => !_epgCategoryTagPrefixes.contains(code) && (_epgCountryCodes.contains(code) || _epgLanguageOnlyCodes.contains(code) || _epgThreeLetterCountry.containsKey(code)))
+      .map((code) => _epgThreeLetterCountry[code] ?? code)
+      .toList(growable: false);
 }
 
 /// The leading tag's first code as a country, language codes included
@@ -594,12 +670,34 @@ String? epgChannelCountry(String name) {
 }
 
 /// The country a feed id's two-letter suffix names: "TNTSport1.uk" -> "gb".
+/// 1.3.30: a `loc.` id is a US local station by construction, and a
+/// trailing `, <ST>` state/province suffix names the country too
+/// (`loc.FOX (KMSP-DT9) Minneapolis, MN` -> "us",
+/// `ca.CHCH Hamilton, ON` -> "ca").
 @visibleForTesting
 String? epgFeedIdCountry(String feedId) {
-  final match = _epgIdCountryRegExp.firstMatch(_epgFoldUnicode(feedId).toLowerCase());
+  final folded = _epgFoldUnicode(feedId).toLowerCase();
+  if (folded.startsWith('loc.')) return 'us';
+  final match = _epgIdCountryRegExp.firstMatch(folded);
+  if (match != null) {
+    final code = match.group(1)!;
+    return _epgSameCountry[code] ?? code;
+  }
+  return _epgStateSuffixCountry(folded);
+}
+
+/// The country a trailing `, <ST>` state/province suffix names
+/// (1.3.30). Canadian provinces are unambiguous; a US state code that
+/// is also an ISO country code (`CA` is California AND Canada, `AR`
+/// is Arkansas AND Argentina) names nothing — neutral is safe, wrong
+/// is not.
+String? _epgStateSuffixCountry(String text) {
+  final match = _epgStateSuffixRegExp.firstMatch(text.trim().toLowerCase());
   if (match == null) return null;
   final code = match.group(1)!;
-  return _epgSameCountry[code] ?? code;
+  if (_epgCaProvinceCodes.contains(code)) return 'ca';
+  if (_epgUsStateCodes.contains(code) && !_epgCountryCodes.contains(code)) return 'us';
+  return null;
 }
 
 /// The countries an XMLTV channel belongs to: its id's two-letter
@@ -611,7 +709,9 @@ Set<String> epgFeedChannelCountries(String feedId, List<String> displayNames) {
   final idCountry = epgFeedIdCountry(feedId);
   if (idCountry != null) out.add(idCountry);
   for (final name in displayNames) {
-    final country = _epgFirstTag(name);
+    // 1.3.30: a display name can carry the country as a trailing
+    // `, <ST>` suffix too, not only as a leading tag.
+    final country = _epgFirstTag(name) ?? _epgStateSuffixCountry(name);
     if (country != null) out.add(country);
   }
   return out;
@@ -640,8 +740,8 @@ Set<String> epgFeedChannelCountries(String feedId, List<String> displayNames) {
 /// An exact id match still beats region (the feed id IS the
 /// channel's declared id). The channel country comes from its name
 /// tag first, then its epg_channel_id / tvg-id suffix; when neither
-/// carries a country, region is neutral for every candidate and the
-/// ranking falls back to id + name words.
+/// carries a country the region defaults to 'us' (1.3.30 — the
+/// provider feed is US-centric), as the affiliate guess does.
 @visibleForTesting
 List<IptvEpgFeedChannel> rankEpgFeedChannels({
   required List<IptvEpgFeedChannel> entries,
@@ -653,6 +753,12 @@ List<IptvEpgFeedChannel> rankEpgFeedChannels({
       epgChannelCountry(channelName) ??
       epgFeedIdCountry(channelEpgId ?? '') ??
       epgFeedIdCountry(channelTvgId ?? '');
+  // 1.3.30: the provider feed is US-centric — a channel with no
+  // detectable country is treated as US, as the affiliate guess
+  // already does. Without this, a `TV|`-prefixed channel (whose
+  // country used to misparse as `tv`) left region neutral for every
+  // candidate and the ranking fell back to alphabetical.
+  final homeCountry = channelCountry ?? 'us';
   final nameWords = epgChannelNameWords(channelName).toSet();
   int idScore(IptvEpgFeedChannel entry) {
     final entryId = entry.xmltvId.toLowerCase();
@@ -666,10 +772,9 @@ List<IptvEpgFeedChannel> rankEpgFeedChannels({
   }
 
   int regionScore(IptvEpgFeedChannel entry) {
-    if (channelCountry == null) return 0;
     final countries = epgFeedChannelCountries(entry.xmltvId, entry.displayNames);
     if (countries.isEmpty) return 0;
-    return countries.contains(channelCountry) ? 1 : -1;
+    return countries.contains(homeCountry) ? 1 : -1;
   }
 
   int nameScore(IptvEpgFeedChannel entry) {
@@ -678,7 +783,11 @@ List<IptvEpgFeedChannel> rankEpgFeedChannels({
       words.addAll(epgChannelNameWords(name));
     }
     words.addAll(epgChannelNameWords(entry.xmltvId));
-    return words.intersection(nameWords).length;
+    // 1.3.30: bare numbers (a channel number) and 1-letter words say
+    // nothing about which channel it is — the matcher tier already
+    // treats them as meaningless. Without this, 'FOX 2' shares '2'
+    // with every '… 2' channel and the ranking ties.
+    return words.intersection(nameWords).where((w) => w.length >= 2 && int.tryParse(w) == null).length;
   }
 
   final ranked = entries.toList(growable: false);
@@ -760,6 +869,22 @@ bool _epgExtraWordIsNumberLike(String word, Set<String> channelWords) {
   }
   return false;
 }
+
+/// True when a feed id is a US local-affiliate id (1.3.30): the
+/// provider's `loc.` prefix, or a parenthesized US callsign
+/// (`(KTVT)`, `(KMSP-DT9)`). Checked against the RAW id string — the
+/// display-name words must not be able to break it. A bare
+/// callsign-looking word is NOT enough: `west` in `CBS West` would
+/// qualify, and bare CBS would guess CBS West.
+bool _epgIsLocalAffiliateId(String feedId) {
+  final id = feedId.toLowerCase();
+  if (id.startsWith('loc.')) return true;
+  return _epgLocalCallsignRegExp.hasMatch(id);
+}
+
+/// A parenthesized US TV callsign: K or W followed by 2-4 letters,
+/// optionally with a `-suffix` (the subchannel, e.g. `-DT9`).
+final _epgLocalCallsignRegExp = RegExp(r'\([kw][a-z]{2,4}(-[a-z0-9]+)?\)');
 
 /// Live TV for IPTV connections (M3U + Xtream Codes).
 ///
@@ -3199,11 +3324,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// channel name and the candidate's id + display names. (3)
   /// affiliate shape — a candidate whose extra words are all
   /// number-like (a bare number, or the channel word plus a number:
-  /// 'FOX 4', 'fox4', 'PBS 12') ranks above one with topic words
-  /// ('Fox News Channel', 'NBC East Stream'). A bare network word
-  /// ('FOX') must only ever guess an affiliate, never a same-word
-  /// spinoff — 'fox' alone also matches Fox News, Fox Sports, Fox
-  /// Soccer, and the shape rule is what keeps those out. (4) fewest
+  /// 'FOX 4', 'fox4', 'PBS 12'), or whose id is a US local affiliate
+  /// (`loc.` prefix or a parenthesized US callsign: 1.3.30 — the real
+  /// feed's affiliates are callsign+city shaped, `loc.CBS (KTVT)
+  /// Fort Worth, TX`), ranks above one with topic words ('Fox News
+  /// Channel', 'NBC East Stream'). A bare network word ('FOX') must
+  /// only ever guess an affiliate, never a same-word spinoff — 'fox'
+  /// alone also matches Fox News, Fox Sports, Fox Soccer, and the
+  /// shape rule is what keeps those out. (4) fewest
   /// extra words — the candidate's words the channel does not share.
   /// (5) plain over timeshift. (6) feed id ascending, so the pick is
   /// deterministic for a given feed.
@@ -3262,7 +3390,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
       final isForeign = countries.isNotEmpty && !countries.contains(homeCountry);
       if (isForeign && channelCountry != null) continue;
       final extraWords = feedWords.difference(channelWords);
-      final shaped = extraWords.every((w) => _epgExtraWordIsNumberLike(w, channelWords));
+      // 1.3.30: the real feed's affiliates are callsign+city shaped
+      // (`loc.CBS (KTVT) Fort Worth, TX`) — their extra words are not
+      // number-like, so the old gate never fired for them. A `loc.`
+      // prefix or a parenthesized US callsign on the raw id marks the
+      // whole id as affiliate-shaped, whatever its other words are.
+      // Spinoffs carry neither signal, so they stay refused.
+      final shaped =
+          extraWords.every((w) => _epgExtraWordIsNumberLike(w, channelWords)) || _epgIsLocalAffiliateId(id);
       // The gate: a single shared word guesses only the affiliate
       // shape; two shared words are a real resemblance.
       if (!shaped && shared.length < 2) continue;
@@ -5692,20 +5827,30 @@ class IptvLiveTvSupport implements LiveTvSupport {
         if (bytes.length >= cap) break;
       }
       _checkXmltvPrefix(bytes);
-    } on StateError {
+    } on StateError catch (e) {
+      // 1.3.30: validation used to fail silently — the phone log had
+      // no preset lines at all. Log the host (never the full URL — it
+      // could carry credentials) so the next debug export shows it.
+      appLogger.w('IPTV EPG source validation failed for ${uri.host}: $e');
       rethrow;
     } catch (e) {
+      appLogger.w('IPTV EPG source validation failed for ${uri.host}: $e');
       throw StateError('Could not fetch the EPG source: $e');
     } finally {
       client.close();
     }
   }
 
-  /// Confirm the first bytes of a would-be source parse as XMLTV. A
-  /// complete small file must parse with a `<tv>` root; a truncated
-  /// prefix (the file is bigger than the validation cap) is accepted
-  /// when the cut is the only problem — the bytes so far parsed as XML
-  /// up to the cut.
+  /// Confirm the first bytes of a would-be source look like XMLTV. The
+  /// prefix is a TRUNCATED file by construction (the 256 KB cap cuts
+  /// it anywhere), so the only question it can answer is shape: a
+  /// `<tv>` root and a first `<channel>` (both sit in the first
+  /// kilobytes of any real guide). A strict DOM parse of the whole
+  /// prefix can only fail on the cut itself — the phone's US2 preset
+  /// died on `XmlTagException: Missing closing tag </desc>`, which the
+  /// old forgiveness catch never caught (a sibling of
+  /// XmlParserException, and "Missing closing tag" contains neither
+  /// forgiven phrase) — so the DOM parse is gone.
   /// 1.3.28: the validation prefix may be gzip — decompress what the
   /// cap caught before checking for `<tv`. Chunked conversion without
   /// requiring close: the 256 KB cap can cut a gzip member mid-stream,
@@ -5726,19 +5871,28 @@ class IptvLiveTvSupport implements LiveTvSupport {
     return out;
   }
 
+  /// The shape a truncated validation prefix must have to count as
+  /// XMLTV (1.3.30): a `<tv>` root and a first `<channel>`. Both sit
+  /// in the first kilobytes of any real guide, so they are readable
+  /// in the prefix even when the 256 KB cap cuts the file mid-element.
+  /// Visible for testing — the validator itself is only reachable
+  /// through a live HTTP fetch.
+  @visibleForTesting
+  static bool xmltvPrefixLooksValid(List<int> bytes) {
+    final text = utf8.decode(_gunzipPrefixIfNeeded(bytes), allowMalformed: true);
+    return text.contains('<tv') && text.contains('<channel');
+  }
+
   static void _checkXmltvPrefix(List<int> bytes) {
-    final xmlBytes = _gunzipPrefixIfNeeded(bytes);
-    final text = utf8.decode(xmlBytes, allowMalformed: true);
-    if (!text.contains('<tv')) throw StateError('Not an XMLTV file (no <tv> element)');
-    try {
-      final doc = XmlDocument.parse(text);
-      if (doc.rootElement.name.local != 'tv') {
-        throw StateError('Not an XMLTV file (root is not <tv>)');
-      }
-    } on XmlParserException catch (e) {
-      final message = e.message.toLowerCase();
-      if (!message.contains('end of input') && !message.contains('unexpected end')) rethrow;
-      // The prefix parsed as XML up to the cut: accept.
+    // 1.3.30: the prefix is a TRUNCATED file by construction (the
+    // 256 KB cap cuts it anywhere), so a strict DOM parse of the whole
+    // prefix can only fail on the cut itself — the phone's US2 preset
+    // died on `XmlTagException: Missing closing tag </desc>`, a
+    // sibling of XmlParserException the old forgiveness catch never
+    // caught. The only question the prefix can answer is whether the
+    // bytes so far are XMLTV-shaped.
+    if (!xmltvPrefixLooksValid(bytes)) {
+      throw StateError('Not an XMLTV file (no <tv> element or no <channel> element)');
     }
   }
 

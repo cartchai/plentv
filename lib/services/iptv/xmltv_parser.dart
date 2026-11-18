@@ -68,10 +68,12 @@ class XmltvParseStats {
 /// the stream — accumulate only the retained list + indexes.
 ///
 /// Same tolerance as [parseXmltv]: a malformed programme is skipped, never
-/// fatal. Only a structurally unparseable document fails the whole parse
-/// (unclosed element at EOF, mismatched tags, invalid XML, or a document
-/// with no elements at all — an empty feed file reads as corrupt, exactly
-/// like [parseXmltv] throwing on an empty body).
+/// fatal. A mid-file element that fails to close skips only the
+/// programme being assembled (1.3.30) — the good programmes around it
+/// still parse. Only a document that is CUT OFF (elements still open
+/// when the stream ends), invalid XML, or a document with no elements
+/// at all fails the whole parse — an empty feed file reads as corrupt,
+/// exactly like [parseXmltv] throwing on an empty body.
 ///
 /// 1.2.2 I8 (parse-time window filter): when [windowFromEpoch] /
 /// [windowToEpoch] are given, a programme is yielded only if it overlaps
@@ -96,6 +98,15 @@ Stream<XmltvProgram> parseXmltvStream(
   // The child element whose text is being accumulated ('title' / 'desc').
   String? currentChild;
   var sawElement = false;
+  // 1.3.30: the event parser does NOT validate nesting (see the
+  // toXmlEvents call below), so nesting is tracked here — the stack of
+  // element names currently open. A close that does not match the top
+  // of the stack means the element being assembled is broken: the
+  // programme is tainted and skipped instead of yielded, and parsing
+  // continues with the next programme. A stray close for an element
+  // that never opened is ignored.
+  final openStack = <String>[];
+  var programmeTainted = false;
   // State for the `<channel>` element currently being read (1.2.5:
   // the feed's display names never entered the app before).
   var inChannel = false;
@@ -135,6 +146,7 @@ Stream<XmltvProgram> parseXmltvStream(
     title.clear();
     desc.clear();
     currentChild = null;
+    programmeTainted = false;
   }
 
   void recordChannel() {
@@ -154,11 +166,23 @@ Stream<XmltvProgram> parseXmltvStream(
     currentDisplayName = null;
   }
 
-  final events = bytes.transform(utf8.decoder).toXmlEvents(validateNesting: true);
+  // 1.3.30: nesting is NOT validated by the event parser. A strict
+  // nesting check throws the whole parse on the first mismatched
+  // element — the phone's US2 preset file is fine, but a genuinely
+  // malformed mid-file element (an unclosed `<desc>`, a `<programme>`
+  // closed out of order) must skip only that programme, the way the
+  // DOM path skips one bad entry. Nesting is tracked by hand instead
+  // (openStack above): a close that does not match the top of the
+  // stack taints the programme being assembled, and a document with
+  // elements still open at EOF is still a hard failure (see below).
+  // Lexical errors (a malformed tag, bad entity) still throw from the
+  // tokenizer — those are not recoverable element-level faults.
+  final events = bytes.transform(utf8.decoder).toXmlEvents(validateNesting: false);
   await for (final batch in events) {
     for (final event in batch) {
       if (event is XmlStartElementEvent) {
         sawElement = true;
+        if (!event.isSelfClosing) openStack.add(event.name);
         if (event.name == 'channel' && !inProgramme) {
           // A nested <channel> resets the outer one (malformed input).
           resetChannel();
@@ -212,8 +236,18 @@ Stream<XmltvProgram> parseXmltvStream(
         }
         currentDisplayName?.write(event.value);
       } else if (event is XmlEndElementEvent) {
+        // 1.3.30: hand-tracked nesting (see above). A close that does
+        // not match the top of the stack means the element being
+        // assembled is broken: pop up to the named element and taint
+        // the programme, so it is skipped instead of yielded. A stray
+        // close for an element that never opened is ignored.
+        final stackIndex = openStack.lastIndexOf(event.name);
+        if (stackIndex >= 0) {
+          if (stackIndex != openStack.length - 1 && inProgramme) programmeTainted = true;
+          openStack.removeRange(stackIndex, openStack.length);
+        }
         if (event.name == 'programme' && inProgramme) {
-          final program = tryBuild();
+          final program = programmeTainted ? null : tryBuild();
           resetProgramme();
           if (program != null) yield program;
         } else if (event.name == 'display-name' && currentDisplayName != null) {
@@ -231,6 +265,9 @@ Stream<XmltvProgram> parseXmltvStream(
   }
   if (!sawElement) {
     throw const FormatException('Empty XMLTV document');
+  }
+  if (openStack.isNotEmpty) {
+    throw FormatException('Truncated XMLTV document: unclosed <${openStack.last}>');
   }
 }
 

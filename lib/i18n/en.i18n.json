@@ -1533,6 +1533,11 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2316": [
+      "Fixed: the four bare FOX, NBC, CBS and PBS rows now fill from a local affiliate's guide — the guess now recognises affiliate names shaped like a callsign and city, not just a channel number",
+      "Fixed: the US guide preset now adds cleanly — a big guide file is no longer rejected part-way through its description — and a guide with one broken programme still loads the good ones around it",
+      "Fixed: the Assign guide list now puts the closest matches on top — your channel's own affiliate first, then other US affiliates, with other countries at the bottom"
+    ],
     "changelog2315": [
       "New: channels with no guide ID now fill from the closest US affiliate when the guide has one — FOX, NBC, CBS and PBS rows fill with an affiliate's guide. The Reload report counts these separately as 'affiliate guess', so a guessed row is never shown as a certain match",
       "Fixed: the debug log and the channel details now name an affiliate guess as a guess, and you can keep a guessed guide for a channel from its details"
@@ -3322,7 +3327,7 @@
     "epgReloadGuideCoverageScopeVisible": "sampled rows on screen",
     "epgReloadGuideCoverageScopeMatched": "matched channels",
     "epgReloadGuideCoverageScopeGuideOrder": "rows in guide order — guide not opened",
-    "epgReloadGuideCoverageNotOpened": "Guide not opened — short-EPG coverage unknown (rows fill in as you open the guide)",
+    "epgReloadGuideCoverageNotOpened": "Guide not opened at Reload — short-EPG coverage unknown (rows fill in as you open the guide)",
     "epgReloadCheckGained": "Playlist check: gained ${gained} guide IDs (${inFeed} of those are in the guide)",
     "epgReloadCheckNoGain": "Playlist check: the playlist adds no guide IDs",
     "epgReloadCheckFailed": "Playlist check failed: ${reason}",

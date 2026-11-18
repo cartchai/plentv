@@ -3869,6 +3869,11 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2316 => [
+		'Fixed: the four bare FOX, NBC, CBS and PBS rows now fill from a local affiliate\'s guide — the guess now recognises affiliate names shaped like a callsign and city, not just a channel number',
+		'Fixed: the US guide preset now adds cleanly — a big guide file is no longer rejected part-way through its description — and a guide with one broken programme still loads the good ones around it',
+		'Fixed: the Assign guide list now puts the closest matches on top — your channel\'s own affiliate first, then other US affiliates, with other countries at the bottom',
+	];
 	List<String> get changelog2315 => [
 		'New: channels with no guide ID now fill from the closest US affiliate when the guide has one — FOX, NBC, CBS and PBS rows fill with an affiliate\'s guide. The Reload report counts these separately as \'affiliate guess\', so a guessed row is never shown as a certain match',
 		'Fixed: the debug log and the channel details now name an affiliate guess as a guess, and you can keep a guessed guide for a channel from its details',
@@ -7465,8 +7470,8 @@ class Translations$iptv$en {
 	/// en: 'rows in guide order — guide not opened'
 	String get epgReloadGuideCoverageScopeGuideOrder => 'rows in guide order — guide not opened';
 
-	/// en: 'Guide not opened — short-EPG coverage unknown (rows fill in as you open the guide)'
-	String get epgReloadGuideCoverageNotOpened => 'Guide not opened — short-EPG coverage unknown (rows fill in as you open the guide)';
+	/// en: 'Guide not opened at Reload — short-EPG coverage unknown (rows fill in as you open the guide)'
+	String get epgReloadGuideCoverageNotOpened => 'Guide not opened at Reload — short-EPG coverage unknown (rows fill in as you open the guide)';
 
 	/// en: 'Playlist check: gained ${gained} guide IDs (${inFeed} of those are in the guide)'
 	String epgReloadCheckGained({required Object gained, required Object inFeed}) => 'Playlist check: gained ${gained} guide IDs (${inFeed} of those are in the guide)';
@@ -11457,6 +11462,9 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2316.0' => 'Fixed: the four bare FOX, NBC, CBS and PBS rows now fill from a local affiliate\'s guide — the guess now recognises affiliate names shaped like a callsign and city, not just a channel number',
+			'about.changelog2316.1' => 'Fixed: the US guide preset now adds cleanly — a big guide file is no longer rejected part-way through its description — and a guide with one broken programme still loads the good ones around it',
+			'about.changelog2316.2' => 'Fixed: the Assign guide list now puts the closest matches on top — your channel\'s own affiliate first, then other US affiliates, with other countries at the bottom',
 			'about.changelog2315.0' => 'New: channels with no guide ID now fill from the closest US affiliate when the guide has one — FOX, NBC, CBS and PBS rows fill with an affiliate\'s guide. The Reload report counts these separately as \'affiliate guess\', so a guessed row is never shown as a certain match',
 			'about.changelog2315.1' => 'Fixed: the debug log and the channel details now name an affiliate guess as a guess, and you can keep a guessed guide for a channel from its details',
 			'about.changelog2314.0' => 'New: EPG sources can now be a .xml.gz file — the guide the US preset uses is compressed, and it used to be rejected',
@@ -11600,11 +11608,11 @@ extension on Translations {
 			'about.changelog2256.0' => 'Updates now download inside the app, with an Install button when the download finishes — no browser needed',
 			'about.changelog2256.1' => 'Name initials are now Category initials: turning one off hides every category with it, so you can switch off a whole region at once',
 			'about.changelog2256.2' => 'The initials list is in alphabetical order',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2256.3' => 'Search now uses the full series list as well as the per-category sweep, so TV shows are found even when the per-category calls come back empty',
 			'about.changelog2256.4' => 'New Series catalog readout in IPTV settings shows whether the catalog loads on your phone',
 			'about.changelog2255.0' => 'Search now finds TV shows, even the first time you search after opening the app',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2255.1' => 'You can search inside one library — pick it above the search results',
 			'about.changelog2255.2' => 'Catch-up is here: Watch from start sits next to Play, and a show that\'s already on offers Start from beginning',
 			'about.changelog2255.3' => 'The live scrubber now covers the show you\'re watching, or the hour block when there\'s no guide info',
@@ -12114,11 +12122,11 @@ extension on Translations {
 			'music.stopPlayback' => 'Stop playback',
 			'music.previousTrack' => 'Previous track',
 			'music.nextTrack' => 'Next track',
+			_ => null,
+		} ?? switch (path) {
 			'music.repeat' => 'Repeat',
 			'music.repeatAll' => 'Repeat all',
 			'music.repeatOne' => 'Repeat one',
-			_ => null,
-		} ?? switch (path) {
 			'music.instantMixNoServer' => 'No server is available for an instant mix',
 			'music.instantMixFailed' => 'Failed to load the instant mix',
 			'music.instantMixEmpty' => 'The instant mix came back with no tracks',
@@ -12628,11 +12636,11 @@ extension on Translations {
 			'metadataEdit.seasons' => 'Seasons',
 			'metadataEdit.show' => 'Show',
 			'metadataEdit.hide' => 'Hide',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.episodeOrdering' => 'Episode Ordering',
 			'metadataEdit.tmdbAiring' => 'The Movie Database (Aired)',
 			'metadataEdit.tvdbAiring' => 'TheTVDB (Aired)',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.tvdbAbsolute' => 'TheTVDB (Absolute)',
 			'metadataEdit.metadataLanguage' => 'Metadata Language',
 			'metadataEdit.useOriginalTitle' => 'Use Original Title',
@@ -12996,7 +13004,7 @@ extension on Translations {
 			'iptv.epgReloadGuideCoverageScopeVisible' => 'sampled rows on screen',
 			'iptv.epgReloadGuideCoverageScopeMatched' => 'matched channels',
 			'iptv.epgReloadGuideCoverageScopeGuideOrder' => 'rows in guide order — guide not opened',
-			'iptv.epgReloadGuideCoverageNotOpened' => 'Guide not opened — short-EPG coverage unknown (rows fill in as you open the guide)',
+			'iptv.epgReloadGuideCoverageNotOpened' => 'Guide not opened at Reload — short-EPG coverage unknown (rows fill in as you open the guide)',
 			'iptv.epgReloadCheckGained' => ({required Object gained, required Object inFeed}) => 'Playlist check: gained ${gained} guide IDs (${inFeed} of those are in the guide)',
 			'iptv.epgReloadCheckNoGain' => 'Playlist check: the playlist adds no guide IDs',
 			'iptv.epgReloadCheckFailed' => ({required Object reason}) => 'Playlist check failed: ${reason}',
@@ -13142,11 +13150,11 @@ extension on Translations {
 			'iptv.miniPlayerRevealWatchdog' => ({required Object ms}) => 'First frame: watchdog reveal after ${ms} ms — no frame was reported',
 			'iptv.miniPlayerRevealNone' => 'First frame: not revealed yet',
 			'iptv.miniPlayerRestartYes' => 'Restart seen: yes',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.miniPlayerRestartNo' => 'Restart seen: no',
 			'iptv.miniPlayerRectYes' => 'Video rect sent: yes',
 			'iptv.miniPlayerRectNo' => 'Video rect sent: no',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.miniPlayerRectValues' => ({required Object rect}) => 'Rect: ${rect}',
 			'iptv.miniPlayerFailReason' => ({required Object reason}) => 'Could not start: ${reason}',
 			'iptv.miniPlayerMissingRecording' => ({required Object programme, required Object channel}) => 'No recording available for ${programme} on ${channel}',
