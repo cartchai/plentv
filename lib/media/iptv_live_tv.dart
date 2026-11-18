@@ -3321,6 +3321,9 @@ class IptvLiveTvSupport implements LiveTvSupport {
       // 1.3.26 §69: per-channel fetch-outcome logging — the next
       // phone log must name the cause per row.
       appLogger.i('IPTV EPG $channelKey: feed matched ${match.matchedXmltvId} via ${match.matchMethod}');
+      // 1.4.2: persist a guessed pick — pick one and stick with it.
+      // Per-channel path only; the bulk paths never write.
+      await _persistGuessedEpgPick(channelKey, match, guide);
       return (
         programs: match.programs,
         source: match.matchMethod == 'name' || match.matchMethod == 'name-loose' || match.matchMethod == 'name-guess' || match.matchMethod == 'name-guess-affiliate'
@@ -3375,6 +3378,62 @@ class IptvLiveTvSupport implements LiveTvSupport {
       shortEpgTimedOut: false,
       lateShortEpg: null,
     );
+  }
+
+  /// 1.4.2: persist a guess-served pick so the row sticks with it.
+  /// Called only from the per-channel fetch path
+  /// ([_fetchFeedPrograms]) — never from the bulk paths (Reload,
+  /// Channels without guide, [_channelHasFeedMatch]), which would
+  /// write ~10k rows into the prefs JSON in one Reload. A stored
+  /// pick is read by tier 1 on the next load, so the row serves
+  /// from the first pass instead of re-guessing from a feed whose
+  /// contents drift between generations.
+  ///
+  /// Rules (research Q5): a manual mapping is never overwritten; a
+  /// stored guessed pick is replaced only when it is gone from the
+  /// feed entirely (not seen, no retained programmes) and the guess
+  /// tier served a different id; still present but out of the
+  /// window means keep the pick (no churn); a mapping for another
+  /// source is never touched. A prefs failure never fails the fetch
+  /// — the row already has its programmes, it just re-guesses next
+  /// load.
+  Future<void> _persistGuessedEpgPick(
+    String channelKey,
+    _GuideResolution match,
+    _CachedXmltvGuide guide,
+  ) async {
+    final method = match.matchMethod;
+    final matchedId = match.matchedXmltvId;
+    final sourceId = match.sourceId;
+    if (matchedId == null || sourceId == null) return;
+    if (method != 'name-guess-affiliate' && method != 'name-guess') return;
+    if (match.programs.isEmpty) return;
+    final origin = method == 'name-guess-affiliate' ? 'guessed-affiliate' : 'guessed-name';
+    try {
+      // Fresh read: an Assign made while this fetch was in flight
+      // must not be overwritten by a stale guard.
+      final existing = (await _epgStore.loadMappings())[channelKey];
+      if (existing != null) {
+        if (existing.sourceId != sourceId) return;
+        if (existing.origin == 'manual') return;
+        if (existing.xmltvId == matchedId) return;
+        if (guide.channelIdsSeen.contains(existing.xmltvId) ||
+            guide.hasRetainedPrograms(existing.xmltvId)) {
+          return;
+        }
+        appLogger.d(
+          'IPTV EPG $channelKey: guessed pick replaced ${existing.xmltvId} -> $matchedId (stored affiliate gone from feed)',
+        );
+      } else {
+        appLogger.d('IPTV EPG $channelKey: guessed pick persisted $matchedId via $method');
+      }
+      await _epgStore.saveMapping(
+        channelKey,
+        IptvEpgMapping(xmltvId: matchedId, sourceId: sourceId, origin: origin),
+      );
+    } catch (e) {
+      appLogger.d('IPTV EPG $channelKey: guessed pick not persisted ($e)');
+    }
   }
 
   /// The single best affiliate guess for [channelName] (1.3.29 P1-5,
@@ -3601,10 +3660,13 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // when nothing else matched.
     final foreignNameCandidates = <String>{};
 
-    // 1. Manual assignment for this source.
+    // 1. Stored assignment for this source — manual (Assign) or a
+    // guessed pick persisted by the per-channel fetch (1.4.2). The
+    // method is origin-aware, so a stored guess still reads as a
+    // guess in the detail sheet and the Reload counts.
     if (mapping != null && mapping.sourceId == sourceId) {
       if (hasInWindow(mapping.xmltvId)) {
-        return matched(programsFor(mapping.xmltvId), mapping.xmltvId, 'manual');
+        return matched(programsFor(mapping.xmltvId), mapping.xmltvId, mapping.matchMethod);
       }
       if (guide.hasRetainedPrograms(mapping.xmltvId) ||
           guide.channelIdsSeen.contains(mapping.xmltvId)) {

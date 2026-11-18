@@ -442,20 +442,35 @@ class IptvM3uTvgIdDiagnostic {
   });
 }
 
-/// One manual EPG assignment: this channel always uses this XMLTV channel
-/// id from this source.
+/// One EPG assignment: this channel always uses this XMLTV channel
+/// id from this source. [origin] says how the mapping got here:
+/// 'manual' (Assign, or the M3U tvg-id Apply) or 'guessed-affiliate' /
+/// 'guessed-name' (auto-persisted by the per-channel fetch when the
+/// guess tier served the row — 1.4.2: pick one and stick with it).
+/// Rows written before 1.4.2 carry no origin and are all manual.
 class IptvEpgMapping {
   final String xmltvId;
   final String sourceId;
+  final String origin;
 
-  const IptvEpgMapping({required this.xmltvId, required this.sourceId});
+  const IptvEpgMapping({required this.xmltvId, required this.sourceId, this.origin = 'manual'});
 
-  Map<String, dynamic> toJson() => {'xmltvId': xmltvId, 'sourceId': sourceId};
+  /// The match method tier 1 reports for this mapping. The detail
+  /// sheet label and the Reload counts key on it, so a stored guess
+  /// must not read as 'manual'.
+  String get matchMethod => switch (origin) {
+    'guessed-affiliate' => 'name-guess-affiliate',
+    'guessed-name' => 'name-guess',
+    _ => 'manual',
+  };
+
+  Map<String, dynamic> toJson() => {'xmltvId': xmltvId, 'sourceId': sourceId, 'origin': origin};
 
   factory IptvEpgMapping.fromJson(Map<String, dynamic> json) {
     return IptvEpgMapping(
       xmltvId: json['xmltvId'] as String? ?? '',
       sourceId: json['sourceId'] as String? ?? IptvEpgSourceConfig.providerId,
+      origin: json['origin'] as String? ?? 'manual',
     );
   }
 }
