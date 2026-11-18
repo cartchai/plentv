@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:plezy/database/app_database.dart';
+import 'package:plezy/exceptions/media_server_exceptions.dart';
 import 'package:plezy/focus/focusable_action_bar.dart';
 import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/library_query.dart';
@@ -626,6 +627,190 @@ void main() {
     const flattenHub = MediaHub(id: 'detail_episodes', title: 'Episodes', type: 'episode', items: <MediaItem>[]);
     expect(rail.leadingItemForHub!(flattenHub), isNull);
   });
+
+  testWidgets('1.4.3 G1 refused seasons fall back to the downloads with the stale badge', (tester) async {
+    await SettingsService.getInstance();
+    // The badge lives in the phone seasons section (the TV rail has
+    // no free-text slot for it — TV still renders the downloaded
+    // seasons, just without the provenance note).
+    TvDetectionService.debugSetAppleTVOverride(false);
+    addTearDown(() => TvDetectionService.debugSetAppleTVOverride(null));
+
+    final show = testMediaItem(
+      id: 'show_1',
+      backend: MediaBackend.jellyfin,
+      kind: MediaKind.show,
+      title: 'The Show',
+      serverId: 'server_1',
+      serverName: 'Server',
+    );
+    final episode1 = testMediaItem(
+      id: 'episode_1',
+      backend: MediaBackend.jellyfin,
+      kind: MediaKind.episode,
+      title: 'Episode 1',
+      index: 1,
+      parentIndex: 1,
+      parentId: 'season_1',
+      parentTitle: 'Season 1',
+      grandparentId: show.id,
+      serverId: show.serverId,
+      serverName: show.serverName,
+    );
+
+    // The live seasons fetch is refused (403) — the panel will not
+    // answer on this network. A completer (not Future.error): the
+    // error is only delivered once _loadSeasons is awaiting it, or
+    // the framework reports the pre-made error as unhandled.
+    final seasonsError = Completer<List<MediaItem>>();
+    final client = _FakeMediaServerClient(
+      show: show,
+      childrenByParent: {},
+      childrenFutures: {show.id: seasonsError.future},
+    );
+
+    // One completed downloaded episode of the show's first season.
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    PlexApiCache.initialize(database);
+    JellyfinApiCache.initialize(database);
+    final manager = DownloadManagerService(
+      database: database,
+      storageService: DownloadStorageService.instance,
+      clientResolver: (serverId, {clientScopeId}) => null,
+    )..recoveryFuture = Future<void>.value();
+    final downloads = DownloadProvider.forTesting(downloadManager: manager, database: database);
+    await tester.runAsync(downloads.ensureInitialized);
+    downloads.debugSeedState(
+      ownedDownloadKeys: {episode1.globalKey},
+      metadata: {episode1.globalKey: episode1},
+      downloads: {episode1.globalKey: DownloadProgress(globalKey: episode1.globalKey, status: DownloadStatus.completed)},
+    );
+    addTearDown(() async {
+      downloads.dispose();
+      manager.dispose();
+      await database.close();
+    });
+
+    final provider = testMultiServer(clients: [client]).provider;
+    await tester.pumpWidget(
+      TranslationProvider(
+        child: MultiProvider(
+          providers: [
+            ChangeNotifierProvider<MultiServerProvider>.value(value: provider),
+            ChangeNotifierProvider<DownloadProvider>.value(value: downloads),
+          ],
+          child: MaterialApp(
+            theme: monoTheme(MonoPalette.dark),
+            home: withProfileNavigationScope(
+              child: SizedBox(width: 1280, height: 720, child: MediaDetailScreen(metadata: show)),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    // The screen is now awaiting the seasons fetch — deliver the
+    // refusal to it.
+    seasonsError.completeError(
+      MediaServerHttpException(
+        type: MediaServerHttpErrorType.unknown,
+        statusCode: 403,
+        message: 'Xtream access denied',
+      ),
+    );
+    // The refusal travels through the catch + the downloads fallback
+    // + the badge setState — a few extra pumps for those rounds.
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump();
+    await tester.pump();
+
+    // The downloaded season renders with the stale badge instead of
+    // the dead "couldn't load seasons" error or the refused row.
+    expect(find.text(t.iptv.seasonsFromDownloads), findsOneWidget);
+    expect(find.text('Season 1'), findsOneWidget);
+    expect(find.text(t.messages.seasonsLoadFailed), findsNothing);
+    expect(find.text(t.iptv.refusedOnThisNetwork), findsNothing);
+  });
+
+  testWidgets('1.4.3 G1 refused seasons with no downloads show the refused state, not the generic failure', (tester) async {
+    await SettingsService.getInstance();
+    TvDetectionService.debugSetAppleTVOverride(false);
+    addTearDown(() => TvDetectionService.debugSetAppleTVOverride(null));
+
+    final show = testMediaItem(
+      id: 'show_1',
+      backend: MediaBackend.jellyfin,
+      kind: MediaKind.show,
+      title: 'The Show',
+      serverId: 'server_1',
+      serverName: 'Server',
+    );
+
+    // The live seasons fetch is refused (403) and there are no
+    // downloads to fall back to.
+    final seasonsError = Completer<List<MediaItem>>();
+    final client = _FakeMediaServerClient(
+      show: show,
+      childrenByParent: {},
+      childrenFutures: {show.id: seasonsError.future},
+    );
+
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    PlexApiCache.initialize(database);
+    JellyfinApiCache.initialize(database);
+    final manager = DownloadManagerService(
+      database: database,
+      storageService: DownloadStorageService.instance,
+      clientResolver: (serverId, {clientScopeId}) => null,
+    )..recoveryFuture = Future<void>.value();
+    final downloads = DownloadProvider.forTesting(downloadManager: manager, database: database);
+    await tester.runAsync(downloads.ensureInitialized);
+    addTearDown(() async {
+      downloads.dispose();
+      manager.dispose();
+      await database.close();
+    });
+
+    final provider = testMultiServer(clients: [client]).provider;
+    await tester.pumpWidget(
+      TranslationProvider(
+        child: MultiProvider(
+          providers: [
+            ChangeNotifierProvider<MultiServerProvider>.value(value: provider),
+            ChangeNotifierProvider<DownloadProvider>.value(value: downloads),
+          ],
+          child: MaterialApp(
+            theme: monoTheme(MonoPalette.dark),
+            home: withProfileNavigationScope(
+              child: SizedBox(width: 1280, height: 720, child: MediaDetailScreen(metadata: show)),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    seasonsError.completeError(
+      MediaServerHttpException(
+        type: MediaServerHttpErrorType.unknown,
+        statusCode: 403,
+        message: 'Xtream access denied',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text(t.iptv.refusedOnThisNetwork), findsOneWidget);
+    expect(find.text(t.iptv.seasonsFromDownloads), findsNothing);
+    expect(find.text(t.messages.seasonsLoadFailed), findsNothing);
+  });
+
   testWidgets('TV detail reveal still waits for the supplemental sections', (tester) async {
     // Counterpart to the test above: the early paint does NOT move the TV
     // reveal. `_isTvDetailReadyToReveal` additionally requires extras, related

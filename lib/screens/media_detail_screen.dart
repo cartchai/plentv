@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import '../media/ids.dart';
+import '../exceptions/media_server_exceptions.dart';
 import '../media/iptv_client.dart';
 
 import 'package:flutter/material.dart';
@@ -362,6 +363,10 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   // generic load-failed message, and its Retry does not re-fire
   // while the breaker is open (see _loadSeasons).
   bool _seasonsRefused = false;
+  // 1.4.3 G1: the shown seasons came from the downloads on disk, not
+  // the panel — the live fetch was refused, so the section says so
+  // instead of looking like a normal load.
+  bool _seasonsFromDownloads = false;
   Completer<void>? _seasonsCompleter;
   List<MediaItem> _episodes = [];
   PagedMediaListState<MediaItem> _allEpisodes = const PagedMediaListState<MediaItem>();
@@ -1832,6 +1837,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       _isLoadingSeasons = true;
       _seasonsLoadFailed = false;
       _seasonsRefused = false;
+      _seasonsFromDownloads = false;
       _hasLoadedSeasons = false;
     });
 
@@ -1934,9 +1940,31 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     } catch (e, st) {
       appLogger.w('Seasons load failed', error: e, stackTrace: st);
       if (!_canUseDetail) return;
+      // 1.4.3 G1: the live seasons fetch was refused (403 — including
+      // the breaker-cooldown 403, and a 403 that landed mid-fetch and
+      // opened the breaker under us). Fall back to the seasons the
+      // downloads already hold, and say so; only when there are none
+      // does the section fail. A non-refusal keeps today's behaviour.
+      final refused =
+          MediaServerHttpException.from(e).statusCode == 403 ||
+          (client is IptvClient && await client.isIn403Cooldown);
+      if (refused) {
+        _loadSeasonsFromDownloads();
+        if (_seasons.isNotEmpty) {
+          setStateIfMounted(() {
+            _isLoadingSeasons = false;
+            _seasonsLoadFailed = false;
+            _seasonsRefused = false;
+            _seasonsFromDownloads = true;
+            _hasLoadedSeasons = true;
+          });
+          return;
+        }
+      }
       setStateIfMounted(() {
         _isLoadingSeasons = false;
         _seasonsLoadFailed = true;
+        _seasonsRefused = refused;
         _hasLoadedSeasons = true;
       });
     } finally {
@@ -3628,6 +3656,18 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                                     t.libraries.groupings.episodes,
                                     style: sectionTitleStyle,
                                   ),
+                                  // 1.4.3 G1: these seasons came from the
+                                  // downloads, not the panel — the live
+                                  // fetch was refused, so the section
+                                  // says so instead of looking like a
+                                  // normal load.
+                                  if (_seasonsFromDownloads) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      t.iptv.seasonsFromDownloads,
+                                      style: theme.textTheme.bodySmall?.copyWith(color: tokens(context).textMuted),
+                                    ),
+                                  ],
                                   const SizedBox(height: 12),
                                   _buildSeasonTabs(),
                                   const SizedBox(height: 16),

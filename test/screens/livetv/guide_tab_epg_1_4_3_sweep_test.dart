@@ -28,8 +28,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:plezy/connection/connection.dart';
 import 'package:plezy/focus/input_mode_tracker.dart';
+import 'package:plezy/i18n/app_locale_utils.dart';
 import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/iptv_live_tv.dart';
@@ -115,7 +117,92 @@ class _SweepTabFakeApi extends XtreamApi {
   }
 }
 
-/// Real XtreamApi (MockClient transport) for the breaker-stop test:
+/// Answering feed for the G1 stamp test's seed phase: 24 live
+/// channels with real tvg-ids and a feed carrying one programme per
+/// channel, so the seed download persists a feed the refused phase
+/// can warm-start from.
+class _StampSeedApi extends XtreamApi {
+  _StampSeedApi() : super(serverUrl: 'https://panel.example.com:8080', username: 'user', password: _testPassword);
+
+  var xmltvCalls = 0;
+  var xmltvBody = '<?xml version="1.0" encoding="UTF-8"?><tv></tv>';
+
+  @override
+  Future<List<XtreamLiveStream>> getLiveStreams({String? categoryId, Future<void>? abortTrigger}) async => List.generate(
+    24,
+    (i) => XtreamLiveStream(streamId: 400 + i, name: 'Channel ${i + 1}', epgChannelId: 'ch${400 + i}'),
+  );
+
+  @override
+  Future<List<XtreamEpgProgram>> getShortEpg(
+    String streamId, {
+    int limit = 4,
+    Duration? timeout,
+    Future<void>? abortTrigger,
+  }) async {
+    throw Exception('get_short_epg unavailable');
+  }
+
+  @override
+  Future<XmltvFeedFetch> getXmltvFeed({String? etag, String? lastModified, Duration timeout = const Duration(seconds: 120), Future<void>? abortTrigger}) async {
+    xmltvCalls++;
+    return (
+      bytes: Stream<List<int>>.value(utf8.encode(xmltvBody)),
+      notModified: false,
+      etag: null,
+      lastModified: null,
+    );
+  }
+
+  @override
+  Future<String> getM3uToFile({
+    required String filePath,
+    String type = 'm3u_plus',
+    String output = 'ts',
+    Duration timeout = const Duration(seconds: 120),
+    Future<void>? abortTrigger,
+    bool resume = false,
+    bool ignoreCatalogCap = false,
+    void Function(int receivedBytes, int? totalBytes)? onProgress,
+  }) async {
+    File(filePath).writeAsStringSync('#EXTM3U\n');
+    return filePath;
+  }
+}
+
+/// Refusing panel for the G1 stamp test: like [_RefusedTabApi] (the
+/// panel 403s everything) but the channels carry the same tvg-ids as
+/// the seed, so the rows can warm-start from the seeded persisted
+/// feed instead of failing outright.
+class _StampRefusedApi extends _RefusedTabApi {
+  _StampRefusedApi({required super.client});
+
+  @override
+  Future<List<XtreamLiveStream>> getLiveStreams({String? categoryId, Future<void>? abortTrigger}) async => List.generate(
+    24,
+    (i) => XtreamLiveStream(streamId: 400 + i, name: 'Channel ${i + 1}', epgChannelId: 'ch${400 + i}'),
+  );
+}
+
+String _stampFeedDoc(DateTime now) {
+  String stamp(DateTime t) {
+    final u = t.toUtc();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${u.year}${two(u.month)}${two(u.day)}${two(u.hour)}${two(u.minute)}${two(u.second)} +0000';
+  }
+
+  final start = stamp(now.subtract(const Duration(hours: 1)));
+  final mid = stamp(now.add(const Duration(hours: 1)));
+  final channels = List.generate(
+    24,
+    (i) => '  <channel id="ch${400 + i}"><display-name>Channel ${i + 1}</display-name></channel>',
+  ).join('\n');
+  final programmes = List.generate(
+    24,
+    (i) => '  <programme start="$start" stop="$mid" channel="ch${400 + i}"><title>Seed Show ${i + 1}</title></programme>',
+  ).join('\n');
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<tv>\n$channels\n$programmes\n</tv>';
+}
 /// the panel refuses everything with 403. getLiveStreams and
 /// getLiveCategories are stubbed (no panel call, no premature
 /// breaker) so the channels load and the breaker opens from the
@@ -460,6 +547,88 @@ void main() {
     );
 
     await harness.drainPacedCalls(tester, () => api.shortEpgCalls);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('G1 the guide stamps the last-updated date when rows serve from a refused feed', (tester) async {
+    final now = DateTime.now();
+
+    // Phase 1 — seed: the panel answers, the feed downloads and
+    // persists, and the source status records the success. Real
+    // async (row store, feed file) runs inside runAsync — it never
+    // completes in the fake-async zone.
+    final seedApi = _StampSeedApi()..xmltvBody = _stampFeedDoc(now);
+    await tester.runAsync(() async {
+      final seedClient = IptvClient.xtream(xtreamConnection: _sweepConnection());
+      seedClient.testXtreamApi = seedApi;
+      await seedClient.iptvChannels();
+      final seedSupport = seedClient.liveTv as IptvLiveTvSupport;
+      final seeded = await seedSupport.fetchEpgForChannel(
+        '400',
+        from: now.subtract(const Duration(hours: 1)),
+        to: now.add(const Duration(hours: 2)),
+      );
+      expect(seeded.map((p) => p.title), contains('Seed Show 1'));
+    });
+    expect(seedApi.xmltvCalls, 1, reason: 'one seed download');
+    // Age the persisted feed past any TTL, so the refused phase's
+    // warm start treats it as stale and attempts the refresh (the
+    // row store keys its freshness off this file's mtime too).
+    final feedFiles = epgTempDir.listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.xml')).toList();
+    expect(feedFiles, hasLength(1), reason: 'the seed persisted exactly one feed file');
+    feedFiles.single.setLastModifiedSync(now.subtract(const Duration(days: 2)));
+
+    // Phase 2 — blocked: the same channels, but the panel 403s
+    // everything. The rows warm-start from the seeded feed, the
+    // background refresh 403s (and records the failure), and the
+    // stamp names the date that feed was last updated.
+    final api = _StampRefusedApi(
+      client: MockClient((request) async => http.Response('{"error": "blocked"}', 403)),
+    );
+    final harness = _SweepTabHarness(api);
+    addTearDown(harness.dispose);
+    await harness.init();
+    expect(harness.channels, hasLength(24));
+    await harness.pump(tester);
+
+    final expectedStamp = t.iptv.epgGuideStale(
+      date: DateFormat.MMMd(LocaleSettings.currentLocale.intlLocaleName).format(DateTime.now().toLocal()),
+    );
+    await harness.waitUntil(tester, () => find.text(expectedStamp).evaluate().isNotEmpty, rounds: 40);
+    expect(find.text(expectedStamp), findsOneWidget, reason: 'the stale stamp names the last-updated date');
+    // The rows serve from the persisted feed: nothing failed (the
+    // service-level G1(a) test proves the warm start serves the
+    // seeded programmes, and this run's log shows "served from
+    // cache" per row — the grid paints programme titles, it does not
+    // render them as plain Text, so no title lookup here).
+    expect(
+      find.text(t.iptv.refusedOnThisNetwork),
+      findsNothing,
+      reason: 'no row failed — the feed served, just stale',
+    );
+    expect(
+      find.text(t.iptv.epgGuideDenied),
+      findsNothing,
+      reason: 'the denial banner stays hidden — rows ARE serving, just stale',
+    );
+
+    // 1.4.3 G1: drain with real-time settling, not fake time alone.
+    // The rows' fetches and the background refresh cross the
+    // fake/real boundary (the breaker check reads the refusal log,
+    // whose load is real async) — a fake-only drain exits while a
+    // fetch is still queued, leaving its 15 s first-paint timer
+    // pending at disposal. Alternating runAsync + pump lets the
+    // real continuations land; the count stability check is the
+    // same as drainPacedCalls.
+    var last = api.shortEpgCalls;
+    var stable = 0;
+    for (var i = 0; i < 16 && stable < 2; i++) {
+      await harness.settleOnce(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+      final nowCount = api.shortEpgCalls;
+      stable = nowCount == last ? stable + 1 : 0;
+      last = nowCount;
+    }
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

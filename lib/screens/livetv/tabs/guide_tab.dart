@@ -355,6 +355,16 @@ class GuideTabState extends State<GuideTab>
   // leaving hour blocks with no explanation. Cleared when any fetch
   // succeeds or the state resets.
   Object? _iptvEpgLastError;
+  /// 1.4.3 G1: the last-success date of a visible feed whose latest
+  /// refresh failed — the guide is serving rows from the persisted
+  /// feed and says so ("Guide last updated …") instead of looking
+  /// fresh. Null when no visible source is failed. Set by
+  /// [_refreshStaleGuideStamp]; cleared with the rest of the EPG
+  /// state (window change / version bump).
+  DateTime? _staleGuideUpdatedAt;
+  /// Last time the stamp was (re)checked, so the per-row completion
+  /// hook does not re-read the source statuses on every row.
+  DateTime? _staleGuideStampCheckedAt;
   final Map<String, int> _iptvEpgVersionByServer = {};
 
   /// Merged per-channel program lists (real programs + "No information"
@@ -1420,6 +1430,9 @@ class GuideTabState extends State<GuideTab>
             // still caps the sweep — a row whose retry comes back
             // empty again does not re-arm.
             if (rearmSweep) _scheduleEpgSweep();
+            // 1.4.3 G1: this row just settled — if its feed failed
+            // its refresh, the stamp names the date it was last good.
+            unawaited(_refreshStaleGuideStamp());
           })
           .catchError((Object e) async {
             if (!mounted) return;
@@ -1455,6 +1468,9 @@ class GuideTabState extends State<GuideTab>
               _iptvEpgLastError = e;
               _mergedProgramsCache.remove(scopeKey);
             });
+            // 1.4.3 G1: this row just settled (failed) — other rows
+            // may be serving stale, so the stamp is re-checked too.
+            unawaited(_refreshStaleGuideStamp());
           }),
     );
   }
@@ -1477,6 +1493,10 @@ class GuideTabState extends State<GuideTab>
     _iptvEpgLoadedEmpty.clear();
     _iptvEpgLoadedEmptyRetried.clear();
     _iptvEpgLastError = null;
+    // 1.4.3 G1: a fresh window / feed rebuild re-checks the stamp
+    // from scratch — a stale date must not survive into it.
+    _staleGuideUpdatedAt = null;
+    _staleGuideStampCheckedAt = null;
     _mergedProgramsCache.clear();
     _programsByChannelScope = const {};
   }
@@ -1556,14 +1576,53 @@ class GuideTabState extends State<GuideTab>
   /// 403 circuit breaker open (1.4.3 C2/C3). The sweep checks every
   /// distinct support (one per server); a single refused server stops
   /// the whole sweep — its calls would all 403.
-  Future<bool> _isAnyIptvSupportIn403Cooldown() async {
+  /// The distinct IPTV supports behind the visible channels.
+  Set<IptvLiveTvSupport> _visibleIptvSupports() {
     final seen = <IptvLiveTvSupport>{};
     for (final channel in widget.channels) {
       final support = _iptvSupportFor(channel);
-      if (support == null || !seen.add(support)) continue;
+      if (support != null) seen.add(support);
+    }
+    return seen;
+  }
+
+  Future<bool> _isAnyIptvSupportIn403Cooldown() async {
+    for (final support in _visibleIptvSupports()) {
       if (await support.isIn403Cooldown) return true;
     }
     return false;
+  }
+
+  /// Refresh the stale-guide stamp (1.4.3 G1): when a visible feed's
+  /// latest refresh failed, the rows on screen came from the persisted
+  /// feed — the stamp names the date that feed was last updated. The
+  /// source status is the record (a background refresh failure is
+  /// recorded there since 1.4.3; a success clears it). Only runs while
+  /// the stamp is hidden, throttled to one status read per second, so
+  /// the per-row completion hook does not re-read on every row — but
+  /// short enough that a failure landing mid-burst is seen by a later
+  /// row's completion, not stranded past the last one.
+  Future<void> _refreshStaleGuideStamp() async {
+    if (_staleGuideUpdatedAt != null) return;
+    final now = DateTime.now();
+    if (_staleGuideStampCheckedAt != null &&
+        now.difference(_staleGuideStampCheckedAt!) < const Duration(seconds: 1)) {
+      return;
+    }
+    _staleGuideStampCheckedAt = now;
+    DateTime? stalest;
+    for (final support in _visibleIptvSupports()) {
+      final statuses = await support.epgSourceStatuses();
+      for (final status in statuses.values) {
+        final lastSuccess = status.lastSuccess;
+        final lastFailure = status.lastFailure;
+        if (lastSuccess == null || lastFailure == null) continue;
+        if (!lastFailure.isAfter(lastSuccess)) continue;
+        if (stalest == null || lastSuccess.isBefore(stalest)) stalest = lastSuccess;
+      }
+    }
+    if (!mounted) return;
+    if (stalest != null) setState(() => _staleGuideUpdatedAt = stalest);
   }
 
   Future<void> _runEpgSweepPass() async {
@@ -1605,6 +1664,12 @@ class GuideTabState extends State<GuideTab>
         blockedByRefusal: true,
       );
       _scheduleEpgSweep();
+      // 1.4.3 G1: the breaker is open because a refresh failed — the
+      // rows behind it are serving stale, so the stamp is re-checked
+      // on every blocked pass (this is the path that keeps running
+      // while the breaker is open; the normal pass end below is
+      // skipped here).
+      unawaited(_refreshStaleGuideStamp());
       return;
     }
     var started = 0;
@@ -1660,6 +1725,9 @@ class GuideTabState extends State<GuideTab>
     if (_epgSweepPassesDone < _epgSweepMaxPasses && _hasUnfetchedEpgChannels()) {
       _scheduleEpgSweep();
     }
+    // 1.4.3 G1: a pass just settled rows — if the feed behind them
+    // failed its refresh, the stamp names the date it was last good.
+    unawaited(_refreshStaleGuideStamp());
   }
 
   /// True when the guide is empty because every visible IPTV fetch
@@ -1703,6 +1771,38 @@ class GuideTabState extends State<GuideTab>
               ),
             ),
             TextButton(onPressed: _retryAllIptvEpg, child: Text(t.common.retry)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The stale-guide stamp (1.4.3 G1): when rows are serving from a
+  /// persisted feed whose latest refresh failed, the guide names the
+  /// date that feed was last updated. Distinct from the denial banner
+  /// (which shows only when NOTHING loaded): the stamp is for stale
+  /// rows that ARE serving.
+  Widget _buildStaleGuideStamp(ThemeData theme) {
+    final tk = tokens(context);
+    final updated = _staleGuideUpdatedAt!;
+    return Material(
+      color: Color.alphaBlend(tk.surface.withValues(alpha: 0.5), tk.bg),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            AppIcon(Symbols.schedule_rounded, size: 18, color: tk.textMuted),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                t.iptv.epgGuideStale(
+                  date: DateFormat.MMMd(LocaleSettings.currentLocale.intlLocaleName).format(updated.toLocal()),
+                ),
+                style: theme.textTheme.bodySmall?.copyWith(color: tk.textMuted),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),
@@ -2361,6 +2461,10 @@ class GuideTabState extends State<GuideTab>
         // 1.2.3: the denial banner — the guide names the denial instead
         // of leaving hour blocks with no explanation.
         if (_showIptvEpgDeniedBanner) _buildIptvEpgDeniedBanner(theme),
+        // 1.4.3 G1: the stale stamp — rows are serving from a persisted
+        // feed whose refresh failed. Hidden when the denial banner
+        // shows (nothing loaded, so there are no rows to stamp).
+        if (_staleGuideUpdatedAt != null && !_showIptvEpgDeniedBanner) _buildStaleGuideStamp(theme),
         Expanded(
           child: ListenableBuilder(
             listenable: _gridHorizontalController,

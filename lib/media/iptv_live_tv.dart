@@ -4075,8 +4075,9 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// back, so nobody else records it — without this, the 304 that
   /// revalidates a stale guide never surfaces anywhere (not in the
   /// status, not in the Reload report). A null attempt (a load the
-  /// bulk/per-channel paths never built) records nothing; a failed
-  /// refresh records nothing either — the previous status stands.
+  /// bulk/per-channel paths never built) records nothing. A failed
+  /// refresh is recorded by [_recordBackgroundFeedFailure] instead —
+  /// the previous status stands only until a failure is recorded.
   Future<void> _recordBackgroundFeedLoad(
     _EpgSourceAttempt? attempt,
     _CachedXmltvGuide guide,
@@ -4085,6 +4086,24 @@ class IptvLiveTvSupport implements LiveTvSupport {
     if (attempt == null) return;
     try {
       await _recordSourceSuccess(attempt, guide, started);
+    } catch (_) {
+      // Best-effort: the guide is already in memory; the next load
+      // re-records.
+    }
+  }
+
+  /// Record a failed background feed refresh in the per-source status
+  /// (1.4.3 G1): the stale-while-revalidate refresh runs behind the
+  /// caller's back, so nobody else records it — without this, a 403
+  /// that kills the refresh never surfaces anywhere (not on the
+  /// sources screen chip, not in the guide tab's stale stamp), and the
+  /// previous success stands as if the feed were fresh. A null attempt
+  /// records nothing; a cancellation is not a failure.
+  Future<void> _recordBackgroundFeedFailure(_EpgSourceAttempt? attempt, Object error) async {
+    if (attempt == null) return;
+    if (MediaServerHttpException.from(error).isCancellation) return;
+    try {
+      await _recordSourceFailure(attempt.config, error);
     } catch (_) {
       // Best-effort: the guide is already in memory; the next load
       // re-records.
@@ -4517,7 +4536,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
       unawaited(
         future
             .then<void>((guide) => _recordBackgroundFeedLoad(attempt, guide, refreshStarted))
-            .catchError((_) {})
+            .catchError((Object e) => _recordBackgroundFeedFailure(attempt, e))
             .whenComplete(() {
           _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
         }),
@@ -4546,7 +4565,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
         unawaited(
           future
               .then<void>((guide) => _recordBackgroundFeedLoad(attempt, guide, refreshStarted))
-              .catchError((_) {})
+              .catchError((Object e) => _recordBackgroundFeedFailure(attempt, e))
               .whenComplete(() {
             _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
           }),
@@ -4572,7 +4591,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
         unawaited(
           future
               .then<void>((guide) => _recordBackgroundFeedLoad(attempt, guide, refreshStarted))
-              .catchError((_) {})
+              .catchError((Object e) => _recordBackgroundFeedFailure(attempt, e))
               .whenComplete(() {
             _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
           }),
