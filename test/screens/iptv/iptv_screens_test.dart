@@ -380,14 +380,20 @@ class _FakeConnectionRegistry extends ConnectionRegistry {
 /// in flight even though the screen would settle fine. This mirrors the
 /// frame-by-frame pumping the screen actually needs (a few frames after
 /// the file I/O lands).
+///
+/// 1.4.3 C1: the pumps advance the fake clock 250 ms each — a bare pump
+/// leaves a paced short-EPG start queued on its 200 ms `Future.delayed`
+/// timer, which is then still pending at disposal ("A Timer is still
+/// pending"). Six rounds (1.5 s fake) stay under the sweep's 2 s idle
+/// window, so no sweep pass starts inside the settle.
 Future<void> pumpLiveTvSettled(WidgetTester tester) async {
-  for (var i = 0; i < 8; i++) {
+  for (var i = 0; i < 6; i++) {
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
   }
-  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 250));
 }
 
 void main() {
