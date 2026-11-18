@@ -20,6 +20,7 @@ import '../models/transcode_quality_preset.dart';
 import '../services/favorite_channels_repository.dart';
 import '../services/device_performance.dart';
 import '../services/storage_health.dart';
+import '../services/iptv/iptv_call_pacer.dart';
 import '../services/iptv/iptv_epg_sources.dart';
 import '../services/iptv/iptv_feed_row_store.dart';
 import '../services/iptv/iptv_heavy_work_gate.dart';
@@ -1396,6 +1397,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
 
   int _shortEpgInFlight = 0;
   final List<Completer<void>> _shortEpgWaiters = [];
+
+  /// Paces `get_short_epg` starts (1.4.3 C1): the semaphore above
+  /// bounds in-flight calls, not rate — the 05:21 log showed 12 calls
+  /// in ~1.3 s (≈ 9 req/s) against a documented 6–8 req/s flood limit
+  /// with only 4 in flight. One pacer per support, shared by the
+  /// guide-open fan-out and the idle sweep (both go through
+  /// [_fetchXtreamShortEpg]).
+  final IptvCallPacer _shortEpgPacer = IptvCallPacer();
 
   /// First-paint budget for one channel's `get_short_epg` (build #15,
   /// item 6): a channel whose short-EPG doesn't answer quickly falls back
@@ -4189,6 +4198,10 @@ class IptvLiveTvSupport implements LiveTvSupport {
   ) async {
     await _acquireShortEpgSlot();
     try {
+      // 1.4.3 C1: pace the start — the semaphore bounds in-flight
+      // calls, not rate. The wait runs while holding the slot, so at
+      // most [_maxShortEpgConcurrency] callers queue in the pacer.
+      await _shortEpgPacer.waitForSlot();
       final request = _client.xtreamApi.getShortEpg(
         channelKey,
         limit: _shortEpgLimit,
