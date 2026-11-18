@@ -92,5 +92,55 @@ void main() {
       );
       expect(ReliefLog.summarizeLogText('no relief here'), 'Relief valve: none recorded');
     });
+
+    test('1.4 F5: line carries the delayed post-GC reading, prefix unchanged', () {
+      // The 1.3.29 trips read 0 MB freed because GC had not run yet
+      // when the after-number was sampled. The delayed token is the
+      // second reading, taken seconds after the drop.
+      final line = ReliefLog.formatLine(
+        src: 'trim',
+        reason: 'memory-pressure',
+        rssBeforeMb: 800,
+        rssAfterMb: 795, // at-drop: only 5 MB freed
+        rssDelayedMb: 700, // after GC: 100 MB freed
+        dropped: 'iptv-catalogs+epg+image-caches',
+      );
+      expect(line.startsWith('RELIEF memory-pressure rssMb=800 rssMbAfter=795 dropped=iptv-catalogs+epg+image-caches'), isTrue);
+      expect(line, contains('freedMb=5'));
+      expect(line, contains('rssMbAfterDelayed=700'));
+    });
+
+    test('1.4 F5: summary prefers the delayed number, old lines keep old math', () {
+      const logs = '''
+2026-11-18 RELIEF memory-pressure rssMb=800 rssMbAfter=795 dropped=iptv-catalogs+epg+image-caches src=trim freedMb=5 rssMbAfterDelayed=700
+2026-11-15 RELIEF rss-high rssMb=745 rssMbAfter=700 dropped=iptv-catalogs+epg src=watchdog freedMb=45
+2026-11-15 unrelated line
+''';
+      // Trip 1 freed 100 (800 - 700 delayed), trip 2 freed 45
+      // (no delayed token — old math). Two trips, counted once each.
+      expect(
+        ReliefLog.summarizeLogText(logs),
+        'Relief valve: 2 trips, freed 145 MB (worst trip 100 MB)',
+      );
+    });
+
+    test('1.4 F5: log() passes the delayed reading through', () {
+      final lines = <String>[];
+      final log = ReliefLog(onLine: lines.add);
+      final line = log.log(
+        src: 'watchdog',
+        reason: 'rss-high',
+        rssBeforeMb: 745,
+        rssAfterMb: 740,
+        rssDelayedMb: 690,
+        dropped: 'iptv-catalogs+epg',
+      );
+      expect(lines, [line]);
+      expect(line, contains('rssMbAfterDelayed=690'));
+      expect(
+        ReliefLog.summarizeLogText(lines.join('\n')),
+        'Relief valve: 1 trips, freed 55 MB (worst trip 55 MB)',
+      );
+    });
   });
 }

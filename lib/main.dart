@@ -1594,6 +1594,69 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// 1.4 (F5): emit the structured RELIEF line 3 s after the drop,
+  /// not synchronously — the RSS sampled right after a drop reads 0 MB
+  /// freed because GC has not run yet (both 1.3.29 trips were OS trims
+  /// level 20 that cleared 64 guide entries + 1,940 programmes yet read
+  /// 0 MB). The delayed sample is the post-GC number, logged on the
+  /// same line as `rssMbAfterDelayed`; the immediate `rssMbAfter` stays
+  /// the at-drop number. The prose warnings at the call sites stay the
+  /// contemporaneous record. Telemetry never breaks the valve:
+  /// guarded by `mounted` + try/catch.
+  void _logReliefDelayed({
+    required String src,
+    required String reason,
+    required int rssBeforeMb,
+    required int rssAfterMb,
+    required String dropped,
+    bool? memoDropped,
+    int? epgWindowPrograms,
+    int? epgCacheLen,
+    int? imageCacheMbBefore,
+    int? imageCacheMbAfter,
+  }) {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      try {
+        ReliefLog.instance.log(
+          src: src,
+          reason: reason,
+          rssBeforeMb: rssBeforeMb,
+          rssAfterMb: rssAfterMb,
+          rssDelayedMb: ProcessInfo.currentRss >> 20,
+          dropped: dropped,
+          memoDropped: memoDropped,
+          epgWindowPrograms: epgWindowPrograms,
+          epgCacheLen: epgCacheLen,
+          imageCacheMbBefore: imageCacheMbBefore,
+          imageCacheMbAfter: imageCacheMbAfter,
+        );
+      } catch (_) {
+        // Telemetry must never break the valve it records.
+      }
+    });
+  }
+
+  /// 1.4 (F5): the native-trim full drops log prose only (no RELIEF
+  /// line) — the same 0-MB-after misreading applies there, because
+  /// both 1.3.29 trips took this path. Schedule a delayed prose
+  /// follow-up carrying the post-GC RSS so the debug export shows
+  /// what the drop actually freed.
+  void _logNativeTrimDelayed({required int level, required int rssAfterMb}) {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      try {
+        final delayedMb = ProcessInfo.currentRss >> 20;
+        appLogger.w(
+          'Native trim level $level, RSS after GC ${delayedMb}MB '
+          '(was ${rssAfterMb}MB right after the drop)',
+        );
+      } catch (_) {
+        // Telemetry must never break the valve it records.
+      }
+    });
+  }
+
   @override
   void didHaveMemoryPressure() {
     super.didHaveMemoryPressure();
@@ -1611,7 +1674,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     _serverManager.dropIptvCachesFromMemory();
     final rssAfterMb = ProcessInfo.currentRss >> 20;
     final iptvStats = _serverManager.iptvMemoryStats();
-    ReliefLog.instance.log(
+    // 1.4 (F5): the RELIEF line goes out 3 s after the drop with the
+    // post-GC reading — the synchronous after-number read 0 MB freed.
+    _logReliefDelayed(
       src: 'trim',
       reason: 'memory-pressure',
       rssBeforeMb: rssBeforeMb,
@@ -1682,6 +1747,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
           '${iptvStats.entries.map((e) => '${e.key}=${e.value}').join(' ')})',
         );
         _evictImageCaches();
+        // 1.4 (F5): post-GC follow-up — the synchronous rssAfter
+        // reads 0 MB freed before GC runs.
+        _logNativeTrimDelayed(level: level, rssAfterMb: rssAfter >> 20);
         return;
       }
       _serverManager.dropIptvCachesFromMemory();
@@ -1693,6 +1761,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         '${iptvStats.entries.map((e) => '${e.key}=${e.value}').join(' ')})',
       );
       _evictImageCaches();
+      // 1.4 (F5): post-GC follow-up — the synchronous rssAfter
+      // reads 0 MB freed before GC runs.
+      _logNativeTrimDelayed(level: level, rssAfterMb: rssAfter >> 20);
       return;
     }
     if (now.difference(_lastTrimImageEviction) < const Duration(seconds: 30)) {
@@ -1777,8 +1848,11 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
           // L-55: the structured RELIEF line (one line, parseable by
           // the benchmark harness) — the after-number is read after
           // BOTH drops, so the freed total is the valve's whole trip.
+          // 1.4 (F5): the line goes out 3 s after the drop with the
+          // post-GC reading — the synchronous after-number read 0 MB
+          // freed on both 1.3.29 trips.
           final rssAfterValve = ProcessInfo.currentRss;
-          ReliefLog.instance.log(
+          _logReliefDelayed(
             src: 'watchdog',
             reason: 'rss-high',
             rssBeforeMb: rss >> 20,
