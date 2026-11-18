@@ -1533,6 +1533,11 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2314": [
+      "New: EPG sources can now be a .xml.gz file — the guide the US preset uses is compressed, and it used to be rejected",
+      "New: a one-tap 'US guide (epgshare01)' in EPG sources. It fills US cable and sports rows the provider guide misses. It does not carry the national FOX, NBC, CBS or PBS feeds, so those four rows stay empty — no guide we could verify carries them",
+      "Fixed: the debug log now says when a guide row was served from the saved guide, so a log can tell that apart from a row that was never fetched"
+    ],
     "changelog2313": [
       "Fixed: the 'Check M3U guide IDs' button no longer gives up after 150 seconds — it shows live progress, keeps going while the playlist downloads, and picks up where it stopped after a stall",
       "Fixed: applying the guide IDs from the playlist no longer overwrites a guide ID you assigned by hand",
@@ -3409,6 +3414,8 @@
     "epgUpdateOnPlaylistChange": "Update when the channel list changes",
     "epgUpdateOnPlaylistChangeDescription": "Refresh the guide when the provider adds or removes channels",
     "epgSourceAdded": "EPG source added",
+    "epgPresetSectionTitle": "Suggested guides",
+    "epgPresetAdded": "Added ${name}",
     "epgSourceDeleted": "EPG source deleted",
     "epgAssigned": "Guide assigned",
     "epgAssignmentCleared": "Assignment cleared",

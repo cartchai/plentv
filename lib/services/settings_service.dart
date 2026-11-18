@@ -998,6 +998,13 @@ class SettingsService extends BaseSharedPreferencesService {
   /// triggers it — hiding a group does not.
   static const iptvEpgUpdateOnPlaylistChange = BoolPref('iptv_epg_update_on_playlist_change', defaultValue: true);
 
+  /// Add the US guide preset (epgshare01) automatically for a
+  /// connection (1.3.28). Default off — built-in default vs one-tap
+  /// preset is the owner's decision, not the code's. When on, the
+  /// preset is added once, the first time the EPG sources screen
+  /// loads for a connection.
+  static const iptvEpgUsPresetDefault = BoolPref('iptv_epg_us_preset_default', defaultValue: false);
+
   /// Xtream User-Agent (build #20): the User-Agent sent on every Xtream
   /// panel request. Trex 403s the app's default Dart UA while TiviMate
   /// works — panels enforce per-user allowed-UA lists, so the name the app

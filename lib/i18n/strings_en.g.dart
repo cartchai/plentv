@@ -3869,6 +3869,11 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2314 => [
+		'New: EPG sources can now be a .xml.gz file — the guide the US preset uses is compressed, and it used to be rejected',
+		'New: a one-tap \'US guide (epgshare01)\' in EPG sources. It fills US cable and sports rows the provider guide misses. It does not carry the national FOX, NBC, CBS or PBS feeds, so those four rows stay empty — no guide we could verify carries them',
+		'Fixed: the debug log now says when a guide row was served from the saved guide, so a log can tell that apart from a row that was never fetched',
+	];
 	List<String> get changelog2313 => [
 		'Fixed: the \'Check M3U guide IDs\' button no longer gives up after 150 seconds — it shows live progress, keeps going while the playlist downloads, and picks up where it stopped after a stall',
 		'Fixed: applying the guide IDs from the playlist no longer overwrites a guide ID you assigned by hand',
@@ -7738,6 +7743,12 @@ class Translations$iptv$en {
 	/// en: 'EPG source added'
 	String get epgSourceAdded => 'EPG source added';
 
+	/// en: 'Suggested guides'
+	String get epgPresetSectionTitle => 'Suggested guides';
+
+	/// en: 'Added ${name}'
+	String epgPresetAdded({required Object name}) => 'Added ${name}';
+
 	/// en: 'EPG source deleted'
 	String get epgSourceDeleted => 'EPG source deleted';
 
@@ -11439,6 +11450,9 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2314.0' => 'New: EPG sources can now be a .xml.gz file — the guide the US preset uses is compressed, and it used to be rejected',
+			'about.changelog2314.1' => 'New: a one-tap \'US guide (epgshare01)\' in EPG sources. It fills US cable and sports rows the provider guide misses. It does not carry the national FOX, NBC, CBS or PBS feeds, so those four rows stay empty — no guide we could verify carries them',
+			'about.changelog2314.2' => 'Fixed: the debug log now says when a guide row was served from the saved guide, so a log can tell that apart from a row that was never fetched',
 			'about.changelog2313.0' => 'Fixed: the \'Check M3U guide IDs\' button no longer gives up after 150 seconds — it shows live progress, keeps going while the playlist downloads, and picks up where it stopped after a stall',
 			'about.changelog2313.1' => 'Fixed: applying the guide IDs from the playlist no longer overwrites a guide ID you assigned by hand',
 			'about.changelog2313.2' => 'The Reload report now says plainly how many channels matched from the provider feed, and what the short guide showed — or that the guide was never opened',
@@ -11582,11 +11596,11 @@ extension on Translations {
 			'about.changelog2255.0' => 'Search now finds TV shows, even the first time you search after opening the app',
 			'about.changelog2255.1' => 'You can search inside one library — pick it above the search results',
 			'about.changelog2255.2' => 'Catch-up is here: Watch from start sits next to Play, and a show that\'s already on offers Start from beginning',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2255.3' => 'The live scrubber now covers the show you\'re watching, or the hour block when there\'s no guide info',
 			'about.changelog2255.4' => 'Fixed the catch-up window so it reaches back days, not seconds',
 			'about.changelog2254.0' => 'Search finds TV shows again — a query matching lots of movies no longer hides the series',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2254.1' => 'Search results are grouped into Movies, TV Shows, Live TV and other libraries, with chips to jump between them',
 			'about.changelog2254.2' => 'The TV guide now shows Loading guide… while it loads, and a tap-to-retry message when it fails',
 			'about.changelog2254.3' => 'The guide loads the quick per-channel data first while the big guide file downloads in the background',
@@ -12096,11 +12110,11 @@ extension on Translations {
 			'music.repeatOne' => 'Repeat one',
 			'music.instantMixNoServer' => 'No server is available for an instant mix',
 			'music.instantMixFailed' => 'Failed to load the instant mix',
+			_ => null,
+		} ?? switch (path) {
 			'music.instantMixEmpty' => 'The instant mix came back with no tracks',
 			'music.noAudioUrl' => ({required Object track}) => 'No audio URL is available for ${track}',
 			'music.discography.singlesAndEps' => 'Singles & EPs',
-			_ => null,
-		} ?? switch (path) {
 			'music.discography.live' => 'Live',
 			'music.discography.compilations' => 'Compilations',
 			'watchTogether.title' => 'Watch Together',
@@ -12610,11 +12624,11 @@ extension on Translations {
 			'metadataEdit.tvdbAiring' => 'TheTVDB (Aired)',
 			'metadataEdit.tvdbAbsolute' => 'TheTVDB (Absolute)',
 			'metadataEdit.metadataLanguage' => 'Metadata Language',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.useOriginalTitle' => 'Use Original Title',
 			'metadataEdit.preferredAudioLanguage' => 'Preferred Audio Language',
 			'metadataEdit.preferredSubtitleLanguage' => 'Preferred Subtitle Language',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.subtitleMode' => 'Auto-Select Subtitle Mode',
 			'metadataEdit.manuallySelected' => 'Manually selected',
 			'metadataEdit.shownWithForeignAudio' => 'Shown with foreign audio',
@@ -13066,6 +13080,8 @@ extension on Translations {
 			'iptv.epgUpdateOnPlaylistChange' => 'Update when the channel list changes',
 			'iptv.epgUpdateOnPlaylistChangeDescription' => 'Refresh the guide when the provider adds or removes channels',
 			'iptv.epgSourceAdded' => 'EPG source added',
+			'iptv.epgPresetSectionTitle' => 'Suggested guides',
+			'iptv.epgPresetAdded' => ({required Object name}) => 'Added ${name}',
 			'iptv.epgSourceDeleted' => 'EPG source deleted',
 			'iptv.epgAssigned' => 'Guide assigned',
 			'iptv.epgAssignmentCleared' => 'Assignment cleared',
@@ -13122,13 +13138,13 @@ extension on Translations {
 			'iptv.miniPlayerRectValues' => ({required Object rect}) => 'Rect: ${rect}',
 			'iptv.miniPlayerFailReason' => ({required Object reason}) => 'Could not start: ${reason}',
 			'iptv.miniPlayerMissingRecording' => ({required Object programme, required Object channel}) => 'No recording available for ${programme} on ${channel}',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.miniPlayerMissingRecordingNoProgramme' => ({required Object channel}) => 'No recording available for this programme on ${channel}',
 			'iptv.miniPlayerLineBusy' => 'Line busy — another stream is using your connection',
 			'iptv.miniPlayerWatchLive' => 'Watch live',
 			'iptv.groupsOff' => ({required Object count}) => '${count} groups off',
 			'iptv.refusalsTitle' => 'Connection refusals',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.refusalsDescription' => 'Every time the provider refuses a request — what it answered and when. No usernames or passwords are stored here.',
 			'iptv.refusalsEmpty' => 'No refusals recorded yet.',
 			'iptv.refusalsCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 refusal recorded', other: '${n} refusals recorded', ), 

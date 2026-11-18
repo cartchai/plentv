@@ -1625,6 +1625,12 @@ class IptvLiveTvSupport implements LiveTvSupport {
       poisoned = attempts.isNotEmpty;
     }
     if (servable && !generationStale && !poisoned) {
+      // 1.3.28: the serve path used to be silent, so a phone log could
+      // not tell "served from cache" from "never fetched" — say so,
+      // with the programme count and source, on every serve.
+      appLogger.i(
+        'IPTV EPG $channelKey: served from cache (${cached.programs.length} programmes, source ${cached.source.name})',
+      );
       return _slice(cached.programs, from, to);
     }
 
@@ -5004,6 +5010,52 @@ class IptvLiveTvSupport implements LiveTvSupport {
     }
   }
 
+  /// 1.3.28: gunzip a feed stream whose first bytes carry the gzip
+  /// magic (0x1F 0x8B) — every live public US guide is a `.xml.gz`,
+  /// and the added-source path (package:http, no auto-decompression,
+  /// unlike the Xtream path's HttpClient autoUncompress) used to hand
+  /// raw gzip bytes to the XML parser. Magic-byte sniffing, not the
+  /// URL suffix: a plain `.xml` served gzip-encoded is caught too, and
+  /// a `.gz` URL serving plain XML passes through untouched. The
+  /// persisted feed file then holds XML (what the cold-start re-parse
+  /// needs), and the byte/SHA stats describe the parsed bytes.
+  static Stream<List<int>> _gunzipFeedIfNeeded(Stream<List<int>> source) async* {
+    final it = StreamIterator<List<int>>(source);
+    try {
+      // Buffer small leading chunks until the magic bytes can be
+      // judged (a 1-byte first chunk must not decide the stream).
+      final head = <int>[];
+      var isGzip = false;
+      var decided = false;
+      while (!decided) {
+        if (!await it.moveNext()) return; // Empty stream.
+        head.addAll(it.current);
+        if (head.length >= 2) {
+          decided = true;
+          isGzip = head[0] == 0x1f && head[1] == 0x8b;
+        }
+      }
+      Stream<List<int>> rest() async* {
+        while (await it.moveNext()) {
+          yield it.current;
+        }
+      }
+      if (!isGzip) {
+        yield head;
+        yield* rest();
+        return;
+      }
+      appLogger.i('IPTV: EPG feed is gzip-compressed, decompressing before parse');
+      Stream<List<int>> all() async* {
+        yield head;
+        yield* rest();
+      }
+      yield* all().transform(GZipCodec().decoder);
+    } finally {
+      await it.cancel();
+    }
+  }
+
   /// The M3U feed as a byte stream plus the conditional-fetch outcome
   /// (build #26, 1.2.2 I9): the old bare `http.get` buffered the whole
   /// body, and its abort only raced the get — the socket could finish in
@@ -5046,7 +5098,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
       throw StateError('XMLTV fetch failed with HTTP ${streamed.statusCode}');
     }
     return (
-      bytes: _closeClientOnDone(streamed.stream.timeout(const Duration(seconds: 120)), client),
+      bytes: _closeClientOnDone(_gunzipFeedIfNeeded(streamed.stream.timeout(const Duration(seconds: 120))), client),
       notModified: false,
       etag: streamed.headers['etag'],
       lastModified: streamed.headers['last-modified'],
@@ -5324,7 +5376,33 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// stored config. Throws [StateError] with the reason when validation
   /// fails. The same URL may be added twice (different names — the
   /// reorder test does exactly that); each entry is its own source.
-  Future<IptvEpgSourceConfig> addEpgSource(String url, {String? name, int? timeShiftMinutes}) async {
+  /// Add a one-tap preset source (1.3.28): adding the same preset
+  /// twice returns the existing source — a preset is added once, never
+  /// duplicated. A preset is identified by its id (and, for sources
+  /// added before presets existed, by URL).
+  Future<IptvEpgSourceConfig> addEpgPreset(IptvEpgSourcePreset preset) async {
+    final sources = await _epgStore.loadUserSources();
+    final existing =
+        sources.where((s) => s.presetId == preset.id || (s.presetId == null && s.url == preset.url)).toList();
+    if (existing.isNotEmpty) return existing.first;
+    return addEpgSource(preset.url, name: preset.name, presetId: preset.id);
+  }
+
+  /// Built-in-default preset (1.3.28): when the flag is on, the US
+  /// preset is added once for this connection. Off by default — the
+  /// decision (built-in default vs one-tap preset) is the owner's,
+  /// not the code's. Returns the preset's config when added or already
+  /// present, null when the flag is off. The [preset] parameter is a
+  /// test seam: production callers leave it at the real preset.
+  Future<IptvEpgSourceConfig?> ensurePresetDefault({
+    IptvEpgSourcePreset preset = IptvEpgSourcePresets.usEpgshare01,
+  }) async {
+    final settings = await SettingsService.getInstance();
+    if (!settings.read(SettingsService.iptvEpgUsPresetDefault)) return null;
+    return addEpgPreset(preset);
+  }
+
+  Future<IptvEpgSourceConfig> addEpgSource(String url, {String? name, int? timeShiftMinutes, String? presetId}) async {
     final trimmed = url.trim();
     await validateEpgSourceUrl(trimmed);
     final uri = Uri.parse(trimmed);
@@ -5336,6 +5414,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
       url: trimmed,
       name: (name ?? '').trim().isEmpty ? uri.host : name!.trim(),
       timeShiftMinutes: timeShiftMinutes,
+      presetId: presetId,
     );
     sources.add(config);
     await _epgStore.saveUserSources(sources);
@@ -5442,8 +5521,29 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// prefix (the file is bigger than the validation cap) is accepted
   /// when the cut is the only problem — the bytes so far parsed as XML
   /// up to the cut.
+  /// 1.3.28: the validation prefix may be gzip — decompress what the
+  /// cap caught before checking for `<tv`. Chunked conversion without
+  /// requiring close: the 256 KB cap can cut a gzip member mid-stream,
+  /// and close() throws on the missing footer; the bytes decoded so
+  /// far are enough — `<tv>` and the first `<channel>` sit in the
+  /// first kilobytes of XML.
+  static List<int> _gunzipPrefixIfNeeded(List<int> bytes) {
+    if (bytes.length < 2 || bytes[0] != 0x1f || bytes[1] != 0x8b) return bytes;
+    final out = <int>[];
+    final decoder = GZipCodec().decoder.startChunkedConversion(_CollectingByteSink(out));
+    try {
+      decoder.add(bytes);
+      decoder.close();
+    } catch (_) {
+      // A truncated member still yields its decodable prefix above;
+      // close() throws on the missing footer, which is expected.
+    }
+    return out;
+  }
+
   static void _checkXmltvPrefix(List<int> bytes) {
-    final text = utf8.decode(bytes, allowMalformed: true);
+    final xmlBytes = _gunzipPrefixIfNeeded(bytes);
+    final text = utf8.decode(xmlBytes, allowMalformed: true);
     if (!text.contains('<tv')) throw StateError('Not an XMLTV file (no <tv> element)');
     try {
       final doc = XmlDocument.parse(text);
@@ -7808,4 +7908,18 @@ class _XmltvGuideAccumulator {
         feedStoreBuildMs: feedStoreBuildMs,
         feedStoreBytes: feedStoreBytes,
       );
+}
+
+/// Appends every decoded chunk to [out] as it arrives (1.3.28): the
+/// 256 KB validation cap can cut a gzip member mid-stream, so the sink
+/// must not wait for close() to deliver anything.
+class _CollectingByteSink implements ChunkedConversionSink<List<int>> {
+  final List<int> out;
+  _CollectingByteSink(this.out);
+
+  @override
+  void add(List<int> chunk) => out.addAll(chunk);
+
+  @override
+  void close() {}
 }

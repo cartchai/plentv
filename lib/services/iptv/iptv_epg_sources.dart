@@ -46,6 +46,11 @@ class IptvEpgSourceConfig {
   /// shift fixes a wrong-timezone feed without re-importing).
   final int? timeShiftMinutes;
 
+  /// One-tap preset this source came from (1.3.28), if any — e.g.
+  /// `'us-epgshare01'`. Null for hand-added sources and older ones.
+  /// A preset is added once: a second add returns this source.
+  final String? presetId;
+
   static const String providerId = 'provider';
   static const String kindProvider = 'provider';
   static const String kindXmltv = 'xmltv';
@@ -57,6 +62,7 @@ class IptvEpgSourceConfig {
     required this.name,
     this.enabled = true,
     this.timeShiftMinutes,
+    this.presetId,
   });
 
   bool get isProvider => id == providerId;
@@ -71,6 +77,7 @@ class IptvEpgSourceConfig {
     'name': name,
     'enabled': enabled,
     if (timeShiftMinutes != null) 'timeShiftMinutes': timeShiftMinutes,
+    if (presetId != null) 'presetId': presetId,
   };
 
   factory IptvEpgSourceConfig.fromJson(Map<String, dynamic> json) {
@@ -84,6 +91,7 @@ class IptvEpgSourceConfig {
       name: json['name'] as String? ?? id,
       enabled: json['enabled'] as bool? ?? true,
       timeShiftMinutes: json['timeShiftMinutes'] as int?,
+      presetId: json['presetId'] as String?,
     );
   }
 
@@ -100,8 +108,48 @@ class IptvEpgSourceConfig {
       name: name ?? this.name,
       enabled: enabled ?? this.enabled,
       timeShiftMinutes: clearTimeShift ? null : (timeShiftMinutes ?? this.timeShiftMinutes),
+      presetId: presetId,
     );
   }
+}
+
+/// One-tap EPG preset (1.3.28): a live-verified public guide the user
+/// can add with one tap instead of pasting a URL by hand.
+class IptvEpgSourcePreset {
+  /// Stable id, stamped on the source it creates (`presetId`).
+  final String id;
+
+  /// Display name.
+  final String name;
+
+  /// The XMLTV URL (may be a `.xml.gz` — the added-source path
+  /// gunzips it, 1.3.28).
+  final String url;
+
+  /// Plain-words coverage note, shown under the preset. Must say what
+  /// the guide covers AND what it does not — a preset must never
+  /// claim to fill rows it cannot.
+  final String description;
+
+  const IptvEpgSourcePreset({required this.id, required this.name, required this.url, required this.description});
+}
+
+/// The verified presets (1.3.28).
+class IptvEpgSourcePresets {
+  /// The live-verified epgshare01 US guide (HTTP 200, 792 channels,
+  /// 83,441 programmes, checked 2026-11-18). It fills US cable and
+  /// sports rows the provider guide misses; it does NOT carry a bare
+  /// national FOX / NBC / CBS / PBS channel, so it does not fill
+  /// those four rows — no preset may claim otherwise.
+  static const usEpgshare01 = IptvEpgSourcePreset(
+    id: 'us-epgshare01',
+    name: 'US guide (epgshare01)',
+    url: 'https://epgshare01.online/epgshare01/epg_ripper_US2.xml.gz',
+    description:
+        'US cable and sports channels the provider guide misses. It does not carry the national FOX, NBC, CBS or PBS feeds, so those rows stay empty.',
+  );
+
+  static const all = [usEpgshare01];
 }
 
 /// Display state of one source's status chip (IPTVnator model — the

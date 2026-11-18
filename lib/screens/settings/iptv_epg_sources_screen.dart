@@ -144,6 +144,9 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
       return;
     }
     final settings = await SettingsService.getInstance();
+    // 1.3.28: the built-in-default preset — a no-op while the flag is
+    // off, so the one-tap preset below is the only path by default.
+    await support.ensurePresetDefault();
     final sources = await support.epgSources();
     final statuses = await support.epgSourceStatuses();
     final addedFirst = await support.addedSourcesTakePrecedence();
@@ -377,6 +380,30 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
     if (added == true && mounted) {
       showSuccessSnackBar(context, t.iptv.epgSourceAdded);
       await _load();
+    }
+  }
+
+  /// Presets not yet added for this connection (1.3.28): a preset
+  /// already added — by id, or by URL for sources added before
+  /// presets existed — is not offered again.
+  List<IptvEpgSourcePreset> get _missingPresets => IptvEpgSourcePresets.all
+      .where((p) => !_sources.any((s) => s.presetId == p.id || (s.presetId == null && s.url == p.url)))
+      .toList();
+
+  /// One tap adds a preset source (1.3.28): no URL to paste, no
+  /// validation round-trip to run by hand — the same add path the
+  /// dialog uses, with its error shown if the guide is unreachable.
+  Future<void> _addPreset(IptvEpgSourcePreset preset) async {
+    final support = _boundSupport();
+    if (support == null) return;
+    try {
+      await support.addEpgPreset(preset);
+      if (!mounted) return;
+      showSuccessSnackBar(context, t.iptv.epgPresetAdded(name: preset.name));
+      await _load();
+    } on StateError catch (e) {
+      if (!mounted) return;
+      showErrorSnackBar(context, e.message);
     }
   }
 
@@ -894,6 +921,27 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
               ),
             ),
           ),
+          // 1.3.28: one-tap preset guides — shown only while a preset
+          // is not yet added for this connection. The tile says what
+          // the guide covers and what it does not, in plain words.
+          if (_missingPresets.isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+              sliver: SliverToBoxAdapter(
+                child: SettingsGroup(
+                  title: t.iptv.epgPresetSectionTitle,
+                  children: [
+                    for (final preset in _missingPresets)
+                      SettingNavigationTile(
+                        icon: Symbols.add_circle_outline_rounded,
+                        title: preset.name,
+                        subtitle: preset.description,
+                        onTap: () => unawaited(_addPreset(preset)),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
             sliver: SliverToBoxAdapter(
