@@ -1485,6 +1485,11 @@ class IptvLiveTvSupport implements LiveTvSupport {
   DateTime? _lastEpgPrefWrite;
   DateTime? _lastEpgAttemptPrefWrite;
 
+  /// Whether the 403 circuit breaker is open for this support's
+  /// connection (1.4.3 C3/C2): the guide tab's sweep and row retry read
+  /// this instead of re-firing the panel.
+  Future<bool> get isIn403Cooldown => _client.isIn403Cooldown;
+
   /// Test-only override for the directory the persisted EPG cache lives
   /// in, so tests can use a temp dir instead of the app cache. Production
   /// code never sets this; reset it in tearDown when a test does.

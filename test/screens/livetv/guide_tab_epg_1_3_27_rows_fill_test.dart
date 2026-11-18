@@ -256,9 +256,32 @@ final class _RowsFillTabHarness {
   }
 
   /// Poll until [test] is true or give up after [rounds] settles.
+  /// 1.4.3 C1: each round also advances the fake clock 250 ms —
+  /// the pacer spaces short-EPG starts 200 ms apart, and a paced
+  /// start only lands when the clock moves (runAsync alone never
+  /// moves it), so a wait loop that only settles would spin forever
+  /// waiting for the second row's call.
   Future<void> waitUntil(WidgetTester tester, bool Function() test, {int rounds = 40}) async {
     for (var i = 0; i < rounds && !test(); i++) {
       await settleOnce(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+  }
+
+  /// Drain the 1.4.3 C1 pacer before the test ends: paced short-EPG
+  /// starts are fake timers, and the framework fails a test that
+  /// disposes the tree with one still pending. Pump until the call
+  /// count is unchanged across two consecutive pumps (bounded) — a
+  /// pending pacer timer would fire within 200 ms and move the
+  /// count, so two stable pumps mean none is left.
+  Future<void> drainPacedCalls(WidgetTester tester) async {
+    var last = api.shortEpgCalledIds.length;
+    var stable = 0;
+    for (var i = 0; i < 16 && stable < 2; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+      final now = api.shortEpgCalledIds.length;
+      stable = now == last ? stable + 1 : 0;
+      last = now;
     }
   }
 
@@ -331,6 +354,14 @@ void main() {
     epgTempDir = await Directory.systemTemp.createTemp('plezy_epg_1_3_27_rows_fill_tab_');
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = () async => epgTempDir;
     IptvCatalogDiskCache.debugDisableDisk = true;
+    // 1.4.3 C1: parse the feed on the main isolate in this harness.
+    // The pacer spreads the rows' short-EPG starts over fake time, so
+    // the feed download starts later in the test's runAsync windows —
+    // and the worker isolate's result then never lands in a combined
+    // run (the check joins the in-flight download and stalls past its
+    // loop cap). The parse itself is not what's under test here; the
+    // 1.2.18 S-1 seam exists for exactly this.
+    IptvLiveTvSupport.debugDisableIsolateFeedParse = true;
     IptvPlaybackActivity.debugResetInstance();
   });
 
@@ -338,6 +369,7 @@ void main() {
     IptvPlaybackActivity.instance.markIdle();
     IptvPlaybackActivity.debugResetInstance();
     IptvCatalogDiskCache.debugDisableDisk = false;
+    IptvLiveTvSupport.debugDisableIsolateFeedParse = false;
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = null;
     if (await epgTempDir.exists()) await epgTempDir.delete(recursive: true);
   });
@@ -364,6 +396,7 @@ void main() {
     expect(find.text('NBC Live Now'), findsWidgets);
     expect(find.text('CBS Live Now'), findsWidgets);
 
+    await harness.drainPacedCalls(tester);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -401,6 +434,7 @@ void main() {
     expect(harness.api.shortEpgCallsFor('201'), greaterThanOrEqualTo(2), reason: 'the healed row is re-asked');
     expect(find.text('Fox News'), findsWidgets, reason: 'the FOX row fills from the feed via its new manual mapping');
 
+    await harness.drainPacedCalls(tester);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -430,6 +464,10 @@ void main() {
     // this test's gate is the titles.)
     await harness.runCheckAndApply(tester);
     await harness.waitUntil(tester, () => harness.api.shortEpgCallsFor('201') >= 2);
+    // 1.4.3 C1: the four rows re-fetch in order behind the pacer,
+    // so wait for the LAST row's re-fetch too — waiting only for
+    // 201 leaves 202-204 still queued and their titles unfilled.
+    await harness.waitUntil(tester, () => harness.api.shortEpgCallsFor('204') >= 2);
     await harness.settleOnce(tester);
     await harness.settleOnce(tester);
     await harness.settleOnce(tester);
@@ -439,6 +477,7 @@ void main() {
     expect(find.text('NBC News'), findsWidgets, reason: 'NBC fills via its new manual feed id');
     expect(find.text('CBS News'), findsWidgets, reason: 'CBS fills via its new manual feed id');
 
+    await harness.drainPacedCalls(tester);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -465,6 +504,7 @@ void main() {
     expect(find.text('NBC News'), findsNothing);
     expect(find.text('CBS News'), findsNothing);
 
+    await harness.drainPacedCalls(tester);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

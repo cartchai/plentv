@@ -155,13 +155,17 @@ final class _LoadedEmptyTabHarness {
   }
 
   /// Poll (real-I/O window) until the short-EPG call count passes
-  /// [count], or give up after 30 rounds.
+  /// [count], or give up after 30 rounds. 1.4.3 C1: each round also
+  /// advances the fake clock 250 ms — the pacer spaces short-EPG
+  /// starts 200 ms apart, and a paced start only lands when the
+  /// clock moves.
   Future<void> waitForEpgCallsAbove(WidgetTester tester, int count) async {
     for (var i = 0; i < 30 && api.epgCalls <= count; i++) {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
     }
   }
 
@@ -171,6 +175,23 @@ final class _LoadedEmptyTabHarness {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pump();
+  }
+
+  /// Drain the 1.4.3 C1 pacer before the test ends: paced short-EPG
+  /// starts are fake timers, and the framework fails a test that
+  /// disposes the tree with one still pending. Pump until the call
+  /// count is unchanged across two consecutive pumps (bounded) — a
+  /// waiter behind the slot semaphore only arms its pacer timer once
+  /// a slot frees, so the cap must cover the whole queue.
+  Future<void> drainPacedCalls(WidgetTester tester) async {
+    var last = api.epgCalls;
+    var stable = 0;
+    for (var i = 0; i < 40 && stable < 2; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+      final now = api.epgCalls;
+      stable = now == last ? stable + 1 : 0;
+      last = now;
+    }
   }
 
   void dispose() => provider.dispose();
@@ -190,6 +211,12 @@ void main() {
     epgTempDir = await Directory.systemTemp.createTemp('plezy_epg_1_3_26_loaded_empty_tab_');
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = () async => epgTempDir;
     IptvCatalogDiskCache.debugDisableDisk = true;
+    // 1.4.3 C1: parse the feed on the main isolate in this harness —
+    // the pacer spreads the rows' short-EPG starts over fake time, so
+    // the feed download starts later in the test's runAsync windows
+    // and the worker isolate's result then never lands in a combined
+    // run. The parse itself is not what's under test here (1.2.18 S-1).
+    IptvLiveTvSupport.debugDisableIsolateFeedParse = true;
     IptvPlaybackActivity.debugResetInstance();
   });
 
@@ -197,6 +224,7 @@ void main() {
     IptvPlaybackActivity.instance.markIdle();
     IptvPlaybackActivity.debugResetInstance();
     IptvCatalogDiskCache.debugDisableDisk = false;
+    IptvLiveTvSupport.debugDisableIsolateFeedParse = false;
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = null;
     if (await epgTempDir.exists()) await epgTempDir.delete(recursive: true);
   });
@@ -265,6 +293,7 @@ void main() {
     await harness.settleOnce(tester);
     expect(find.text('Late Show 100'), findsWidgets);
 
+    await harness.drainPacedCalls(tester);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

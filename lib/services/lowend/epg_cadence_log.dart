@@ -109,9 +109,10 @@ class EpgCadenceLog {
     required int skippedFailed,
     required int skippedInFlight,
     required bool blockedByPlayback,
+    bool blockedByRefusal = false,
   }) {
     final line =
-        'EPG-CADENCE sweep pass=$pass started=$started skippedLoaded=$skippedLoaded skippedFailed=$skippedFailed skippedInFlight=$skippedInFlight blockedByPlayback=$blockedByPlayback';
+        'EPG-CADENCE sweep pass=$pass started=$started skippedLoaded=$skippedLoaded skippedFailed=$skippedFailed skippedInFlight=$skippedInFlight blockedByPlayback=$blockedByPlayback blockedByRefusal=$blockedByRefusal';
     try {
       appLogger.i(line);
     } catch (_) {

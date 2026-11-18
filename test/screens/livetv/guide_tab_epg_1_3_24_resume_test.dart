@@ -46,6 +46,7 @@ import 'package:plezy/providers/multi_server_provider.dart';
 import 'package:plezy/screens/livetv/tabs/guide_tab.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
+import 'package:plezy/services/iptv/iptv_refusal_log.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -195,6 +196,10 @@ final class _ResumeHarness {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
       await tester.pump();
+      // 1.4.3 C1: advance the fake clock too — the pacer spaces
+      // short-EPG starts 200 ms apart, and a paced start only lands
+      // when the clock moves.
+      await tester.pump(const Duration(milliseconds: 250));
     }
   }
 
@@ -252,6 +257,33 @@ final class _ResumeHarness {
     }
   }
 
+  /// Drain the 1.4.3 C1 pacer AND the sweep's in-flight fetches before
+  /// the test ends. Paced short-EPG starts are fake timers, and a
+  /// started fetch holds a 15 s first-paint timer — the framework
+  /// fails a test that disposes the tree with either still pending.
+  /// Each round pumps the clock (releasing paced starts) and then
+  /// completes every fetch that started, which frees the short-EPG
+  /// slots so the next queued start arms instead of stalling the
+  /// drain, and cancels that fetch's first-paint timer. The sweep
+  /// keeps starting new fetches until its 5-pass budget is spent, so
+  /// the drain runs until the call count is unchanged across three
+  /// pumps AND no fetch is pending — three stable pumps flush any
+  /// pacer timer armed in the last round (it fires within 200 ms).
+  Future<void> drainPacedCalls(WidgetTester tester) async {
+    var last = api.epgCalls;
+    var stable = 0;
+    for (var i = 0; i < 80 && (stable < 3 || api.pending.isNotEmpty); i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+      for (final id in api.pending.keys.toList()) {
+        api.completeWith(id, []);
+      }
+      await tester.pump();
+      final now = api.epgCalls;
+      stable = now == last ? stable + 1 : 0;
+      last = now;
+    }
+  }
+
   void dispose() => provider.dispose();
 }
 
@@ -266,9 +298,20 @@ void main() {
     LocaleSettings.setLocaleSync(AppLocale.en);
     await SettingsService.getInstance();
     MemoryLogOutput.clearLogs();
+    // 1.4.3 C2: the sweep awaits the refusal-log load, and the log
+    // singleton caches its load Future — a load orphaned when the
+    // previous test's zone tore down would hang the next test's sweep
+    // pass forever. Fresh log per test.
+    IptvRefusalLog.debugResetInstance();
     epgTempDir = await Directory.systemTemp.createTemp('plezy_epg_1_3_24_resume_');
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = () async => epgTempDir;
     IptvCatalogDiskCache.debugDisableDisk = true;
+    // 1.4.3 C1: parse the feed on the main isolate in this harness —
+    // the pacer spreads the rows' short-EPG starts over fake time, so
+    // the feed download starts later in the test's runAsync windows
+    // and the worker isolate's result then never lands in a combined
+    // run. The parse itself is not what's under test here (1.2.18 S-1).
+    IptvLiveTvSupport.debugDisableIsolateFeedParse = true;
     IptvPlaybackActivity.debugResetInstance();
   });
 
@@ -276,7 +319,9 @@ void main() {
     IptvPlaybackActivity.instance.markIdle();
     IptvPlaybackActivity.debugResetInstance();
     IptvCatalogDiskCache.debugDisableDisk = false;
+    IptvLiveTvSupport.debugDisableIsolateFeedParse = false;
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = null;
+    IptvRefusalLog.debugResetInstance();
     if (await epgTempDir.exists()) await epgTempDir.delete(recursive: true);
   });
 
@@ -296,7 +341,14 @@ void main() {
     await harness.waitForEpgCallsAbove(tester, 0);
     for (var i = 0; i < 40 && !harness.api.pending.keys.contains('100'); i++) {
       for (final id in harness.api.pending.keys.toList()) {
-        if (id != '100') harness.api.completeWith(id, []);
+        // 1.4.3 C1: complete with a programme, not empty — an empty
+        // short-EPG falls back to the feed, and the pacer stretches
+        // this loop over enough rounds for that fallback to land and
+        // trip the xmltvCalls == 0 assertion below (the fallback is
+        // the test's own completion, not the resume under test).
+        // A programme fills the row, frees the slot, and never
+        // touches the feed.
+        if (id != '100') harness.api.completeWith(id, [_titled('Slot $id', DateTime.now())]);
       }
       await harness.settleOnce(tester);
     }
@@ -328,9 +380,17 @@ void main() {
     await harness.resume(tester);
     for (var i = 0; i < 40 && harness.api.calledIds.where((id) => id == '100').length < 2; i++) {
       for (final id in harness.api.pending.keys.toList()) {
-        if (id != '100') harness.api.completeWith(id, []);
+        // 1.4.3 C1: complete with a programme, not empty — see the
+        // pre-background loop above: an empty short-EPG falls back to
+        // the feed, and the pacer stretches this loop over enough
+        // rounds for that fallback to land before the xmltvCalls == 0
+        // assertion below.
+        if (id != '100') harness.api.completeWith(id, [_titled('Slot $id', DateTime.now())]);
       }
       await harness.settleOnce(tester);
+      // 1.4.3 C1: advance the fake clock too — the re-fetch is a
+      // paced short-EPG start and only lands when the clock moves.
+      await tester.pump(const Duration(milliseconds: 250));
     }
     expect(
       harness.api.calledIds.where((id) => id == '100').length,
@@ -349,6 +409,7 @@ void main() {
     expect(find.text('Resume Show 100'), findsWidgets);
 
     await harness.drainPending(tester);
+    await harness.drainPacedCalls(tester);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -374,6 +435,15 @@ void main() {
 
     // The initial sweep fires after 2 s idle and logs its pass.
     await tester.pump(const Duration(seconds: 2));
+    // 1.4.3 C2: the sweep pass awaits the breaker check, so its log
+    // lands a beat after the timer fires — poll for it instead of
+    // asserting immediately. (The visible rows' paced starts can also
+    // grow the call count during this wait, so the log — not the
+    // count — is the proof the sweep ran.)
+    for (var i = 0; i < 20 && !MemoryLogOutput.getLogs().any((e) => e.message.contains('EPG-CADENCE sweep pass=1')); i++) {
+      await harness.settleOnce(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+    }
     await harness.waitForEpgCallsAbove(tester, visibleCalls);
     expect(harness.api.epgCalls, greaterThan(visibleCalls), reason: 'the idle sweep starts fetches beyond the visible rows');
     expect(
@@ -404,9 +474,14 @@ void main() {
     // budget, so its first pass logs pass=1 again. It may start zero
     // fetches (the cancelled rows are in-flight again after the F3
     // re-fetch, so it correctly skips them) — the log line is the
-    // proof it ran, not a call-count growth.
+    // proof it ran, not a call-count growth. 1.4.3 C2: the pass
+    // awaits the breaker check, so poll for the log instead of
+    // asserting immediately after one settle.
     await tester.pump(const Duration(seconds: 2));
-    await harness.settleOnce(tester);
+    for (var i = 0; i < 20 && !MemoryLogOutput.getLogs().any((e) => e.message.contains('EPG-CADENCE sweep pass=1')); i++) {
+      await harness.settleOnce(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+    }
     expect(
       MemoryLogOutput.getLogs().any((e) => e.message.contains('EPG-CADENCE sweep pass=1')),
       isTrue,
@@ -414,6 +489,7 @@ void main() {
     );
 
     await harness.drainPending(tester);
+    await harness.drainPacedCalls(tester);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

@@ -233,12 +233,16 @@ final class _BlankRowHarness {
 
   /// Pump until the guide has asked for the EPG of [count] channels,
   /// giving the real disk I/O behind the feed read runAsync windows.
+  /// 1.4.3 C1: each round also advances the fake clock 250 ms — the
+  /// pacer spaces short-EPG starts 200 ms apart, and a paced start
+  /// only lands when the clock moves.
   Future<void> waitForEpgCalls(WidgetTester tester, int count) async {
     for (var i = 0; i < 10 && api.epgCalls < count; i++) {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
     }
     expect(api.epgCalls, count);
     await tester.runAsync(() async {

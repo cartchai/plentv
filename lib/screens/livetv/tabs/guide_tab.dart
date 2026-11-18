@@ -1481,16 +1481,18 @@ class GuideTabState extends State<GuideTab>
   // channels it knows. When the guide sits idle, the tab sweeps the
   // channels in this category that have no guide yet, a few at a time,
   // so the rows are filled by the time you scroll to them. Bounded on
-  // purpose: 24 channels per pass, at most 5 passes per category view
-  // (120 channels), 2 s of stillness before each pass — and NEVER
+  // purpose: 8 channels per pass (1.4.3 C2 — 24 was a burst against a
+  // panel that flood-blocks), at most 5 passes per category view
+  // (40 channels), 2 s of stillness before each pass — and NEVER
   // while a stream is playing, because a short-EPG burst on top of
   // viewing traffic blocks the one-connection line (the same rule as
   // the feed download in [_xmltvGuideForKey]). The support's slot
   // semaphore already bounds the panel calls; the sweep only starts
   // them. A failed channel stays failed (tap-to-retry) — the sweep
-  // never retries it.
+  // never retries it. And a refused panel stops the sweep entirely
+  // (1.4.3 C2/C3 — see [_runEpgSweepPass]).
   static const _epgSweepIdleDelay = Duration(seconds: 2);
-  static const _epgSweepChannelsPerPass = 24;
+  static const _epgSweepChannelsPerPass = 8;
   static const _epgSweepMaxPasses = 5;
   Timer? _epgSweepIdleTimer;
   int _epgSweepPassesDone = 0;
@@ -1517,7 +1519,21 @@ class GuideTabState extends State<GuideTab>
     return false;
   }
 
-  void _runEpgSweepPass() {
+  /// True when any IPTV support behind this guide's channels has its
+  /// 403 circuit breaker open (1.4.3 C2/C3). The sweep checks every
+  /// distinct support (one per server); a single refused server stops
+  /// the whole sweep — its calls would all 403.
+  Future<bool> _isAnyIptvSupportIn403Cooldown() async {
+    final seen = <IptvLiveTvSupport>{};
+    for (final channel in widget.channels) {
+      final support = _iptvSupportFor(channel);
+      if (support == null || !seen.add(support)) continue;
+      if (await support.isIn403Cooldown) return true;
+    }
+    return false;
+  }
+
+  Future<void> _runEpgSweepPass() async {
     _epgSweepIdleTimer = null;
     if (!mounted) return;
     if (_epgSweepPassesDone >= _epgSweepMaxPasses) return;
@@ -1536,6 +1552,25 @@ class GuideTabState extends State<GuideTab>
       // stopping bumps the guide version, which rebuilds the tab and
       // re-schedules the sweep anyway — the timer covers the case
       // where it doesn't.
+      _scheduleEpgSweep();
+      return;
+    }
+    // 1.4.3 C2/C3: a refused panel stops the sweep entirely — every
+    // sweep call would 403, and re-firing during a block can extend
+    // it. No pass is spent: the sweep resumes after the next idle
+    // window, once the breaker lapses. The pass is still logged so
+    // "blocked by refusal" is distinguishable from "never ran".
+    if (await _isAnyIptvSupportIn403Cooldown()) {
+      if (!mounted) return;
+      EpgCadenceLog.recordSweepPass(
+        pass: _epgSweepPassesDone + 1,
+        started: 0,
+        skippedLoaded: 0,
+        skippedFailed: 0,
+        skippedInFlight: 0,
+        blockedByPlayback: false,
+        blockedByRefusal: true,
+      );
       _scheduleEpgSweep();
       return;
     }
