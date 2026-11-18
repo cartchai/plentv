@@ -16,6 +16,7 @@ import 'device_performance.dart';
 import '../utils/last_decode_stats.dart';
 import 'downloads_media_store.dart';
 import 'file_picker_service.dart';
+import 'iptv/iptv_refusal_log.dart';
 import 'last_crash_store.dart';
 import 'lowend/frame_time_collector.dart';
 import 'lowend/phase_rss_sampler.dart';
@@ -317,9 +318,29 @@ class DebugLogExportService {
       ),
       MainThreadWatchdog.summaryLine(watchdogRing ?? const []),
       await buildLastCrashSummaryLine(),
+      await buildRefusalSummaryLine(),
       'Failed starts: $failedStarts — $dumpReason${previousExitReason == null ? '' : ' (last exit: $previousExitReason)'}',
     ];
     return lines.join('\n');
+  }
+
+  /// One line on the IPTV refusal log (1.4.3 D2): how many refusals
+  /// are recorded and, for the latest, what it was and which network
+  /// and address family it happened on — the family is the D2 point
+  /// (a 403 that only happens on IPv6 reads differently from one on
+  /// both families). Reads the persisted log directly, so it reflects
+  /// the newest entry even when the in-memory singleton has not
+  /// loaded it yet. Never throws: an unreadable log reports itself.
+  static Future<String> buildRefusalSummaryLine() async {
+    try {
+      final entries = await IptvRefusalLog().loadEntries();
+      if (entries.isEmpty) return 'IPTV refusals: none recorded';
+      final latest = entries.first;
+      final status = latest.statusCode == null ? latest.failureKind : 'HTTP ${latest.statusCode}';
+      return 'IPTV refusals: ${entries.length} recorded, latest $status on ${latest.network} (${latest.addressFamily})';
+    } catch (_) {
+      return 'IPTV refusals: unreadable';
+    }
   }
 
   /// The log tail for the dump, capped at [StorageHealth

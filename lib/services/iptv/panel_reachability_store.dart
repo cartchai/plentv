@@ -63,6 +63,48 @@ abstract final class PanelReachabilityStore {
     return 'unknown';
   }
 
+  @visibleForTesting
+  static String? debugAddressFamiliesOverride;
+
+  /// Which address families the device currently has a usable,
+  /// non-local address in: 'ipv4' | 'ipv6' | 'dual' | 'unknown'
+  /// (1.4.3 D2). Best effort, never throws — like [currentNetworkId].
+  /// Only the family is ever reported, never an address: the caller
+  /// (the refusal log) stores the label, so a 403 that only happens
+  /// on IPv6 can be told apart from one that happens on both without
+  /// any address ever leaving the device.
+  ///
+  /// An address counts when it is not loopback, not link-local and
+  /// not unique-local (fc00::/7). A global IPv6 address is one in
+  /// 2000::/3 — its first hex digit is 2 or 3.
+  static Future<String> currentAddressFamilies() async {
+    final override = debugAddressFamiliesOverride;
+    if (override != null) return override;
+    var hasV4 = false;
+    var hasV6 = false;
+    try {
+      final interfaces = await NetworkInterface.list();
+      for (final interface in interfaces) {
+        for (final address in interface.addresses) {
+          if (address.isLoopback || address.isLinkLocal) continue;
+          final text = address.address.toLowerCase();
+          if (text.startsWith('fc') || text.startsWith('fd')) continue;
+          if (address.type == InternetAddressType.IPv4) {
+            hasV4 = true;
+          } else if (text.startsWith('2') || text.startsWith('3')) {
+            hasV6 = true;
+          }
+        }
+      }
+    } catch (error, stackTrace) {
+      appLogger.d('Panel reachability: address families unavailable', error: error, stackTrace: stackTrace);
+    }
+    if (hasV4 && hasV6) return 'dual';
+    if (hasV4) return 'ipv4';
+    if (hasV6) return 'ipv6';
+    return 'unknown';
+  }
+
   static String _prefsKey(String connectionId) => '$_prefsKeyPrefix$connectionId';
 
   /// The stored verdict for [connectionId], if any: the network it was

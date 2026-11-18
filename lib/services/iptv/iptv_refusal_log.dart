@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../base_shared_preferences_service.dart';
 import '../connectivity_probe.dart';
 import '../../utils/log_redaction_manager.dart';
+import 'panel_reachability_store.dart';
 
 /// One recorded panel refusal (build #27).
 ///
@@ -35,6 +36,9 @@ class IptvRefusalEntry {
     String bodySnippet = '',
     this.userAgent = '',
     this.network = 'unknown',
+    // 1.4.3 D2: the address family when refused — a label only
+    // ('ipv4' | 'ipv6' | 'dual' | 'unknown'), never an address.
+    this.addressFamily = 'unknown',
   }) : headers = sanitizeHeaders(headers),
        bodySnippet = sanitizeBody(bodySnippet);
 
@@ -81,7 +85,13 @@ class IptvRefusalEntry {
   /// different story from one that happens on both.
   final String network;
 
-  IptvRefusalEntry copyWith({String? network}) => IptvRefusalEntry(
+  /// The address family when refused: 'ipv4' | 'ipv6' | 'dual' |
+  /// 'unknown' (1.4.3 D2). A label only — never an address. A refusal
+  /// that only happens on IPv6 is a different story from one that
+  /// happens on both families.
+  final String addressFamily;
+
+  IptvRefusalEntry copyWith({String? network, String? addressFamily}) => IptvRefusalEntry(
     timestamp: timestamp,
     connectionId: connectionId,
     connectionName: connectionName,
@@ -92,6 +102,7 @@ class IptvRefusalEntry {
     bodySnippet: bodySnippet,
     userAgent: userAgent,
     network: network ?? this.network,
+    addressFamily: addressFamily ?? this.addressFamily,
   );
 
   Map<String, dynamic> toJson() => {
@@ -106,6 +117,7 @@ class IptvRefusalEntry {
     'body': bodySnippet,
     'ua': userAgent,
     'network': network,
+    'family': addressFamily,
   };
 
   factory IptvRefusalEntry.fromJson(Map<String, dynamic> json) {
@@ -127,6 +139,8 @@ class IptvRefusalEntry {
       bodySnippet: (json['body'] as String?) ?? '',
       userAgent: (json['ua'] as String?) ?? '',
       network: (json['network'] as String?) ?? 'unknown',
+      // Entries written before 1.4.3 carry no family key.
+      addressFamily: (json['family'] as String?) ?? 'unknown',
     );
   }
 
@@ -138,6 +152,7 @@ class IptvRefusalEntry {
       '[${_formatTimestamp(timestamp)}] ${_statusLabel()} · $action',
       if (connectionName.isNotEmpty) 'Connection: $connectionName',
       'Network: $network',
+      'Address family: $addressFamily',
       if (userAgent.isNotEmpty) 'User-Agent: $userAgent',
       if (headers.isNotEmpty) ...[
         'Headers:',
@@ -245,8 +260,10 @@ class IptvRefusalLog {
   IptvRefusalLog({
     Future<SharedPreferencesWithCache> Function()? prefsProvider,
     Future<String> Function()? networkTypeProvider,
+    Future<String> Function()? addressFamilyProvider,
   }) : _prefsProvider = prefsProvider ?? BaseSharedPreferencesService.sharedCache,
-       _networkTypeProvider = networkTypeProvider ?? _defaultNetworkType;
+       _networkTypeProvider = networkTypeProvider ?? _defaultNetworkType,
+       _addressFamilyProvider = addressFamilyProvider ?? PanelReachabilityStore.currentAddressFamilies;
 
   /// How many refusals are kept; the oldest drops off past this.
   static const int maxEntries = 50;
@@ -267,6 +284,7 @@ class IptvRefusalLog {
 
   final Future<SharedPreferencesWithCache> Function() _prefsProvider;
   final Future<String> Function() _networkTypeProvider;
+  final Future<String> Function() _addressFamilyProvider;
 
   /// The entries, newest first. The Settings screen listens to this.
   final ValueNotifier<List<IptvRefusalEntry>> entriesNotifier = ValueNotifier(const []);
@@ -302,17 +320,20 @@ class IptvRefusalLog {
   }
 
   /// Append [entry] (newest first), dropping the oldest past
-  /// [maxEntries]. The network type is resolved here when the entry
-  /// does not carry one — callers that already know it pass it in.
-  /// Never throws: a failed load, a failed probe, or a failed write
-  /// drops the entry, never the caller.
+  /// [maxEntries]. The network type and address family are resolved
+  /// here when the entry does not carry one — callers that already
+  /// know them pass them in. Never throws: a failed load, a failed
+  /// probe, or a failed write drops the entry, never the caller.
   Future<void> record(IptvRefusalEntry entry) {
     return _enqueue(() async {
       try {
         await ensureLoaded();
         final network = entry.network == 'unknown' ? await _networkType() : entry.network;
-        final withNetwork = network == entry.network ? entry : entry.copyWith(network: network);
-        final next = [withNetwork, ...entriesNotifier.value];
+        final family = entry.addressFamily == 'unknown' ? await _addressFamily() : entry.addressFamily;
+        final resolved = (network == entry.network && family == entry.addressFamily)
+            ? entry
+            : entry.copyWith(network: network, addressFamily: family);
+        final next = [resolved, ...entriesNotifier.value];
         if (next.length > maxEntries) next.removeRange(maxEntries, next.length);
         await _persist(next);
         entriesNotifier.value = List.unmodifiable(next);
@@ -380,6 +401,17 @@ class IptvRefusalLog {
   Future<String> _networkType() async {
     try {
       return await _networkTypeProvider();
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
+  /// Best-effort address-family resolution (1.4.3 D2): same
+  /// never-throw shape as [_networkType] — only the family label is
+  /// ever stored, never an address.
+  Future<String> _addressFamily() async {
+    try {
+      return await _addressFamilyProvider();
     } catch (_) {
       return 'unknown';
     }
