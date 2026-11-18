@@ -2604,7 +2604,28 @@ class IptvClient implements MediaServerClient {
   /// within [refusalProbeBackoff] (build #28) — the health-probe half
   /// of the 403 circuit breaker (1.4.3 C3 delegates to the shared
   /// check, so the probe and the call sites agree about the window).
-  Future<bool> _hasRecentRefusal() async => _isIn403Cooldown();
+  /// Whether this connection has a recent 403 in the refusal log
+  /// (build #28 — the health-probe guard). Log-only, with the
+  /// [refusalProbeBackoff] window: the log write lags a 403 by ~500 ms
+  /// (its network probe), and that lag is load-bearing — a probe fired
+  /// immediately after a 403 still runs and publishes its own verdict
+  /// (build #20's accessDenied, build #21's 401→authError). The guard
+  /// only bites once the entry lands, for later resumes. This is
+  /// deliberately NOT the 1.4.3 breaker check: the in-memory flag
+  /// would close the lag window and the probe would return the
+  /// last-known verdict (which defaults to online) instead of the
+  /// verdict the probe itself would publish.
+  Future<bool> _hasRecentRefusal() async {
+    try {
+      await _refusalLog.ensureLoaded();
+    } catch (_) {
+      return false;
+    }
+    final cutoff = DateTime.now().subtract(refusalProbeBackoff);
+    return _refusalLog.entriesNotifier.value.any(
+      (e) => e.connectionId == connection.id && e.statusCode == 403 && e.timestamp.isAfter(cutoff),
+    );
+  }
 
   @override
   Future<HealthStatus> checkHealth() async {

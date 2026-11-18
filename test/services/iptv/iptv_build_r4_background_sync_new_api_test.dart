@@ -537,7 +537,12 @@ void main() {
       final d = depsFor(panel);
       final ok = await IptvBackgroundSync.runOnce(deps: d.deps);
       expect(ok, isTrue, reason: 'a refusal must never be retried');
-      expect(panel.totalRequests, 3);
+      // 1.4.3 C3: the first fetch (live) 403s at the panel and opens
+      // the breaker, so the movie and series fetches throw the
+      // cooldown 403 without a panel call — one panel request, not
+      // three. The outcomes below are unchanged (all three failed,
+      // no retry); only the panel saw one refusal instead of three.
+      expect(panel.totalRequests, 1);
       final record = await IptvBackgroundSync.readLastRun();
       expect(record!['retry'], isFalse);
       expect(outcomesOf(record), {
@@ -550,7 +555,10 @@ void main() {
         networkTypeProvider: () async => 'wifi',
       );
       final entries = await log.loadEntries();
-      expect(entries.where((e) => e.statusCode == 403).length, greaterThanOrEqualTo(3));
+      // 1.4.3 C3: only the refusal that reached the panel is
+      // recorded — the cooldown 403s are the app declining to ask,
+      // not the panel refusing, so they add no entry.
+      expect(entries.where((e) => e.statusCode == 403).length, greaterThanOrEqualTo(1));
     });
 
     test('the callback resolves the UA from prefs, not the default', () async {

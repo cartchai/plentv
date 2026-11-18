@@ -361,6 +361,10 @@ void main() {
       expect(await client.checkHealth(), HealthStatus.offline, reason: '3rd consecutive 429 publishes offline');
       panel.userInfoMode = _UserInfoMode.forbidden;
       expect(await client.checkHealth(), HealthStatus.accessDenied, reason: '403 is definitive, not transient');
+      // 1.4.3 C3: the 403 opened the breaker, so the next probe would
+      // throw the cooldown 403 instead of reaching the panel — clear
+      // it so this case observes the 401 mapping, not the breaker.
+      client.clear403Cooldown();
       panel.userInfoMode = _UserInfoMode.unauthorized;
       expect(await client.checkHealth(), HealthStatus.authError, reason: '401 is definitive, not transient');
     });

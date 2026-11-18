@@ -317,17 +317,39 @@ final class _MiniPlayerHarness {
   }
 
   Future<void> waitForEpgCalls(WidgetTester tester, int count) async {
+    // 1.4.3 C1: each round also advances the fake clock — the pacer
+    // spaces short-EPG starts 200 ms apart, and a paced start only
+    // lands when the fake clock moves (runAsync alone advances real
+    // time, never the fake clock). The step is 100 ms and the total
+    // stays under the 2 s sweep window: advancing past it would fire
+    // the idle sweep mid-wait, and its async pass never settles under
+    // the settleRows that follows.
     for (var i = 0; i < 10 && api.epgCalls < count; i++) {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     }
     expect(api.epgCalls, count);
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pump();
+  }
+
+  /// Bounded settle after the rows finish (1.4.3 C1/C2): pumpAndSettle
+  /// never returns here — the idle sweep's 2 s timer fires while it
+  /// pumps, and the async pass it starts keeps a frame scheduled past
+  /// the settle budget. Six rounds of real settle + 250 ms fake
+  /// pumps let the rows land (paced starts included) without waiting
+  /// on the sweep, which is still running in the background.
+  Future<void> settleRows(WidgetTester tester) async {
+    for (var i = 0; i < 6; i++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump(const Duration(milliseconds: 250));
+    }
   }
 
   Future<void> tapChannel(WidgetTester tester, String name) async {
@@ -523,7 +545,7 @@ void main() {
       await harness.waitForEpgCalls(tester, 2);
       harness.api.completeEmpty('100');
       harness.api.completeEmpty('101');
-      await tester.pumpAndSettle();
+      await harness.settleRows(tester);
 
       await harness.tapChannel(tester, 'Trex News');
 
@@ -557,10 +579,10 @@ void main() {
         ),
       ]);
       harness.api.completeEmpty('101');
-      await tester.pumpAndSettle();
+      await harness.settleRows(tester);
 
       await tester.tap(find.text('Past Show'));
-      await tester.pumpAndSettle();
+      await harness.settleRows(tester);
       expect(find.textContaining('Watch from start'), findsOneWidget);
 
       await tester.tap(find.textContaining('Watch from start'));
@@ -581,7 +603,7 @@ void main() {
       await harness.waitForEpgCalls(tester, 2);
       harness.api.completeEmpty('100');
       harness.api.completeEmpty('101');
-      await tester.pumpAndSettle();
+      await harness.settleRows(tester);
 
       await harness.tapChannel(tester, 'Trex News');
       expect(harness.players.single.openedMedia.single.headers, containsPair('User-Agent', 'VLC'));

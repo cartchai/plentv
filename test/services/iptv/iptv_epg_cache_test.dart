@@ -727,7 +727,12 @@ void main() {
       );
     }
     // Let the six fetches pile up against the cap.
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // 1.4.3 C1: the pacer spaces short-EPG starts 200 ms apart, so
+    // the four slot-holders start at 0/200/400/600 ms — the snapshot
+    // below waits a full second, not 200 ms, or only the first start
+    // has landed. The cap itself is unchanged: never more than four
+    // in flight.
+    await Future<void>.delayed(const Duration(seconds: 1));
     expect(api.shortEpgMaxInFlight, 4, reason: 'at most four get_short_epg calls run at once');
     expect(api.calls.length, 4, reason: 'the other two channels wait for a slot');
     api.shortEpgGate!.complete();
