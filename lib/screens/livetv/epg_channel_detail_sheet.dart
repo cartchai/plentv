@@ -72,6 +72,7 @@ class _EpgChannelDetailSheetState extends State<_EpgChannelDetailSheet> {
       'name' => t.iptv.epgMatchMethodName,
       'name-loose' => t.iptv.epgMatchMethodNameLoose,
       'name-guess' => t.iptv.epgMatchMethodNameGuess,
+      'name-guess-affiliate' => t.iptv.epgMatchMethodNameGuessAffiliate,
       'manual' => t.iptv.epgMatchMethodManual,
       _ => '—',
     };
@@ -197,8 +198,9 @@ class _EpgChannelDetailSheetState extends State<_EpgChannelDetailSheet> {
             // 1.2.22 §64.6: keep a loose match by hand. A loose match
             // is a guess — it is never saved automatically, so the
             // button only appears for one, with nothing assigned yet.
+            // 1.3.29: the same holds for an affiliate guess.
             if (!_loading &&
-                detail?.matchMethod == 'name-loose' &&
+                (detail?.matchMethod == 'name-loose' || detail?.matchMethod == 'name-guess-affiliate') &&
                 _assignment == null &&
                 detail?.matchedXmltvId != null &&
                 detail?.sourceId != null)

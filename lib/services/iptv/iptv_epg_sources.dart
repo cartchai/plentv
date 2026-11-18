@@ -818,6 +818,13 @@ class IptvEpgMatchTiers {
   final int tvgId;
   final int name;
   final int nameLoose;
+
+  /// 1.3.29 P1-5: channels filled by the region-gated word-overlap
+  /// affiliate guess ('name-guess-affiliate'). Kept apart from
+  /// [name] on purpose — a guess is not a certain match, and the
+  /// Reload dialog says so.
+  final int affiliateGuess;
+
   final int ambiguous;
   final int foreign;
   final int noTvgId;
@@ -837,6 +844,7 @@ class IptvEpgMatchTiers {
     this.tvgId = 0,
     this.name = 0,
     this.nameLoose = 0,
+    this.affiliateGuess = 0,
     this.ambiguous = 0,
     this.foreign = 0,
     this.noTvgId = 0,
@@ -852,6 +860,7 @@ class IptvEpgMatchTiers {
         tvgId = 0,
         name = 0,
         nameLoose = 0,
+        affiliateGuess = 0,
         ambiguous = 0,
         foreign = 0,
         noTvgId = 0,
@@ -862,7 +871,7 @@ class IptvEpgMatchTiers {
         none = 0;
 
   /// Channels that got a guide, by any tier.
-  int get matched => manual + tvgId + name + nameLoose;
+  int get matched => manual + tvgId + name + nameLoose + affiliateGuess;
 
   /// Channels that got no guide, for any reason.
   int get unmatched => ambiguous + foreign + noTvgId + tvgIdNotInFeed + matchedButNoProgrammes + none;

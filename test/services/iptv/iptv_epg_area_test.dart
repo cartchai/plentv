@@ -30,10 +30,16 @@ const _testPassword = 'pa' 'ss';
 ///
 /// PROVING CASE (the tester will use it): the unmatchable channel —
 /// feed channel id "beIN 1" vs tvg-id "beIN.Sports.1" vs name
-/// "beIN SPORTS 1 HD". No automatic match can reach it; only a manual
-/// assignment can. (1.2.5: the old feed id "beIN Sports 1" now matches
+/// "beIN SPORTS 1 HD". (1.2.5: the old feed id "beIN Sports 1" now matches
 /// by name — both sides normalize to "beinsports1" — so the proving
 /// case moved to an id the name tier cannot reach.)
+///
+/// 1.3.29: the affiliate guess DOES reach it now — the channel and the
+/// feed id share the word "bein", and the feed id's extra words are
+/// empty, so the guess is affiliate-shaped and correct. The proving
+/// case no longer proves "only manual can reach it"; the group now
+/// proves the guess reaches it, manual assignment still wins over the
+/// guess, and clearing restores the guess.
 
 XtreamConnection _trexConnection() => XtreamConnection(
   id: 'trex',
@@ -162,11 +168,13 @@ void main() {
   );
 
   group('Manual assignment — the beIN proving case (§3.2, §4)', () {
-    test('no automatic match reaches beIN Sports 1', () async {
+    test('the affiliate guess reaches beIN Sports 1 (1.3.29)', () async {
       // Feed id "beIN 1" vs tvg-id "beIN.Sports.1" vs name
       // "beIN SPORTS 1 HD": exact and folded tvg-id miss, the name
       // tier misses ("beinsports1" vs "bein1"), numeric and loose
-      // miss. The guide shows hour blocks.
+      // miss — but the 1.3.29 affiliate guess reaches it: the channel
+      // and the feed id share the word "bein", and the feed id adds
+      // no topic word, so the guess is affiliate-shaped — and right.
       await loadChannels();
       final now = DateTime.now();
       api.xmltvBody = _feedWith(
@@ -177,41 +185,61 @@ void main() {
       );
       final window = windowAround(now);
       final programs = await support.fetchEpgForChannel('200', from: window.from, to: window.to);
-      expect(programs, isEmpty);
+      expect(programs.map((p) => p.title), ['beIN Show']);
+      final detail = await support.channelEpgDetail('200', from: window.from, to: window.to);
+      expect(detail.hasGuide, isTrue);
+      expect(detail.matchMethod, 'name-guess-affiliate');
+      expect(detail.matchedXmltvId, 'beIN 1');
     });
 
     test('a manual assignment serves the feed, survives refresh, and clears', () async {
       await loadChannels();
       final now = DateTime.now();
+      // A second feed id, so the manual assignment can point
+      // somewhere the guess does not — the guess picks 'beIN 1',
+      // the hand assignment picks 'beIN 2'.
+      final beIN2 =
+          '<channel id="beIN 2"><display-name>beIN 2</display-name></channel>'
+          '<programme start="${_xmltvTime(now)}" stop="${_xmltvTime(now.add(const Duration(hours: 1)))}" channel="beIN 2">'
+          '<title>beIN 2 Show</title></programme>';
       api.xmltvBody = _feedWith(
         channelId: 'beIN 1',
         title: 'beIN Show',
         start: now,
         end: now.add(const Duration(hours: 1)),
+        extraProgrammes: beIN2,
       );
       final window = windowAround(now);
-      // The first fetch caches the empty result — assign, then bust the
-      // cache (the way Update now does) so the mapping is consulted.
-      expect(await support.fetchEpgForChannel('200', from: window.from, to: window.to), isEmpty);
-      await support.assignEpg('200', xmltvId: 'beIN 1', sourceId: IptvEpgSourceConfig.providerId);
+      // The first fetch serves the affiliate guess — assign, then
+      // bust the cache (the way Update now does) so the mapping is
+      // consulted.
+      expect(
+        (await support.fetchEpgForChannel('200', from: window.from, to: window.to)).map((p) => p.title),
+        ['beIN Show'],
+      );
+      await support.assignEpg('200', xmltvId: 'beIN 2', sourceId: IptvEpgSourceConfig.providerId);
       await support.refreshEpgCache();
       final assigned = await support.fetchEpgForChannel('200', from: window.from, to: window.to);
-      expect(assigned.map((p) => p.title), ['beIN Show']);
+      expect(assigned.map((p) => p.title), ['beIN 2 Show']);
 
       // The mapping survives a refresh: bust the cache again and the
-      // channel still shows its feed programmes.
+      // channel still shows its hand-assigned feed programmes.
       await support.refreshEpgCache();
       final afterRefresh = await support.fetchEpgForChannel('200', from: window.from, to: window.to);
-      expect(afterRefresh.map((p) => p.title), ['beIN Show']);
+      expect(afterRefresh.map((p) => p.title), ['beIN 2 Show']);
 
-      // Clear assignment restores auto-matching (nothing, for beIN).
+      // Clear assignment restores auto-matching — the affiliate
+      // guess, for beIN.
       await support.clearEpgAssignment('200');
       await support.refreshEpgCache();
-      expect(await support.fetchEpgForChannel('200', from: window.from, to: window.to), isEmpty);
+      expect(
+        (await support.fetchEpgForChannel('200', from: window.from, to: window.to)).map((p) => p.title),
+        ['beIN Show'],
+      );
       expect(await support.epgAssignmentFor('200'), isNull);
     });
 
-    test('EPG details name the assignment and the why-no-match', () async {
+    test('EPG details name the affiliate guess, then the manual assignment', () async {
       await loadChannels();
       final now = DateTime.now();
       api.xmltvBody = _feedWith(
@@ -221,13 +249,14 @@ void main() {
         end: now.add(const Duration(hours: 1)),
       );
       final window = windowAround(now);
-      // Fetch first so the feed is loaded: the detail for an unmatched
-      // channel must say noMatch, not "not loaded yet".
-      expect(await support.fetchEpgForChannel('200', from: window.from, to: window.to), isEmpty);
-      final unmatched = await support.channelEpgDetail('200', from: window.from, to: window.to);
-      expect(unmatched.hasGuide, isFalse);
-      expect(unmatched.noGuideReason, IptvEpgNoGuideReason.noMatch);
-      expect(unmatched.matchedXmltvId, isNull);
+      // Fetch first so the feed is loaded: the detail for a guessed
+      // channel names the guess, not "not loaded yet".
+      expect(await support.fetchEpgForChannel('200', from: window.from, to: window.to), isNotEmpty);
+      final guessed = await support.channelEpgDetail('200', from: window.from, to: window.to);
+      expect(guessed.hasGuide, isTrue);
+      expect(guessed.matchMethod, 'name-guess-affiliate');
+      expect(guessed.matchedXmltvId, 'beIN 1');
+      expect(guessed.noGuideReason, isNull);
 
       await support.assignEpg('200', xmltvId: 'beIN 1', sourceId: IptvEpgSourceConfig.providerId);
       await support.refreshEpgCache();

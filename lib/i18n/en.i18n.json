@@ -1533,6 +1533,10 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2315": [
+      "New: channels with no guide ID now fill from the closest US affiliate when the guide has one — FOX, NBC, CBS and PBS rows fill with an affiliate's guide. The Reload report counts these separately as 'affiliate guess', so a guessed row is never shown as a certain match",
+      "Fixed: the debug log and the channel details now name an affiliate guess as a guess, and you can keep a guessed guide for a channel from its details"
+    ],
     "changelog2314": [
       "New: EPG sources can now be a .xml.gz file — the guide the US preset uses is compressed, and it used to be rejected",
       "New: a one-tap 'US guide (epgshare01)' in EPG sources. It fills US cable and sports rows the provider guide misses. It does not carry the national FOX, NBC, CBS or PBS feeds, so those four rows stay empty — no guide we could verify carries them",
@@ -3305,7 +3309,7 @@
     "epgReloadTvDetails": "Reload TV details",
     "epgReloadTvDetailsDescription": "Re-fetch the channel list and the guide, and report what loaded",
     "epgReloadTvDetailsResult": "${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match",
-    "epgReloadMatchBreakdown": "Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}",
+    "epgReloadMatchBreakdown": "Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}",
     "epgReloadUnmatchedBreakdown": "No match — ambiguous: ${ambiguous}, foreign: ${foreign}, no tvg-id: ${noTvgId}, tvg-id not in feed: ${tvgIdNotInFeed}, matched but no programmes: ${matchedButNoProgrammes}",
     "epgReloadFeedSample": "Feed sample: ${samples}",
     "epgReloadUnmatchedSample": "Unmatched sample: ${samples}",
@@ -3408,6 +3412,7 @@
     "epgMatchMethodManual": "Assigned by hand",
     "epgMatchMethodNameLoose": "Loose name match",
     "epgMatchMethodNameGuess": "Name (best guess)",
+    "epgMatchMethodNameGuessAffiliate": "Name guess (affiliate)",
     "epgUpdateTime": "Update time",
     "epgUpdateTimeDescription": "Time of day the guide refreshes",
     "epgUpdateTimeOff": "Off",

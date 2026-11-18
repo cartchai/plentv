@@ -743,6 +743,24 @@ bool _epgHasTimeshift(String feedId, List<String> names) {
   return false;
 }
 
+/// True when an extra word of an affiliate-guess candidate is
+/// number-like (1.3.29 tier 5.5): a bare number ('4', '12'), or the
+/// channel word plus a number ('fox4', 'fox12' — the id token of a
+/// numbered affiliate). A topic word ('news', 'east', 'kids') is
+/// never number-like, which is what keeps a bare network word from
+/// guessing a same-word spinoff channel.
+bool _epgExtraWordIsNumberLike(String word, Set<String> channelWords) {
+  if (word.isEmpty) return false;
+  if (word.codeUnits.every((c) => c >= 0x30 && c <= 0x39)) return true;
+  for (final channelWord in channelWords) {
+    if (channelWord.length >= 2 && word.startsWith(channelWord)) {
+      final rest = word.substring(channelWord.length);
+      if (rest.isNotEmpty && rest.codeUnits.every((c) => c >= 0x30 && c <= 0x39)) return true;
+    }
+  }
+  return false;
+}
+
 /// Live TV for IPTV connections (M3U + Xtream Codes).
 ///
 /// Channels come from the provider's live list; playback is a direct stream
@@ -2585,8 +2603,9 @@ class IptvLiveTvSupport implements LiveTvSupport {
   Set<String> _windowCandidateIds(
     _CachedXmltvGuide? guide,
     String channelKey,
-    Map<String, IptvEpgMapping> mappings,
-  ) {
+    Map<String, IptvEpgMapping> mappings, {
+    bool includeAffiliateGuess = true,
+  }) {
     final ids = <String>{};
     final mapping = mappings[channelKey];
     if (mapping != null) ids.add(mapping.xmltvId);
@@ -2612,6 +2631,16 @@ class IptvLiveTvSupport implements LiveTvSupport {
         if (key.isNotEmpty) ids.addAll(guide.nameCandidatesFor(key));
         final looseKey = looseEpgChannelNameKey(channelName);
         if (looseKey.isNotEmpty) ids.addAll(guide.looseCandidatesFor(looseKey));
+        // 1.3.29 tier 5.5: the affiliate guess is a candidate too —
+        // the window must hold the pick's rows before the match runs,
+        // or the per-channel fetch picks the right id and then
+        // reports it out-of-window. One id, not the whole word pool,
+        // so the window cap is untouched. Neighbours skip it (their
+        // own fetches ensure theirs) — see [_windowFeedIdsFor].
+        if (includeAffiliateGuess) {
+          final guess = _affiliateGuessFor(guide, channelName, epgChannelId, tvgId);
+          if (guess != null) ids.add(guess);
+        }
       }
     }
     return ids;
@@ -2639,7 +2668,11 @@ class IptvLiveTvSupport implements LiveTvSupport {
         for (var offset = 1; offset <= 25; offset++) {
           for (final i in [index - offset, index + offset]) {
             if (i < 0 || i >= channels.length) continue;
-            ids.addAll(_windowCandidateIds(guide, channels[i].key, mappings));
+            // Neighbours are prefetch margin, not a trigger — their
+            // affiliate guesses stay out (their own fetches ensure
+            // theirs), so a row fetch does not pay the word-pool
+            // scoring for 50 neighbours.
+            ids.addAll(_windowCandidateIds(guide, channels[i].key, mappings, includeAffiliateGuess: false));
             if (ids.length >= _CachedXmltvGuide.maxWindowFeedIds) {
               return ids.take(_CachedXmltvGuide.maxWindowFeedIds).toSet();
             }
@@ -3096,7 +3129,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
       appLogger.i('IPTV EPG $channelKey: feed matched ${match.matchedXmltvId} via ${match.matchMethod}');
       return (
         programs: match.programs,
-        source: match.matchMethod == 'name' || match.matchMethod == 'name-loose' || match.matchMethod == 'name-guess'
+        source: match.matchMethod == 'name' || match.matchMethod == 'name-loose' || match.matchMethod == 'name-guess' || match.matchMethod == 'name-guess-affiliate'
             ? IptvEpgSource.feedByName
             : IptvEpgSource.feedById,
         feedDeferred: false,
@@ -3148,6 +3181,127 @@ class IptvLiveTvSupport implements LiveTvSupport {
       shortEpgTimedOut: false,
       lateShortEpg: null,
     );
+  }
+
+  /// The single best affiliate guess for [channelName] (1.3.29 P1-5,
+  /// tier 5.5), or null when no serving feed channel overlaps the
+  /// name words. Ranking, best first: (1) region — a non-foreign
+  /// candidate ranks above a foreign twin. Non-foreign means the feed
+  /// channel's countries are empty or contain the channel's country;
+  /// when the channel carries no country, the default region is 'us'
+  /// (the provider feed is US-centric and the rows that motivated
+  /// this tier are US networks). A foreign twin never wins while a
+  /// non-foreign candidate exists, and never serves a channel whose
+  /// country is known. Region is binary on purpose: among
+  /// non-foreign candidates overlap decides, so a callsign channel's
+  /// own affiliate (4 shared words) beats the national feed (1
+  /// shared word). (2) word overlap — shared words between the
+  /// channel name and the candidate's id + display names. (3)
+  /// affiliate shape — a candidate whose extra words are all
+  /// number-like (a bare number, or the channel word plus a number:
+  /// 'FOX 4', 'fox4', 'PBS 12') ranks above one with topic words
+  /// ('Fox News Channel', 'NBC East Stream'). A bare network word
+  /// ('FOX') must only ever guess an affiliate, never a same-word
+  /// spinoff — 'fox' alone also matches Fox News, Fox Sports, Fox
+  /// Soccer, and the shape rule is what keeps those out. (4) fewest
+  /// extra words — the candidate's words the channel does not share.
+  /// (5) plain over timeshift. (6) feed id ascending, so the pick is
+  /// deterministic for a given feed.
+  ///
+  /// Gate: a candidate guesses only when it is affiliate-shaped OR
+  /// shares at least two words. A single shared word guesses only
+  /// the affiliate shape — 'FOX' may guess 'FOX 4' but never 'Fox
+  /// News Channel' (unshaped, overlap 1), and 'News' never guesses
+  /// a specific news channel. Two shared words are a real name
+  /// resemblance ('FOX 2 St. Louis' for 'KTVI FOX 2 St. Louis').
+  /// The pick must share at least one word of length 2 or more — a
+  /// bare number or single letter never guesses. Unlike H5's tie
+  /// rule, a tie on every discriminator is broken by feed id, not
+  /// refused: the owner ordered the bare rows filled, and among
+  /// same-shape affiliates (FOX 4 vs FOX 5) there is no principled
+  /// best — first-sorted is the guess, recorded honestly as one.
+  ///
+  /// Cost: candidate generation skips one-letter words — a candidate
+  /// sharing only a bare number or letter can never satisfy the
+  /// meaningful-overlap rule, so skipping it loses nothing and keeps
+  /// common numbers ('2', '1') from pulling thousands of ids into
+  /// the pool. Timeshift (a regex over re-tokenized names) is
+  /// computed only for the candidates tied with the head. [exclude]
+  /// is the set of ids the caller already ruled out
+  /// (identified-but-empty, foreign twins).
+  String? _affiliateGuessFor(
+    _CachedXmltvGuide guide,
+    String channelName,
+    String? epgChannelId,
+    String? tvgId, {
+    Set<String> exclude = const {},
+  }) {
+    final channelWords = epgChannelNameWords(channelName).toSet();
+    if (channelWords.isEmpty) return null;
+    final channelCountry =
+        epgChannelCountry(channelName) ??
+        epgFeedIdCountry(epgChannelId ?? '') ??
+        epgFeedIdCountry(tvgId ?? '');
+    // The region a candidate must belong to: the channel's own
+    // country when known, else the default 'us'.
+    final homeCountry = channelCountry ?? 'us';
+    final candidates = <String>{};
+    for (final word in channelWords) {
+      if (word.length < 2) continue;
+      candidates.addAll(guide.wordCandidatesFor(word));
+    }
+    candidates.removeAll(exclude);
+    if (candidates.isEmpty) return null;
+    final scored = <({String id, int region, int overlap, bool shaped, int extra})>[];
+    for (final id in candidates) {
+      final feedWords = guide.feedWordsById[id] ?? const <String>{};
+      final shared = feedWords.intersection(channelWords);
+      if (shared.isEmpty) continue;
+      if (shared.where((w) => w.length >= 2).isEmpty) continue;
+      final countries = guide.feedCountriesById[id] ?? const <String>{};
+      final isForeign = countries.isNotEmpty && !countries.contains(homeCountry);
+      if (isForeign && channelCountry != null) continue;
+      final extraWords = feedWords.difference(channelWords);
+      final shaped = extraWords.every((w) => _epgExtraWordIsNumberLike(w, channelWords));
+      // The gate: a single shared word guesses only the affiliate
+      // shape; two shared words are a real resemblance.
+      if (!shaped && shared.length < 2) continue;
+      scored.add((
+        id: id,
+        region: isForeign ? 0 : 1,
+        overlap: shared.length,
+        shaped: shaped,
+        extra: extraWords.length,
+      ));
+    }
+    // A foreign twin never wins while a non-foreign candidate
+    // exists: drop rank-0 candidates when any rank-1 candidate is
+    // present.
+    final hasHome = scored.any((s) => s.region > 0);
+    final ranked = (hasHome ? scored.where((s) => s.region > 0) : scored).toList(growable: false)
+      ..sort((a, b) {
+        final region = b.region.compareTo(a.region);
+        if (region != 0) return region;
+        final overlap = b.overlap.compareTo(a.overlap);
+        if (overlap != 0) return overlap;
+        if (a.shaped != b.shaped) return a.shaped ? -1 : 1;
+        final extra = a.extra.compareTo(b.extra);
+        if (extra != 0) return extra;
+        return a.id.compareTo(b.id);
+      });
+    if (ranked.isEmpty) return null;
+    // Timeshift is the last discriminator and the expensive one: only
+    // the candidates tied with the head on region, overlap, shape
+    // and extra pay for it. The tied list stays in id order (the
+    // sort above), so the first plain one — or the first one when
+    // none is plain — is the deterministic pick.
+    final head = ranked.first;
+    final tied = ranked
+        .takeWhile((s) => s.region == head.region && s.overlap == head.overlap && s.shaped == head.shaped && s.extra == head.extra)
+        .toList(growable: false);
+    if (tied.length == 1) return head.id;
+    final plain = tied.where((s) => !_epgHasTimeshift(s.id, guide.displayNames[s.id] ?? const <String>[])).toList(growable: false);
+    return (plain.isEmpty ? tied : plain).first.id;
   }
 
   /// The match chain for one loaded guide (shared by the fetch path, the
@@ -3449,6 +3603,37 @@ class IptvLiveTvSupport implements LiveTvSupport {
           // matched-but-no-programmes for them instead of 'foreign'.
           identifiedButEmpty.addAll(looseCandidates);
         }
+      }
+      // 5.5. Word-overlap affiliate guess (1.3.29 P1-5, owner-approved):
+      // for a channel with no guide id whose name words overlap a
+      // serving feed channel's words, guess the single best one and
+      // record it as 'name-guess-affiliate' — never as a certain
+      // match. The owner decided filling the bare network rows (FOX /
+      // PBS / NBC / CBS) matters more than leaving them empty, and
+      // accepts the programmes may be a local affiliate's rather
+      // than the national feed's.
+      //
+      // Placement is deliberate: AFTER the loose tier, not between
+      // name (5) and loose (6) as P1-5 first sketched it. The loose
+      // tier proves itself by exact loose-key equality; a guess must
+      // never pre-empt a deterministic match. The guess is the last
+      // resort before the blocked reasons. The pick itself lives in
+      // [_affiliateGuessFor], shared with [_windowCandidateIds] so
+      // the window holds the pick's rows before the match runs —
+      // without that, the per-channel fetch would pick the right id
+      // and then report it out-of-window (1.3.29, harness).
+      final guessId = _affiliateGuessFor(
+        guide,
+        channelName,
+        epgChannelId,
+        tvgId,
+        exclude: {...identifiedButEmpty, ...foreignNameCandidates},
+      );
+      if (guessId != null) {
+        if (hasInWindow(guessId)) {
+          return matched(programsFor(guessId), guessId, 'name-guess-affiliate');
+        }
+        identifiedButEmpty.add(guessId);
       }
     }
     if (identifiedButEmpty.isNotEmpty) {
@@ -6600,6 +6785,9 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
     var tvgIdMatches = 0;
     var nameMatches = 0;
     var looseNameMatches = 0;
+    // 1.3.29 P1-5: the affiliate-guess bucket — kept apart from the
+    // certain 'name' bucket so the dialog shows the guess honestly.
+    var affiliateGuessMatches = 0;
     var ambiguousCount = 0;
     var foreignCount = 0;
     var noTvgIdCount = 0;
@@ -6633,6 +6821,8 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
             nameMatches++;
           case 'name-loose':
             looseNameMatches++;
+          case 'name-guess-affiliate':
+            affiliateGuessMatches++;
           default:
             tvgIdMatches++;
         }
@@ -6777,7 +6967,7 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
     final windowSlide = await _slideReloadWindow(outcome, channels, mappings);
     appLogger.i(
       'IPTV EPG reload: ${channels.length} channels, $withGuide with guide '
-      '(manual $manualMatches, tvg-id $tvgIdMatches, name $nameMatches, loose-name $looseNameMatches; '
+      '(manual $manualMatches, tvg-id $tvgIdMatches, name $nameMatches, loose-name $looseNameMatches, affiliate-guess $affiliateGuessMatches; '
       'no match: ambiguous $ambiguousCount, foreign $foreignCount, no-tvg-id $noTvgIdCount, '
       'tvg-id-not-in-feed $tvgIdNotInFeedCount, matched-but-no-programmes $matchedButNoProgrammesCount, '
       'no-feed $noFeedCount); $epgChannelIdCount carry epg_channel_id; '
@@ -6819,6 +7009,7 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
         tvgId: tvgIdMatches,
         name: nameMatches,
         nameLoose: looseNameMatches,
+        affiliateGuess: affiliateGuessMatches,
         ambiguous: ambiguousCount,
         foreign: foreignCount,
         noTvgId: noTvgIdCount,
@@ -7658,7 +7849,10 @@ class _CachedXmltvGuide {
         normalizedNameChannels = _channelsByNormalizedName(programCountByChannel.keys),
         looseNameChannels = _channelsByLooseName(programCountByChannel.keys, displayNames),
         mixedChannelIds = _mixedChannelIds(displayNames),
-        looseMixedChannelIds = _mixedChannelIds(displayNames, loose: true);
+        looseMixedChannelIds = _mixedChannelIds(displayNames, loose: true),
+        wordChannels = _channelsByWord(programCountByChannel.keys, displayNames),
+        feedWordsById = _wordsByFeedId(programCountByChannel.keys, displayNames),
+        feedCountriesById = _countriesByFeedId(programCountByChannel.keys, displayNames);
 
   /// Copy with a new fetchedAt (the 304 path reuses the same guide
   /// object — metadata and window unchanged).
@@ -7698,6 +7892,23 @@ class _CachedXmltvGuide {
   /// as before.
   final Map<String, Set<String>> looseNameChannels;
 
+  /// Word -> serving feed ids carrying that word in their id or in a
+  /// display name (tier 5.5, the 1.3.29 affiliate guess). Built from
+  /// the ids with programmes only, so a word lookup never returns a
+  /// feed id with nothing to serve.
+  final Map<String, Set<String>> wordChannels;
+
+  /// Serving feed id -> the words its id and display names carry
+  /// (tier 5.5 ranking: overlap and extra words). Precomputed at
+  /// parse time so the tier does set arithmetic, not re-tokenizing,
+  /// per channel — the Reload resolves ~26k channels against it.
+  final Map<String, Set<String>> feedWordsById;
+
+  /// Serving feed id -> the countries its id suffix or display-name
+  /// tags name (tier 5.5 region gate). Precomputed for the same
+  /// reason as [feedWordsById].
+  final Map<String, Set<String>> feedCountriesById;
+
   /// Feed ids whose declared display names are NOT all one channel
   /// (F6B, 1.2.8).
   final Set<String> mixedChannelIds;
@@ -7723,6 +7934,15 @@ class _CachedXmltvGuide {
     if (matches != null) ids.addAll(matches);
     ids.removeWhere((id) => looseMixedChannelIds.contains(id));
     return ids;
+  }
+
+  /// Serving feed ids carrying [word] in their id or a display name
+  /// (tier 5.5 candidates — the word index, built from the ids with
+  /// programmes only).
+  Set<String> wordCandidatesFor(String word) {
+    final ids = wordChannels[word];
+    if (ids == null) return const <String>{};
+    return ids.toSet();
   }
 
   static Map<String, String> _foldedChannelIds(Iterable<String> ids) {
@@ -7802,6 +8022,64 @@ class _CachedXmltvGuide {
       for (final name in entry.value) {
         add(name, entry.key);
       }
+    }
+    return map;
+  }
+
+  /// Word -> serving feed ids (tier 5.5): every word the id or a
+  /// display name carries, for the ids with programmes only. A display
+  /// name belonging to an id with no programmes contributes nothing —
+  /// the tier only ever serves ids with retained programmes.
+  static Map<String, Set<String>> _channelsByWord(
+    Iterable<String> ids,
+    Map<String, List<String>> displayNames,
+  ) {
+    final serving = ids.toSet();
+    final map = <String, Set<String>>{};
+    void addWords(Iterable<String> words, String channelId) {
+      for (final word in words) {
+        (map[word] ??= <String>{}).add(channelId);
+      }
+    }
+
+    for (final id in serving) {
+      addWords(epgChannelNameWords(id), id);
+    }
+    for (final entry in displayNames.entries) {
+      if (!serving.contains(entry.key)) continue;
+      for (final name in entry.value) {
+        addWords(epgChannelNameWords(name), entry.key);
+      }
+    }
+    return map;
+  }
+
+  /// Serving feed id -> its words (tier 5.5 ranking), from the id
+  /// plus every display name.
+  static Map<String, Set<String>> _wordsByFeedId(
+    Iterable<String> ids,
+    Map<String, List<String>> displayNames,
+  ) {
+    final map = <String, Set<String>>{};
+    for (final id in ids) {
+      final words = <String>{...epgChannelNameWords(id)};
+      for (final name in displayNames[id] ?? const <String>[]) {
+        words.addAll(epgChannelNameWords(name));
+      }
+      map[id] = words;
+    }
+    return map;
+  }
+
+  /// Serving feed id -> its countries (tier 5.5 region gate), from
+  /// the id suffix plus every display name's leading tag.
+  static Map<String, Set<String>> _countriesByFeedId(
+    Iterable<String> ids,
+    Map<String, List<String>> displayNames,
+  ) {
+    final map = <String, Set<String>>{};
+    for (final id in ids) {
+      map[id] = epgFeedChannelCountries(id, displayNames[id] ?? const <String>[]);
     }
     return map;
   }

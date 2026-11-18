@@ -543,29 +543,35 @@ void main() {
       // 1.3.26 §69: HBO's twins are guessed now (first sorted 'hbo-a'),
       // so it counts as with-guide via the name bucket and the
       // ambiguous bucket is empty.
-      expect(result.withGuide, 5);
-      expect(result.withoutGuide, 3);
+      // 1.3.29: beIN SPORTS 1 HD now fills via the affiliate guess
+      // ('name-guess-affiliate', counted in its own bucket) — it
+      // shares the word "bein" with the feed id "beIN 1" and adds no
+      // topic word — so withGuide/matched grow 5→6, tvg-id-not-in-feed
+      // drops 2→1, and beIN leaves the unmatched sample.
+      expect(result.withGuide, 6);
+      expect(result.withoutGuide, 2);
       expect(result.matchTiers.manual, 0);
       expect(result.matchTiers.tvgId, 2);
       expect(result.matchTiers.name, 2);
       expect(result.matchTiers.nameLoose, 1);
+      expect(result.matchTiers.affiliateGuess, 1);
       expect(result.matchTiers.ambiguous, 0);
       expect(result.matchTiers.foreign, 1);
       expect(result.matchTiers.noTvgId, 0);
-      expect(result.matchTiers.tvgIdNotInFeed, 2);
+      expect(result.matchTiers.tvgIdNotInFeed, 1);
       expect(result.matchTiers.matchedButNoProgrammes, 0);
       expect(result.matchTiers.matchedButNoProgrammesDeclared, 0);
       expect(result.matchTiers.matchedButNoProgrammesOutsideWindow, 0);
       expect(result.matchTiers.none, 0);
-      expect(result.matchTiers.matched, 5);
-      expect(result.matchTiers.unmatched, 3);
+      expect(result.matchTiers.matched, 6);
+      expect(result.matchTiers.unmatched, 2);
       expect(result.epgChannelIdCount, 8);
       expect(result.feedSamples.map((e) => e.xmltvId), ['012345', 'SkyOne.de', 'beIN 1', 'cnn.us', 'hbo-a']);
-      expect(result.sampleUnmatched.map((e) => e.channelName), ['LRT', 'UK: SKY ONE', 'beIN SPORTS 1 HD']);
+      expect(result.sampleUnmatched.map((e) => e.channelName), ['LRT', 'UK: SKY ONE']);
       final outcome = result.feedOutcomes.first;
       expect(outcome.kind, IptvEpgFeedOutcomeKind.loaded);
       expect(outcome.feedChannels, 8);
-      expect(outcome.matchedChannels, 5);
+      expect(outcome.matchedChannels, 6);
       expect(outcome.feedProgramsParsed, 9);
       expect(outcome.feedProgramsRetained, 8);
       expect(outcome.feedChannelsParsed, 9);

@@ -500,6 +500,7 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
           tvgId: tiers.tvgId,
           name: tiers.name,
           loose: tiers.nameLoose,
+          affiliate: tiers.affiliateGuess,
         ),
       );
       if (tiers.unmatched > 0) {
