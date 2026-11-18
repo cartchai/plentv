@@ -6,8 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import 'package:provider/provider.dart';
+
 import '../../i18n/app_locale_utils.dart';
 import '../../i18n/strings.g.dart';
+import '../../media/ids.dart';
+import '../../media/iptv_client.dart';
+import '../../providers/multi_server_provider.dart';
 import '../../services/iptv/iptv_refusal_log.dart';
 import '../../utils/formatters.dart';
 import '../../utils/snackbar_helper.dart';
@@ -58,8 +63,27 @@ class _IptvRefusalsScreenState extends State<IptvRefusalsScreen> {
   }
 
   Future<void> _clear() async {
+    // 1.4.3 G3: clearing the log alone would leave the breaker's
+    // in-memory flag (C3) holding the panel shut for the rest of its
+    // cooldown — the log-derived half clears, the flag does not. A
+    // deliberate Clear clears both, so the next fetch actually tries.
+    // The connection ids are read before the clear wipes them.
+    final connectionIds = IptvRefusalLog.instance.entriesNotifier.value
+        .map((e) => e.connectionId)
+        .where((id) => id.isNotEmpty)
+        .toSet();
     await IptvRefusalLog.instance.clear();
     if (!mounted) return;
+    // The provider is absent when the screen is pumped standalone
+    // (tests) — a nullable read keeps the Clear working there, and
+    // there is simply no breaker to clear without a client.
+    final multiServer = context.read<MultiServerProvider?>();
+    if (multiServer != null) {
+      for (final id in connectionIds) {
+        final client = multiServer.getClientForServer(ServerId(id));
+        if (client is IptvClient) client.clear403Cooldown();
+      }
+    }
     showSuccessSnackBar(context, t.iptv.refusalsCleared);
   }
 

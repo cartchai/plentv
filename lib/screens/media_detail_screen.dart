@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import '../media/ids.dart';
+import '../media/iptv_client.dart';
 
 import 'package:flutter/material.dart';
 
@@ -356,6 +357,11 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   List<MediaItem> _seasons = [];
   bool _isLoadingSeasons = false;
   bool _seasonsLoadFailed = false; // the seasons fetch threw (vs. a genuinely empty show)
+  // 1.4.3 G3: the seasons failure was a refusal (403) — the section
+  // says the panel refused access on this network instead of the
+  // generic load-failed message, and its Retry does not re-fire
+  // while the breaker is open (see _loadSeasons).
+  bool _seasonsRefused = false;
   Completer<void>? _seasonsCompleter;
   List<MediaItem> _episodes = [];
   PagedMediaListState<MediaItem> _allEpisodes = const PagedMediaListState<MediaItem>();
@@ -1825,6 +1831,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     setStateIfMounted(() {
       _isLoadingSeasons = true;
       _seasonsLoadFailed = false;
+      _seasonsRefused = false;
       _hasLoadedSeasons = false;
     });
 
@@ -1833,6 +1840,22 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     if (client == null) {
       setStateIfMounted(() {
         _isLoadingSeasons = false;
+        _hasLoadedSeasons = true;
+      });
+      if (!(_seasonsCompleter?.isCompleted ?? true)) _seasonsCompleter?.complete();
+      return;
+    }
+
+    // 1.4.3 G3: while the 403 breaker is open the seasons fetch
+    // cannot succeed — the panel is refusing, and re-firing only
+    // risks extending the block. The Retry tap lands here too, so
+    // it fires nothing either: the section shows the refused state
+    // instead of the generic load-failed message.
+    if (client is IptvClient && await client.isIn403Cooldown) {
+      setStateIfMounted(() {
+        _isLoadingSeasons = false;
+        _seasonsLoadFailed = true;
+        _seasonsRefused = true;
         _hasLoadedSeasons = true;
       });
       if (!(_seasonsCompleter?.isCompleted ?? true)) _seasonsCompleter?.complete();
@@ -3593,7 +3616,10 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                                 if (_isLoadingSeasons)
                                   _sectionLoading
                                 else if (_seasonsLoadFailed)
-                                  _sectionError(t.messages.seasonsLoadFailed, () => unawaited(_loadSeasons()))
+                                  _sectionError(
+                                    _seasonsRefused ? t.iptv.refusedOnThisNetwork : t.messages.seasonsLoadFailed,
+                                    () => unawaited(_loadSeasons()),
+                                  )
                                 else if (_seasons.isEmpty)
                                   _sectionEmpty(context, t.messages.noSeasonsFound)
                                 else ...[

@@ -9,6 +9,8 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:plezy/connection/connection.dart';
 import 'package:plezy/connection/connection_registry.dart';
@@ -23,6 +25,7 @@ import 'package:plezy/screens/settings/iptv_settings_screen.dart';
 import 'package:plezy/services/credential_vault.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/iptv_refusal_log.dart';
+import 'package:plezy/services/iptv/panel_reachability_store.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -69,12 +72,14 @@ IptvRefusalEntry _entry({
   required String action,
   int? statusCode = 403,
   String failureKind = 'http',
+  String connectionId = '',
   Map<String, String> headers = const {'cf-ray': 'abc123', 'server': 'cloudflare'},
   String bodySnippet = 'Just a moment...',
   DateTime? timestamp,
 }) {
   return IptvRefusalEntry(
     timestamp: timestamp ?? DateTime.utc(2026, 11, 10, 5, 40, 12),
+    connectionId: connectionId,
     connectionName: 'Trex',
     action: action,
     statusCode: statusCode,
@@ -93,7 +98,7 @@ Future<void> _pumpRefusalsScreen(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpSettingsScreen(WidgetTester tester) async {
+Future<IptvClient> _pumpSettingsScreen(WidgetTester tester) async {
   CredentialVault.resetKeyForTesting();
   await tester.runAsync(() => CredentialVault.protect('opaque-vault-warmup'));
   final db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -102,7 +107,8 @@ Future<void> _pumpSettingsScreen(WidgetTester tester) async {
   await registry.upsert(_trexConnection());
 
   final manager = MultiServerManager();
-  manager.debugRegisterClientForTesting(_trexClient());
+  final client = _trexClient();
+  manager.debugRegisterClientForTesting(client);
   final provider = testMultiServerProvider(manager);
   addTearDown(() {
     provider.dispose();
@@ -132,6 +138,7 @@ Future<void> _pumpSettingsScreen(WidgetTester tester) async {
     ),
   );
   await tester.pumpAndSettle();
+  return client;
 }
 
 void main() {
@@ -249,6 +256,114 @@ void main() {
 
       expect(find.text(t.iptv.refusalsTitle), findsOneWidget);
       expect(find.text(t.iptv.refusalsCount(n: 1)), findsOneWidget);
+    });
+  });
+
+  group('G3 manual clears clear the breaker', () {
+    /// An XtreamApi whose panel 403s live-category calls (the probe)
+    /// and answers everything else 200, so a health check during a
+    /// manual retry cannot re-open the breaker the retry just cleared.
+    ({XtreamApi api, int Function() calls}) refusingApi() {
+      var calls = 0;
+      final api = XtreamApi(
+        serverUrl: 'https://panel.example.com:8080',
+        username: 'user',
+        password: 'pa' 'ss',
+        httpClient: MockClient((request) async {
+          if (request.url.queryParameters['action'] == 'get_live_categories') {
+            calls++;
+            return http.Response('{"error": "blocked"}', 403);
+          }
+          return http.Response('{"status": "Active"}', 200);
+        }),
+        connectionId: 'trex',
+        connectionName: 'Trex',
+      );
+      return (api: api, calls: () => calls);
+    }
+
+    /// Open the client's breaker with one panel 403, and record the
+    /// matching log entry (the API above records nothing itself — its
+    /// onRefusal is unwired — so the log entry is recorded directly).
+    /// Returns the probe's call count getter.
+    Future<int Function()> openBreaker(WidgetTester tester, IptvClient client) async {
+      final refusing = refusingApi();
+      client.testXtreamApi = refusing.api;
+      await tester.runAsync(() => IptvRefusalLog.instance.record(
+        _entry(action: 'player_api.php?action=get_live_categories', connectionId: 'trex'),
+      ));
+      await expectLater(refusing.api.getLiveCategories(), throwsA(isA<Exception>()));
+      expect(refusing.calls(), 1, reason: 'the probe 403 reaches the panel once');
+      expect(await client.isIn403Cooldown, isTrue, reason: 'the breaker is open');
+      return refusing.calls;
+    }
+
+    testWidgets('Settings Retry clears the breaker so the next call reaches the panel', (tester) async {
+      final networkId = await tester.runAsync(() => PanelReachabilityStore.currentNetworkId());
+      await tester.runAsync(
+        () => PanelReachabilityStore.recordUnreachable(connectionId: 'trex', networkId: networkId),
+      );
+      final client = await _pumpSettingsScreen(tester);
+      final calls = await openBreaker(tester, client);
+
+      // The verdicts load is real async (interface enumeration +
+      // prefs) — drive it in real time, or the section never builds
+      // in the fake-async zone.
+      for (
+        var i = 0;
+        i < 20 && find.text(t.iptv.panelUnreachableTitle(name: 'Trex')).evaluate().isEmpty;
+        i++
+      ) {
+        await tester.runAsync(() async => await Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+      expect(find.text(t.iptv.panelUnreachableTitle(name: 'Trex')), findsOneWidget);
+      final verdictRow = find.ancestor(
+        of: find.text(t.iptv.panelUnreachableTitle(name: 'Trex')),
+        matching: find.byType(Row),
+      );
+      await tester.tap(find.descendant(of: verdictRow, matching: find.text(t.common.retry)));
+      // The retry clears the verdict, clears the breaker and re-probes
+      // the panel — all real async that straddles the fake-async zone —
+      // so alternate real time and pumps until the verdict row is gone.
+      for (
+        var i = 0;
+        i < 20 && find.text(t.iptv.panelUnreachableTitle(name: 'Trex')).evaluate().isNotEmpty;
+        i++
+      ) {
+        await tester.runAsync(() async => await Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+      expect(find.text(t.iptv.panelUnreachableTitle(name: 'Trex')), findsNothing, reason: 'the verdict is cleared');
+      // The retry cleared the breaker: the next probe reaches the
+      // panel (and 403s there) instead of throwing the cooldown 403
+      // with no panel call. The throw is expected either way — the
+      // panel count is what discriminates.
+      await expectLater(client.xtreamApi.getLiveCategories(), throwsA(isA<Exception>()));
+      expect(calls(), 2, reason: 'the cleared breaker lets the next call through');
+    });
+
+    testWidgets('Refusals Clear clears the breaker so the next call reaches the panel', (tester) async {
+      final client = await _pumpSettingsScreen(tester);
+      final calls = await openBreaker(tester, client);
+
+      await tester.tap(find.text(t.iptv.refusalsTitle));
+      await tester.pumpAndSettle();
+      expect(find.text(t.iptv.refusalsDescription), findsOneWidget);
+
+      await tester.tap(find.byTooltip(t.iptv.refusalsClear));
+      // The clear runs through the log's queued prefs write, whose
+      // continuations straddle the fake-async and real-async zones:
+      // pumpAndSettle alone never lets it finish, so alternate real
+      // time and pumps until the empty state renders.
+      for (var i = 0; i < 20 && find.text(t.iptv.refusalsEmpty).evaluate().isEmpty; i++) {
+        await tester.runAsync(() async => await Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+      expect(find.text(t.iptv.refusalsEmpty), findsOneWidget);
+
+      await expectLater(client.xtreamApi.getLiveCategories(), throwsA(isA<Exception>()));
+      expect(calls(), 2, reason: 'the cleared breaker lets the next call through');
     });
   });
 }

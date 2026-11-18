@@ -37,7 +37,6 @@ import 'package:plezy/models/livetv_channel.dart';
 import 'package:plezy/providers/multi_server_provider.dart';
 import 'package:plezy/screens/livetv/tabs/guide_tab.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
-import 'package:plezy/services/iptv/iptv_epg_sources.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
 import 'package:plezy/services/iptv/iptv_refusal_log.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
@@ -399,6 +398,66 @@ void main() {
     // below is the safety property: nothing reached the panel after
     // the first refusal, sweep or otherwise.
     expect(panelRequests, 1, reason: 'the sweep adds no panel call either');
+
+    await harness.drainPacedCalls(tester, () => api.shortEpgCalls);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('G3 tapping a refused row retries nothing while the breaker is open', (tester) async {
+    var panelRequests = 0;
+    final api = _RefusedTabApi(
+      client: MockClient((request) async {
+        panelRequests++;
+        return http.Response('{"error": "blocked"}', 403);
+      }),
+    );
+    final harness = _SweepTabHarness(api);
+    addTearDown(harness.dispose);
+    await harness.init();
+    expect(harness.channels, hasLength(24));
+    await harness.pump(tester);
+
+    // Let the visible rows fail (paced) — the first short-EPG call
+    // 403s at the panel, the rest throw the cooldown 403, and each
+    // failed row is marked refused (the 403 is a refusal, not a
+    // generic failure).
+    for (var i = 0; i < 7; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    await harness.waitUntil(
+      tester,
+      () => find.text(t.iptv.refusedOnThisNetwork).evaluate().isNotEmpty,
+      rounds: 12,
+    );
+    expect(find.text(t.iptv.refusedOnThisNetwork), findsWidgets, reason: 'a failed row says it was refused');
+    expect(panelRequests, 1, reason: 'only the first call reaches the panel');
+
+    // The refusal record lands asynchronously — wait for it, or the
+    // retry's breaker check would read an empty log and fire.
+    for (var i = 0; i < 20 && !IptvRefusalLog.instance.entriesNotifier.value.any((e) => e.statusCode == 403); i++) {
+      await harness.settleOnce(tester);
+    }
+    expect(
+      IptvRefusalLog.instance.entriesNotifier.value.any((e) => e.statusCode == 403),
+      isTrue,
+      reason: 'the 403 is recorded before the retry tap',
+    );
+
+    // Tap the refused row: the retry must fire nothing while the
+    // breaker is open. On the base the tap clears the failed flag
+    // and re-fetches (the row goes back to loading and the panel
+    // sees a second request).
+    await tester.tap(find.text(t.iptv.refusedOnThisNetwork).first);
+    await harness.settleOnce(tester);
+    await tester.pump(const Duration(milliseconds: 250));
+    await harness.settleOnce(tester);
+
+    expect(panelRequests, 1, reason: 'the blocked retry adds no panel call');
+    expect(
+      find.text(t.iptv.refusedOnThisNetwork),
+      findsWidgets,
+      reason: 'the row still says refused instead of going back to loading',
+    );
 
     await harness.drainPacedCalls(tester, () => api.shortEpgCalls);
     await tester.pumpWidget(const SizedBox.shrink());

@@ -333,6 +333,12 @@ class GuideTabState extends State<GuideTab>
   final Set<String> _iptvEpgInFlight = {};
   final Set<String> _iptvEpgLoaded = {};
   final Set<String> _iptvEpgFailed = {};
+  /// 1.4.3 G3: scopeKeys whose failure was a refusal (403) — or whose
+  /// retry was blocked while the breaker was open. Their row says the
+  /// panel refused access on this network instead of inviting another
+  /// tap that cannot succeed. Cleared with the failed set (window
+  /// change / cache bust / a retry once the breaker has cleared).
+  final Set<String> _iptvEpgRefused = {};
   /// 1.3.26 §69: scopeKeys whose fetch completed with zero programmes
   /// (loaded-empty rows) — the sweep retries these once per guide
   /// open instead of skipping them forever as "loaded". A retry that
@@ -1333,6 +1339,7 @@ class GuideTabState extends State<GuideTab>
       _iptvEpgVersionByServer[serverId] = support.epgVersion;
       _iptvEpgLoaded.clear();
       _iptvEpgFailed.clear();
+      _iptvEpgRefused.clear();
       _iptvEpgLoadedEmpty.clear();
       _iptvEpgLoadedEmptyRetried.clear();
       _mergedProgramsCache.clear();
@@ -1414,7 +1421,21 @@ class GuideTabState extends State<GuideTab>
             // empty again does not re-arm.
             if (rearmSweep) _scheduleEpgSweep();
           })
-          .catchError((Object e) {
+          .catchError((Object e) async {
+            if (!mounted) return;
+            // 1.4.3 G3: a refusal is not a generic failure — the row
+            // says the panel refused access on this network, so the
+            // retry tap knows it cannot succeed while the breaker is
+            // open. The final error is often the feed's "failed
+            // recently" StateError, not the 403 itself (the short-EPG
+            // 403 is swallowed by the feed fallback), so the breaker
+            // is consulted too — it reads the API's in-memory flag,
+            // set the moment the 403 was seen. A cooldown 403 (no
+            // request sent) carries status 403, so it marks the row
+            // the same way.
+            final refused =
+                MediaServerHttpException.from(e).statusCode == 403 ||
+                await _isAnyIptvSupportIn403Cooldown();
             if (!mounted) return;
             setState(() {
               _iptvEpgInFlight.remove(scopeKey);
@@ -1427,6 +1448,7 @@ class GuideTabState extends State<GuideTab>
               // Fail open: the row renders hour placeholders for this
               // window instead of retrying in a loop.
               _iptvEpgFailed.add(scopeKey);
+              if (refused) _iptvEpgRefused.add(scopeKey);
               // 1.3.26 §69: a failed fetch is not a loaded-empty one.
               _iptvEpgLoadedEmpty.remove(scopeKey);
               // 1.2.3: keep the error for the denial banner.
@@ -1451,6 +1473,7 @@ class GuideTabState extends State<GuideTab>
   void _resetIptvEpgState() {
     _iptvEpgLoaded.clear();
     _iptvEpgFailed.clear();
+    _iptvEpgRefused.clear();
     _iptvEpgLoadedEmpty.clear();
     _iptvEpgLoadedEmptyRetried.clear();
     _iptvEpgLastError = null;
@@ -1465,8 +1488,18 @@ class GuideTabState extends State<GuideTab>
   /// 1.1.2 D8: the retry forces a fresh feed download, bypassing the
   /// feed's 5-minute negative cache — the tap actually tries again
   /// instead of failing instantly with "failed recently".
-  void _retryIptvEpg(LiveTvChannel channel) {
+  /// 1.4.3 G3: while the 403 breaker is open a retry cannot succeed —
+  /// the panel is refusing, and re-firing only risks extending the
+  /// block. The retry then fires nothing: the row is marked refused
+  /// so it says so instead of inviting another tap. The banner's
+  /// Retry-all routes through here too, so it is guarded the same way.
+  Future<void> _retryIptvEpg(LiveTvChannel channel) async {
     final scopeKey = liveTvChannelScopeKey(channel);
+    if (await _isAnyIptvSupportIn403Cooldown()) {
+      if (mounted) setState(() => _iptvEpgRefused.add(scopeKey));
+      return;
+    }
+    _iptvEpgRefused.remove(scopeKey);
     _iptvEpgFailed.remove(scopeKey);
     _iptvEpgLoaded.remove(scopeKey);
     _iptvEpgLoadedEmpty.remove(scopeKey);
@@ -1684,7 +1717,7 @@ class GuideTabState extends State<GuideTab>
     if (_iptvEpgFailed.isEmpty) return;
     final failed = Set<String>.of(_iptvEpgFailed);
     for (final channel in widget.channels) {
-      if (failed.contains(liveTvChannelScopeKey(channel))) _retryIptvEpg(channel);
+      if (failed.contains(liveTvChannelScopeKey(channel))) unawaited(_retryIptvEpg(channel));
     }
   }
 
@@ -1702,7 +1735,7 @@ class GuideTabState extends State<GuideTab>
           color: Color.alphaBlend(tk.surface.withValues(alpha: 0.5), tk.bg),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(tk.radiusXs)),
           child: InkWell(
-            onTap: () => _retryIptvEpg(channel),
+            onTap: () => unawaited(_retryIptvEpg(channel)),
             borderRadius: BorderRadius.circular(tk.radiusXs),
             child: Center(
               child: Row(
@@ -1712,7 +1745,12 @@ class GuideTabState extends State<GuideTab>
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      t.liveTv.guideLoadFailed,
+                      // 1.4.3 G3: a refused row says so instead of
+                      // inviting a retry that cannot succeed while
+                      // the breaker is open.
+                      _iptvEpgRefused.contains(liveTvChannelScopeKey(channel))
+                          ? t.iptv.refusedOnThisNetwork
+                          : t.liveTv.guideLoadFailed,
                       style: theme.textTheme.bodySmall?.copyWith(color: tk.textMuted),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

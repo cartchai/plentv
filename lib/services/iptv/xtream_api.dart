@@ -265,6 +265,18 @@ class XtreamApi {
     _breakerOpenedAt = null;
   }
 
+  /// Whether this instance's in-memory breaker flag is open (1.4.3
+  /// G3): set the moment a 403 is seen, without waiting for the log
+  /// write. The client reads this so its guards see a refusal
+  /// immediately. A flag-only read — the full [isIn403Cooldown]
+  /// (flag + log provider) would recurse back into the client,
+  /// whose provider is this getter's caller. Cleared by
+  /// [clearBreaker].
+  bool get isBreakerOpenInMemory {
+    final openedAt = _breakerOpenedAt;
+    return openedAt != null && DateTime.now().difference(openedAt) < breakerCooldown;
+  }
+
   /// Throw the cooldown 403 when the breaker is open (1.4.3 C3): no
   /// panel call is made and no refusal is recorded — the panel already
   /// refused, and re-firing during a block can reset or extend it.

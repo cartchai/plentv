@@ -2557,6 +2557,17 @@ class IptvClient implements MediaServerClient {
   DateTime? _breakerClearedAt;
 
   Future<bool> _isIn403Cooldown() async {
+    // 1.4.3 G3: the API's in-memory flag is set the moment a 403 is
+    // seen; the log write behind it can lag ~500 ms (its network
+    // probe), and a guard that only reads the log would miss a
+    // refusal that just happened — the row that just failed with
+    // the feed's "failed recently" StateError would not be marked
+    // refused. The flag is this client's own API instance, so it
+    // cannot leak across connections; a manual clear resets it
+    // (see [clear403Cooldown]). The flag-only read (not the API's
+    // full isIn403Cooldown, whose provider fallback calls back
+    // into this method) keeps it recursion-free.
+    if (_api?.isBreakerOpenInMemory ?? false) return true;
     try {
       await _refusalLog.ensureLoaded();
     } catch (_) {

@@ -973,6 +973,13 @@ class _PanelReachabilityTileState extends State<_PanelReachabilityTile> {
     setState(() => _retrying = true);
     await PanelReachabilityStore.clearVerdict(connectionId: connectionId);
     if (!mounted) return;
+    // 1.4.3 G3: the manual Retry also clears the 403 breaker for this
+    // connection. Clearing the verdict alone would leave the breaker's
+    // in-memory flag holding the panel shut for the rest of its
+    // cooldown, so the retry the owner just asked for would fire
+    // nothing. A deliberate retry re-fires once.
+    final client = context.read<MultiServerProvider>().getClientForServer(ServerId(connectionId));
+    if (client is IptvClient) client.clear403Cooldown();
     await context.read<MultiServerProvider>().checkServerHealth();
     if (!mounted) return;
     setState(() {
