@@ -39,6 +39,7 @@ import 'package:plezy/screens/video_player/live_tv_session_args.dart';
 import 'package:plezy/screens/video_player_screen.dart';
 import 'package:plezy/services/device_performance.dart';
 import 'package:plezy/services/multi_server_manager.dart';
+import 'package:plezy/utils/last_decode_stats.dart';
 import 'package:plezy/services/offline_watch_sync_service.dart';
 import 'package:plezy/services/settings_service.dart';
 import 'package:plezy/watch_together/providers/watch_together_provider.dart';
@@ -295,6 +296,117 @@ void main() {
       },
     );
   });
+
+  testWidgets('1.4 P7: a zap records the active ExoPlayer decoder for the debug export', (tester) async {
+    // The mpv triage never arms on ExoPlayer, so a software fallback
+    // there was silent: getProperty('hwdec-current') returned null and
+    // nothing recorded the decoder. The zap's open now records it ~5 s
+    // after the tune commits — the zap runs in the fake zone, so a pump
+    // past the window flushes the record.
+    LastDecodeStats.debugReset();
+    addTearDown(LastDecodeStats.debugReset);
+    final channels = [
+      LiveTvChannel(key: 'ch-1', title: 'Channel 1', serverId: 'srv-1'),
+      LiveTvChannel(key: 'ch-2', title: 'Channel 2', serverId: 'srv-1'),
+    ];
+    final liveTv = _SingleConnectionLiveTvSupport();
+    final player = _ReleaseRecordingPlayer()..hwdecCurrentForTest = 'c2.qcom.avc.decoder';
+    final shell = _LiveShell(client: _LiveMediaServerClient(liveTv));
+
+    await SettingsService.instance.write(SettingsService.matchContentFrameRate, true);
+
+    await withMockPlayerChannels(
+      methodChannelName: 'com.plezy/mpv_player',
+      eventChannelName: 'com.plezy/mpv_player/events',
+      methodHandler: (call) async => call.method == 'initialize' ? false : null,
+      testBody: () async {
+        final key = GlobalKey<VideoPlayerScreenState>();
+        await tester.pumpWidget(shell.screen(key: key, channel: channels.first, channels: channels));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        final state = key.currentState!..player = player;
+        await state.debugMarkPlaybackStartedForTesting();
+
+        await tester.runAsync(state.debugStartPlaybackForTesting);
+        await tester.pump();
+        expect(player.openedUris, ['http://example.invalid/ch-1.m3u8']);
+
+        // The launch's own record runs on a real 5 s timer (armed from
+        // runAsync); clear it so only the zap's record is observed.
+        LastDecodeStats.debugReset();
+        final stopGate = Completer<void>();
+        player.stopGate = stopGate;
+        final zap = state.debugSwitchLiveChannelForTesting(1);
+        for (var i = 0; i < 20 && !player.events.contains('stop-started'); i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        stopGate.complete();
+        await zap;
+        await tester.pump();
+        expect(player.openedUris, contains('http://example.invalid/ch-2.m3u8'));
+
+        expect(LastDecodeStats.hwdecCurrent, isNull, reason: 'no record before the 5 s window');
+        await tester.pump(const Duration(seconds: 6));
+        expect(LastDecodeStats.hwdecCurrent, 'c2.qcom.avc.decoder');
+
+        await tester.pump(const Duration(seconds: 15));
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  });
+
+  testWidgets('1.4 P7: the zap records the decoder even when it is software', (tester) async {
+    LastDecodeStats.debugReset();
+    addTearDown(LastDecodeStats.debugReset);
+    final channels = [
+      LiveTvChannel(key: 'ch-1', title: 'Channel 1', serverId: 'srv-1'),
+      LiveTvChannel(key: 'ch-2', title: 'Channel 2', serverId: 'srv-1'),
+    ];
+    final liveTv = _SingleConnectionLiveTvSupport();
+    final player = _ReleaseRecordingPlayer()..hwdecCurrentForTest = 'c2.android.avc.decoder';
+    final shell = _LiveShell(client: _LiveMediaServerClient(liveTv));
+
+    await SettingsService.instance.write(SettingsService.matchContentFrameRate, true);
+
+    await withMockPlayerChannels(
+      methodChannelName: 'com.plezy/mpv_player',
+      eventChannelName: 'com.plezy/mpv_player/events',
+      methodHandler: (call) async => call.method == 'initialize' ? false : null,
+      testBody: () async {
+        final key = GlobalKey<VideoPlayerScreenState>();
+        await tester.pumpWidget(shell.screen(key: key, channel: channels.first, channels: channels));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        final state = key.currentState!..player = player;
+        await state.debugMarkPlaybackStartedForTesting();
+
+        await tester.runAsync(state.debugStartPlaybackForTesting);
+        await tester.pump();
+        expect(player.openedUris, ['http://example.invalid/ch-1.m3u8']);
+
+        LastDecodeStats.debugReset();
+        final stopGate = Completer<void>();
+        player.stopGate = stopGate;
+        final zap = state.debugSwitchLiveChannelForTesting(1);
+        for (var i = 0; i < 20 && !player.events.contains('stop-started'); i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        stopGate.complete();
+        await zap;
+        await tester.pump();
+        expect(player.openedUris, contains('http://example.invalid/ch-2.m3u8'));
+
+        await tester.pump(const Duration(seconds: 6));
+        // The fake answers the raw decoder name; the real Android player
+        // maps software decoders to 'no' (player_android_hwdec_test).
+        // This test proves the record path; the mapping is proven there.
+        expect(LastDecodeStats.hwdecCurrent, 'c2.android.avc.decoder');
+
+        await tester.pump(const Duration(seconds: 15));
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  });
 }
 
 /// The provider shell a live screen needs (same shape as
@@ -355,6 +467,10 @@ class _ReleaseRecordingPlayer implements Player {
   final List<String> properties = [];
   Completer<void>? stopGate;
 
+  /// The `hwdec-current` value `getProperty` answers with (the native
+  /// stats' decoder name on a real ExoPlayer tune).
+  String? hwdecCurrentForTest;
+
   @override
   PlayerState get state => const PlayerState(position: Duration.zero, duration: Duration.zero, seekable: false);
 
@@ -411,6 +527,12 @@ class _ReleaseRecordingPlayer implements Player {
   Future<void> setProperty(String name, String value) async {
     properties.add('$name=$value');
     events.add('prop:$name=$value');
+  }
+
+  @override
+  Future<String?> getProperty(String name) async {
+    if (name == 'hwdec-current') return hwdecCurrentForTest;
+    return null;
   }
 
   @override

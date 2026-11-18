@@ -459,6 +459,16 @@ class PlayerAndroid extends PlayerBase with VideoRectSupport {
         final stats = await getStats();
         final height = stats['videoHeight'];
         return height?.toString();
+      // 1.4 (P7): ExoPlayer has no mpv `hwdec-current` property — derive
+      // it from the native stats' `videoDecoderName` so the triage, the
+      // performance overlay and the debug export see the active decoder
+      // instead of null (a silent software fallback on the main TV
+      // path). Software decoders report 'no' (the mpv value the
+      // triage/export branch on); hardware reports the decoder name,
+      // which the export prints verbatim.
+      case 'hwdec-current':
+        final stats = await getStats();
+        return hwdecCurrentFromDecoderName(stats['videoDecoderName'] as String?);
       default:
         return null;
     }
@@ -592,4 +602,32 @@ class PlayerAndroid extends PlayerBase with VideoRectSupport {
     if (disposed) return;
     await invoke('setLogLevel', {'level': level});
   }
+}
+
+/// 1.4 (P7): whether an Android decoder component name is a software
+/// decoder. Mirrors `MediaCodecQuery.isSoftwareCodecName`
+/// (`android/.../shared/MediaCodecQuery.kt`): the AOSP software
+/// components are `OMX.google.*`, `OMX.ffmpeg.*`, `c2.android.*`,
+/// `c2.ffmpeg.*` and anything with `.sw.` in the name. `c2.google.*` is
+/// NOT software — it is the Tensor vendor prefix (`c2.google.av1.decoder`
+/// is the BigOcean hardware AV1 block on Pixel 6+).
+bool isSoftwareDecoderName(String name) {
+  final normalized = name.toLowerCase();
+  return normalized.startsWith('omx.google.') ||
+      normalized.startsWith('omx.ffmpeg.') ||
+      normalized.startsWith('c2.android.') ||
+      normalized.startsWith('c2.ffmpeg.') ||
+      normalized.contains('.sw.');
+}
+
+/// Map a native `videoDecoderName` stats value to the `hwdec-current`
+/// value the Dart side consumes: null when unknown (no decoder yet),
+/// `'no'` for a software decoder (the mpv value the triage/export
+/// branch on), the decoder name for hardware. `'Software'` is the
+/// `getVideoDecoderInfo` sentinel when no hardware decoder exists for
+/// the mime — a software fallback, not a decoder name.
+String? hwdecCurrentFromDecoderName(String? decoderName) {
+  if (decoderName == null || decoderName.isEmpty || decoderName == 'unknown') return null;
+  if (decoderName == 'Software') return 'no';
+  return isSoftwareDecoderName(decoderName) ? 'no' : decoderName;
 }

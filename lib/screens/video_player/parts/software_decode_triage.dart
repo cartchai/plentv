@@ -13,11 +13,43 @@ extension _SoftwareDecodeTriageMethods on VideoPlayerScreenState {
   /// player swap or an exit inside the window suppresses it. One warning
   /// per tune at most; a zap re-arms for the new channel.
   void _armSoftwareDecodeTriage(Player player) {
+    // 1.4 (P7): on ExoPlayer the mpv triage below never runs (the drop
+    // counts and `video-codec` are mpv properties), but the active
+    // decoder still needs its playback-start record — otherwise a
+    // software fallback on the main TV path is silent. Record it once
+    // the open commits; the mpv path keeps its own observer.
+    if (player is! PlayerNative) {
+      unawaited(_recordExoPlayerDecoderAtOpen(player, _live.streamGeneration));
+      return;
+    }
     // mpv-only: the drop counts and `video-codec` come off mpv
     // properties; ExoPlayer tunes never reach here in practice.
-    if (player is! PlayerNative) return;
     final generation = _live.streamGeneration;
     unawaited(_checkSoftwareDecodeTriage(player, generation));
+  }
+
+  /// 1.4 (P7): ExoPlayer-side playback-start decoder record. The
+  /// decoder initializes during the open, so the read waits ~5 s (the
+  /// triage's window) before asking the player for `hwdec-current`
+  /// (derived from the native stats' decoder name on Android). A zap,
+  /// re-open or exit inside the window suppresses it — the new tune
+  /// owns its own record. Logs a software fallback once per flip, like
+  /// the mpv observer in player_base.
+  Future<void> _recordExoPlayerDecoderAtOpen(Player player, int generation) async {
+    await Future.delayed(const Duration(seconds: 5));
+    if (!mounted || _shuttingDown || player != this.player) return;
+    if (_live.streamGeneration != generation) return;
+    String? hwdecCurrent;
+    try {
+      hwdecCurrent = await player.getProperty('hwdec-current');
+    } catch (_) {
+      return;
+    }
+    if (hwdecCurrent == null) return;
+    final changed = LastDecodeStats.recordHwdec(hwdecCurrent);
+    if (changed && hwdecCurrent == 'no') {
+      appLogger.i('[ExoPlayer] hwdec-current=no (software decode)');
+    }
   }
 
   Future<void> _checkSoftwareDecodeTriage(Player player, int generation) async {
