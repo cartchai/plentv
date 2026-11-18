@@ -354,7 +354,27 @@ extension _VideoPlayerLiveTvMethods on VideoPlayerScreenState {
   /// Configure MPV options for live streaming.
   /// The official Plex Media Player does not set client-side reconnect options —
   /// reconnection is handled by the server's transcoder on the input side.
-  Future<void> _setLiveStreamOptions(Player player) => player.setProperty('force-seekable', 'no');
+  Future<void> _setLiveStreamOptions(Player player) async {
+    await player.setProperty('force-seekable', 'no');
+    // 1.4 (P3 live half + P4 switch half): a live stream never seeks
+    // back, so the demuxer back buffer (mpv's 50 MiB default) is pure
+    // dead weight on the reduced tiers — 0 there, mpv default elsewhere
+    // (see [demuxerBackBufferBytes]). This runs on every live open
+    // (launch, zap, re-open) BEFORE the new URL loads, so on a zap the
+    // old channel's back buffer is dropped at exactly the moment the new
+    // channel needs the memory — including on the old-order path
+    // (Plex/Jellyfin, multi-connection) where the old stream is still
+    // playing while the new one opens. Always written so a reused player
+    // never carries one item's tuning into the next open.
+    await player.setProperty(
+      'demuxer-max-back-bytes',
+      '${demuxerBackBufferBytes(
+        isLive: true,
+        isNetworkVod: false,
+        isReducedTier: DevicePerformance.shedCachesOnBackground,
+      )}',
+    );
+  }
 
   /// Re-opens the current session's live stream at [streamUrl].
   ///

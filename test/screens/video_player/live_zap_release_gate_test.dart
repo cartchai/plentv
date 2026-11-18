@@ -37,6 +37,7 @@ import 'package:plezy/providers/offline_mode_provider.dart';
 import 'package:plezy/providers/playback_state_provider.dart';
 import 'package:plezy/screens/video_player/live_tv_session_args.dart';
 import 'package:plezy/screens/video_player_screen.dart';
+import 'package:plezy/services/device_performance.dart';
 import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/offline_watch_sync_service.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -186,6 +187,114 @@ void main() {
       },
     );
   });
+
+  testWidgets('1.4 P4: a zap drops the back buffer to 0 before opening the next channel (reduced tier)', (tester) async {
+    // The old channel's back buffer is worthless once we leave it: the
+    // zap must drop it to 0 before the new URL loads, so the new channel
+    // gets that memory at the moment it needs it. On the reduced tiers
+    // live opens run at 0 (P3); this test proves the drop lands in the
+    // zap itself, after the release and before the open.
+    DevicePerformance.debugReset(tier: DeviceTier.low);
+    addTearDown(DevicePerformance.debugReset);
+    final channels = [
+      LiveTvChannel(key: 'ch-1', title: 'Channel 1', serverId: 'srv-1'),
+      LiveTvChannel(key: 'ch-2', title: 'Channel 2', serverId: 'srv-1'),
+      LiveTvChannel(key: 'ch-3', title: 'Channel 3', serverId: 'srv-1'),
+    ];
+    final liveTv = _SingleConnectionLiveTvSupport();
+    final player = _ReleaseRecordingPlayer();
+    final shell = _LiveShell(client: _LiveMediaServerClient(liveTv));
+
+    await SettingsService.instance.write(SettingsService.matchContentFrameRate, true);
+
+    await withMockPlayerChannels(
+      methodChannelName: 'com.plezy/mpv_player',
+      eventChannelName: 'com.plezy/mpv_player/events',
+      methodHandler: (call) async => call.method == 'initialize' ? false : null,
+      testBody: () async {
+        final key = GlobalKey<VideoPlayerScreenState>();
+        await tester.pumpWidget(shell.screen(key: key, channel: channels.first, channels: channels));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        final state = key.currentState!..player = player;
+        await state.debugMarkPlaybackStartedForTesting();
+
+        await tester.runAsync(state.debugStartPlaybackForTesting);
+        await tester.pump();
+        expect(player.openedUris, ['http://example.invalid/ch-1.m3u8']);
+
+        final stopGate = Completer<void>();
+        player.stopGate = stopGate;
+        final zap = state.debugSwitchLiveChannelForTesting(1);
+        for (var i = 0; i < 20 && !player.events.contains('stop-started'); i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        stopGate.complete();
+        await zap;
+        await tester.pump();
+
+        expect(player.openedUris, contains('http://example.invalid/ch-2.m3u8'));
+        expect(player.properties, contains('demuxer-max-back-bytes=0'));
+        final dropped = player.events.lastIndexOf('prop:demuxer-max-back-bytes=0');
+        final stopFinished = player.events.indexOf('stop-finished');
+        final opened = player.events.indexOf('open:http://example.invalid/ch-2.m3u8');
+        expect(dropped, greaterThan(stopFinished), reason: 'the back buffer drops after the release');
+        expect(dropped, lessThan(opened), reason: 'the back buffer drops before the new URL loads');
+
+        await tester.pump(const Duration(seconds: 15));
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  });
+
+  testWidgets('1.4 P4: a zap on a full tier keeps the mpv back-buffer default', (tester) async {
+    DevicePerformance.debugReset(tier: DeviceTier.full);
+    addTearDown(DevicePerformance.debugReset);
+    final channels = [
+      LiveTvChannel(key: 'ch-1', title: 'Channel 1', serverId: 'srv-1'),
+      LiveTvChannel(key: 'ch-2', title: 'Channel 2', serverId: 'srv-1'),
+    ];
+    final liveTv = _SingleConnectionLiveTvSupport();
+    final player = _ReleaseRecordingPlayer();
+    final shell = _LiveShell(client: _LiveMediaServerClient(liveTv));
+
+    await SettingsService.instance.write(SettingsService.matchContentFrameRate, true);
+
+    await withMockPlayerChannels(
+      methodChannelName: 'com.plezy/mpv_player',
+      eventChannelName: 'com.plezy/mpv_player/events',
+      methodHandler: (call) async => call.method == 'initialize' ? false : null,
+      testBody: () async {
+        final key = GlobalKey<VideoPlayerScreenState>();
+        await tester.pumpWidget(shell.screen(key: key, channel: channels.first, channels: channels));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        final state = key.currentState!..player = player;
+        await state.debugMarkPlaybackStartedForTesting();
+
+        await tester.runAsync(state.debugStartPlaybackForTesting);
+        await tester.pump();
+        expect(player.openedUris, ['http://example.invalid/ch-1.m3u8']);
+
+        final stopGate = Completer<void>();
+        player.stopGate = stopGate;
+        final zap = state.debugSwitchLiveChannelForTesting(1);
+        for (var i = 0; i < 20 && !player.events.contains('stop-started'); i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        stopGate.complete();
+        await zap;
+        await tester.pump();
+
+        expect(player.openedUris, contains('http://example.invalid/ch-2.m3u8'));
+        expect(player.properties, contains('demuxer-max-back-bytes=52428800'),
+            reason: 'full tiers keep mpv 50 MiB default');
+
+        await tester.pump(const Duration(seconds: 15));
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  });
 }
 
 /// The provider shell a live screen needs (same shape as
@@ -243,6 +352,7 @@ class _LiveShell {
 class _ReleaseRecordingPlayer implements Player {
   final List<String> openedUris = [];
   final List<String> events = [];
+  final List<String> properties = [];
   Completer<void>? stopGate;
 
   @override
@@ -298,7 +408,10 @@ class _ReleaseRecordingPlayer implements Player {
   Future<bool> requestAudioFocus() async => true;
 
   @override
-  Future<void> setProperty(String name, String value) async {}
+  Future<void> setProperty(String name, String value) async {
+    properties.add('$name=$value');
+    events.add('prop:$name=$value');
+  }
 
   @override
   Future<void> dispose({bool preserveDisplayMode = false}) async {}
