@@ -89,9 +89,10 @@ Future<void> navigateToLiveTv(
     ),
   );
 
-  // 1.2.18 S-10: trim before the player opens (see
-  // navigateToVideoPlayer).
-  multiServer.serverManager.trimIptvCachesIfHot();
+  // 1.4 (P1): drop the browsing state before the player opens on
+  // low-RAM tiers (see navigateToVideoPlayer) — the demuxer fill
+  // starts with headroom instead of overlapping the browse heap.
+  multiServer.serverManager.dropIptvBrowsingStateForPlayback();
   unawaited(route.push(navigator));
   launchObserver?.mark('opening');
 }

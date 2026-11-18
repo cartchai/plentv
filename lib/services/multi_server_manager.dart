@@ -5,6 +5,7 @@ import '../media/ids.dart';
 import 'package:clock/clock.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 
 import '../connection/connection.dart';
 import '../i18n/app_locale_utils.dart';
@@ -21,6 +22,7 @@ import '../utils/app_logger.dart';
 import '../utils/media_server_timeouts.dart';
 import '../utils/active_client_scope.dart';
 import '../utils/future_extensions.dart';
+import 'device_performance.dart';
 
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -1786,6 +1788,41 @@ class MultiServerManager {
     for (final client in _iptvByConnectionId.values) {
       client.trimCachesIfHot('playback start');
     }
+  }
+
+  /// Drop the browsing state on playback start (1.4, P1): on the
+  /// reduced tiers (T0–T2 — the same gate as the background shed,
+  /// [DevicePerformance.shedCachesOnBackground]) the player opens
+  /// into a low heap — the catalog memos, the EPG guide and the image
+  /// cache go UNCONDITIONALLY, so the demuxer fill starts with
+  /// headroom instead of overlapping the unshed browse heap (~65–100
+  /// MB on a Trex-scale catalog). The next browse/search/guide
+  /// re-reads from disk/index (no network). On T3+ the old hot-gated
+  /// trim runs instead: nothing is dropped outright, so browse keeps
+  /// working from memory after playback. The weekly sync already
+  /// waits for idle while a stream is playing (build #28), so no
+  /// sync work starts under the player either.
+  void dropIptvBrowsingStateForPlayback() {
+    if (DevicePerformance.shedCachesOnBackground) {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+      dropIptvCachesFromMemory();
+      appLogger.i(
+        'IPTV: playback-start drop on ${DevicePerformance.currentTier} (memos + guide + images dropped)',
+      );
+      return;
+    }
+    trimIptvCachesIfHot();
+  }
+
+  /// Register an IPTV client directly (tests only): the playback-drop
+  /// harness needs a client with warm memos without paying for a full
+  /// bind (health probe + bind chain). Production always goes through
+  /// [addIptvConnection].
+  @visibleForTesting
+  void debugRegisterIptvClient(IptvClient client) {
+    _iptvByConnectionId[client.connection.id] = client;
+    _clients[client.connection.id] = client;
   }
 
   /// Drop the in-memory IPTV catalogs + EPG guides on every connection

@@ -507,10 +507,11 @@ Future<bool?> navigateToVideoPlayer(
       ),
     );
 
-    // 1.2.18 S-10: trim before the player opens — the demuxer fill
-    // starts with headroom instead of overlapping the unshed browse
-    // heap. No-op when RSS is comfortable.
-    manager.trimIptvCachesIfHot();
+    // 1.4 (P1): drop the browsing state before the player opens on
+    // low-RAM tiers — the demuxer fill starts with headroom instead
+    // of overlapping the unshed browse heap. On T3+ this is the old
+    // hot-gated trim (a no-op when RSS is comfortable).
+    manager.dropIptvBrowsingStateForPlayback();
     pushFuture = route.push(navigator, replaceCurrent: usePushReplacement);
     launchObserver?.mark('opening');
   } finally {
