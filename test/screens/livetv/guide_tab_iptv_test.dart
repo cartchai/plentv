@@ -14,6 +14,7 @@ import 'package:plezy/media/iptv_live_tv.dart';
 import 'package:plezy/models/livetv_channel.dart';
 import 'package:plezy/providers/multi_server_provider.dart';
 import 'package:plezy/screens/livetv/tabs/guide_tab.dart';
+import 'package:plezy/services/iptv/iptv_refusal_log.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/multi_server_manager.dart';
@@ -196,7 +197,7 @@ final class _IptvGuideHarness {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     }
     expect(api.epgCalls, count);
     // Build #15: the xmltv feed read is real disk I/O kicked in the
@@ -212,6 +213,55 @@ final class _IptvGuideHarness {
     await tester.pump();
   }
 
+
+  /// Bounded settle (1.4.3 C2): pumpAndSettle never returns here —
+  /// the idle sweep's async pass keeps a frame scheduled past its
+  /// budget. Six rounds of real settle + 250 ms fake pumps let the
+  /// rows land without waiting on the sweep.
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 6; i++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+  }
+
+  /// Drain a short-EPG fetch the idle sweep started after the test's
+  /// own completes — the sweep retries a loaded-EMPTY row once with
+  /// force (1.3.26 §69), and its Completer is never completed by the
+  /// test, so its 15 s first-paint timer is still pending at disposal
+  /// ("A Timer is still pending"). Completing it with [] lets the
+  /// fetch land. Call AFTER the final expects: the retry's landing
+  /// may flip the row (feed failure → failed), which must not move
+  /// the assertions. Only needed for tests whose rows end
+  /// loaded-empty (placeholder blocks); rows with programmes are
+  /// never retried, so they need no drain.
+  Future<void> drainPendingEpg(WidgetTester tester) async {
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+      // The pending map keeps completed Completers (getShortEpg only
+      // overwrites the entry on the NEXT call), so only complete one
+      // that has not answered yet — completing an answered one throws
+      // "Future already completed".
+      for (final entry in api.pending.entries.toList()) {
+        if (!entry.value.isCompleted) entry.value.complete(const []);
+      }
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump(const Duration(milliseconds: 250));
+      // The pending map never empties (completed entries stay until
+      // overwritten), so "done" means no entry is still unanswered.
+      bool hasUnanswered() =>
+          api.pending.values.any((c) => !c.isCompleted);
+      if (!hasUnanswered()) {
+        await tester.pump(const Duration(milliseconds: 250));
+        if (!hasUnanswered()) return;
+      }
+    }
+  }
+
   void dispose() => provider.dispose();
 }
 
@@ -223,6 +273,12 @@ void main() {
 
   setUp(() async {
     resetSharedPreferencesForTest();
+    // 1.4.3 G3: the guide tab's failure handler consults the refusal
+    // log (breaker check), and the log is a singleton — without a
+    // reset, one test's 403 entries make a later test's generic
+    // failure look refused (H4), and a load orphaned by a torn-down
+    // zone hangs the next test's rows in loading (mini-player).
+    IptvRefusalLog.debugResetInstance();
     LocaleSettings.setLocaleSync(AppLocale.en);
     // fetchEpgForChannel reads EPG settings first: prime SettingsService
     // here, or the prefs read started from inside the widget load never
@@ -239,6 +295,7 @@ void main() {
   });
 
   tearDown(() async {
+    IptvRefusalLog.debugResetInstance();
     IptvCatalogDiskCache.debugDisableDisk = false;
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = null;
     if (await epgTempDir.exists()) await epgTempDir.delete(recursive: true);
@@ -262,7 +319,7 @@ void main() {
 
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.byType(LinearProgressIndicator), findsNothing);
     // v1.1.1: a channel whose fetch finished with no programmes at all
@@ -287,7 +344,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 1);
 
     harness.api.completeError('100', Exception('provider down'));
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     // No placeholders pretending the load finished empty; the retry state
     // is visible instead.
@@ -303,7 +360,7 @@ void main() {
     harness.api.complete('100', [
       _epg(id: 'a', title: 'Retried Show', start: hourStart, end: hourStart.add(const Duration(hours: 1))),
     ]);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text(t.liveTv.guideLoadFailed), findsNothing);
     expect(find.text('Retried Show'), findsOneWidget);
@@ -335,15 +392,23 @@ void main() {
     );
     harness.api.completeError('100', denied);
     harness.api.completeError('101', denied);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
-    // Per-row retry states AND the banner naming the denial.
-    expect(find.text(t.liveTv.guideLoadFailed), findsNWidgets(2));
+    // Per-row refused states (1.4.3 G3: a 403 is not a generic
+    // failure — the row says the panel refused access on this
+    // network, so its retry cannot succeed while the breaker is
+    // open) AND the banner naming the denial.
+    expect(find.text(t.iptv.refusedOnThisNetwork), findsNWidgets(2));
+    expect(find.text(t.liveTv.guideLoadFailed), findsNothing);
     expect(find.text(t.iptv.epgGuideDenied), findsOneWidget);
     expect(find.text(t.common.retry), findsOneWidget);
 
     // The banner's Retry refetches both channels (force, D8); with the
     // feed answering again, completing them with programmes clears it.
+    // 1.4.3 G3: the retry is dead while the breaker is open, so the
+    // block is cleared first — the same clear the refusals screen's
+    // Clear and the settings Retry perform in the app.
+    harness.client.clear403Cooldown();
     harness.api.failXmltvError = null;
     await tester.tap(find.text(t.common.retry));
     await harness.waitForEpgCalls(tester, 4);
@@ -355,7 +420,7 @@ void main() {
     harness.api.complete('101', [
       _epg(id: 'b', title: 'Retried Sport', start: hourStart, end: hourStart.add(const Duration(hours: 1))),
     ]);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text(t.iptv.epgGuideDenied), findsNothing);
     expect(find.text(t.liveTv.guideLoadFailed), findsNothing);
@@ -372,7 +437,7 @@ void main() {
 
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     // v1.1.1 (Task G restored): one "No information available" block per
     // uncovered clock hour — 5 visible per row at this viewport, 10
@@ -397,7 +462,7 @@ void main() {
       _epg(id: 'b', title: 'Hour Show Two', start: hourStart.add(const Duration(hours: 1)), end: hourStart.add(const Duration(hours: 2))),
     ]);
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('Hour Show One'), findsOneWidget);
     expect(find.text('Hour Show Two'), findsOneWidget);
@@ -419,16 +484,18 @@ void main() {
 
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     // First block belongs to channel 100 (catch-up) and is the past
     // partial hour: the tune action reads "Watch Channel" and catch-up
     // reads "Watch from start (N min ago)" from that hour's own start.
     await tester.tap(find.text('No information available').first);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('Watch Channel'), findsOneWidget);
     expect(find.textContaining('Watch from start'), findsOneWidget);
+    // 1.4.3: drain the sweep's loaded-empty retry (see drainPendingEpg).
+    await harness.drainPendingEpg(tester);
   });
 
   testWidgets('no catch-up action for a channel without an archive', (tester) async {
@@ -439,16 +506,18 @@ void main() {
     await harness.waitForEpgCalls(tester, 1);
 
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await tester.tap(find.text('No information available').first);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     // Past hour block, so the tune action reads "Watch Channel";
     // channel 101 has no archive, so no catch-up action.
     expect(find.text('Watch Channel'), findsOneWidget);
     expect(find.text(t.liveTv.startFromBeginning), findsNothing);
     expect(find.textContaining('Watch from start'), findsNothing);
+    // 1.4.3: drain the sweep's loaded-empty retry (see drainPendingEpg).
+    await harness.drainPendingEpg(tester);
   });
 
   testWidgets('a past programme with guide data shows Watch from start next to Watch Channel', (tester) async {
@@ -471,10 +540,10 @@ void main() {
         end: now.subtract(const Duration(minutes: 10)),
       ),
     ]);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await tester.tap(find.text('Past Show'));
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('Watch Channel'), findsOneWidget);
     expect(find.textContaining('Watch from start'), findsOneWidget);
@@ -499,10 +568,10 @@ void main() {
         end: now.add(const Duration(minutes: 30)),
       ),
     ]);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await tester.tap(find.text('Live Show'));
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('Play'), findsOneWidget);
     expect(find.text('Start from beginning'), findsOneWidget);
@@ -525,10 +594,10 @@ void main() {
         end: now.add(const Duration(hours: 2)),
       ),
     ]);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await tester.tap(find.text('Future Show'));
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('Watch Channel'), findsOneWidget);
     expect(find.textContaining('Watch from start'), findsNothing);
@@ -554,7 +623,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 1);
 
     harness.api.completeEmpty('100');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     // Task G: 5 visible one-hour "No information available" blocks (the
     // 6h window holds 6 hour blocks; the last falls past the viewport).
@@ -571,7 +640,7 @@ void main() {
 
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     // 5 visible hour blocks per row x 2 rows; no single-window blocks.
     expect(find.text('No information available'), findsNWidgets(10));
@@ -591,7 +660,7 @@ void main() {
       _epg(id: 'a', title: 'Hour Show One', start: hourStart, end: hourStart.add(const Duration(hours: 1))),
       _epg(id: 'b', title: 'Hour Show Two', start: hourStart.add(const Duration(hours: 1)), end: hourStart.add(const Duration(hours: 2))),
     ]);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('Hour Show One'), findsOneWidget);
     expect(find.text('Hour Show Two'), findsOneWidget);
@@ -616,7 +685,7 @@ void main() {
     // at dispose (the existing loading test does the same).
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
   });
 
   testWidgets('H4: a failed EPG fetch shows a retry state, never hour blocks', (tester) async {
@@ -630,7 +699,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 1);
 
     harness.api.completeError('100', Exception('provider down'));
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('No information available'), findsNothing);
     expect(find.text('No guide data for this channel'), findsNothing);
@@ -645,7 +714,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 1);
 
     harness.api.completeEmpty('100');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     // The hour blocks must exist first (fails on base: build #17 §10
     // shows one whole-window block instead, so there is nothing to tap).
@@ -655,10 +724,12 @@ void main() {
     // hour before now); channel 100 has an archive, so the detail must
     // offer catch-up from that hour's own start time.
     await tester.tap(find.text('No information available').first);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('Watch Channel'), findsOneWidget);
     expect(find.textContaining('Watch from start'), findsOneWidget);
+    // 1.4.3: drain the sweep's loaded-empty retry (see drainPendingEpg).
+    await harness.drainPendingEpg(tester);
   });
 
   testWidgets('H5b: tapping a past hour block on a channel without an archive offers no catch-up', (tester) async {
@@ -669,17 +740,19 @@ void main() {
     await harness.waitForEpgCalls(tester, 1);
 
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     // The hour blocks must exist first (fails on base: build #17 §10
     // shows one whole-window block instead, so there is nothing to tap).
     expect(find.text('No information available'), findsWidgets);
 
     await tester.tap(find.text('No information available').first);
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.text('Watch Channel'), findsOneWidget);
     expect(find.textContaining('Watch from start'), findsNothing);
     expect(find.text(t.liveTv.startFromBeginning), findsNothing);
+    // 1.4.3: drain the sweep's loaded-empty retry (see drainPendingEpg).
+    await harness.drainPendingEpg(tester);
   });
 }

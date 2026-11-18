@@ -144,7 +144,7 @@ final class _MenuHarness {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     }
     expect(api.epgCalls, 2);
     await tester.runAsync(() async {
@@ -153,7 +153,21 @@ final class _MenuHarness {
     await tester.pump();
     api.completeEmpty('100');
     api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await settle(tester);
+  }
+
+
+  /// Bounded settle (1.4.3 C2): pumpAndSettle never returns here —
+  /// the idle sweep's async pass keeps a frame scheduled past its
+  /// budget. Six rounds of real settle + 250 ms fake pumps let the
+  /// rows land without waiting on the sweep.
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 6; i++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump(const Duration(milliseconds: 250));
+    }
   }
 
   void dispose() => provider.dispose();
@@ -194,7 +208,7 @@ void main() {
       );
 
       await tester.longPress(find.text('Trex News').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(find.text('Hide channel'), findsOneWidget);
       expect(find.text('Add to favourites'), findsOneWidget);
@@ -217,9 +231,9 @@ void main() {
       );
 
       await tester.longPress(find.text('Trex News').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
       await tester.tap(find.text('Hide channel'));
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(hidden.map((c) => c.key), ['100']);
       expect(toggled, isEmpty);
@@ -239,9 +253,9 @@ void main() {
       );
 
       await tester.longPress(find.text('Trex Sports').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
       await tester.tap(find.text('Add to favourites'));
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(toggled.map((c) => c.key), ['101']);
       expect(hidden, isEmpty);
@@ -260,12 +274,12 @@ void main() {
       );
 
       await tester.longPress(find.text('Trex News').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(find.text('Remove from favourites'), findsOneWidget);
       expect(find.text('Add to favourites'), findsNothing);
       await tester.tap(find.text('Remove from favourites'));
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
       expect(toggled.map((c) => c.key), ['100']);
       harness.dispose();
     });
@@ -287,7 +301,7 @@ void main() {
       );
 
       await tester.longPress(find.text('Plex News').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(find.text('Hide channel'), findsNothing);
       expect(find.text('Add to favourites'), findsOneWidget);

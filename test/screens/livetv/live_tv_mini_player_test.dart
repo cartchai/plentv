@@ -17,6 +17,7 @@ import 'package:plezy/mpv/player/player_state.dart';
 import 'package:plezy/mpv/player/player_streams.dart';
 import 'package:plezy/providers/multi_server_provider.dart';
 import 'package:plezy/screens/livetv/tabs/guide_tab.dart';
+import 'package:plezy/services/iptv/iptv_refusal_log.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/multi_server_manager.dart';
@@ -282,7 +283,7 @@ final class _MiniPlayerHarness {
 
   Future<void> rotateLandscape(WidgetTester tester) async {
     tester.view.physicalSize = const Size(844, 390);
-    await tester.pumpAndSettle();
+    await settle(tester);
   }
 
   /// Pump until the guide has asked for the EPG of [count] channels
@@ -293,7 +294,7 @@ final class _MiniPlayerHarness {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     }
     expect(api.epgCalls, count);
     // Build #15: the xmltv feed read is real disk I/O kicked in the
@@ -313,6 +314,25 @@ final class _MiniPlayerHarness {
     await tester.pump();
   }
 
+
+  /// Bounded settle (1.4.3 C2): pumpAndSettle never returns here —
+  /// the idle sweep's async pass keeps a frame scheduled past its
+  /// budget. Six rounds of real settle + 250 ms fake pumps let the
+  /// rows land without waiting on the sweep. Kept at six, not a
+  /// longer condition-based wait: a longer settle advances the fake
+  /// clock far enough to move the catch-up sheet's button below the
+  /// fold. (Rows stuck loading past six rounds were the orphaned
+  /// refusal-log load, fixed by the debugResetInstance in
+  /// setUp/tearDown above, not by waiting longer.)
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 6; i++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+  }
+
   void dispose() {
     for (final player in players) {
       unawaited(player.close());
@@ -329,6 +349,13 @@ void main() {
 
   setUp(() async {
     resetSharedPreferencesForTest();
+    // 1.4.3 G3: the guide tab's failure handler awaits the breaker
+    // check, which reads the refusal log — a log load orphaned when
+    // a previous test's zone tore down hangs the next test's rows in
+    // loading forever (the fetch fails in the log, the tab never
+    // marks the row). Reset the singleton per test, as the 1.3.24
+    // resume file does.
+    IptvRefusalLog.debugResetInstance();
     LocaleSettings.setLocaleSync(AppLocale.en);
     await SettingsService.getInstance();
     epgTempDir = await Directory.systemTemp.createTemp('plezy_epg_miniplayer_');
@@ -337,6 +364,7 @@ void main() {
   });
 
   tearDown(() async {
+    IptvRefusalLog.debugResetInstance();
     IptvCatalogDiskCache.debugDisableDisk = false;
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = null;
     if (await epgTempDir.exists()) await epgTempDir.delete(recursive: true);
@@ -350,7 +378,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 2);
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(find.byKey(const Key('live-tv-mini-player')), findsNothing);
     expect(harness.players, isEmpty);
@@ -364,7 +392,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 2);
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await harness.tapChannel(tester, 'Trex News');
 
@@ -392,7 +420,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 2);
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await harness.tapChannel(tester, 'Trex News');
     await harness.tapChannel(tester, 'Trex Sports');
@@ -415,7 +443,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 2);
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await harness.tapChannel(tester, 'Trex News');
     expect(harness.players.single.openCount, 1);
@@ -424,9 +452,9 @@ void main() {
     // v1.1.1: the rows are hourly "No information available" blocks
     // again (Task G restored), not one "No guide data" block per row.
     await tester.drag(find.text('No information available').first, const Offset(0, -300));
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
     await tester.drag(find.text('No information available').first, const Offset(0, 300));
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     expect(harness.players.single.openCount, 1);
     expect(find.byKey(const Key('live-tv-mini-player')), findsOneWidget);
@@ -440,7 +468,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 2);
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await harness.tapChannel(tester, 'Trex News');
     expect(find.byKey(const Key('live-tv-mini-player')), findsOneWidget);
@@ -462,7 +490,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 2);
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await harness.tapChannel(tester, 'Trex News');
     await tester.tap(find.byKey(const Key('mini-player-fullscreen')));
@@ -485,7 +513,7 @@ void main() {
     await harness.waitForEpgCalls(tester, 2);
     harness.api.completeEmpty('100');
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await harness.tapChannel(tester, 'Trex News');
     await tester.tap(find.byKey(const Key('mini-player-close')));
@@ -514,10 +542,10 @@ void main() {
       _epg(id: 'live', title: 'Live Show', start: now.subtract(const Duration(minutes: 10)), end: now.add(const Duration(minutes: 50))),
     ]);
     harness.api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
 
     await tester.tap(find.text('Past Show'));
-    await tester.pumpAndSettle();
+    await harness.settle(tester);
     expect(find.textContaining('Watch from start'), findsOneWidget);
 
     await tester.tap(find.textContaining('Watch from start'));

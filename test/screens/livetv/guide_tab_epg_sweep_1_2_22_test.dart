@@ -147,6 +147,42 @@ final class _SweepHarness {
     await tester.pump();
   }
 
+  /// Drain the pacer + row-build cascade until no new short-EPG call
+  /// has started for ten consecutive rounds (1 s fake). Starts land
+  /// 200 ms apart (1.4.3 C1 pacer), and each completed row rebuilds
+  /// the grid and builds the next row, so the count climbs in a
+  /// cascade — one stable round (100 ms) is a false calm between two
+  /// paced starts. A queued pacer start holds a `Future.delayed`
+  /// timer past disposal ("A Timer is still pending"), so a test
+  /// must drain before it disposes the guide. Capped at 80 rounds
+  /// (8 s fake — 30 channels × 200 ms of pacer alone is 6 s).
+  Future<void> drainCalls(WidgetTester tester) async {
+    var stableRounds = 0;
+    var last = api.epgCalls;
+    for (var i = 0; i < 80 && stableRounds < 10; i++) {
+      await settleOnce(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      if (api.epgCalls == last) {
+        stableRounds++;
+      } else {
+        stableRounds = 0;
+        last = api.epgCalls;
+      }
+    }
+  }
+
+  /// Poll until the short-EPG call list contains [id], or give up
+  /// after 60 rounds (6 s fake — the sweep needs two 2 s idle
+  /// windows to reach past the loaded-empty retries: pass 1 spends
+  /// its 8 slots retrying the visible empty rows, pass 2 fetches the
+  /// unfetched channels).
+  Future<void> waitForCalledId(WidgetTester tester, String id) async {
+    for (var i = 0; i < 60 && !api.calledIds.contains(id); i++) {
+      await settleOnce(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
   /// Poll (real-I/O window) until the short-EPG call count reaches
   /// [count], or give up after 30 rounds.
   Future<void> waitForEpgCalls(WidgetTester tester, int count) async {
@@ -154,7 +190,7 @@ final class _SweepHarness {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     }
   }
 
@@ -182,12 +218,18 @@ void main() {
     epgTempDir = await Directory.systemTemp.createTemp('plezy_epg22_sweep_');
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = () async => epgTempDir;
     IptvCatalogDiskCache.debugDisableDisk = true;
+    // 1.4.3: the worker-isolate feed parse starves in combined runs
+    // once the pacer shifts timing (the check joins an in-flight
+    // feed download that never completes) — parse on the test thread
+    // instead, as the 1.3.24/26/27 files do. Production is unaffected.
+    IptvLiveTvSupport.debugDisableIsolateFeedParse = true;
     IptvPlaybackActivity.debugResetInstance();
   });
 
   tearDown(() async {
     IptvPlaybackActivity.instance.markIdle();
     IptvPlaybackActivity.debugResetInstance();
+    IptvLiveTvSupport.debugDisableIsolateFeedParse = false;
     IptvCatalogDiskCache.debugDisableDisk = false;
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = null;
     if (await epgTempDir.exists()) await epgTempDir.delete(recursive: true);
@@ -213,14 +255,28 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await harness.waitForEpgCalls(tester, visibleCalls + 1);
     expect(harness.api.epgCalls, greaterThan(visibleCalls), reason: 'the idle sweep starts fetches beyond the visible rows');
-    // Channel 115 is the 16th row — past any viewport at this size —
-    // and the first pass covers 24 channels, so it must be swept.
-    expect(harness.api.calledIds, contains('115'), reason: 'the sweep reaches off-screen rows');
+    // 1.4.3 C2: the first pass covers 8 channels (was 24), so the
+    // off-screen row it must reach is the first one past the
+    // visible set — calls are made in channel order, so that is
+    // channel 100 + visibleCalls. (The old assertion named 115, the
+    // 16th row, which a single 8-channel pass cannot reach.)
+    expect(
+      harness.api.calledIds,
+      contains('${100 + visibleCalls}'),
+      reason: 'the sweep reaches off-screen rows',
+    );
     expect(
       harness.api.calledIds.toSet().difference(visibleIds),
       isNotEmpty,
       reason: 'the new calls are for channels the rows never built',
     );
+
+    // 1.4.3 C1: the sweep's 8 fetches start 200 ms apart through the
+    // pacer, so most are still queued on `Future.delayed` timers when
+    // the expects run — dispose with them pending fails the test.
+    // Drain the cascade first (the sweep stops once every channel
+    // has been fetched, so the count stabilises).
+    await harness.drainCalls(tester);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -231,26 +287,46 @@ void main() {
     await harness.init();
     await harness.pump(tester);
     await harness.waitForEpgCalls(tester, 1);
-    await harness.settleOnce(tester);
-    await harness.settleOnce(tester);
+    // 1.4.3 C1: mark playing BEFORE draining the visible rows' paced
+    // starts — the starts land 200 ms apart, so a snapshot taken
+    // first would still be climbing and the playing window would
+    // count paced visible starts as sweep fetches. Playback gates
+    // only the sweep, never the rows' own fetches, so draining while
+    // playing measures exactly what this test claims.
+    IptvPlaybackActivity.instance.markPlaying();
+    // Drain the visible rows' paced starts with the shared drain
+    // (stable across ten rounds — see drainCalls): the rows build in
+    // a cascade, each completion rebuilding the grid and building the
+    // next row, so a short stability window counts late visible
+    // starts as sweep fetches. Playback gates only the sweep, never
+    // the rows' own fetches, so draining while playing measures
+    // exactly what this test claims.
+    await harness.drainCalls(tester);
     final visibleCalls = harness.api.epgCalls;
     expect(visibleCalls, greaterThan(0));
     expect(visibleCalls, lessThan(30));
 
     // Playing: the 2 s idle window fires, sees playback, and spends
     // no pass — nothing new is fetched.
-    IptvPlaybackActivity.instance.markPlaying();
     await tester.pump(const Duration(seconds: 2));
     await harness.settleOnce(tester);
     await harness.settleOnce(tester);
     expect(harness.api.epgCalls, visibleCalls, reason: 'no sweep fetch may start while a stream is playing');
 
-    // Stopped: the next idle window sweeps.
+    // Stopped: the next idle windows sweep. Pass 1 spends its 8
+    // slots retrying the visible loaded-empty rows (1.3.26 §69);
+    // pass 2 reaches the unfetched channels past them.
     IptvPlaybackActivity.instance.markIdle();
-    await tester.pump(const Duration(seconds: 2));
-    await harness.waitForEpgCalls(tester, visibleCalls + 1);
+    await harness.waitForCalledId(tester, '${100 + visibleCalls}');
     expect(harness.api.epgCalls, greaterThan(visibleCalls), reason: 'the sweep runs once playback stops');
-    expect(harness.api.calledIds, contains('115'));
+    // 1.4.3 C2: the first pass covers 8 channels (was 24) — the
+    // off-screen row it must reach is the first one past the
+    // visible set (see F5a).
+    expect(harness.api.calledIds, contains('${100 + visibleCalls}'));
+
+    // 1.4.3 C1: drain the pacer queue before disposing (see F5a) —
+    // the later passes' fetches are still starting 200 ms apart.
+    await harness.drainCalls(tester);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

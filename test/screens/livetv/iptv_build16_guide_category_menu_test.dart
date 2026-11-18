@@ -142,7 +142,7 @@ final class _MenuHarness {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     }
     expect(api.epgCalls, 2);
     await tester.runAsync(() async {
@@ -151,7 +151,20 @@ final class _MenuHarness {
     await tester.pump();
     api.completeEmpty('100');
     api.completeEmpty('101');
-    await tester.pumpAndSettle();
+    await settle(tester);
+  }
+
+  /// Bounded settle (1.4.3 C2): pumpAndSettle never returns here —
+  /// the idle sweep's async pass keeps a frame scheduled past its
+  /// budget. Six rounds of real settle + 250 ms fake pumps let the
+  /// rows land without waiting on the sweep.
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 6; i++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump(const Duration(milliseconds: 250));
+    }
   }
 
   void dispose() => provider.dispose();
@@ -191,7 +204,7 @@ void main() {
       );
 
       await tester.longPress(find.text('Trex News').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(find.text(t.liveTv.channelCategory(name: 'Trex Channels')), findsOneWidget);
       // The chevron belongs to the category row itself — scope the
@@ -223,9 +236,9 @@ void main() {
       );
 
       await tester.longPress(find.text('Trex News').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
       await tester.tap(find.text(t.liveTv.channelCategory(name: 'Trex Channels')));
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(find.text(t.liveTv.hideCategory), findsOneWidget);
       expect(find.text(t.liveTv.showCategory), findsNothing);
@@ -245,11 +258,11 @@ void main() {
       );
 
       await tester.longPress(find.text('Trex Sports').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
       await tester.tap(find.text(t.liveTv.channelCategory(name: 'Trex Channels')));
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
       await tester.tap(find.text(t.liveTv.hideCategory));
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(toggled.length, 1);
       expect(toggled.single.channel.key, '101');
@@ -271,9 +284,9 @@ void main() {
       );
 
       await tester.longPress(find.text('Trex News').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
       await tester.tap(find.text(t.liveTv.channelCategory(name: 'Trex Channels')));
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(find.text(t.liveTv.showCategory), findsOneWidget);
       expect(find.text(t.liveTv.hideCategory), findsNothing);
@@ -294,7 +307,7 @@ void main() {
       );
 
       await tester.longPress(find.text('Plex News').first);
-      await tester.pumpAndSettle();
+      await harness.settle(tester);
 
       expect(find.text(t.liveTv.channelCategory(name: 'Trex Channels')), findsNothing);
       expect(find.text('Hide channel'), findsNothing);

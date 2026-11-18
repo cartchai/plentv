@@ -1672,6 +1672,12 @@ class GuideTabState extends State<GuideTab>
       unawaited(_refreshStaleGuideStamp());
       return;
     }
+    // 1.4.3 C2: the pass awaits the breaker check above, so the
+    // widget can be disposed while it is suspended — the loop below
+    // reads context (via _iptvSupportFor) and must not run on a dead
+    // State. The blocked branches above check mounted inside their
+    // own blocks; this covers the open-breaker path.
+    if (!mounted) return;
     var started = 0;
     var skippedLoaded = 0;
     var skippedFailed = 0;
