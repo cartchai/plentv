@@ -11,6 +11,7 @@ import '../../utils/iptv_initials.dart';
 import '../../utils/json_utils.dart';
 import '../../utils/media_server_timeouts.dart';
 import 'iptv_refusal_log.dart';
+import 'iptv_streaming_json.dart';
 
 /// The User-Agent values the Xtream panel sees (build #20).
 ///
@@ -1523,50 +1524,96 @@ class _VisibleFileParseParams {
 /// body-based ones — the isolate reads the file, then runs the identical
 /// in-loop filter. A missing/corrupt file throws, and the caller treats
 /// that as a cache miss exactly like a corrupt body.
-Future<List<XtreamLiveStream>> _parseLiveStreamsFileVisible(_VisibleFileParseParams params) async {
-  final body = await File(params.path).readAsString();
-  return _parseVisibleList(
-    _decodeCatalogJson(body),
-    XtreamLiveStream.fromJson,
-    (row) => row.categoryId,
-    params.filter,
+///
+/// 1.4 (F3): the file is streamed row by row ([parseJsonArrayFile] /
+/// [streamJsonArrayFile]) instead of read whole + `jsonDecode`d — the
+/// tens-of-MB body String and the decoded list of maps are never
+/// resident. The in-loop filter is the same as [_parseVisibleList]:
+/// hidden rows are skipped before parsing (category id straight off
+/// the raw map), with the post-parse check as a safety net. A truncated
+/// file reports incomplete and throws exactly like the old whole-file
+/// decode failing — its valid prefix never lands as a partial list.
+Future<List<T>> _parseCatalogFileVisible<T>(
+  String path,
+  T Function(Map<String, dynamic> json) parse,
+  String? Function(T row) categoryIdOf,
+  VisibleCatalogFilter filter,
+) async {
+  final rows = <T>[];
+  final result = await streamJsonArrayFile(
+    path,
+    onObject: (map) {
+      try {
+        if (filter.isHidden(map['category_id']?.toString())) return;
+        final row = parse(map);
+        if (!filter.isHidden(categoryIdOf(row))) rows.add(row);
+      } catch (_) {
+        // A malformed row does not invalidate its siblings.
+      }
+    },
+  );
+  if (!result.complete) _throwUnparseableCatalog();
+  return rows;
+}
+
+/// Full (unfiltered) file parsers (1.2.16/1.2.19): same rows as the
+/// body-based ones. 1.4 (F3): streamed row by row instead of whole-file
+/// read + `jsonDecode` — the download already streamed to the file, and
+/// now the parse does too, so a cold first-load never holds the body
+/// String + the decoded maps + the typed rows at once. A truncated file
+/// throws exactly like the old whole-file decode failing.
+Future<List<T>> _parseCatalogFile<T>(
+  String path,
+  T Function(Map<String, dynamic> json) parse,
+) async {
+  final parsed = await parseJsonArrayFile<T>(path, parse);
+  if (!parsed.complete) _throwUnparseableCatalog();
+  return parsed.rows;
+}
+
+/// The corrupt-catalog throw, shared by the streaming file parsers:
+/// same type + message prefix as [_decodeCatalogJson]'s throw, so
+/// callers that treat an unparseable body as a cache miss / empty
+/// response see no change.
+Never _throwUnparseableCatalog() {
+  throw MediaServerHttpException(
+    type: MediaServerHttpErrorType.unknown,
+    message: 'Xtream returned unparseable JSON: truncated or malformed catalog file',
   );
 }
 
-Future<List<XtreamVodStream>> _parseVodStreamsFileVisible(_VisibleFileParseParams params) async {
-  final body = await File(params.path).readAsString();
-  return _parseVisibleList(
-    _decodeCatalogJson(body),
-    XtreamVodStream.fromJson,
-    (row) => row.categoryId,
-    params.filter,
-  );
-}
+Future<List<XtreamLiveStream>> _parseLiveStreamsFileVisible(_VisibleFileParseParams params) =>
+    _parseCatalogFileVisible(
+      params.path,
+      XtreamLiveStream.fromJson,
+      (row) => row.categoryId,
+      params.filter,
+    );
 
-Future<List<XtreamSeries>> _parseSeriesFileVisible(_VisibleFileParseParams params) async {
-  final body = await File(params.path).readAsString();
-  return _parseVisibleList(
-    _decodeCatalogJson(body),
-    XtreamSeries.fromJson,
-    (row) => row.categoryId,
-    params.filter,
-  );
-}
+Future<List<XtreamVodStream>> _parseVodStreamsFileVisible(_VisibleFileParseParams params) =>
+    _parseCatalogFileVisible(
+      params.path,
+      XtreamVodStream.fromJson,
+      (row) => row.categoryId,
+      params.filter,
+    );
 
-Future<List<XtreamVodStream>> _parseVodStreamsFile(String path) async {
-  final body = await File(path).readAsString();
-  return _parseVodStreams(body);
-}
+Future<List<XtreamSeries>> _parseSeriesFileVisible(_VisibleFileParseParams params) =>
+    _parseCatalogFileVisible(
+      params.path,
+      XtreamSeries.fromJson,
+      (row) => row.categoryId,
+      params.filter,
+    );
 
-Future<List<XtreamLiveStream>> _parseLiveStreamsFile(String path) async {
-  final body = await File(path).readAsString();
-  return _parseLiveStreams(body);
-}
+Future<List<XtreamVodStream>> _parseVodStreamsFile(String path) =>
+    _parseCatalogFile(path, XtreamVodStream.fromJson);
 
-Future<List<XtreamSeries>> _parseSeriesFile(String path) async {
-  final body = await File(path).readAsString();
-  return _parseSeries(body);
-}
+Future<List<XtreamLiveStream>> _parseLiveStreamsFile(String path) =>
+    _parseCatalogFile(path, XtreamLiveStream.fromJson);
+
+Future<List<XtreamSeries>> _parseSeriesFile(String path) =>
+    _parseCatalogFile(path, XtreamSeries.fromJson);
 
 /// Message for the file-based visible writers: source + destination
 /// paths plus the filter. Plain values only, like [_VisibleFileParseParams].
@@ -1578,26 +1625,98 @@ class _VisibleFileWriteParams {
   const _VisibleFileWriteParams(this.sourcePath, this.destPath, this.filter);
 }
 
-Future<void> _writeVodStreamsFileVisible(_VisibleFileWriteParams params) async {
-  final body = await File(params.sourcePath).readAsString();
-  final visible = _parseVodStreamsVisible(_VisibleParseParams(body, params.filter));
-  await File(params.destPath).parent.create(recursive: true);
-  await File(params.destPath).writeAsString(jsonEncode(visible.map((r) => r.toJson()).toList()));
+/// Shared visible-only file writer (1.4, F3): streams the source file
+/// row by row and writes the visible rows incrementally to a temp file,
+/// renamed into place only when the source parsed cleanly — the same
+/// temp+rename atomicity as the sync's S-2 disk writer. The old shape
+/// read the whole source, decoded the whole list, built the whole
+/// visible list, and re-encoded it as one String; this holds one row
+/// plus one 2048-row chunk (~300 KB) at a time. A truncated source
+/// throws and leaves the previous disk file untouched (the temp file
+/// is deleted); the caller treats that as a failed persist, never as a
+/// partial catalog. The bytes are identical to the old
+/// `jsonEncode(visible.map(toJson).toList())` (compact JSON, no spaces).
+Future<void> _writeCatalogFileVisible<T>(
+  _VisibleFileWriteParams params,
+  T Function(Map<String, dynamic> json) parse,
+  String? Function(T row) categoryIdOf,
+  Map<String, dynamic> Function(T row) toJson,
+) async {
+  final dest = File(params.destPath);
+  await dest.parent.create(recursive: true);
+  final tmpFile = File('${params.destPath}.tmp');
+  final sink = tmpFile.openWrite();
+  try {
+    sink.write('[');
+    const chunkRows = 2048;
+    final chunk = StringBuffer();
+    var first = true;
+    var inChunk = 0;
+    final result = await streamJsonArrayFile(
+      params.sourcePath,
+      onObject: (map) {
+        try {
+          if (params.filter.isHidden(map['category_id']?.toString())) return;
+          final row = parse(map);
+          if (params.filter.isHidden(categoryIdOf(row))) return;
+          if (!first) chunk.write(',');
+          first = false;
+          chunk.write(jsonEncode(toJson(row)));
+          if (++inChunk >= chunkRows) {
+            sink.write(chunk.toString());
+            chunk.clear();
+            inChunk = 0;
+          }
+        } catch (_) {
+          // A malformed row does not invalidate its siblings.
+        }
+      },
+    );
+    if (inChunk > 0) sink.write(chunk.toString());
+    sink.write(']');
+    await sink.close();
+    if (!result.complete) {
+      try {
+        if (await tmpFile.exists()) await tmpFile.delete();
+      } catch (_) {}
+      _throwUnparseableCatalog();
+    }
+    if (await dest.exists()) await dest.delete();
+    await tmpFile.rename(params.destPath);
+  } catch (e) {
+    try {
+      await sink.close();
+    } catch (_) {}
+    try {
+      if (await tmpFile.exists()) await tmpFile.delete();
+    } catch (_) {}
+    rethrow;
+  }
 }
 
-Future<void> _writeLiveStreamsFileVisible(_VisibleFileWriteParams params) async {
-  final body = await File(params.sourcePath).readAsString();
-  final visible = _parseLiveStreamsVisible(_VisibleParseParams(body, params.filter));
-  await File(params.destPath).parent.create(recursive: true);
-  await File(params.destPath).writeAsString(jsonEncode(visible.map((r) => r.toJson()).toList()));
-}
+Future<void> _writeVodStreamsFileVisible(_VisibleFileWriteParams params) =>
+    _writeCatalogFileVisible(
+      params,
+      XtreamVodStream.fromJson,
+      (row) => row.categoryId,
+      (row) => row.toJson(),
+    );
 
-Future<void> _writeSeriesFileVisible(_VisibleFileWriteParams params) async {
-  final body = await File(params.sourcePath).readAsString();
-  final visible = _parseSeriesVisible(_VisibleParseParams(body, params.filter));
-  await File(params.destPath).parent.create(recursive: true);
-  await File(params.destPath).writeAsString(jsonEncode(visible.map((r) => r.toJson()).toList()));
-}
+Future<void> _writeLiveStreamsFileVisible(_VisibleFileWriteParams params) =>
+    _writeCatalogFileVisible(
+      params,
+      XtreamLiveStream.fromJson,
+      (row) => row.categoryId,
+      (row) => row.toJson(),
+    );
+
+Future<void> _writeSeriesFileVisible(_VisibleFileWriteParams params) =>
+    _writeCatalogFileVisible(
+      params,
+      XtreamSeries.fromJson,
+      (row) => row.categoryId,
+      (row) => row.toJson(),
+    );
 
 String _encodeLiveStreamsVisible(_VisibleParseParams params) =>
     jsonEncode(_parseLiveStreamsVisible(params).map((row) => row.toJson()).toList());
