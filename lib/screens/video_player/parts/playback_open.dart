@@ -751,13 +751,16 @@ extension _VideoPlayerOpenMethods on VideoPlayerScreenState {
   /// mpv stream ring buffer for poorly interleaved MP4/MOV direct play (the
   /// ring absorbs the demuxer's audio↔video byte ping-pong so HTTP reads stay
   /// linear instead of dropping the connection on every byte seek — see
-  /// [networkStreamRingBytes]). Every property is always written, set or
+  /// [networkStreamRingBytes]) plus the demuxer back buffer (1.4, P3:
+  /// 0 for live TV, 16 MiB for network VOD on the reduced tiers — see
+  /// [demuxerBackBufferBytes]). Every property is always written, set or
   /// reset, so a reused player never carries one item's tuning into the next
   /// open. On Android with ExoPlayer active they are stashed natively and
   /// replayed on the exo→mpv fallback, so keep them unconditional.
   Future<void> _applyNetworkStreamTuning({
     required Player player,
     required bool isNetworkVod,
+    required bool isLive,
     required bool isTranscoding,
     required MediaVersion? selectedVersion,
   }) async {
@@ -826,6 +829,18 @@ extension _VideoPlayerOpenMethods on VideoPlayerScreenState {
       );
     }
     await player.setProperty('stream-buffer-size', '${ringBytes ?? mpvDefaultStreamBufferBytes}');
+    // 1.4 (P3): the demuxer back buffer — mpv's 50 MiB default is pure
+    // backward-seek history. Live TV never seeks back (0 on the reduced
+    // tiers); network VOD keeps 16 MiB. Always written, like the ring
+    // above, so a reused player never carries one item's tuning into
+    // the next open. On Android with ExoPlayer active this is stashed
+    // natively and replayed on the exo→mpv fallback.
+    final backBytes = demuxerBackBufferBytes(
+      isLive: isLive,
+      isNetworkVod: isNetworkVod,
+      isReducedTier: DevicePerformance.shedCachesOnBackground,
+    );
+    await player.setProperty('demuxer-max-back-bytes', '$backBytes');
   }
 
   /// Open [videoUrl] on [player]: stream tuning → open → native subtitle style.
@@ -866,6 +881,7 @@ extension _VideoPlayerOpenMethods on VideoPlayerScreenState {
     await _applyNetworkStreamTuning(
       player: player,
       isNetworkVod: !isLocalMedia && !widget.isLive,
+      isLive: widget.isLive,
       isTranscoding: isTranscoding,
       selectedVersion: selectedVersion,
     );

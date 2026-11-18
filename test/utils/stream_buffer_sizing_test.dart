@@ -77,4 +77,38 @@ void main() {
       expect(androidStreamRingCapBytes(1024), 128 * 1024 * 1024);
     });
   });
+
+  group('demuxerBackBufferBytes (1.4, P3)', () {
+    test('live TV on a reduced tier disables the back buffer', () {
+      expect(
+        demuxerBackBufferBytes(isLive: true, isNetworkVod: false, isReducedTier: true),
+        0,
+      );
+    });
+
+    test('network VOD on a reduced tier keeps 16 MiB', () {
+      expect(
+        demuxerBackBufferBytes(isLive: false, isNetworkVod: true, isReducedTier: true),
+        16 * 1024 * 1024,
+      );
+    });
+
+    test('local media on a reduced tier keeps mpv default', () {
+      expect(
+        demuxerBackBufferBytes(isLive: false, isNetworkVod: false, isReducedTier: true),
+        50 * 1024 * 1024,
+      );
+    });
+
+    test('full tiers keep mpv default for live and VOD alike', () {
+      expect(
+        demuxerBackBufferBytes(isLive: true, isNetworkVod: false, isReducedTier: false),
+        50 * 1024 * 1024,
+      );
+      expect(
+        demuxerBackBufferBytes(isLive: false, isNetworkVod: true, isReducedTier: false),
+        50 * 1024 * 1024,
+      );
+    });
+  });
 }

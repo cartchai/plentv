@@ -51,6 +51,37 @@ int androidStreamRingCapBytes(int heapMB) {
   return maxStreamRingBytes;
 }
 
+/// mpv's built-in `demuxer-max-back-bytes` default (50 MiB, demux/demux.c:
+/// `.max_bytes_bw = 50 * 1024 * 1024`). Written back for opens that don't
+/// qualify for a reduced back buffer so a reused player never carries one
+/// item's tuning into the next.
+const mpvDefaultDemuxerBackBytes = 50 * 1024 * 1024;
+
+/// Reduced back buffer for network VOD on the low-RAM tiers (1.4, P3):
+/// 16 MiB keeps short rewinds working while freeing up to 34 MiB vs the
+/// 50 MiB default at exactly the moment a new item needs it.
+const lowRamVodDemuxerBackBytes = 16 * 1024 * 1024;
+
+/// mpv `demuxer-max-back-bytes` for an open: 0 for live TV on the reduced
+/// tiers (a live stream never seeks back — a rewind re-fetches from the
+/// network, which is acceptable for live), 16 MiB for network VOD on the
+/// reduced tiers, mpv's 50 MiB default everywhere else (local media, and
+/// the full tiers where the back buffer is cheap). On Android with
+/// ExoPlayer active this is stashed natively and replayed on the exo→mpv
+/// fallback; ExoPlayer itself keeps no back buffer by default
+/// (DefaultLoadControl without setBackBuffer), so the main TV path
+/// already runs at 0.
+int demuxerBackBufferBytes({
+  required bool isLive,
+  required bool isNetworkVod,
+  required bool isReducedTier,
+}) {
+  if (!isReducedTier) return mpvDefaultDemuxerBackBytes;
+  if (isLive) return 0;
+  if (isNetworkVod) return lowRamVodDemuxerBackBytes;
+  return mpvDefaultDemuxerBackBytes;
+}
+
 /// mpv `stream-buffer-size` for a network direct play of [container] at
 /// [bitrateKbps] total bitrate, or null when mpv's 128 KiB default suffices.
 ///
