@@ -3869,6 +3869,9 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2318 => [
+		'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
+	];
 	List<String> get changelog2317 => [
 		'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
 		'Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV',
@@ -11469,6 +11472,7 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
 			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
 			'about.changelog2317.1' => 'Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV',
 			'about.changelog2317.2' => 'Fixed: the weekly catalog refresh now reads the lists one row at a time instead of all at once, cutting its biggest memory spike',
@@ -11614,9 +11618,9 @@ extension on Translations {
 			'about.changelog2258.4' => 'The library title no longer runs off the edge on narrow phones — long names like trex — Movies now shorten with …',
 			'about.changelog2257.0' => 'Your channels, movies and shows are now saved on the phone, so they load straight away instead of downloading every time you open the app',
 			'about.changelog2257.1' => 'When the saved copy gets old, the app shows it straight away and quietly fetches the new one in the background',
-			'about.changelog2257.2' => 'Refresh playlists in IPTV settings now clears the saved copy too, so you always get fresh data',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2257.2' => 'Refresh playlists in IPTV settings now clears the saved copy too, so you always get fresh data',
 			'about.changelog2257.3' => 'The saved copy is per connection, so two IPTV sources never mix each other up',
 			'about.changelog2257.4' => 'Pictures and posters still load from the internet as before — only the lists are saved',
 			'about.changelog2256.0' => 'Updates now download inside the app, with an Install button when the download finishes — no browser needed',
@@ -12128,9 +12132,9 @@ extension on Translations {
 			'music.clearQueue' => 'Clear queue',
 			'music.lyrics' => 'Lyrics',
 			'music.noLyrics' => 'No lyrics available',
-			'music.sleepTimer' => 'Sleep timer',
 			_ => null,
 		} ?? switch (path) {
+			'music.sleepTimer' => 'Sleep timer',
 			'music.sleepTimerEndOfTrack' => 'End of track',
 			'music.sleepTimerMinutes' => ({required Object n}) => '${n} minutes',
 			'music.stopPlayback' => 'Stop playback',
@@ -12642,9 +12646,9 @@ extension on Translations {
 			'metadataEdit.deleteAfterPlaying' => 'Delete Episodes After Playing',
 			'metadataEdit.never' => 'Never',
 			'metadataEdit.afterADay' => 'After a day',
-			'metadataEdit.afterAWeek' => 'After a week',
 			_ => null,
 		} ?? switch (path) {
+			'metadataEdit.afterAWeek' => 'After a week',
 			'metadataEdit.afterAMonth' => 'After a month',
 			'metadataEdit.onNextRefresh' => 'On next refresh',
 			'metadataEdit.seasons' => 'Seasons',
@@ -13156,9 +13160,9 @@ extension on Translations {
 			'iptv.lastSearchSectionSkipped' => ({required Object section}) => '${section}: skipped',
 			'iptv.miniPlayerTitle' => 'Mini-player',
 			'iptv.miniPlayerNone' => 'No tune yet — play a channel in Live TV, then check back here.',
-			'iptv.miniPlayerChannel' => ({required Object channel, required Object backend}) => '${channel} · ${backend}',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.miniPlayerChannel' => ({required Object channel, required Object backend}) => '${channel} · ${backend}',
 			'iptv.miniPlayerRevealEvent' => ({required Object ms}) => 'First frame: restart event · ${ms} ms',
 			'iptv.miniPlayerRevealLatch' => ({required Object ms}) => 'First frame: already rendered · ${ms} ms',
 			'iptv.miniPlayerRevealWatchdog' => ({required Object ms}) => 'First frame: watchdog reveal after ${ms} ms — no frame was reported',
