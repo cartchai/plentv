@@ -218,6 +218,69 @@ class XtreamApi {
   /// Null in tests and for callers that do not record.
   final Future<void> Function(IptvRefusalEntry entry)? _onRefusal;
 
+  /// 1.4.3 C3 (403 circuit breaker): answers whether a 403 for this
+  /// connection was recorded recently — the log-derived half of the
+  /// breaker, provided by the client (which reads the refusal log).
+  /// Null means no log to consult (sign-in probe, tests without a log)
+  /// — the breaker then runs on the in-memory flag alone (fail-open).
+  final Future<bool> Function()? _recent403Provider;
+
+  /// How long after a 403 the breaker stays open (1.4.3 C3): mirrors the
+  /// 5-minute refusal backoff and the 5-minute xmltv negative cache, so
+  /// every "don't re-ask yet" window in the app agrees. Test-overridable
+  /// (assign a shorter value in tests — restore it after).
+  static Duration breakerCooldown = const Duration(minutes: 5);
+
+  /// When this client last saw a 403, set synchronously the moment the
+  /// refusal is recorded (1.4.3 C3) — the log write behind [_onRefusal]
+  /// is queued and can take up to ~500 ms (network-type probe), so a
+  /// burst fired in that window would otherwise slip through. The
+  /// log-derived provider covers restarts and other instances; this flag
+  /// covers the same-instance race. Cleared by [clearBreaker].
+  DateTime? _breakerOpenedAt;
+
+  /// True when the 403 circuit breaker is open for this client (1.4.3
+  /// C3): a 403 seen in-memory within [breakerCooldown], or the
+  /// log-derived provider says a recent 403 exists. Fail-open: no
+  /// provider, or a provider that throws, means "not open" — a broken
+  /// diagnostic must never take the server offline.
+  Future<bool> get isIn403Cooldown async {
+    final openedAt = _breakerOpenedAt;
+    if (openedAt != null && DateTime.now().difference(openedAt) < breakerCooldown) return true;
+    final provider = _recent403Provider;
+    if (provider == null) return false;
+    try {
+      return await provider();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Manually clear the breaker (1.4.3 C3): the refusals screen Clear
+  /// and the Settings manual Retry call this (via the client) so a
+  /// deliberate retry re-fires once instead of waiting out the window.
+  /// Only clears this instance's in-memory flag; the log-derived half
+  /// is cleared by the client's own manual-clear timestamp.
+  void clearBreaker() {
+    _breakerOpenedAt = null;
+  }
+
+  /// Throw the cooldown 403 when the breaker is open (1.4.3 C3): no
+  /// panel call is made and no refusal is recorded — the panel already
+  /// refused, and re-firing during a block can reset or extend it.
+  /// Callers see an ordinary 403 and serve cache / the refused state,
+  /// exactly as for a live 403.
+  Future<void> _throwIfBreakerOpen(Uri uri) async {
+    if (await isIn403Cooldown) {
+      throw MediaServerHttpException(
+        type: MediaServerHttpErrorType.unknown,
+        message: 'Xtream access denied (403 cooldown, no request sent)',
+        statusCode: 403,
+        requestUri: uri,
+      );
+    }
+  }
+
   /// The connection this client serves, for the recorded entry ('' when
   /// the client is a pre-connection probe — the sign-in screen).
   final String _connectionId;
@@ -231,6 +294,7 @@ class XtreamApi {
     this._userAgent,
     this._userAgentProvider,
     this._onRefusal,
+    this._recent403Provider,
     this._connectionId = '',
     this._connectionName = '',
   }) : serverUrl = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl,
@@ -313,6 +377,8 @@ class XtreamApi {
     Duration receiveTimeout = MediaServerTimeouts.receive,
     Future<void>? abortTrigger,
   }) async {
+    // 1.4.3 C3: a recent 403 means no request at all — not even one.
+    await _throwIfBreakerOpen(uri);
     http.Response response;
     try {
       // Build #21: an AbortableRequest so a search section can hard-cancel
@@ -415,6 +481,8 @@ class XtreamApi {
     bool ignoreCatalogCap = false,
     void Function(int receivedBytes, int? totalBytes)? onProgress,
   }) async {
+    // 1.4.3 C3: a recent 403 means no request at all — not even one.
+    await _throwIfBreakerOpen(uri);
     // 1.2.19 (L-4): the partial file's length is the resume point. A
     // missing file reads as 0 (fresh download); sync I/O is deliberate
     // — the hub temp-file helpers use sync I/O for the same fake-async
@@ -572,6 +640,10 @@ class XtreamApi {
     required String failureKind,
     http.Response? response,
   }) async {
+    // 1.4.3 C3: open the breaker the moment a 403 is seen, synchronously
+    // — the log write below is queued and can lag ~500 ms, and a burst
+    // fired in that window must not slip through. Only 403 opens it.
+    if (statusCode == 403) _breakerOpenedAt = DateTime.now();
     final onRefusal = _onRefusal;
     if (onRefusal == null) return;
     try {
@@ -1016,6 +1088,8 @@ class XtreamApi {
     Future<void>? abortTrigger,
   }) async {
     final uri = Uri.parse('$serverUrl/xmltv.php?username=$username&password=$password');
+    // 1.4.3 C3: a recent 403 means no request at all — not even one.
+    await _throwIfBreakerOpen(uri);
     http.StreamedResponse streamed;
     try {
       // Build #28: AbortableRequest, same shape as the other fetchers —
@@ -1108,6 +1182,8 @@ class XtreamApi {
     void Function(int receivedBytes, int? totalBytes)? onProgress,
   }) async {
     final uri = Uri.parse('$serverUrl/xmltv.php?username=$username&password=$password');
+    // 1.4.3 C3: a recent 403 means no request at all — not even one.
+    await _throwIfBreakerOpen(uri);
     var existingBytes = 0;
     try {
       existingBytes = File(filePath).lengthSync();

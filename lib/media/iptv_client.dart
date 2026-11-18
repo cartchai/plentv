@@ -341,6 +341,10 @@ class IptvClient implements MediaServerClient {
     // diagnostic. Record-only: the exception the caller sees is
     // unchanged, and no request is added.
     onRefusal: (entry) => IptvRefusalLog.instance.record(entry),
+    // 1.4.3 C3: the 403 circuit breaker reads the same log — a 403
+    // recorded for this connection within the cooldown window means
+    // every panel call site stands down instead of re-firing.
+    recent403Provider: _isIn403Cooldown,
     connectionId: connection.id,
     connectionName: _name,
   );
@@ -2537,25 +2541,59 @@ class IptvClient implements MediaServerClient {
   LiveTvSupport get liveTv => _liveTv;
 
   /// True when the refusal log holds a 403 for this connection recorded
-  /// within [refusalProbeBackoff] (build #28). Only a 403 (access
-  /// denied) backs off the probe — a 429 is rate-limiting, not a
-  /// refusal, and the probe is how the app learns the panel recovered.
-  /// A log that cannot be loaded says nothing, so the probe runs
-  /// (fail-open: a broken log must not take the server offline). The
-  /// check is best-effort by construction: a refusal recorded
-  /// fire-and-forget a moment earlier may not have persisted yet, so
-  /// one probe can slip through — one call, not a sweep.
-  Future<bool> _hasRecentRefusal() async {
+  /// within [XtreamApi.breakerCooldown] (1.4.3 C3 — the 403 circuit
+  /// breaker, shared by the health probe and every panel call site).
+  /// Only a 403 (access denied) opens the breaker — a 429 is
+  /// rate-limiting, not a refusal, and the probe is how the app learns
+  /// the panel recovered. A log that cannot be loaded says nothing, so
+  /// the probe runs (fail-open: a broken log must not take the server
+  /// offline). The check is best-effort by construction: a refusal
+  /// recorded fire-and-forget a moment earlier may not have persisted
+  /// yet, so one probe can slip through — one call, not a sweep. The
+  /// API client's in-memory flag covers that same-instance race; this
+  /// log half covers restarts and other instances. A manual clear
+  /// ([clear403Cooldown]) after a 403 means the owner deliberately
+  /// re-asked — 403s at or before it do not open the breaker.
+  DateTime? _breakerClearedAt;
+
+  Future<bool> _isIn403Cooldown() async {
     try {
       await _refusalLog.ensureLoaded();
     } catch (_) {
       return false;
     }
-    final cutoff = DateTime.now().subtract(refusalProbeBackoff);
+    final cutoff = DateTime.now().subtract(XtreamApi.breakerCooldown);
+    final clearedAt = _breakerClearedAt;
     return _refusalLog.entriesNotifier.value.any(
-      (e) => e.connectionId == connection.id && e.statusCode == 403 && e.timestamp.isAfter(cutoff),
+      (e) =>
+          e.connectionId == connection.id &&
+          e.statusCode == 403 &&
+          e.timestamp.isAfter(cutoff) &&
+          (clearedAt == null || e.timestamp.isAfter(clearedAt)),
     );
   }
+
+  /// Whether the 403 circuit breaker is open for this connection
+  /// (1.4.3 C3). The guide tab (sweep, row retry) and the detail
+  /// screens (seasons retry) read this instead of re-firing the panel.
+  Future<bool> get isIn403Cooldown => _isIn403Cooldown();
+
+  /// Manually clear the 403 circuit breaker (1.4.3 C3): the refusals
+  /// screen Clear (via the log) and the Settings manual Retry call
+  /// this so a deliberate retry re-fires once instead of waiting out
+  /// the window. Clears this client's in-memory flag (via the API
+  /// client) and stamps the manual clear so log entries at or before
+  /// it stop opening the breaker.
+  void clear403Cooldown() {
+    _breakerClearedAt = DateTime.now();
+    _api?.clearBreaker();
+  }
+
+  /// True when the refusal log holds a 403 for this connection recorded
+  /// within [refusalProbeBackoff] (build #28) — the health-probe half
+  /// of the 403 circuit breaker (1.4.3 C3 delegates to the shared
+  /// check, so the probe and the call sites agree about the window).
+  Future<bool> _hasRecentRefusal() async => _isIn403Cooldown();
 
   @override
   Future<HealthStatus> checkHealth() async {
