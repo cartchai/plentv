@@ -3325,6 +3325,12 @@ class Translations$connections$en {
 	/// en: '${count} servers refused access for this account'
 	String accessDeniedMany({required Object count}) => '${count} servers refused access for this account';
 
+	/// en: 'View refusals'
+	String get accessDeniedViewRefusals => 'View refusals';
+
+	/// en: 'The panel refused this account on this network. It works on mobile data — check Connection refusals in Settings to see what it said.'
+	String get accessDeniedHint => 'The panel refused this account on this network. It works on mobile data — check Connection refusals in Settings to see what it said.';
+
 	/// en: 'Sign in again'
 	String get signInAgain => 'Sign in again';
 
@@ -3868,6 +3874,15 @@ class Translations$about$en {
 		'Text size on TV is now capped so large-text settings no longer break the guide layout',
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+	];
+	List<String> get changelog2319 => [
+		'Fixed: once the panel refuses access, the app now stops asking it again for five minutes instead of retrying for minutes on end — retrying during a block can stretch it out',
+		'Fixed: the guide now spaces out its channel requests so it stays under the panel\'s flood limit instead of firing them all at once',
+		'New: when the guide can\'t reach the panel it now shows the last guide it downloaded, with the date it was last updated, instead of empty rows',
+		'New: the access-denied banner now has a button that opens Connection refusals, so you can see exactly what the panel said',
+		'Fixed: the Retry buttons on a refused connection no longer re-fire the same refused request — they say the connection is refused instead',
+		'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
+		'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 	];
 	List<String> get changelog2318 => [
 		'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
@@ -7609,6 +7624,15 @@ class Translations$iptv$en {
 	/// en: 'The guide couldn't load'
 	String get epgGuideFailed => 'The guide couldn\'t load';
 
+	/// en: 'Guide last updated ${date}'
+	String epgGuideStale({required Object date}) => 'Guide last updated ${date}';
+
+	/// en: 'Showing downloaded seasons — the panel refused access on this network'
+	String get seasonsFromDownloads => 'Showing downloaded seasons — the panel refused access on this network';
+
+	/// en: 'The panel refused access on this network — see Connection refusals in Settings'
+	String get refusedOnThisNetwork => 'The panel refused access on this network — see Connection refusals in Settings';
+
 	/// en: 'Channels without guide'
 	String get epgNoGuideTitle => 'Channels without guide';
 
@@ -11172,6 +11196,8 @@ extension on Translations {
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Session expired for ${count} servers',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} refused access for this account',
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servers refused access for this account',
+			'connections.accessDeniedViewRefusals' => 'View refusals',
+			'connections.accessDeniedHint' => 'The panel refused this account on this network. It works on mobile data — check Connection refusals in Settings to see what it said.',
 			'connections.signInAgain' => 'Sign in again',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Edit ${product} connection',
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Add or remove URLs for ${serverName}. PlezTV will use the reachable URL with the lowest latency.',
@@ -11472,6 +11498,13 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2319.0' => 'Fixed: once the panel refuses access, the app now stops asking it again for five minutes instead of retrying for minutes on end — retrying during a block can stretch it out',
+			'about.changelog2319.1' => 'Fixed: the guide now spaces out its channel requests so it stays under the panel\'s flood limit instead of firing them all at once',
+			'about.changelog2319.2' => 'New: when the guide can\'t reach the panel it now shows the last guide it downloaded, with the date it was last updated, instead of empty rows',
+			'about.changelog2319.3' => 'New: the access-denied banner now has a button that opens Connection refusals, so you can see exactly what the panel said',
+			'about.changelog2319.4' => 'Fixed: the Retry buttons on a refused connection no longer re-fire the same refused request — they say the connection is refused instead',
+			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
+			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
 			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
 			'about.changelog2317.1' => 'Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV',
@@ -11609,6 +11642,8 @@ extension on Translations {
 			'about.changelog2259.2' => 'Movie and TV show lists now load from the phone first, so browsing feels quicker after the first open',
 			'about.changelog2259.3' => 'Movies and TV libraries always show up now, even if every category in them is turned off',
 			'about.changelog2259.4' => 'Turning off a country or region now actually hides those categories everywhere — in the lists, the guide and search',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2259.5' => 'The small Live TV player shows video again, not just sound',
 			'about.changelog2259.6' => 'Settings now shows what your last search found, and where it came from, so a search that finds nothing can be figured out',
 			'about.changelog2258.0' => 'Live TV now plays in a small player at the top of the guide on your phone, so you can watch while you browse what\'s on',
@@ -11618,8 +11653,6 @@ extension on Translations {
 			'about.changelog2258.4' => 'The library title no longer runs off the edge on narrow phones — long names like trex — Movies now shorten with …',
 			'about.changelog2257.0' => 'Your channels, movies and shows are now saved on the phone, so they load straight away instead of downloading every time you open the app',
 			'about.changelog2257.1' => 'When the saved copy gets old, the app shows it straight away and quietly fetches the new one in the background',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2257.2' => 'Refresh playlists in IPTV settings now clears the saved copy too, so you always get fresh data',
 			'about.changelog2257.3' => 'The saved copy is per connection, so two IPTV sources never mix each other up',
 			'about.changelog2257.4' => 'Pictures and posters still load from the internet as before — only the lists are saved',
@@ -12123,6 +12156,8 @@ extension on Translations {
 			'music.goToArtist' => 'Go to artist',
 			'music.instantMix' => 'Instant Mix',
 			'music.playNext' => 'Play next',
+			_ => null,
+		} ?? switch (path) {
 			'music.addToQueue' => 'Add to queue',
 			'music.discNumber' => ({required Object n}) => 'Disc ${n}',
 			'music.trackCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} track', other: '${n} tracks', ), 
@@ -12132,8 +12167,6 @@ extension on Translations {
 			'music.clearQueue' => 'Clear queue',
 			'music.lyrics' => 'Lyrics',
 			'music.noLyrics' => 'No lyrics available',
-			_ => null,
-		} ?? switch (path) {
 			'music.sleepTimer' => 'Sleep timer',
 			'music.sleepTimerEndOfTrack' => 'End of track',
 			'music.sleepTimerMinutes' => ({required Object n}) => '${n} minutes',
@@ -12637,6 +12670,8 @@ extension on Translations {
 			'metadataEdit.seriesDefault' => 'Series default',
 			'metadataEdit.episodeSorting' => 'Episode Sorting',
 			'metadataEdit.oldestFirst' => 'Oldest first',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.newestFirst' => 'Newest first',
 			'metadataEdit.keep' => 'Keep',
 			'metadataEdit.allEpisodes' => 'All episodes',
@@ -12646,8 +12681,6 @@ extension on Translations {
 			'metadataEdit.deleteAfterPlaying' => 'Delete Episodes After Playing',
 			'metadataEdit.never' => 'Never',
 			'metadataEdit.afterADay' => 'After a day',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.afterAWeek' => 'After a week',
 			'metadataEdit.afterAMonth' => 'After a month',
 			'metadataEdit.onNextRefresh' => 'On next refresh',
@@ -13063,6 +13096,9 @@ extension on Translations {
 			'iptv.epgGuideDenied' => 'The panel denied access — the guide couldn\'t load',
 			'iptv.epgGuideNotAnswering' => 'The panel is not answering — the guide couldn\'t load',
 			'iptv.epgGuideFailed' => 'The guide couldn\'t load',
+			'iptv.epgGuideStale' => ({required Object date}) => 'Guide last updated ${date}',
+			'iptv.seasonsFromDownloads' => 'Showing downloaded seasons — the panel refused access on this network',
+			'iptv.refusedOnThisNetwork' => 'The panel refused access on this network — see Connection refusals in Settings',
 			'iptv.epgNoGuideTitle' => 'Channels without guide',
 			'iptv.epgNoGuideDescription' => 'Channels with no guide data. Tap Assign to pick a guide for a channel by hand.',
 			'iptv.epgNoGuideEmpty' => 'Every channel has guide data',
@@ -13148,6 +13184,8 @@ extension on Translations {
 			'iptv.guideCoverageFeedIds' => ({required Object count}) => 'Feed lists ${count} channel ids',
 			'iptv.lastSearchTitle' => 'Last search',
 			'iptv.lastSearchNone' => 'No search yet — search for something, then check back here.',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.lastSearchQuery' => ({required Object query, required Object totalMs, required Object scoped}) => '“${query}” · ${totalMs} ms${scoped}',
 			'iptv.lastSearchScopedSuffix' => ' · scoped',
 			'iptv.lastSearchSection' => ({required Object section, required Object returned, required Object loadRows, required Object loadMs, required Object source, required Object sweep, required Object partial, required Object hidden, required Object ms}) => '${section}: ${returned} found · load ${loadRows} rows in ${loadMs} ms (${source}) · sweep ${sweep} · partial ${partial} · hidden ${hidden} · ${ms} ms',
@@ -13160,8 +13198,6 @@ extension on Translations {
 			'iptv.lastSearchSectionSkipped' => ({required Object section}) => '${section}: skipped',
 			'iptv.miniPlayerTitle' => 'Mini-player',
 			'iptv.miniPlayerNone' => 'No tune yet — play a channel in Live TV, then check back here.',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.miniPlayerChannel' => ({required Object channel, required Object backend}) => '${channel} · ${backend}',
 			'iptv.miniPlayerRevealEvent' => ({required Object ms}) => 'First frame: restart event · ${ms} ms',
 			'iptv.miniPlayerRevealLatch' => ({required Object ms}) => 'First frame: already rendered · ${ms} ms',
