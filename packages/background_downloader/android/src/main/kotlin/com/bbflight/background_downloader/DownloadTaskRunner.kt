@@ -399,54 +399,71 @@ class DownloadTaskRunner(context: TaskJobContext) : TaskRunner(context) {
                             )
                         return TaskStatus.failed
                     }
-                    if (taskCanResume) {
-                        Log.i(
-                            TAG,
-                            "Task ${task.taskId} paused due to timeout, will resume"
-                        )
-                        val start = bytesTotal + startByte
-                        val resumeData = ResumeData(task, resumeDataPath(), start, eTagHeader)
-                        val holdingQueue = BDPlugin.holdingQueue
-                        val success = if (holdingQueue != null) {
-                            // Route the resume through the holding queue: a direct
-                            // doEnqueue would run the continuation outside the queue's
-                            // accounting, while this run's finish report frees a slot —
-                            // every timeout cycle would raise effective concurrency past
-                            // maxConcurrent. compareTo orders by the task's original
-                            // creation time, so the resume goes to the front, not the back
-                            holdingQueue.add(
-                                EnqueueItem(
-                                    context = context.appContext,
-                                    task = task,
-                                    notificationConfigJsonString = notificationConfigJsonString,
-                                    resumeData = resumeData
-                                )
-                            )
-                        } else {
-                            BDPlugin.doEnqueue(
-                                context.appContext,
-                                task,
-                                notificationConfigJsonString,
-                                resumeData,
-                                1000
-                            )
-                        }
-                        if (!success) {
-                            Log.w(TAG, "Task ${task.taskId} timed out and could not re-enqueue to resume")
-                            taskException = TaskException(
-                                ExceptionType.general,
-                                description = "Task timed out and could not re-enqueue to resume"
-                            )
-                            cleanup(usesUri, destUri)
-                            return TaskStatus.failed
-                        }
-                        return TaskStatus.paused
+                    // 1.4.61 F1/F2 (PlezTV fork): the timeout is a resume
+                    // checkpoint, not a failure — whether or not the plain
+                    // response advertised ranges. In 1.4.6 this leg deleted
+                    // the partial (cleanup) because taskCanResume was false
+                    // for a panel that omits Accept-Ranges on a plain 200,
+                    // so the retry run found no file and restarted from 0%
+                    // at every 120 s timeout. The partial is KEPT here and
+                    // the continuation is re-enqueued through the holding
+                    // queue exactly as the taskCanResume leg does. The
+                    // resume run's own 206 + ETag checks are the real gate:
+                    // if the server genuinely refuses the Range, that run
+                    // fails cleanly instead of silently restarting from 0%.
+                    val start = bytesTotal + startByte
+                    val resumeLine = if (taskCanResume) {
+                        "Task ${task.taskId} paused due to timeout, will resume at byte $start"
+                    } else {
+                        "Task ${task.taskId} timed out at byte $start; server did not " +
+                                "advertise ranges, resuming anyway — the resume run's " +
+                                "206 check is the gate"
                     }
-                    Log.i(TAG, "Task ${task.taskId} timed out and cannot pause/resume")
-                    taskException =
-                        TaskException(ExceptionType.connection, description = "Task timed out")
-                    cleanup(usesUri, destUri)
-                    return TaskStatus.failed
+                    Log.i(TAG, resumeLine)
+                    postWorkerLog(resumeLine)
+                    val resumeData = ResumeData(task, resumeDataPath(), start, eTagHeader)
+                    val holdingQueue = BDPlugin.holdingQueue
+                    val success = if (holdingQueue != null) {
+                        // Route the resume through the holding queue: a direct
+                        // doEnqueue would run the continuation outside the queue's
+                        // accounting, while this run's finish report frees a slot —
+                        // every timeout cycle would raise effective concurrency past
+                        // maxConcurrent. compareTo orders by the task's original
+                        // creation time, so the resume goes to the front, not the back
+                        holdingQueue.add(
+                            EnqueueItem(
+                                context = context.appContext,
+                                task = task,
+                                notificationConfigJsonString = notificationConfigJsonString,
+                                resumeData = resumeData
+                            )
+                        )
+                    } else {
+                        BDPlugin.doEnqueue(
+                            context.appContext,
+                            task,
+                            notificationConfigJsonString,
+                            resumeData,
+                            1000
+                        )
+                    }
+                    if (!success) {
+                        Log.w(TAG, "Task ${task.taskId} timed out and could not re-enqueue to resume")
+                        postWorkerLog(
+                            "Task ${task.taskId} timed out and could not re-enqueue " +
+                                    "to resume at byte $start; partial kept for the Dart retry"
+                        )
+                        taskException = TaskException(
+                            ExceptionType.general,
+                            description = "Task timed out and could not re-enqueue to resume"
+                        )
+                        // 1.4.61 F1: do NOT delete the partial here either —
+                        // the Dart retry still needs it, and
+                        // prepResumeAfterFailure stores resume data for it
+                        // right after this return.
+                        return TaskStatus.failed
+                    }
+                    return TaskStatus.paused
                 }
 
                 TaskStatus.failed -> {
@@ -540,11 +557,25 @@ class DownloadTaskRunner(context: TaskJobContext) : TaskRunner(context) {
             // set tempFilePath from resume data, or "" if a new tempFile is needed
             requiredStartByte = context.getInputLong(keyStartByte, 0)
             if (requiredStartByte == 0L) {
-                return false
+                // 1.4.61 F6: fall back to the in-memory resume data the
+                // previous run posted (processResumeData always keeps a
+                // copy). Covers a retry the Dart side enqueued without
+                // resume data — e.g. the post raced the process dying.
+                // The entry is cleared when the task cleans up, so a fresh
+                // download of the same task id never picks up stale bytes;
+                // the file-existence check below still applies.
+                val local = BDPlugin.localResumeData[task.taskId]
+                if (local == null || local.requiredStartByte <= 0L) {
+                    return false
+                }
+                requiredStartByte = local.requiredStartByte
+                eTag = local.eTag
+                tempFilePath = local.data
+            } else {
+                eTag = context.getInputString(keyETag)
+                tempFilePath = if (requiredStartByte > 0) context.getInputString(keyResumeDataData) ?: ""
+                else ""
             }
-            eTag = context.getInputString(keyETag)
-            tempFilePath = if (requiredStartByte > 0) context.getInputString(keyResumeDataData) ?: ""
-            else ""
         }
 
         val resumeUri = Uri.parse(tempFilePath)
@@ -720,16 +751,26 @@ class DownloadTaskRunner(context: TaskJobContext) : TaskRunner(context) {
         // store resume data whenever the partial is over 1 MiB, regardless
         // of the plain response's Accept-Ranges flag. The 1 MiB threshold
         // stays: it is the deliberate guard for trivial partials.
-        if (bytesTotal + startByte > 1 shl 20) {
+        val partialBytes = bytesTotal + startByte
+        if (partialBytes > 1 shl 20) {
             // if failure can be resumed, post resume data
             processResumeData(
                 ResumeData(
-                    task, resumeDataPath(), bytesTotal + startByte, eTagHeader
+                    task, resumeDataPath(), partialBytes, eTagHeader
                 ), prefs
             )
+            // 1.4.61 F4: the export must show the resume-data store (byte
+            // offset) — without it, a from-0 restart needs logcat to tell
+            // a deleted file apart from missing resume data.
+            val line = "Task ${task.taskId} failed; resume data stored at byte $partialBytes"
+            Log.i(TAG, line)
+            postWorkerLog(line)
         } else {
             // if it cannot be resumed, delete the temp file
             if (!usesUri) deleteTempFile()
+            val line = "Task ${task.taskId} failed; partial under 1 MiB, temp file deleted"
+            Log.i(TAG, line)
+            postWorkerLog(line)
         }
     }
 

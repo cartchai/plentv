@@ -366,6 +366,17 @@ open class TaskRunner(
          */
         suspend fun processResumeData(resumeData: ResumeData, prefs: SharedPreferences) {
             BDPlugin.localResumeData[resumeData.task.taskId] = resumeData
+            // 1.4.61 F6: persist to prefs unconditionally, not only when the
+            // Dart post fails — if the process dies before the retry, the
+            // next run would otherwise have no resume data at all. The
+            // Dart side pops (consumes) this map on retrieval, so entries
+            // do not linger past the retry that uses them.
+            storeLocally(
+                BDPlugin.keyResumeDataMap,
+                resumeData.task.taskId,
+                bdJson.encodeToString<ResumeData>(resumeData),
+                prefs
+            )
             postOnBackgroundChannel(
                 "resumeData", resumeData.task, mutableListOf(
                     resumeData.data,
@@ -373,14 +384,7 @@ open class TaskRunner(
                     resumeData.eTag
                 ), onFail =
                     {
-                        // unsuccessful post, so store in local prefs
-                        Log.d(TAG, "Could not post resume data -> storing locally")
-                        storeLocally(
-                            BDPlugin.keyResumeDataMap,
-                            resumeData.task.taskId,
-                            bdJson.encodeToString<ResumeData>(resumeData),
-                            prefs
-                        )
+                        Log.d(TAG, "Could not post resume data to Dart (already stored locally)")
                     })
         }
 
@@ -508,7 +512,20 @@ open class TaskRunner(
         withContext(Dispatchers.IO) {
             task = context.task
             val isExpedited = task.priority < 5 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-            val timeout = if (isExpedited) expeditedTaskTimeoutMillis else taskTimeoutMillis
+            // 1.4.61 (PlezTV fork): the expedited run timeout is a setting
+            // (Settings → IPTV, "Download run timeout"), pushed from Dart
+            // into native prefs as keyConfigDownloadRunTimeout. Default is
+            // expeditedTaskTimeoutMillis (2 minutes), clamped to the
+            // library's 9-minute non-expedited cap — past that the system
+            // can kill the worker mid-run. Applies to runs started after
+            // the setting changes; a running worker keeps the timeout it
+            // started with.
+            val defaultMinutes = (expeditedTaskTimeoutMillis / 60000).toInt()
+            val configuredMinutes =
+                prefs.getInt(BDPlugin.keyConfigDownloadRunTimeout, defaultMinutes)
+                    .coerceIn(defaultMinutes, 9)
+            val expeditedTimeout = configuredMinutes * 60 * 1000L
+            val timeout = if (isExpedited) expeditedTimeout else taskTimeoutMillis
             CoroutineScope(Dispatchers.Default).launch {
                 delay(timeout)
                 isTimedOut = true

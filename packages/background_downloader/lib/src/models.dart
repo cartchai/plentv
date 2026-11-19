@@ -639,6 +639,11 @@ final class Config {
   /// Config string for temp file path
   static const tempFilePath = 'tempFilePath';
 
+  /// Config string for the expedited download run timeout, in whole
+  /// minutes (1.4.61 PlezTV fork, Settings → IPTV). Android only: sent
+  /// to native as an int; the native worker clamps it to 2–9 minutes.
+  static const downloadRunTimeout = 'downloadRunTimeout';
+
   // Config arguments
 
   /// Config argument for always

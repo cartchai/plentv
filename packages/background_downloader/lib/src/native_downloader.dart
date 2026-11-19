@@ -767,6 +767,15 @@ final class AndroidDownloader extends NativeDownloader {
           null,
         );
 
+      // 1.4.61 (PlezTV fork): expedited download run timeout, whole
+      // minutes (Settings → IPTV). The native worker clamps it to 2–9
+      // minutes; 2 is the library's own expedited default.
+      case (Config.downloadRunTimeout, final int minutes):
+        await NativeDownloader.methodChannel.invokeMethod(
+          'configDownloadRunTimeout',
+          minutes,
+        );
+
       default:
         return (
           configItem.$1,

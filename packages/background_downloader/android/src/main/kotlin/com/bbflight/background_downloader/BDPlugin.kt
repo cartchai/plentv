@@ -103,6 +103,11 @@ class BDPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             "com.bbflight.background_downloader.config.skipExistingFiles"
         const val keyConfigTempFilePath =
             "com.bbflight.background_downloader.config.tempFilePath"
+        // 1.4.61 (PlezTV fork): expedited download run timeout, in whole
+        // minutes (Settings → IPTV, "Download run timeout"). Read by
+        // TaskRunner at run start; default 2, clamped to 9.
+        const val keyConfigDownloadRunTimeout =
+            "com.bbflight.background_downloader.config.downloadRunTimeout"
 
 
         @SuppressLint("StaticFieldLeak")
@@ -717,6 +722,7 @@ class BDPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     "configHoldingQueue" -> methodConfigHoldingQueue(call)
                     "configSkipExistingFiles" -> methodConfigSkipExistingFiles(call)
                     "configTempFilePath" -> methodConfigTempFilePath(call)
+                    "configDownloadRunTimeout" -> methodConfigDownloadRunTimeout(call)
                     "platformVersion" -> methodPlatformVersion()
                     "forceFailPostOnBackgroundChannel" -> methodForceFailPostOnBackgroundChannel(
                         call
@@ -1486,6 +1492,18 @@ class BDPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private suspend fun methodConfigRequestTimeout(call: MethodCall): Any? {
         withContext(defaultScope.coroutineContext) {
             updateSharedPreferences(keyConfigRequestTimeout, call.arguments as Int?)
+        }
+        return null
+    }
+
+    /**
+     * Store the expedited download run timeout (whole minutes) in shared
+     * preferences, read by [TaskRunner] at run start. Null removes the
+     * setting, restoring the 2-minute default.
+     */
+    private suspend fun methodConfigDownloadRunTimeout(call: MethodCall): Any? {
+        withContext(defaultScope.coroutineContext) {
+            updateSharedPreferences(keyConfigDownloadRunTimeout, call.arguments as Int?)
         }
         return null
     }
