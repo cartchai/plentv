@@ -643,17 +643,20 @@ https://example.com/cnn.m3u8
       expect(seasons.map((i) => i.leafCount), [2, 1]);
       expect(seasons.every((i) => i.parentTitle == 'Alice'), isTrue);
       // Each season's episodes come from fetchChildren(season:<id>:<n>),
-      // with the stripped parent title carried through.
+      // with the stripped show name carried through in grandparentTitle
+      // and the season label in parentTitle (1.4.6 G1).
       final season1 = await client.fetchChildren('season:10:1');
       expect(season1.map((i) => i.title), ['Pilot', 'Second']);
       expect(season1.map((i) => i.parentIndex), [1, 1]);
       expect(season1.map((i) => i.index), [1, 2]);
-      expect(season1.every((i) => i.parentTitle == 'Alice'), isTrue);
+      expect(season1.every((i) => i.grandparentTitle == 'Alice'), isTrue);
+      expect(season1.every((i) => i.parentTitle == 'Season 1'), isTrue);
       final season2 = await client.fetchChildren('season:10:2');
       expect(season2.map((i) => i.title), ['Return']);
       expect(season2.map((i) => i.parentIndex), [2]);
       expect(season2.map((i) => i.index), [1]);
-      expect(season2.every((i) => i.parentTitle == 'Alice'), isTrue);
+      expect(season2.every((i) => i.grandparentTitle == 'Alice'), isTrue);
+      expect(season2.every((i) => i.parentTitle == 'Season 2'), isTrue);
       client.close();
     });
   });

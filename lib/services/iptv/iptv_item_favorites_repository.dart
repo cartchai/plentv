@@ -18,6 +18,12 @@ class IptvFavoriteItem {
   final String? parentId;
   final String? parentTitle;
 
+  /// 1.4.6 G1: the show link for episodes (parentTitle is the season
+  /// since 1.4.6, not the show). Null for rows saved before 1.4.6, which
+  /// fall back to parentTitle — the show name under the old semantics.
+  final String? grandparentId;
+  final String? grandparentTitle;
+
   /// The item's category id (1.2.4, catalog memory): the precise signal
   /// for whether a pruned favourite needs a refresh — the category is
   /// visible now but the item does not resolve (see
@@ -34,6 +40,8 @@ class IptvFavoriteItem {
     this.libraryId,
     this.parentId,
     this.parentTitle,
+    this.grandparentId,
+    this.grandparentTitle,
     this.categoryId,
   });
 
@@ -45,6 +53,8 @@ class IptvFavoriteItem {
     if (libraryId != null) 'libraryId': libraryId,
     if (parentId != null) 'parentId': parentId,
     if (parentTitle != null) 'parentTitle': parentTitle,
+    if (grandparentId != null) 'grandparentId': grandparentId,
+    if (grandparentTitle != null) 'grandparentTitle': grandparentTitle,
     if (categoryId != null) 'categoryId': categoryId,
   };
 
@@ -62,6 +72,8 @@ class IptvFavoriteItem {
       libraryId: json['libraryId'] as String?,
       parentId: json['parentId'] as String?,
       parentTitle: json['parentTitle'] as String?,
+      grandparentId: json['grandparentId'] as String?,
+      grandparentTitle: json['grandparentTitle'] as String?,
       categoryId: json['categoryId'] as String?,
     );
   }

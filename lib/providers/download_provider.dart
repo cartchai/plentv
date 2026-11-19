@@ -846,7 +846,10 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         id: showRatingKey,
         backend: meta.backend,
         kind: MediaKind.show,
-        title: meta.grandparentTitle ?? t.common.unknown,
+        // 1.4.6 G3: an old leaf carries the show name in parentTitle
+        // (grandparentTitle was never set) — recover it instead of
+        // showing "Unknown".
+        title: meta.grandparentTitle ?? meta.parentTitle ?? t.common.unknown,
         thumbPath: meta.grandparentThumbPath,
         artPath: meta.grandparentArtPath,
         serverId: meta.serverId,
@@ -1023,13 +1026,20 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         : buildGlobalKey(ServerId(firstEp.serverId!), seasonId);
     final storedSeason = seasonGlobalKey == null ? null : _resolvedMetadata(seasonGlobalKey);
 
+    // 1.4.6 G3: the show name as this function knows it — the stored show
+    // row, else the leaf's grandparentTitle, else the leaf's parentTitle
+    // (which IS the show name on old leaves). A parentTitle equal to it
+    // means "no season label", so the synthesized title falls through to
+    // "Season N" instead of repeating the show name.
+    final showTitle =
+        _storedContainerFor(firstEp, firstEp.grandparentId)?.title ?? firstEp.grandparentTitle ?? firstEp.parentTitle;
     final base = storedSeason != null && storedSeason.isSeason
         ? storedSeason.copyWith(serverId: firstEp.serverId, serverName: firstEp.serverName ?? storedSeason.serverName)
         : MediaItem(
             id: seasonId.isNotEmpty ? seasonId : '${firstEp.grandparentId}#s$seasonIndex',
             backend: firstEp.backend,
             kind: MediaKind.season,
-            title: firstEp.parentTitle?.isNotEmpty == true
+            title: firstEp.parentTitle?.isNotEmpty == true && firstEp.parentTitle != showTitle
                 ? firstEp.parentTitle
                 : t.common.seasonNumber(number: seasonIndex),
             index: seasonIndex,

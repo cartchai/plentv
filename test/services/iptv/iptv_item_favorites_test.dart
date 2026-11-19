@@ -169,8 +169,11 @@ void main() {
       expect(favs.map((i) => i.id), ['episode:10:100', 'series:10', 'movie:1']);
       expect(favs.map((i) => i.kind), [MediaKind.episode, MediaKind.show, MediaKind.movie]);
       // The episode keeps its show link so the detail screen can show it.
+      // 1.4.6 G1: the show lives in grandparentTitle now; parentTitle is
+      // the season.
       expect(favs.first.parentId, 'series:10');
-      expect(favs.first.parentTitle, 'Alpha Show');
+      expect(favs.first.grandparentTitle, 'Alpha Show');
+      expect(favs.first.parentTitle, 'Season 1');
     });
 
     test('an item that left the catalog renders from its snapshot', () async {
@@ -190,6 +193,33 @@ void main() {
       expect(favs, hasLength(1));
       expect(favs.first.title, 'Removed Movie');
       expect(favs.first.thumbPath, 'https://x/99.jpg');
+      expect(favs.first.isFavorite, isTrue);
+    });
+
+    test('an episode that left the catalog keeps its show link from its snapshot', () async {
+      const repo = SharedPreferencesIptvItemFavoritesRepository();
+      final client = _client(repository: repo);
+      // 1.4.6 G1: episodes carry the show in grandparentTitle and the
+      // season in parentTitle — the snapshot must keep the show link, or
+      // the detail screen loses it for a removed episode (parentTitle
+      // alone would read "Season 1").
+      const gone = MediaItem.xtream(
+        id: 'episode:10:99',
+        kind: MediaKind.episode,
+        title: 'Removed Episode',
+        thumbPath: 'https://x/e99.jpg',
+        parentId: 'series:10',
+        parentTitle: 'Season 1',
+        grandparentId: 'series:10',
+        grandparentTitle: 'Alpha Show',
+      );
+      await client.setFavorite(gone, true);
+
+      final favs = await client.favoriteItems();
+      expect(favs, hasLength(1));
+      expect(favs.first.title, 'Removed Episode');
+      expect(favs.first.grandparentTitle, 'Alpha Show');
+      expect(favs.first.parentTitle, 'Season 1');
       expect(favs.first.isFavorite, isTrue);
     });
 
