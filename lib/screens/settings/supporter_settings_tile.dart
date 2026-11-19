@@ -7,7 +7,7 @@ import '../../services/supporter/supporter_service.dart';
 import '../../widgets/setting_tile.dart';
 import '../../widgets/supporter_sheet.dart';
 
-/// The top Settings tile in purchasable builds: names the Theme & Icon Pack,
+/// The top Settings tile in purchasable builds: names PlezTV Supporter,
 /// opens its sheet while locked, and thanks the user once it is unlocked.
 class SupporterSettingsTile extends StatelessWidget {
   const SupporterSettingsTile({super.key, this.focusNode});

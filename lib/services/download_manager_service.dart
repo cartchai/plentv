@@ -731,10 +731,10 @@ class DownloadManagerService {
   }
 
   /// Resolve only the per-server profile scopes for [activeProfileId] —
-  /// the namespace map [getAllPinnedMetadata] also returns, without the
-  /// bulk pinned-row decode (1.2.18 S-14). Callers that need metadata
-  /// resolve each owned item per item instead ([lookupMetadata]), so
-  /// startup loads keys, not every pinned row across every backend.
+  /// the namespace map, without the bulk pinned-row decode (1.2.18 S-14).
+  /// Callers that need metadata resolve each owned item per item instead
+  /// ([lookupMetadata]), so startup loads keys, not every pinned row
+  /// across every backend.
   /// The servers holding downloads owned by [activeProfileId].
   Future<Set<String>> _ownedServerIds(String activeProfileId) async {
     final ownerKeys = await _database.getDownloadOwnerKeysForProfile(activeProfileId);
@@ -753,40 +753,6 @@ class DownloadManagerService {
       activeProfileId,
     );
     return {for (final entry in scopes.entries) entry.key: entry.value.scopeId};
-  }
-
-  /// Bulk-load pinned metadata for every download owned by [activeProfileId].
-  /// Profile-visible hydration reads only exact owner namespaces; it never
-  /// pre-merges another user's rows.
-  ///
-  /// [scopesByServer] maps each owned server id to the namespace used, so
-  /// callers can address the compound-scoped keys in [items] without
-  /// re-resolving the profile binding per download.
-  Future<({Map<String, MediaItem> items, Map<String, String?> scopesByServer})> getAllPinnedMetadata({
-    String? activeProfileId,
-  }) async {
-    if (activeProfileId == null || activeProfileId.isEmpty) {
-      return (items: const <String, MediaItem>{}, scopesByServer: const <String, String?>{});
-    }
-    final scopes = await _profileScopesForServers(
-      await _ownedServerIds(activeProfileId),
-      activeProfileId,
-    );
-    final allowedByBackend = <MediaBackend, Set<ServerId>>{
-      for (final backend in MediaBackend.values) backend: <ServerId>{},
-    };
-    for (final scope in scopes.values) {
-      if (scope.scopeId != null) allowedByBackend[scope.backend]!.add(ServerId(scope.scopeId!));
-    }
-    final results = await Future.wait(
-      MediaBackend.values.map(
-        (backend) => ApiCache.forBackend(backend).getAllPinnedMetadata(cacheServerIds: allowedByBackend[backend]),
-      ),
-    );
-    return (
-      items: {for (final result in results) ...result},
-      scopesByServer: {for (final entry in scopes.entries) entry.key: entry.value.scopeId},
-    );
   }
 
   Future<MediaItem?> lookupMetadata(
@@ -1865,13 +1831,30 @@ class DownloadManagerService {
     return metadata.serverId == null ? metadata.copyWith(serverId: serverId) : metadata;
   }
 
-  Future<void> _backfillArtworkPath(DownloadedMediaItem row, MediaItem metadata) async {
-    final thumbPath = metadata.thumbPath;
-    if (thumbPath == null || thumbPath.isEmpty) return;
+  /// Normalize [thumbPath] to its artwork storage key and persist it for
+  /// [globalKey], skipping the write when the stored path already matches
+  /// (the backfill's early-return guard). Returns the normalized path and
+  /// whether the stored path changed. [currentThumbPath] lets callers
+  /// that already hold the row skip the re-read; otherwise the row is
+  /// read to compare. Callers keep their own progress emits: the backfill
+  /// emits only on change, the artwork completion always emits.
+  Future<({String? normalized, bool changed})> storeThumbPath(
+    String globalKey,
+    String? thumbPath, {
+    String? currentThumbPath,
+  }) async {
+    if (thumbPath == null || thumbPath.isEmpty) return (normalized: null, changed: false);
     final normalized = artworkStorageKey(thumbPath);
-    if (row.thumbPath == normalized) return;
+    final current = currentThumbPath ?? (await _database.getDownloadedMedia(globalKey))?.thumbPath;
+    if (current == normalized) return (normalized: normalized, changed: false);
+    await _database.updateArtworkPaths(globalKey: globalKey, thumbPath: normalized);
+    return (normalized: normalized, changed: true);
+  }
 
-    await _database.updateArtworkPaths(globalKey: row.globalKey, thumbPath: normalized);
+  Future<void> _backfillArtworkPath(DownloadedMediaItem row, MediaItem metadata) async {
+    final stored = await storeThumbPath(row.globalKey, metadata.thumbPath, currentThumbPath: row.thumbPath);
+    if (!stored.changed) return;
+    final normalized = stored.normalized!;
     if (_disposed) return;
     _progressController.add(
       DownloadProgress(
@@ -3895,9 +3878,7 @@ class DownloadManagerService {
       final specs = client.resolveDownloadArtwork(metadata);
       final artworkSettled = await _artworkService.ensureArtworkSpecs(ServerId(serverId), specs);
 
-      final storedThumbPath = metadata.thumbPath == null ? null : artworkStorageKey(metadata.thumbPath!);
-      await _database.updateArtworkPaths(globalKey: globalKey, thumbPath: storedThumbPath);
-
+      final storedThumbPath = (await storeThumbPath(globalKey, metadata.thumbPath)).normalized;
       _emitProgressWithArtwork(globalKey, isRepair: isRepair, thumbPath: storedThumbPath);
       appLogger.d(artworkSettled ? 'Artwork downloaded for $globalKey' : 'Artwork remains incomplete for $globalKey');
       return artworkSettled;

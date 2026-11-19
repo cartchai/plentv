@@ -10,16 +10,17 @@ import '../../models/trackers/fribb_mapping_row.dart';
 import '../../utils/country_codes.dart';
 import '../../utils/external_ids.dart';
 import '../trackers/anilist/anilist_client.dart';
-import '../trackers/anime_mappings_store.dart';
 import '../trackers/fribb_index.dart';
 import '../trackers/future_coalescer.dart';
+import '../trackers/noop_anime_mappings.dart';
 import 'catalog_source.dart';
 import 'catalog_watchlist_machinery.dart';
 
 /// [CatalogSource] backed by AniList's GraphQL API.
 ///
 /// The client is owned and rebound by `TrackersProvider`; this source only
-/// borrows it. Fribb bridges AniList/MAL identities to media-server IDs.
+/// borrows it. The anime mappings were removed in 1.5.2, so no cross-service
+/// ids are resolved: catalog items keep their AniList/MAL ids only.
 class AnilistCatalogSource with CatalogWatchlistMachinery implements CatalogSource, CatalogCommunityRatings {
   static final RegExp _accentColorPattern = RegExp(r'^#[0-9a-fA-F]{6}$');
 
@@ -28,7 +29,7 @@ class AnilistCatalogSource with CatalogWatchlistMachinery implements CatalogSour
   final FutureCoalescer<int> _viewerIdLoad = FutureCoalescer<int>();
   int? _viewerId;
 
-  AnilistCatalogSource(this._client, {FribbMappingLookup? fribb}) : _fribb = fribb ?? AnimeMappingsStore.instance;
+  AnilistCatalogSource(this._client, {FribbMappingLookup? fribb}) : _fribb = fribb ?? const NoopAnimeMappingsLookup();
 
   @override
   CatalogSourceId get id => CatalogSourceId.anilist;

@@ -9,10 +9,10 @@ import '../../models/mal/mal_anime.dart';
 import '../../models/trackers/fribb_mapping_row.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/external_ids.dart';
-import '../trackers/anime_mappings_store.dart';
 import '../trackers/fribb_index.dart';
 import '../trackers/mal/mal_client.dart';
 import '../trackers/mal/mal_constants.dart';
+import '../trackers/noop_anime_mappings.dart';
 import '../trackers/tracker_exceptions.dart';
 import 'catalog_source.dart';
 import 'catalog_watchlist_machinery.dart';
@@ -24,15 +24,15 @@ import 'catalog_watchlist_machinery.dart';
 /// movie/show split, so it serves the anime rows, and its watchlist is the
 /// user's Plan to Watch list.
 ///
-/// MAL entries carry no media-server external ids; the Fribb anime-lists
-/// mapping bridges both directions: catalog items are enriched with
-/// tvdb/tmdb/imdb (library matching, cross-source membership), and library
-/// items resolve to a MAL id via [resolveItemIds].
+/// MAL entries carry no media-server external ids. The anime mappings that
+/// used to bridge them to tvdb/tmdb/imdb were removed in 1.5.2, so catalog
+/// items keep their MAL ids only and library items no longer resolve to a
+/// MAL id through a mapping.
 class MalCatalogSource with CatalogWatchlistMachinery implements CatalogSource, CatalogCommunityRatings {
   final MalClient _client;
   final FribbMappingLookup _fribb;
 
-  MalCatalogSource(this._client, {FribbMappingLookup? fribb}) : _fribb = fribb ?? AnimeMappingsStore.instance;
+  MalCatalogSource(this._client, {FribbMappingLookup? fribb}) : _fribb = fribb ?? const NoopAnimeMappingsLookup();
 
   @override
   String get watchlistLogLabel => 'MAL: Plan to Watch';

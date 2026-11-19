@@ -41,6 +41,20 @@ class _FakeIptvClient implements MediaServerClient {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// [_FakeIptvClient] that counts `fetchItem` calls, so a test can prove
+/// two concurrent refreshes share one network fill (A3).
+class _CountingFakeIptvClient extends _FakeIptvClient {
+  _CountingFakeIptvClient({required super.serverId, required super.itemsById});
+
+  int fetchCount = 0;
+
+  @override
+  Future<MediaItem?> fetchItem(String id) async {
+    fetchCount++;
+    return super.fetchItem(id);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -259,6 +273,33 @@ void main() {
       expect(provider.metadata, contains(globalKey));
       expect(provider.downloadedEpisodes, hasLength(1));
       expect(provider.downloadedShows.single.title, showFolder);
+
+      provider.dispose();
+    });
+
+    test('concurrent refreshes join one run instead of filling twice (A3)', () async {
+      // No file on disk, so synthesis cannot fire — only the live fill
+      // can populate the row. Two refreshes fired at once (startup +
+      // servers-connected, or tab shown mid-refresh) must share one
+      // pass: the fake client sees exactly one fetchItem call.
+      await seedCompletedEpisodeRow();
+
+      final provider = await buildReadyProvider();
+      expect(provider.metadata, isNot(contains(globalKey)));
+
+      final client = _CountingFakeIptvClient(
+        serverId: ServerId(serverId),
+        itemsById: {episodeRatingKey: episodeItem()},
+      );
+      testClientResolver = (_, {clientScopeId}) => client;
+      await Future.wait([
+        provider.refreshMetadataFromCache(),
+        provider.refreshMetadataFromCache(),
+      ]);
+
+      expect(client.fetchCount, 1);
+      expect(provider.metadata, contains(globalKey));
+      expect(provider.downloadedEpisodes, hasLength(1));
 
       provider.dispose();
     });

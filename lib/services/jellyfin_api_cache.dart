@@ -8,8 +8,6 @@ import '../media/media_backend.dart';
 import '../media/media_browser_dialect.dart';
 import '../media/media_item.dart';
 import '../utils/app_logger.dart';
-import '../utils/global_key_utils.dart';
-import '../utils/isolate_helper.dart';
 import 'api_cache.dart';
 import 'credential_vault.dart';
 import 'jellyfin_cache_resolver.dart';
@@ -77,8 +75,7 @@ class JellyfinApiCache extends ApiCache {
   /// fail.
   ///
   /// Single-item path stays on the main isolate — decoding one BaseItemDto
-  /// is cheap and matches [PlexApiCache.getMetadata]'s shape. Bulk-load
-  /// callers go through [getAllPinnedMetadata] which still parallelises.
+  /// is cheap and matches [PlexApiCache.getMetadata]'s shape.
   @override
   Future<MediaItem?> getMetadata(ServerId serverId, String itemId) async {
     final resolved = await _resolver.findResolvedItem(serverId, itemId);
@@ -173,64 +170,6 @@ class JellyfinApiCache extends ApiCache {
         // Skip malformed entries.
       }
     }
-  }
-
-  /// Load all pinned MediaBrowser metadata in a single query.
-  ///
-  /// Returns a map keyed by `buildGlobalKey(ServerId(serverId), itemId)` for O(1)
-  /// lookups, mirroring [PlexApiCache.getAllPinnedMetadata] so callers can
-  /// spread-merge the two results.
-  @override
-  Future<Map<String, MediaItem>> getAllPinnedMetadata({Set<ServerId>? cacheServerIds}) async {
-    final allEntries = await _resolver.findPinnedItems();
-    final entries = cacheServerIds == null
-        ? allEntries
-        : allEntries
-              .where(
-                (entry) =>
-                    cacheServerIds.contains(ServerId(entry.key.scopeId)) ||
-                    cacheServerIds.contains(ServerId('${entry.key.machineId}/${entry.key.userId}')),
-              )
-              .toList(growable: false);
-    if (entries.isEmpty) return {};
-
-    // Resolve the connection context per serverId once on the main thread
-    // (DB queries can't move into the isolate). Each context carries the
-    // serverName and dialect used to stamp the [MediaItem] plus the
-    // baseUrl/accessToken required to absolutize image paths.
-    final contexts =
-        <String, ({String machineId, String name, String baseUrl, String accessToken, MediaBrowserDialect dialect})>{};
-    final absolutizers = <String, JellyfinImageAbsolutizer>{};
-    for (final entry in entries) {
-      final id = entry.connection.id;
-      if (contexts.containsKey(id)) continue;
-      final ctx = await _serverContext(entry.connection, machineId: entry.key.machineId);
-      if (ctx != null) {
-        contexts[id] = ctx;
-        absolutizers[id] = JellyfinImageAbsolutizer(baseUrl: ctx.baseUrl, accessToken: ctx.accessToken);
-      }
-    }
-
-    return await tryIsolateRun(
-      () => decodeCachedMediaRows(
-        entries,
-        serializedData: (entry) => entry.cacheRow.data,
-        decode: (entry, data) {
-          final ctx = contexts[entry.connection.id];
-          final absolutizer = absolutizers[entry.connection.id];
-          if (ctx == null || absolutizer == null) return null;
-          final mapped = JellyfinMappers.mediaItem(
-            data,
-            serverId: ServerId(ctx.machineId),
-            serverName: ctx.name,
-            absolutizer: absolutizer,
-            dialect: ctx.dialect,
-          );
-          if (mapped == null) return null;
-          return MapEntry(buildGlobalKey(ServerId(entry.key.scopeId), entry.key.itemId), mapped);
-        },
-      ),
-    );
   }
 
   /// Resolve the connection context (server name, dialect, base URL, and access

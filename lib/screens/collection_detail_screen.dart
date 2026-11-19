@@ -66,7 +66,6 @@ class _CollectionDetailScreenState extends BaseMediaListDetailScreen<CollectionD
         PaginatedItemUpdatable<CollectionDetailScreen>,
         StandardPaginatedView<MediaItem, CollectionDetailScreen>,
         DeletionAware<CollectionDetailScreen> {
-  static const int _pageSize = 200;
 
   /// Scroll offset where the pinned title starts fading in, and the distance
   /// over which it completes. Roughly where the poster leaves the viewport.
@@ -131,7 +130,7 @@ class _CollectionDetailScreenState extends BaseMediaListDetailScreen<CollectionD
   @override
   Future<void> loadItems() {
     return loadStandardPaginatedItems(
-      pageSize: _pageSize,
+      pageSize: defaultListPageSize,
       errorMessageFor: (error, stackTrace) =>
           localizedLoadErrorMessage(error, stackTrace, context: t.collections.collection),
       onLoaded: (loadedCount, totalCount) {
@@ -535,7 +534,7 @@ class _CollectionDetailScreenState extends BaseMediaListDetailScreen<CollectionD
               totalItems: totalSize,
               itemAt: (index) => loadedItems[index],
               onRefresh: updateItem,
-              onSkeletonVisible: (index) => ensureIndexLoaded(index, pageSize: _pageSize),
+              onSkeletonVisible: (index) => ensureIndexLoaded(index, pageSize: defaultListPageSize),
               collectionId: widget.isOffline ? null : widget.collection.id,
               onListRefresh: loadItems,
               isOffline: widget.isOffline,

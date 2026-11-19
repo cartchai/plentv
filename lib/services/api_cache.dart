@@ -276,9 +276,8 @@ abstract class ApiCache {
   Future<void> deleteForItem(ServerId serverId, String itemId);
 
   /// Persist a watched/unwatched flip into the cached metadata JSON for
-  /// [itemId] so reloads (`getMetadata` / `getAllPinnedMetadata`) reflect the
-  /// state without having to refetch from the server. No-op when the row
-  /// isn't cached. Backend subclasses know which JSON fields to mutate
+  /// [itemId] so reloads ([getMetadata]) reflect the state without having
+  /// to refetch from the server. No-op when the row isn't cached. Backend subclasses know which JSON fields to mutate
   /// (Plex `viewCount`, MediaBrowser `UserData.PlayCount` / `Played`).
   ///
   /// Optional positional progress fields ([viewOffsetMs], [lastViewedAt],
@@ -303,9 +302,4 @@ abstract class ApiCache {
     int? lastViewedAt,
     int? viewedLeafCount,
   });
-
-  /// Bulk-load pinned metadata whose private cache namespace is included in
-  /// [cacheServerIds]. A null set retains the backend's complete diagnostic
-  /// view; profile-visible hydration must always pass exact allowed scopes.
-  Future<Map<String, MediaItem>> getAllPinnedMetadata({Set<ServerId>? cacheServerIds});
 }

@@ -17,8 +17,8 @@
 # traces, the phone-verdict surface. --split-debug-info keeps the symbol
 # map in CI for symbolizing any release stack trace.
 #
-# How to ship: push a tag vX.Y.Z-2.25.0 to main. The workflow builds the
-# APK and creates the Release with PlezTV.vX.Y.Z-2.25.0.apk attached.
+# How to ship: push a tag vX.Y.Z-2.26.0 to main. The workflow builds the
+# APK and creates the Release with PlezTV.vX.Y.Z-2.26.0.apk attached.
 # workflow_dispatch builds only (no release) and uploads the APK as a
 # workflow artifact instead. Codemagic stays as a backup builder.
 #

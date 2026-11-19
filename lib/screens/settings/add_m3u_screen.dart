@@ -11,6 +11,7 @@ import '../../mixins/controller_disposer_mixin.dart';
 import '../../profiles/profile.dart';
 import '../../services/iptv/m3u_parser.dart';
 import '../../utils/app_logger.dart';
+import '../../utils/media_server_timeouts.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/focused_scroll_scaffold.dart';
 import '../../widgets/loading_indicator_box.dart';
@@ -68,7 +69,7 @@ class _AddM3uScreenState extends State<AddM3uScreen> with AsyncFormStateMixin, C
     }
     http.Response response;
     try {
-      response = await http.get(uri).timeout(const Duration(seconds: 30));
+      response = await http.get(uri).timeout(MediaServerTimeouts.response);
     } catch (_) {
       throw const _ProbeFailure('unreachable');
     }

@@ -498,7 +498,7 @@ void main() {
         clientResolver: (_, {clientScopeId}) => null,
       );
 
-      final all = await manager.getAllPinnedMetadata(activeProfileId: 'profile-b');
+      final scopes = await manager.getPinnedMetadataScopes(activeProfileId: 'profile-b');
       final item = await manager.lookupMetadata(
         ServerId('jf-machine'),
         'item-1',
@@ -506,9 +506,9 @@ void main() {
         activeProfileId: 'profile-b',
       );
 
-      expect(all.items.keys, ['jf-machine/user-b:item-1']);
-      expect(all.items.values.single.title, 'Cached for user-b');
-      expect(all.scopesByServer, {'jf-machine': 'jf-machine/user-b'});
+      // The scopes-only call resolves exactly the namespace the deleted
+      // bulk call returned — per-item lookup finds the pinned row in it.
+      expect(scopes, {'jf-machine': 'jf-machine/user-b'});
       expect(item?.title, 'Cached for user-b');
     });
 
@@ -571,12 +571,10 @@ void main() {
       );
 
       final scopes = await manager.getPinnedMetadataScopes(activeProfileId: profileId);
-      final all = await manager.getAllPinnedMetadata(activeProfileId: profileId);
 
       // The scopes-only call resolves exactly the namespaces the bulk
-      // call returns — the split changes nothing about scope resolution.
+      // call used to return — the split changes nothing about scope resolution.
       expect(scopes, {'jf-machine': 'jf-machine/user-b'});
-      expect(scopes, all.scopesByServer);
       expect(await manager.getPinnedMetadataScopes(), isEmpty);
       expect(await manager.getPinnedMetadataScopes(activeProfileId: ''), isEmpty);
     });
@@ -626,7 +624,7 @@ void main() {
         clientResolver: (_, {clientScopeId}) => null,
       );
 
-      final all = await manager.getAllPinnedMetadata(activeProfileId: 'profile-b');
+      final scopes = await manager.getPinnedMetadataScopes(activeProfileId: 'profile-b');
       final item = await manager.lookupMetadata(
         serverId,
         'item-1',
@@ -634,8 +632,7 @@ void main() {
         activeProfileId: 'profile-b',
       );
 
-      expect(all.items['plex-machine:item-1']?.title, 'Offline Plex');
-      expect(all.scopesByServer, {'plex-machine': scope.cacheServerId});
+      expect(scopes, {'plex-machine': scope.cacheServerId});
       expect(item?.title, 'Offline Plex');
     });
 
@@ -897,8 +894,8 @@ void main() {
         'Rehydrated for profile B',
       );
       expect(
-        (await PlexApiCache.instance.getAllPinnedMetadata(cacheServerIds: {destinationScope.cacheServerId})).keys,
-        [globalKey],
+        await PlexApiCache.instance.getPinnedKeys(destinationScope.cacheServerId),
+        {'item-1'},
       );
       expect(await PlexApiCache.instance.getMetadata(transferScope.cacheServerId, 'item-1'), isNull);
     });

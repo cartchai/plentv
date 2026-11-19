@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../device_performance.dart';
@@ -107,6 +108,28 @@ class IptvHeavyWorkGate {
     return (totalMem * 0.45).round().clamp(512 << 20, 1536 << 20);
   }
 
+  /// Whether RSS is already above half the watchdog threshold — the
+  /// "hot" condition both cache-trim halves share (A29). False when
+  /// there is no watchdog (iOS/tvOS) or the RSS read fails: no trim,
+  /// never a failed job.
+  static bool get isMemoryHot {
+    final forced = debugForceMemoryHot;
+    if (forced != null) return forced;
+    try {
+      final threshold = watchdogThresholdBytes();
+      if (threshold == null) return false;
+      return ProcessInfo.currentRss > threshold ~/ 2;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Test seam: force [isMemoryHot] regardless of real RSS. Null
+  /// (default) reads the real RSS. Tests set it to prove the RSS-gated
+  /// trim fires when hot (and stays quiet when cool).
+  @visibleForTesting
+  static bool? debugForceMemoryHot;
+
   /// Pre-emptive trim (1.2.18 S-4b): when RSS is already above half
   /// the watchdog threshold, clear the (non-live) image cache before
   /// a heavy job starts, so the spike starts with headroom. Only the
@@ -117,9 +140,7 @@ class IptvHeavyWorkGate {
   /// RSS read or a missing binding means no trim, never a failed job.
   static bool trimImageCacheBeforeHeavyJob() {
     try {
-      final threshold = watchdogThresholdBytes();
-      if (threshold == null) return false;
-      if (ProcessInfo.currentRss <= threshold ~/ 2) return false;
+      if (!isMemoryHot) return false;
       PaintingBinding.instance.imageCache.clear();
       return true;
     } catch (_) {

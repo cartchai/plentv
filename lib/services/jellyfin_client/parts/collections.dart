@@ -2,6 +2,9 @@ part of '../../jellyfin_client.dart';
 
 mixin _JellyfinCollectionMethods on _JellyfinClientInternals {
   static const int _collectionsPageSize = 36;
+
+  /// Backend API pagination for BoxSet membership lookups, deliberately
+  /// independent of the shared UI list size ([defaultListPageSize]).
   static const int _membershipBoxSetPageSize = 200;
 
   /// BoxSets live in a single server-wide collections folder, not under each

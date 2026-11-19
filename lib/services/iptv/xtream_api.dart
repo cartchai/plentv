@@ -385,7 +385,7 @@ class XtreamApi {
   /// `.timeout()` over send + whole-body receipt is gone.
   Future<String> _fetchBody(
     Uri uri, {
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = MediaServerTimeouts.response,
     Duration receiveTimeout = MediaServerTimeouts.receive,
     Future<void>? abortTrigger,
   }) async {
@@ -695,7 +695,7 @@ class XtreamApi {
 
   Future<dynamic> _getJson(
     Uri uri, {
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = MediaServerTimeouts.response,
     Future<void>? abortTrigger,
   }) async {
     final body = await _fetchBody(uri, timeout: timeout, abortTrigger: abortTrigger);
@@ -1046,7 +1046,7 @@ class XtreamApi {
   }) async {
     final decoded = await _getJson(
       _playerApiUri(action: 'get_short_epg', extra: {'stream_id': streamId, 'limit': '$limit'}),
-      timeout: timeout ?? const Duration(seconds: 30),
+      timeout: timeout ?? MediaServerTimeouts.response,
       abortTrigger: abortTrigger,
     );
     if (decoded is! Map<String, dynamic>) return const [];

@@ -140,11 +140,9 @@ void main() {
       await cache.pinForOffline(transferScope.cacheServerId, '1');
 
       final item = await cache.getMetadata(transferScope.cacheServerId, '1');
-      final all = await cache.getAllPinnedMetadata(cacheServerIds: {transferScope.cacheServerId});
 
       expect(item?.serverId, 'srv');
       expect(item?.globalKey, 'srv:1');
-      expect(all.keys, {'srv:1'});
     });
 
     test('put on existing key overwrites prior data (insertOnConflictUpdate)', () async {
@@ -355,82 +353,6 @@ void main() {
       expect(meta.libraryTitle, 'Movies');
     });
 
-    test('getAllPinnedMetadata returns an empty map when nothing is pinned', () async {
-      await cache.put(ServerId('srv'), '/library/metadata/1', mediaContainer(ratingKey: '1'));
-      // No pin yet.
-      expect(await cache.getAllPinnedMetadata(), isEmpty);
-    });
-
-    test('getAllPinnedMetadata aggregates pinned items across servers, keyed by globalKey', () async {
-      await cache.put(ServerId('srv-a'), '/library/metadata/1', mediaContainer(ratingKey: '1', title: 'A1'));
-      await cache.put(ServerId('srv-a'), '/library/metadata/2', mediaContainer(ratingKey: '2', title: 'A2'));
-      await cache.put(ServerId('srv-b'), '/library/metadata/9', mediaContainer(ratingKey: '9', title: 'B9'));
-      // One unpinned row to verify it's filtered out.
-      await cache.put(ServerId('srv-b'), '/library/metadata/10', mediaContainer(ratingKey: '10', title: 'B10'));
-
-      await cache.pinForOffline(ServerId('srv-a'), '1');
-      await cache.pinForOffline(ServerId('srv-a'), '2');
-      await cache.pinForOffline(ServerId('srv-b'), '9');
-
-      final result = await cache.getAllPinnedMetadata();
-      expect(result.keys.toSet(), {'srv-a:1', 'srv-a:2', 'srv-b:9'});
-      expect(result['srv-a:1']!.title, 'A1');
-      expect(result['srv-a:1']!.serverId, 'srv-a');
-      expect(result['srv-b:9']!.title, 'B9');
-      expect(result['srv-b:9']!.serverId, 'srv-b');
-    });
-
-    test('getAllPinnedMetadata preserves hoisted MediaContainer library fields', () async {
-      await cache.put(
-        ServerId('srv'),
-        '/library/metadata/42',
-        mediaContainer(ratingKey: '42', title: 'Hello', librarySectionID: 7, librarySectionTitle: 'Movies'),
-      );
-      await cache.pinForOffline(ServerId('srv'), '42');
-
-      final result = await cache.getAllPinnedMetadata();
-
-      expect(result['srv:42']!.libraryId, '7');
-      expect(result['srv:42']!.libraryTitle, 'Movies');
-    });
-
-    test('getAllPinnedMetadata skips rows whose key is not a metadata endpoint', () async {
-      // Insert a pinned row at a non-metadata endpoint via raw insert.
-      await db
-          .into(db.apiCache)
-          .insert(
-            ApiCacheCompanion.insert(
-              cacheKey: 'srv:/library/sections/1/all',
-              data: jsonEncode(mediaContainer()),
-              pinned: const Value(true),
-            ),
-          );
-      await cache.put(ServerId('srv'), '/library/metadata/1', mediaContainer(ratingKey: '1'));
-      await cache.pinForOffline(ServerId('srv'), '1');
-
-      final result = await cache.getAllPinnedMetadata();
-      expect(result.keys.toSet(), {'srv:1'});
-    });
-
-    test('getAllPinnedMetadata silently skips rows with malformed JSON', () async {
-      // Bad-JSON pinned row.
-      await db
-          .into(db.apiCache)
-          .insert(
-            ApiCacheCompanion.insert(
-              cacheKey: 'srv:/library/metadata/bad',
-              data: 'not-json',
-              pinned: const Value(true),
-            ),
-          );
-      // Good pinned row.
-      await cache.put(ServerId('srv'), '/library/metadata/good', mediaContainer(ratingKey: 'good', title: 'OK'));
-      await cache.pinForOffline(ServerId('srv'), 'good');
-
-      final result = await cache.getAllPinnedMetadata();
-      expect(result.keys, contains('srv:good'));
-      expect(result.keys, isNot(contains('srv:bad')));
-    });
     test('profile-scoped rows stay isolated while projecting the public item identity', () async {
       final publicServerId = ServerId('plex-public');
       final scopeA = buildPlexProfileScopeId(serverId: publicServerId, profileId: 'profile-a').cacheServerId;
@@ -471,15 +393,6 @@ void main() {
       expect(singleB.isWatched, isTrue);
       expect(singleB.viewOffsetMs, 0);
       expect(singleB.lastViewedAt, 1700000002);
-
-      final bulkA = await cache.getAllPinnedMetadata(cacheServerIds: {scopeA});
-      final bulkB = await cache.getAllPinnedMetadata(cacheServerIds: {scopeB});
-      expect(bulkA.keys, ['plex-public:42']);
-      expect(bulkA['plex-public:42']!.title, 'Profile A');
-      expect(bulkA['plex-public:42']!.viewOffsetMs, 12000);
-      expect(bulkB.keys, ['plex-public:42']);
-      expect(bulkB['plex-public:42']!.title, 'Profile B');
-      expect(bulkB['plex-public:42']!.isWatched, isTrue);
 
       await cache.clearVolatile();
       expect(await cache.getMetadata(scopeA, ratingKey), isNotNull);

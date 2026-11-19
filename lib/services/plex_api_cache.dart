@@ -7,8 +7,6 @@ import '../database/app_database.dart';
 import '../database/plex_metadata_recovery.dart';
 import '../media/media_backend.dart';
 import '../media/media_item.dart';
-import '../utils/global_key_utils.dart';
-import '../utils/isolate_helper.dart';
 import '../utils/plex_cache_parser.dart';
 import '../utils/active_client_scope.dart';
 import '../utils/plex_library_section_utils.dart';
@@ -149,34 +147,4 @@ class PlexApiCache extends ApiCache {
     await put(ServerId(serverId), endpoint, cached);
   }
 
-  /// Load all pinned Plex metadata in a single query.
-  ///
-  /// Returns a map keyed by `buildGlobalKey(ServerId(serverId), ratingKey)` for O(1)
-  /// lookups. Used by DownloadProvider to batch-load metadata on startup
-  /// instead of issuing per-item DB queries.
-  @override
-  Future<Map<String, MediaItem>> getAllPinnedMetadata({Set<ServerId>? cacheServerIds}) async {
-    final allEntries = await listPinnedRowsByPattern(_metadataKeyPattern);
-    final entries = cacheServerIds == null
-        ? allEntries
-        : allEntries.where((entry) => cacheServerIds.contains(entry.serverId)).toList(growable: false);
-    if (entries.isEmpty) return {};
-
-    return await tryIsolateRun(
-      () => decodeCachedMediaRows(
-        entries,
-        serializedData: (entry) => entry.data,
-        decode: (entry, data) {
-          final container = PlexCacheParser.extractMediaContainer(data);
-          final json = PlexCacheParser.extractFirstMetadata(data);
-          if (json == null) return null;
-          final publicServerId = publicPlexServerIdFromCacheScope(entry.serverId) ?? entry.serverId;
-          return MapEntry(
-            buildGlobalKey(publicServerId, entry.id),
-            PlexMappers.mediaItemFromCacheJson(_withContainerLibrary(json, container), serverId: publicServerId),
-          );
-        },
-      ),
-    );
-  }
 }

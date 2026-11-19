@@ -709,7 +709,7 @@ extension DownloadDatabaseOperations on AppDatabase {
       // The durable metadata row belongs to the physical download: once
       // the row is gone there is nothing left to list, so drop the saved
       // details with it instead of leaving a stale row behind.
-      await (delete(downloadMetadata)..where((t) => t.globalKey.equals(globalKey))).go();
+      await deleteDownloadMetadata(globalKey);
     });
     return safRootUri;
   }

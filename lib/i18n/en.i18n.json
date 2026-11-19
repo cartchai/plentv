@@ -1544,6 +1544,14 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2326": [
+      "Removed: the anime title mappings are gone — the app no longer downloads anything from the creator's servers, and AniList and MyAnimeList entries no longer get extra IDs from that file",
+      "Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can't drift apart again",
+      "Fixed: opening Downloads no longer starts the same details refresh twice at once",
+      "New: About → What's new now lists every release up to this one instead of stopping at 1.4.5",
+      "Fixed: looking up a series in a big list is now instant instead of scanning every show each time",
+      "Cleanup: removed leftover code, unused settings text and outdated comments from the 2.26.0 update"
+    ],
     "changelog2325": [
       "Fixed: downloaded TV episodes and movies from IPTV now stay listed in Downloads after you restart the app — they used to vanish from the list even though the file was still on your phone",
       "Fixed: opening Downloads now fills in any missing episode details once your TV service is connected",

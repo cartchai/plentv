@@ -93,6 +93,14 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// refresh, exactly the bug this fix removes.
   final Set<String> _synthesizedMetadataKeys = {};
 
+  /// Session-local keys whose synthesis was already attempted and failed
+  /// (A28): a row that can never resolve (file deleted/moved, non-IPTV
+  /// backend, non-matching path) used to re-pay the per-row DB + path +
+  /// disk-stat chain on every refresh forever. Skipped on later refreshes
+  /// until the download completes again (see [_onProgressUpdate]) or the
+  /// provider reloads (see [_loadPersistedDownloads]).
+  final Set<String> _synthesisAttempted = {};
+
   /// Test seam: whether [globalKey]'s metadata is currently a synthesized
   /// stand-in (see [_synthesizedMetadataKeys]).
   @visibleForTesting
@@ -441,6 +449,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       _downloads.clear();
       _artworkPaths.clear();
       _metadata.clear();
+      _synthesisAttempted.clear();
       _queueing.clear();
       _deletionProgress.clear();
       _ownedDownloadKeys.clear();
@@ -454,23 +463,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
 
       final downloads = await _downloadManager.getAllDownloads();
 
-      // 1.2.18 S-14: load only the per-server profile scopes at startup —
-      // never the bulk pinned map (every pinned row across every backend,
-      // decoded into one Map). Each owned download resolves its own row
-      // per item below ([lookupMetadata]), bounded by download count,
-      // and collections/parents get the same per-item fallback.
-      final pinned = (
-        items: const <String, MediaItem>{},
-        scopesByServer: await _downloadManager.getPinnedMetadataScopes(
-          activeProfileId: _activeProfileId,
-        ),
-      );
-
-      // One select for every durable metadata row: the per-item hydration
-      // below consults this snapshot instead of issuing one select per
-      // download (the cold-hydration select count stays constant).
-      final durableByKey = await _downloadManager.loadDurableMetadata();
-
+      final ownedKeys = <String>[];
       for (final item in downloads) {
         _downloads[item.globalKey] = DownloadProgress(
           globalKey: item.globalKey,
@@ -485,33 +478,148 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         _artworkPaths[item.globalKey] = DownloadedArtwork(thumbPath: item.thumbPath);
         _downloadLibraries[item.globalKey] = (libraryId: item.libraryId, libraryTitle: item.libraryTitle);
 
-        if (_ownsDownloadKey(item.globalKey)) {
-          await _hydrateDownloadMetadata(item.globalKey, pinned, durableByKey: durableByKey);
-        }
+        if (_ownsDownloadKey(item.globalKey)) ownedKeys.add(item.globalKey);
       }
 
+      // Shared with [refreshMetadataFromCache]: scopes, durable snapshot,
+      // per-key hydration, collections, overlay, synthesis.
+      final result = await _hydrateAllDownloads(keys: ownedKeys, fetchOnMiss: false);
+
       await _loadSyncRules();
-      await _loadDownloadCollections(pinned);
-
-      // Apply queued offline watch actions on top of the server-time metadata
-      // we just loaded, so re-entries reflect locally-marked watched/unwatched
-      // state from previous sessions until those actions sync to the server.
-      await _applyOfflineWatchOverlay();
-
-      // Safety net: rows with a file on disk but no metadata anywhere
-      // (pre-1.5.1 IPTV rows, no server reachable yet) still list, from a
-      // leaf synthesized from the row + file path.
-      final synthesizedCount = await _synthesizeMissingMetadata();
 
       appLogger.i(
         'Loaded ${_downloads.length} downloads, ${_metadata.length} metadata entries, '
         'and ${_syncRules.length} sync rules'
-        '${synthesizedCount > 0 ? ', $synthesizedCount synthesized from files on disk' : ''}',
+        '${result.synthesizedCount > 0 ? ', ${result.synthesizedCount} synthesized from files on disk' : ''}',
       );
       safeNotifyListeners();
     } catch (e) {
       appLogger.e('Failed to load persisted downloads', error: e);
     }
+  }
+
+  /// Cap on concurrent per-item metadata hydrations (A7): the refresh
+  /// used to fill misses one round-trip at a time. Four in flight bounds
+  /// the network work without stacking timeouts against the provider.
+  static const int _maxMetadataFillConcurrency = 4;
+
+  /// One per-key hydration that never throws: a failure logs and yields
+  /// null, so a chunk's `Future.wait` is not rejected by one bad row.
+  Future<_MetadataHydrationResult?> _hydrateOneDownload(
+    String globalKey,
+    Map<String, String?> scopesByServer, {
+    required bool fetchOnMiss,
+    bool Function()? isStale,
+    Map<String, MediaItem>? durableByKey,
+  }) async {
+    try {
+      return await _hydrateDownloadMetadata(
+        globalKey,
+        scopesByServer,
+        fetchOnMiss: fetchOnMiss,
+        isStale: isStale,
+        durableByKey: durableByKey,
+      );
+    } catch (e) {
+      appLogger.d('Failed to hydrate metadata for $globalKey: $e');
+      return null;
+    }
+  }
+
+  /// Shared hydration core for [_loadPersistedDownloads] and
+  /// [refreshMetadataFromCache]: scopes-only pinned record → one bulk
+  /// durable snapshot → per-key [_hydrateDownloadMetadata] → synthesis →
+  /// collections → offline overlay. [fetchOnMiss] is false for the startup
+  /// load (no live client yet) and true for refreshes. Returns hit/miss
+  /// accounting for the caller's log line.
+  Future<({int cacheHits, int networkFills, int misses, int synthesizedCount})> _hydrateAllDownloads({
+    required Iterable<String> keys,
+    required bool fetchOnMiss,
+    bool Function()? isStale,
+    int? expectedProfileGeneration,
+  }) async {
+    // 1.2.18 S-14: scopes only — the per-item lookups below replace the
+    // bulk pinned decode (every pinned row across every backend, decoded
+    // into one Map). Each owned download resolves its own row per item
+    // below ([lookupMetadata]), bounded by download count, and
+    // collections/parents get the same per-item fallback.
+    final scopesByServer = await _downloadManager.getPinnedMetadataScopes(
+      activeProfileId: _activeProfileId,
+    );
+    if (isStale?.call() ?? false) {
+      return (cacheHits: 0, networkFills: 0, misses: 0, synthesizedCount: 0);
+    }
+
+    // One select for every durable metadata row: the per-item hydration
+    // below consults this snapshot instead of issuing one select per
+    // download (the cold-hydration select count stays constant).
+    final durableByKey = await _downloadManager.loadDurableMetadata();
+    if (isStale?.call() ?? false) {
+      return (cacheHits: 0, networkFills: 0, misses: 0, synthesizedCount: 0);
+    }
+
+    var cacheHits = 0;
+    var networkFills = 0;
+    var misses = 0;
+    // A7: network fills run up to [_maxMetadataFillConcurrency] at a time
+    // instead of one round-trip per item in turn — M misses used to be M
+    // strictly sequential round-trips per refresh. The cap stays small:
+    // metadata API calls, not streams, but no reason to stack timeouts
+    // against the provider. Chunked `Future.wait` bounds the in-flight
+    // count the same way the short-EPG semaphore does.
+    final keyList = keys.toList(growable: false);
+    for (var i = 0; i < keyList.length; i += _maxMetadataFillConcurrency) {
+      final chunk = keyList.sublist(
+        i,
+        (i + _maxMetadataFillConcurrency).clamp(0, keyList.length),
+      );
+      final results = await Future.wait(
+        chunk.map(
+          (globalKey) => _hydrateOneDownload(
+            globalKey,
+            scopesByServer,
+            fetchOnMiss: fetchOnMiss,
+            isStale: isStale,
+            durableByKey: durableByKey,
+          ),
+        ),
+      );
+      for (final result in results) {
+        if (result == null) continue;
+        if (result.stale) {
+          return (cacheHits: cacheHits, networkFills: networkFills, misses: misses, synthesizedCount: 0);
+        }
+        if (result.metadata == null) {
+          misses++;
+        } else if (result.networkFilled) {
+          networkFills++;
+        } else {
+          cacheHits++;
+        }
+      }
+    }
+
+    // Safety net: rows with a file on disk but no metadata anywhere
+    // (pre-1.5.1 IPTV rows, no server reachable yet) still list, from a
+    // leaf synthesized from the row + file path.
+    final synthesizedCount = await _synthesizeMissingMetadata();
+    if (synthesizedCount > 0) {
+      misses = keys.where((key) => !_metadata.containsKey(key)).length;
+    }
+    await _loadDownloadCollections();
+
+    // Re-apply offline overlay so locally-queued watch actions aren't
+    // clobbered by stale per-backend caches that haven't yet seen the
+    // server roundtrip. Runs after synthesis so synthesized stand-ins
+    // get the overlay too.
+    await _applyOfflineWatchOverlay(expectedProfileGeneration: expectedProfileGeneration);
+
+    return (
+      cacheHits: cacheHits,
+      networkFills: networkFills,
+      misses: misses,
+      synthesizedCount: synthesizedCount,
+    );
   }
 
   /// Hydrate queued OfflineWatchProgress actions into the canonical
@@ -524,16 +632,9 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     );
   }
 
-  /// Load parent metadata (show + season for episodes, artist + album for
-  /// tracks) from a pre-loaded map (no DB I/O). Used during bulk
-  /// initialization to avoid per-item DB queries.
-  void _loadParentMetadataFromMap(MediaItem leaf, Map<String, MediaItem> allMetadata, {String? clientScopeId}) {
-    _metadataStore.loadParentMetadataFromMap(leaf, allMetadata, clientScopeId: clientScopeId);
-  }
-
-  /// Resolve a leaf's parent rows (show + season, artist + album) that the
-  /// map load above missed, one DB lookup each. Only the missing ones are
-  /// read — a parent shared by many downloaded siblings is fetched once.
+  /// Resolve a leaf's parent rows (show + season, artist + album) that are
+  /// not already in [_metadata], one DB lookup each. Only the missing ones
+  /// are read — a parent shared by many downloaded siblings is fetched once.
   Future<void> _hydrateMissingParents(
     MediaItem leaf, {
     String? clientScopeId,
@@ -565,13 +666,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   }
 
   /// Rebuild [_collections] from the active profile's stored membership and
-  /// the collections' metadata in [pinned]. [pinned] can predate a refresh
-  /// that just pinned a collection, so the loaded entry's metadata stands in
-  /// for a snapshot miss. A collection with neither stays out until the next
-  /// refresh pins it.
-  Future<void> _loadDownloadCollections(
-    ({Map<String, MediaItem> items, Map<String, String?> scopesByServer}) pinned,
-  ) async {
+  /// the collections' metadata resolved per item from their backend cache
+  /// (the 1.2.18 S-14 replacement for the deleted bulk pinned map). The
+  /// loaded entry's metadata stands in for a snapshot miss. A collection
+  /// with neither stays out until the next refresh pins it.
+  Future<void> _loadDownloadCollections() async {
     final profileId = _activeProfileId;
     final generation = _profileGeneration;
     final stored = profileId == null
@@ -581,14 +680,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     final loaded = Map.of(_collections);
     _collections.clear();
     for (final (:serverId, :collectionId, :memberIds) in stored) {
-      final scopeId = pinned.scopesByServer[serverId];
       final globalKey = buildGlobalKey(ServerId(serverId), collectionId);
       // 1.2.18 S-14: with no bulk pinned map, a collection row resolves
       // per item from its backend cache; the previously-loaded entry is
       // the last resort, as before.
       final cached =
-          (scopeId == null ? null : pinned.items[buildGlobalKey(ServerId(scopeId), collectionId)]) ??
-          pinned.items[globalKey] ??
           await _downloadManager.lookupMetadata(
             ServerId(serverId),
             collectionId,
@@ -609,7 +705,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
 
   Future<_MetadataHydrationResult> _hydrateDownloadMetadata(
     String globalKey,
-    ({Map<String, MediaItem> items, Map<String, String?> scopesByServer}) pinned, {
+    Map<String, String?> scopesByServer, {
     bool fetchOnMiss = false,
     bool Function()? isStale,
     Map<String, MediaItem>? durableByKey,
@@ -618,19 +714,17 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     if (parsed == null) return (metadata: null, networkFilled: false, stale: false);
 
     // MediaBrowser bulk keys are compound-scoped (`machine/user:item`); Plex
-    // keys are public. Try the exact profile namespace first, then the public
-    // key, then the per-item lookup (which also finds cached-but-unpinned rows).
-    final clientScopeId = pinned.scopesByServer[parsed.serverId];
-    var cached =
-        (clientScopeId == null ? null : pinned.items[buildGlobalKey(ServerId(clientScopeId), parsed.ratingKey)]) ??
-        pinned.items[globalKey] ??
-        await _downloadManager.lookupMetadata(
-          parsed.serverId,
-          parsed.ratingKey,
-          preferActiveScope: true,
-          activeProfileId: _activeProfileId,
-          durableByKey: durableByKey,
-        );
+    // keys are public. The per-item lookup resolves the active profile's
+    // namespace internally ([preferActiveScope]); [clientScopeId] is kept
+    // for the parent check below.
+    final clientScopeId = scopesByServer[parsed.serverId];
+    var cached = await _downloadManager.lookupMetadata(
+      parsed.serverId,
+      parsed.ratingKey,
+      preferActiveScope: true,
+      activeProfileId: _activeProfileId,
+      durableByKey: durableByKey,
+    );
     if (isStale?.call() ?? false) return (metadata: null, networkFilled: false, stale: true);
 
     var networkFilled = false;
@@ -672,10 +766,8 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       }
       _metadata[globalKey] = cached;
       if (cached.isEpisode || cached.kind == MediaKind.track) {
-        _loadParentMetadataFromMap(cached, pinned.items, clientScopeId: clientScopeId);
-        // 1.2.18 S-14: with no bulk pinned map the parent rows are not in
-        // `pinned.items` — resolve the missing ones per item instead, so
-        // show/season (or artist/album) rows keep their stored metadata.
+        // Resolve any missing parent rows per item, so show/season (or
+        // artist/album) rows keep their stored metadata.
         await _hydrateMissingParents(cached, clientScopeId: clientScopeId, durableByKey: durableByKey);
       }
     }
@@ -717,6 +809,12 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     _downloads[progress.globalKey] = downloadedAt == merged.downloadedAt
         ? merged
         : merged.copyWith(downloadedAt: downloadedAt);
+
+    // A (re-)download that just completed may have its file back on disk:
+    // let the next refresh attempt synthesis for it again.
+    if (merged.status == DownloadStatus.completed) {
+      _synthesisAttempted.remove(progress.globalKey);
+    }
 
     // Sync artwork paths when they are available.
     if (merged.hasArtworkPaths) {
@@ -1926,10 +2024,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     _RelatedMetadataDownloadContext? relatedContext,
   }) async {
     final globalKey = metadata.globalKey;
-    final hydration = await _hydrateDownloadMetadata(globalKey, (
-      items: const <String, MediaItem>{},
-      scopesByServer: const <String, String?>{},
-    ), isStale: () => !_isQueueOwnershipCurrent(ownership));
+    final hydration = await _hydrateDownloadMetadata(
+      globalKey,
+      const <String, String?>{},
+      isStale: () => !_isQueueOwnershipCurrent(ownership),
+    );
     if (hydration.stale) return;
     final hydrated = hydration.metadata ?? metadata;
     _metadata[globalKey] = hydrated;
@@ -2418,39 +2517,55 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       if (!_ownsDownloadKey(globalKey)) continue;
       if (progress.status != DownloadStatus.completed) continue;
       if (_metadata.containsKey(globalKey)) continue;
-      final parsed = parseGlobalKey(globalKey);
-      if (parsed == null) continue;
-      final row = await _database.getDownloadedMedia(globalKey);
-      if (row == null) continue;
-      final backend = await _downloadManager.backendForServer(parsed.serverId);
-      if (backend == null) continue;
-      if (backend != MediaBackend.xtream && backend != MediaBackend.m3u) continue;
-      final storedPath = row.videoFilePath;
-      if (storedPath == null || storedPath.startsWith('content://')) continue;
-      late final String absolutePath;
-      try {
-        absolutePath = await DownloadStorageService.instance.ensureAbsolutePath(storedPath);
-      } catch (e) {
-        appLogger.d('Skipping metadata synthesis for $globalKey: cannot resolve path ($e)');
-        continue;
+      // Already attempted and failed this session: skip the per-row DB +
+      // path + disk-stat chain until the download completes again.
+      if (_synthesisAttempted.contains(globalKey)) continue;
+      if (await _trySynthesizeMetadata(globalKey)) {
+        synthesized++;
+      } else {
+        _synthesisAttempted.add(globalKey);
       }
-      if (!await File(absolutePath).exists()) continue;
-      final leaf = _synthesizeLeafFromPath(
-        serverId: parsed.serverId.value,
-        itemId: parsed.ratingKey,
-        kind: MediaKind.fromString(row.type),
-        backend: backend,
-        absolutePath: absolutePath,
-      );
-      if (leaf == null) continue;
-      _metadata[globalKey] = leaf;
-      _synthesizedMetadataKeys.add(globalKey);
-      synthesized++;
     }
     if (synthesized > 0) {
       appLogger.i('Synthesized metadata for $synthesized downloads from files on disk');
     }
     return synthesized;
+  }
+
+  /// One synthesis attempt for a completed row without metadata: build a
+  /// display leaf from the Drift row + file path. Returns false when the
+  /// row can never resolve (no row, no IPTV backend, no/unreadable file,
+  /// non-matching path) — the caller records the key so later refreshes
+  /// skip the attempt.
+  Future<bool> _trySynthesizeMetadata(String globalKey) async {
+    final parsed = parseGlobalKey(globalKey);
+    if (parsed == null) return false;
+    final row = await _database.getDownloadedMedia(globalKey);
+    if (row == null) return false;
+    final backend = await _downloadManager.backendForServer(parsed.serverId);
+    if (backend == null) return false;
+    if (backend != MediaBackend.xtream && backend != MediaBackend.m3u) return false;
+    final storedPath = row.videoFilePath;
+    if (storedPath == null || storedPath.startsWith('content://')) return false;
+    late final String absolutePath;
+    try {
+      absolutePath = await DownloadStorageService.instance.ensureAbsolutePath(storedPath);
+    } catch (e) {
+      appLogger.d('Skipping metadata synthesis for $globalKey: cannot resolve path ($e)');
+      return false;
+    }
+    if (!await File(absolutePath).exists()) return false;
+    final leaf = _synthesizeLeafFromPath(
+      serverId: parsed.serverId.value,
+      itemId: parsed.ratingKey,
+      kind: MediaKind.fromString(row.type),
+      backend: backend,
+      absolutePath: absolutePath,
+    );
+    if (leaf == null) return false;
+    _metadata[globalKey] = leaf;
+    _synthesizedMetadataKeys.add(globalKey);
+    return true;
   }
 
   /// Build a display leaf for [absolutePath] (a file under
@@ -2555,7 +2670,24 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     };
   }
 
+  /// In-flight metadata refresh, if one is running: concurrent triggers
+  /// (startup, servers-connected, profile switch, Downloads tab shown) join
+  /// the same run instead of each walking every owned key.
+  Future<void>? _metadataRefreshInFlight;
+
   Future<void> refreshMetadataFromCache() async {
+    final inFlight = _metadataRefreshInFlight;
+    if (inFlight != null) return inFlight;
+    final run = _refreshMetadataFromCacheInner();
+    _metadataRefreshInFlight = run;
+    try {
+      await run;
+    } finally {
+      if (identical(_metadataRefreshInFlight, run)) _metadataRefreshInFlight = null;
+    }
+  }
+
+  Future<void> _refreshMetadataFromCacheInner() async {
     final profileGeneration = _profileGeneration;
     bool isStale() => isDisposed || profileGeneration != _profileGeneration;
     // The initial load runs in the constructor and may still be in flight
@@ -2575,62 +2707,22 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       return;
     }
 
-    // 1.2.18 S-14: scopes only — the per-item lookups below replace the
-    // bulk pinned decode (see the init site for the rationale).
-    final pinned = (
-      items: const <String, MediaItem>{},
-      scopesByServer: await _downloadManager.getPinnedMetadataScopes(
-        activeProfileId: _activeProfileId,
-      ),
+    // Shared with [_loadPersistedDownloads]: scopes, durable snapshot,
+    // per-key hydration, synthesis, collections, overlay. The startup load
+    // runs with fetchOnMiss false (no live client yet); refreshes fill
+    // from the network.
+    final result = await _hydrateAllDownloads(
+      keys: keys,
+      fetchOnMiss: true,
+      isStale: isStale,
+      expectedProfileGeneration: profileGeneration,
     );
     if (isStale()) return;
-    // One select for every durable metadata row (see the load site).
-    final durableByKey = await _downloadManager.loadDurableMetadata();
-    if (isStale()) return;
-    int cacheHits = 0;
-    int networkFills = 0;
-    int misses = 0;
 
-    for (final globalKey in keys) {
-      try {
-        final result = await _hydrateDownloadMetadata(
-          globalKey,
-          pinned,
-          fetchOnMiss: true,
-          isStale: isStale,
-          durableByKey: durableByKey,
-        );
-        if (result.stale) return;
-        if (result.metadata == null) {
-          misses++;
-        } else if (result.networkFilled) {
-          networkFills++;
-        } else {
-          cacheHits++;
-        }
-      } catch (e) {
-        appLogger.d('Failed to refresh metadata for $globalKey: $e');
-      }
-    }
-    // Safety net: rows that stayed unresolved (no cache row, no live item)
-    // but whose file is on disk still list, from a leaf synthesized from
-    // the row + file path.
-    final synthesizedCount = await _synthesizeMissingMetadata();
-    if (synthesizedCount > 0) {
-      misses = keys.where((key) => !_metadata.containsKey(key)).length;
-    }
-    await _loadDownloadCollections(pinned);
-    if (isStale()) return;
-
-    // Re-apply offline overlay so locally-queued watch actions aren't clobbered
-    // by stale per-backend caches that haven't yet seen the server roundtrip.
-    await _applyOfflineWatchOverlay(expectedProfileGeneration: profileGeneration);
-    if (isStale()) return;
-
-    final updatedCount = cacheHits + networkFills + synthesizedCount;
+    final updatedCount = result.cacheHits + result.networkFills + result.synthesizedCount;
     appLogger.i(
       'refreshMetadataFromCache: walked ${keys.length} keys → '
-      '$cacheHits cache hits, $networkFills network fills, $synthesizedCount synthesized, $misses unresolved',
+      '${result.cacheHits} cache hits, ${result.networkFills} network fills, ${result.synthesizedCount} synthesized, ${result.misses} unresolved',
     );
     if (updatedCount > 0) {
       safeNotifyListeners();

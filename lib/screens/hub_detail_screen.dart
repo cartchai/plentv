@@ -57,7 +57,6 @@ class HubDetailScreen extends StatefulWidget {
 
 class _HubDetailScreenState extends State<HubDetailScreen>
     with Refreshable, GridFocusNodeMixin, FocusableDetailScreenMixin, PaginatedItemLoader<MediaItem, HubDetailScreen> {
-  static const int _pageSize = 200;
 
   List<MediaItem> _items = [];
   List<MediaItem> _filteredItems = [];
@@ -305,7 +304,7 @@ class _HubDetailScreenState extends State<HubDetailScreen>
       var initialPageApplied = true;
       final applied = await _continuation.runNewGeneration(() async {
         if (_usesPaginatedLoader) {
-          final result = await loadInitialPageWithStatus(_pageSize);
+          final result = await loadInitialPageWithStatus(defaultListPageSize);
           initialPageApplied = result.applied;
           if (!result.applied) return;
           items = result.page.items;
@@ -314,7 +313,7 @@ class _HubDetailScreenState extends State<HubDetailScreen>
         } else if (loader == null) {
           final page = client == null
               ? const LibraryPage<MediaItem>(items: [], totalCount: 0)
-              : await client.fetchMoreHubItemsPage(widget.hub.id, start: 0, size: _pageSize);
+              : await client.fetchMoreHubItemsPage(widget.hub.id, start: 0, size: defaultListPageSize);
           items = _applySectionFilter(page.items);
           totalCount = page.totalCount;
           loadedCount = page.items.length;
@@ -369,7 +368,7 @@ class _HubDetailScreenState extends State<HubDetailScreen>
       return ContinuationPage(items: items, totalCount: 1, consumedCount: 1);
     }
 
-    final page = await client.fetchMoreHubItemsPage(widget.hub.id, start: startIndex, size: _pageSize);
+    final page = await client.fetchMoreHubItemsPage(widget.hub.id, start: startIndex, size: defaultListPageSize);
     return ContinuationPage(
       items: _applySectionFilter(page.items),
       totalCount: page.totalCount,
@@ -419,7 +418,7 @@ class _HubDetailScreenState extends State<HubDetailScreen>
 
   void _requestNextHubPage() {
     if (!_canRequestNextHubPage) return;
-    ensureIndexLoaded(loadedItems.length, pageSize: _pageSize);
+    ensureIndexLoaded(loadedItems.length, pageSize: defaultListPageSize);
   }
 
   void _handleGridItemFocusChange(int index, bool hasFocus, {required bool isLastRow}) {
@@ -441,7 +440,7 @@ class _HubDetailScreenState extends State<HubDetailScreen>
 
   void _retryHubContinuation() {
     if (_usesPaginatedLoader) {
-      ensureIndexLoaded(loadedItems.length, pageSize: _pageSize);
+      ensureIndexLoaded(loadedItems.length, pageSize: defaultListPageSize);
     } else {
       unawaited(_continuation.retry());
     }

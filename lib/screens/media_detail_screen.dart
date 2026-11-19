@@ -489,7 +489,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   bool _initialDetailFocusApplied = false;
   bool _initialEpisodePagingInFlight = false;
   bool _initialEpisodePagingDone = false;
-  static const int _episodesPageSize = 200;
   // Sentinel at the end of the inline episode list; its viewport position drives
   // lazy paging (the list is shrink-wrapped, so it can't self-detect near-end).
   final GlobalKey _episodeTailKey = GlobalKey();
@@ -2285,7 +2284,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
   /// One page of [season]'s episodes, sized for the detail lists.
   Future<LibraryPage<MediaItem>> _fetchSeasonPage(MediaServerClient client, MediaItem season, {required int start}) {
-    return fetchSeasonEpisodePage(client, show: _metadata, season: season, start: start, size: _episodesPageSize);
+    return fetchSeasonEpisodePage(client, show: _metadata, season: season, start: start, size: defaultListPageSize);
   }
 
   /// Selects the season tab at [seasonIndex] and loads its episodes. The list
@@ -3144,7 +3143,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       _hasLoadedEpisodes = false;
     });
     try {
-      final firstPage = await _fetchFlattenedEpisodePage(client, ServerId(serverId), start: 0, size: _episodesPageSize);
+      final firstPage = await _fetchFlattenedEpisodePage(client, ServerId(serverId), start: 0, size: defaultListPageSize);
       if (!mounted || generation != _episodesLoadGeneration) return;
       setStateIfMounted(() {
         _allEpisodes = _allEpisodes.completeInitialLoad(firstPage.items, firstPage.totalCount);
@@ -3272,7 +3271,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       _allEpisodes = _allEpisodes.startLoadMore();
     });
     try {
-      final page = await _fetchFlattenedEpisodePage(client, ServerId(serverId), start: offset, size: _episodesPageSize);
+      final page = await _fetchFlattenedEpisodePage(client, ServerId(serverId), start: offset, size: defaultListPageSize);
       if (!mounted || generation != _episodesLoadGeneration) return;
       setStateIfMounted(() {
         _allEpisodes = _allEpisodes.completeLoadMore(

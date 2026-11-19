@@ -9,9 +9,11 @@
 //        refresh failed before the Reload returned (nothing fresh was
 //        downloaded — and the stale seed record must NOT leak into
 //        `feedDownloads`).
-//   F10a the pre-parse trim fires: with the per-channel cache filled
-//        past half the tier cap, the next feed parse counts a
-//        before-job trim (and logs it).
+//   F10a the pre-parse trim fires when memory is hot: with the
+//        per-channel cache filled past half the tier cap, the next
+//        feed parse counts a before-job trim (and logs it). The
+//        trim is RSS-gated (A29), so the test forces memory hot —
+//        a cool run correctly trims nothing.
 //
 // No live panel use: the "panel" is a scripted fake XtreamApi, the
 // "server" is example.test. No download URL is ever logged. A test
@@ -147,11 +149,13 @@ void main() {
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = () async => tempDir;
     IptvLiveTvSupport.debugLastFeedParseCaller = null;
     IptvLiveTvSupport.debugTrimBeforeHeavyJobCount = 0;
+    IptvHeavyWorkGate.debugForceMemoryHot = null;
     api = _FixOnlyFakeApi();
   });
 
   tearDown(() async {
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = null;
+    IptvHeavyWorkGate.debugForceMemoryHot = null;
     // Never delete the temp dir under a feed parse still in flight in
     // the process-global gate — it strands the gate and the NEXT
     // test's first feed load never parses.
@@ -292,6 +296,11 @@ void main() {
 
     await support.refreshEpgCache();
     api.xmltvBody = _xmltvDocN(now, 41, titlePrefix: 'Evening');
+    // A29: the pre-parse trim is RSS-gated — force memory hot so this
+    // refresh's parse counts a before-job trim, the way a hot phone
+    // would. Without the force the test VM's RSS stays cool and the
+    // trim (correctly) stays quiet.
+    IptvHeavyWorkGate.debugForceMemoryHot = true;
     // A long drip (~11 s): the 40 fill-fetches take ~6 s, so the
     // refresh must still be downloading while they run — otherwise
     // it lands mid-fill and the later rows serve the new titles.

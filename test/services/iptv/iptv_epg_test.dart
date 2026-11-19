@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -297,7 +298,7 @@ void main() {
   });
 
   group('parseXmltv', () {
-    test('decodes programmes, converts offsets to UTC, skips malformed rows', () {
+    test('decodes programmes, converts offsets to UTC, skips malformed rows', () async {
       const body = '''
 <?xml version="1.0" encoding="UTF-8"?>
 <tv>
@@ -314,7 +315,7 @@ void main() {
   </programme>
 </tv>''';
 
-      final programs = parseXmltv(body);
+      final programs = await parseXmltvStream(Stream<List<int>>.value(utf8.encode(body))).toList();
 
       expect(programs, hasLength(3));
       expect(programs[0].title, 'Noon News');
@@ -326,8 +327,11 @@ void main() {
       expect(programs[2].channelId, 'ch2');
     });
 
-    test('throws when the document itself does not parse', () {
-      expect(() => parseXmltv('<tv><programme'), throwsA(anything));
+    test('throws when the document itself does not parse', () async {
+      await expectLater(
+        parseXmltvStream(Stream<List<int>>.value(utf8.encode('<tv><programme'))).toList(),
+        throwsA(anything),
+      );
     });
   });
 

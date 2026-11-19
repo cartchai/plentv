@@ -7,9 +7,9 @@ import '../../models/trackers/fribb_mapping_row.dart';
 import '../../utils/external_ids.dart';
 import 'anime_episode_progress_resolver.dart';
 import 'anime_lists_index.dart';
-import 'anime_mappings_store.dart';
 import 'fribb_index.dart';
 import 'future_coalescer.dart';
+import 'noop_anime_mappings.dart';
 
 /// Paired ID output: always-present Plex external IDs (tvdb/imdb/tmdb) plus
 /// optional Fribb-sourced anime IDs (mal/anilist/simkl). Simkl uses [external]
@@ -59,22 +59,22 @@ class TrackerRatingContext {
   bool get isMovie => kind == MediaKind.movie;
 }
 
-/// Resolves item ids → tracker external IDs. Returns both backend-native
-/// external IDs (used by Trakt and by Simkl for non-anime matches) and Fribb
-/// anime IDs (used by MAL/AniList, and by Simkl for anime precision).
-/// Episodes resolve against the show's GUIDs because Fribb only maps
-/// show-level external IDs. Anime-Lists' episode mappings disambiguate
-/// same-season split-cour episode ranges by AniDB id.
+/// Resolves item ids → tracker external IDs. Returns the backend-native
+/// external IDs (used by Trakt and by Simkl for non-anime matches). The anime
+/// mappings were removed in 1.5.2, so no Fribb anime IDs are resolved
+/// anymore: MAL/AniList contexts carry the external IDs only, and Simkl
+/// falls back to them for anime too. Episodes resolve against the show's
+/// GUIDs.
 ///
-/// A HAMA-matched Plex library supplies an AniDB id and nothing else. That is
-/// Fribb's own primary key, so it resolves an anime directly — but Anime-Lists
-/// maps tvdb/tmdb episode coordinates onto AniDB rather than the reverse, so
-/// those items get no episode mapping and fall back to the show's own
+/// A HAMA-matched Plex library supplies an AniDB id and nothing else. That
+/// used to resolve an anime directly through Fribb; with the mappings
+/// removed it maps to nothing, and those items fall back to the show's own
 /// numbering, which is what HAMA's plain `anidb` mode already uses.
 ///
-/// The Fribb lookup is skipped when [needsFribb] returns false — set this way
-/// for Trakt (which never uses anime IDs) and for a Simkl-only configuration,
-/// so those users don't pay the anime mappings download they'll never need.
+/// The anime lookup is a no-op since the mappings were removed in 1.5.2
+/// (every lookup answers "no mapping"). [needsFribb] still short-circuits
+/// it — set this way for Trakt (which never uses anime IDs) and for a
+/// Simkl-only configuration — so those users skip the lookup entirely.
 class TrackerIdResolver {
   final MediaServerClient _client;
   final FribbMappingLookup _store;
@@ -95,8 +95,8 @@ class TrackerIdResolver {
     AnimeEpisodeProgressLookup? animeProgress,
   }) : _client = client,
        _needsFribb = needsFribb ?? _returnTrue,
-       _store = store ?? AnimeMappingsStore.instance,
-       _animeLists = animeLists ?? AnimeMappingsStore.instance,
+       _store = store ?? const NoopAnimeMappingsLookup(),
+       _animeLists = animeLists ?? const NoopAnimeMappingsLookup(),
        _animeProgress = animeProgress ?? AnimeEpisodeProgressResolver(client);
 
   static bool _returnTrue() => true;

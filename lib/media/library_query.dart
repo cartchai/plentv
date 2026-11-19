@@ -9,6 +9,12 @@ part 'library_query.freezed.dart';
 /// Sort order applied to a library query.
 enum LibrarySortDirection { ascending, descending }
 
+/// Default page size for paged list screens (actor/collection/hub lists,
+/// episode lists): one shared value so the screens don't each re-declare
+/// 200. Backend clients keep their own API page sizes (their
+/// `_...PageSize` consts) — those are server pagination, not UI paging.
+const int defaultListPageSize = 200;
+
 @freezed
 sealed class LibrarySort with _$LibrarySort {
   /// Backend-neutral sort field. Common values: `addedAt`, `originallyAvailableAt`,

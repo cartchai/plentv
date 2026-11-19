@@ -1384,6 +1384,8 @@ class PlexClient
   }
 
   /// Page size used when walking all pages of a paginated endpoint.
+  /// Backend API pagination, deliberately independent of the shared UI
+  /// list size ([defaultListPageSize]).
   static const int _fetchAllPageSize = 200;
 
   /// Iterate every page of a paginated endpoint and concatenate the results.

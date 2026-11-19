@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:xml/xml.dart';
 import 'package:xml/xml_events.dart';
 
 /// One programme from an XMLTV file, before mapping to [LiveTvProgram].
@@ -10,8 +9,8 @@ import 'package:xml/xml_events.dart';
 /// URL) and Xtream's `xmltv.php` speak: a `<programme>` carries
 /// `start="YYYYMMDDHHMMSS ±HHMM"`, `stop`, and `channel="tvg-id"`, with
 /// `<title>` and `<desc>` children.
-/// Parsing runs in an isolate ([parseXmltv] is top-level) because provider
-/// files run to megabytes.
+/// Parsing streams chunked bytes ([parseXmltvStream]) so provider files
+/// running to megabytes never sit in memory whole.
 class XmltvProgram {
   /// The `channel` attribute — matches an M3U entry's `tvg-id`.
   final String channelId;
@@ -60,20 +59,20 @@ class XmltvParseStats {
 /// [XmltvProgram] per `<programme>` element as it closes.
 ///
 /// Build #26: the provider feed runs to ~150 MB at Trex scale, and the old
-/// [parseXmltv] path held it ~4x at once (whole UTF-16 String, isolate
+/// DOM path held it ~4x at once (whole UTF-16 String, isolate
 /// copy, DOM tree, result list — ~1.45 GB peak RSS on the production cold
 /// start). This consumes chunked bytes through the `xml` package's chunked
 /// event API (`Stream<String>.toXmlEvents`), so only the programme
 /// currently being assembled is ever in memory. Callers must NOT `toList()`
 /// the stream — accumulate only the retained list + indexes.
 ///
-/// Same tolerance as [parseXmltv]: a malformed programme is skipped, never
+/// Same tolerance as the old DOM parser: a malformed programme is skipped, never
 /// fatal. A mid-file element that fails to close skips only the
 /// programme being assembled (1.3.30) — the good programmes around it
 /// still parse. Only a document that is CUT OFF (elements still open
 /// when the stream ends), invalid XML, or a document with no elements
 /// at all fails the whole parse — an empty feed file reads as corrupt,
-/// exactly like [parseXmltv] throwing on an empty body.
+/// exactly like the old parser throwing on an empty body.
 ///
 /// 1.2.2 I8 (parse-time window filter): when [windowFromEpoch] /
 /// [windowToEpoch] are given, a programme is yielded only if it overlaps
@@ -269,53 +268,6 @@ Stream<XmltvProgram> parseXmltvStream(
   if (openStack.isNotEmpty) {
     throw FormatException('Truncated XMLTV document: unclosed <${openStack.last}>');
   }
-}
-
-/// Parse an XMLTV document into programmes. Malformed entries are skipped,
-/// never fatal: a provider file with one bad `<programme>` still yields the
-/// rest. Throws only when the document itself does not parse. The DOM
-/// path has no window filter, so [stats] sees every programme parsed.
-List<XmltvProgram> parseXmltv(String body, {XmltvParseStats? stats}) {
-  final document = XmlDocument.parse(body);
-  if (stats != null) {
-    for (final channel in document.findAllElements('channel')) {
-      final id = channel.getAttribute('id')?.trim() ?? '';
-      if (id.isEmpty) continue;
-      stats.channelIds.add(id);
-      final names = channel
-          .findElements('display-name')
-          .map((e) => e.innerText.trim())
-          .where((n) => n.isNotEmpty)
-          .toList(growable: false);
-      if (names.isNotEmpty) {
-        (stats.channelDisplayNames[id] ??= []).addAll(names);
-      }
-    }
-  }
-  final programs = <XmltvProgram>[];
-  for (final element in document.findAllElements('programme')) {
-    try {
-      final channelId = element.getAttribute('channel')?.trim() ?? '';
-      final start = _parseXmltvTime(element.getAttribute('start'));
-      final stop = _parseXmltvTime(element.getAttribute('stop'));
-      if (channelId.isEmpty || start == null || stop == null || stop <= start) continue;
-      stats?.programsSeen++;
-      stats?.programsYielded++;
-      stats?.programChannelIds.add(channelId);
-      programs.add(
-        XmltvProgram(
-          channelId: channelId,
-          startEpoch: start,
-          stopEpoch: stop,
-          title: element.getElement('title')?.innerText.trim() ?? '',
-          description: element.getElement('desc')?.innerText.trim() ?? '',
-        ),
-      );
-    } catch (_) {
-      // One bad programme does not invalidate the file.
-    }
-  }
-  return programs;
 }
 
 /// XMLTV time: `YYYYMMDDHHMMSS ±HHMM` (offset optional, defaults to UTC).

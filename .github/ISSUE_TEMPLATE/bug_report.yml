@@ -48,11 +48,11 @@ body:
       required: true
 
   - type: input
-    id: plezy-version
+    id: pleztv-version
     attributes:
-      label: Plezy Version
+      label: PlezTV Version
       description: Check the app settings for the version number and paste it here
-      placeholder: e.g., 1.7.0
+      placeholder: e.g., 1.5.2-2.26.0
     validations:
       required: true
 

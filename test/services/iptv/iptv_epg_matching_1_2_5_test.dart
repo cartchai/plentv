@@ -99,14 +99,14 @@ void main() {
   group('XMLTV parser — display names + parse stats (Fix 1/2)', () {
     String xmltvTime(DateTime dt) => '${DateFormat('yyyyMMddHHmmss').format(dt.toUtc())} +0000';
 
-    test('parseXmltv records channel ids with their display names', () {
+    test('parseXmltvStream records channel ids with their display names', () async {
       const body = '<?xml version="1.0" encoding="UTF-8"?><tv>'
           '<channel id="cnn.us"><display-name>CNN</display-name><display-name>CNN International</display-name></channel>'
           '<channel id="bbc.uk"><display-name>BBC One</display-name></channel>'
           '<programme channel="cnn.us" start="20261113120000 +0000" stop="20261113130000 +0000"><title>News</title></programme>'
           '</tv>';
       final stats = XmltvParseStats();
-      final programs = parseXmltv(body, stats: stats);
+      final programs = await parseXmltvStream(Stream<List<int>>.value(utf8.encode(body)), stats: stats).toList();
       expect(programs, hasLength(1));
       expect(stats.channelIds, {'cnn.us', 'bbc.uk'});
       expect(stats.channelDisplayNames['cnn.us'], ['CNN', 'CNN International']);
@@ -144,12 +144,12 @@ void main() {
       expect(stats.programChannelIds, {'cnn.us', 'bbc.uk'});
     });
 
-    test('a feed with no <channel> elements reports none', () {
+    test('a feed with no <channel> elements reports none', () async {
       const body = '<?xml version="1.0" encoding="UTF-8"?><tv>'
           '<programme channel="cnn.us" start="20261113120000 +0000" stop="20261113130000 +0000"><title>News</title></programme>'
           '</tv>';
       final stats = XmltvParseStats();
-      final programs = parseXmltv(body, stats: stats);
+      final programs = await parseXmltvStream(Stream<List<int>>.value(utf8.encode(body)), stats: stats).toList();
       expect(programs, hasLength(1));
       expect(stats.channelIds, isEmpty);
       expect(stats.channelDisplayNames, isEmpty);

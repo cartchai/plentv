@@ -42,36 +42,6 @@ class _DownloadMetadataStore extends ChangeNotifier {
   Map<String, MediaItem> get resolvedItems =>
       Map.unmodifiable({for (final entry in items.entries) entry.key: applyWatchState(entry.value)});
 
-  /// Loads show/season or artist/album metadata from an already-fetched cache
-  /// snapshot without issuing per-parent database queries.
-  void loadParentMetadataFromMap(MediaItem leaf, Map<String, MediaItem> allMetadata, {String? clientScopeId}) {
-    final serverId = leaf.serverId;
-    if (serverId == null) return;
-
-    MediaItem? lookupParent(String ratingKey) {
-      if (clientScopeId != null && clientScopeId.isNotEmpty) {
-        final scoped = allMetadata[buildGlobalKey(ServerId(clientScopeId), ratingKey)];
-        if (scoped != null) return scoped;
-      }
-      return allMetadata[buildGlobalKey(ServerId(serverId), ratingKey)];
-    }
-
-    void loadParent(String? ratingKey) {
-      if (ratingKey == null) return;
-      final parentGlobalKey = buildGlobalKey(ServerId(serverId), ratingKey);
-      if (items.containsKey(parentGlobalKey)) return;
-      final parentMetadata = lookupParent(ratingKey);
-      if (parentMetadata == null) return;
-      items[parentGlobalKey] = parentMetadata;
-      if (parentMetadata.thumbPath != null) {
-        artworkPaths[parentGlobalKey] = DownloadedArtwork(thumbPath: parentMetadata.thumbPath);
-      }
-    }
-
-    loadParent(leaf.grandparentId);
-    loadParent(leaf.parentId);
-  }
-
   /// Rehydrates queued offline watch actions into the canonical hierarchy-aware
   /// watch-state layer for the active profile.
   Future<void> hydrateOfflineWatchOverlay({bool Function()? isStale}) async {

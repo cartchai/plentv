@@ -36,8 +36,9 @@ class _FakeFribbLookup implements FribbMappingLookup {
 
   _FakeFribbLookup(this.rows);
 
-  /// Mirrors the real store: an AniDB id is the dataset's primary key and
-  /// resolves at most one row, so it short-circuits the tvdb/tmdb/imdb ladder.
+  /// Mirrors the removed store's lookup order: an AniDB id is the dataset's
+  /// primary key and resolves at most one row, so it short-circuits the
+  /// tvdb/tmdb/imdb ladder.
   @override
   Future<List<FribbMappingRow>> lookup({
     required bool movie,

@@ -845,18 +845,4 @@ void main() {
       );
     });
   });
-
-  group('FribbIndex byMal', () {
-    test('indexes rows by mal_id for reverse lookup', () {
-      final index = FribbIndex.fromRows(const [
-        FribbMappingRow(malId: 16498, tvdbId: 267440),
-        FribbMappingRow(malId: 32281, imdbIds: ['tt5311514']),
-        FribbMappingRow(anidbId: 1), // no mal id — must not appear
-      ]);
-
-      expect(index.byMal[16498]?.tvdbId, 267440);
-      expect(index.byMal[32281]?.imdbIds, ['tt5311514']);
-      expect(index.byMal, hasLength(2));
-    });
-  });
 }

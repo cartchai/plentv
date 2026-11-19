@@ -116,6 +116,8 @@ mixin _PlexCollectionMethods on _PlexClientInternals {
   static const int _membershipLookupChunkSize = 100;
 
   /// Page size for listing a library's collections during a membership lookup.
+  /// Backend API pagination, deliberately independent of the shared UI
+  /// list size ([defaultListPageSize]).
   static const int _membershipCollectionsPageSize = 200;
 
   /// `collectionMode` of a collection set to "Hide collection": it never

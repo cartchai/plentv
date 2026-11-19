@@ -1,6 +1,8 @@
 part of '../../jellyfin_client.dart';
 
 mixin _JellyfinPlaylistMethods on _JellyfinClientInternals {
+  /// Backend API page size for playlist pages, deliberately independent
+  /// of the shared UI list size ([defaultListPageSize]).
   static const int _playlistsPageSize = 200;
 
   @override

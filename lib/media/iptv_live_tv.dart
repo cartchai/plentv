@@ -1600,18 +1600,22 @@ class IptvLiveTvSupport implements LiveTvSupport {
     return evicted;
   }
 
-  /// Trim caches around a heavy job (1.2.18 S-4b/S-8b): the image
-  /// cache goes only when RSS is already above half the watchdog
-  /// threshold; the oldest half of the short-EPG cache goes
-  /// UNCONDITIONALLY on every call — [trimEpgCacheBeyondWindow]
-  /// evicts to half the tier cap regardless of RSS, so the "when hot" name
-  /// covers the image half only. Before a heavy job so the spike
-  /// starts with headroom, and after a feed parse (after: true) so the
-  /// spike's leftovers do not linger. Logged so the next dump proves
-  /// the trim happened.
+  /// Trim caches around a heavy job (1.2.18 S-4b/S-8b): both halves go
+  /// only when RSS is already above half the watchdog threshold
+  /// ([IptvHeavyWorkGate.isMemoryHot]) — the image cache and the oldest
+  /// half of the short-EPG cache ([trimEpgCacheBeyondWindow] evicts to
+  /// half the tier cap). Before a heavy job so the spike starts with
+  /// headroom, and after a feed parse (after: true) so the spike's
+  /// leftovers do not linger. When memory is fine neither half fires:
+  /// evicted EPG rows re-read from persisted per-channel files on next
+  /// access, so trimming when cool only buys disk re-reads. Logged so
+  /// the next dump proves the trim happened.
   void _trimCachesIfHot(String job, {bool after = false}) {
     final imageTrimmed = IptvHeavyWorkGate.trimImageCacheBeforeHeavyJob();
-    final epgEvicted = trimEpgCacheBeyondWindow();
+    // A29: the EPG half used to fire unconditionally on every call —
+    // one feed parse trimmed twice (before + after) even with memory
+    // to spare. Same RSS gate as the image half now.
+    final epgEvicted = IptvHeavyWorkGate.isMemoryHot ? trimEpgCacheBeyondWindow() : 0;
     if (imageTrimmed || epgEvicted > 0) {
       // 1.4.4 F10: count the before-job trims so a test can prove the
       // pre-parse trim fires (the log alone only appears when something

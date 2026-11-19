@@ -58,6 +58,7 @@ import '../utils/external_ids.dart';
 import '../utils/iptv_initials.dart';
 import '../utils/library_content_notifier.dart';
 import '../utils/media_server_http_client.dart' show AbortController;
+import '../utils/media_server_timeouts.dart';
 import 'iptv_live_tv.dart';
 import 'watch_progress.dart';
 import '../services/iptv/iptv_item_favorites_repository.dart';
@@ -414,6 +415,13 @@ class IptvClient implements MediaServerClient {
   Future<List<XtreamLiveStream>>? _liveStreamsFuture;
   Future<List<XtreamVodStream>>? _vodStreamsFuture;
   Future<List<XtreamSeries>>? _seriesFuture;
+
+  /// By-id index for the memoized series list (A8): lookups used to
+  /// linearly scan the whole list (46,461 series on this provider) on
+  /// every call. Built once from the loaded list (see [_seriesByIdMap]),
+  /// cleared wherever the memo is cleared — never served across a
+  /// catalog clear or reload.
+  Map<int, XtreamSeries>? _seriesById;
 
   /// The in-flight toggle re-derive (1.2.4, see
   /// [_rederiveMemosFromDisk]): [unhiddenCategoriesNeedRefresh] awaits
@@ -1719,6 +1727,7 @@ class IptvClient implements MediaServerClient {
           _vodCategoryNamesFuture = null;
         default:
           _seriesFuture = null;
+          _seriesById = null;
           _seriesListLoaded = false;
           _seriesCategoriesFuture = null;
           _seriesCategoryNamesFuture = null;
@@ -1781,6 +1790,7 @@ class IptvClient implements MediaServerClient {
         _vodCategoryNamesFuture = null;
       default:
         _seriesFuture = null;
+        _seriesById = null;
         _seriesListLoaded = false;
         _seriesLoadSource = '';
         _seriesCategoriesFuture = Future.value(categories);
@@ -2337,6 +2347,7 @@ class IptvClient implements MediaServerClient {
     _liveStreamsFuture = null;
     _vodStreamsFuture = null;
     _seriesFuture = null;
+    _seriesById = null;
     _vodStreamsLoaded = false;
     _seriesListLoaded = false;
     _liveStreamsLoaded = false;
@@ -2382,6 +2393,7 @@ class IptvClient implements MediaServerClient {
     _liveStreamsFuture = null;
     _vodStreamsFuture = null;
     _seriesFuture = null;
+    _seriesById = null;
     _vodStreamsLoaded = false;
     _seriesListLoaded = false;
     _liveStreamsLoaded = false;
@@ -3250,6 +3262,7 @@ class IptvClient implements MediaServerClient {
     if (cached != null) return cached;
     final future = _loadSeriesCached().catchError((Object e) {
       _seriesFuture = null;
+      _seriesById = null;
       throw e;
     });
     _seriesFuture = future;
@@ -3259,11 +3272,20 @@ class IptvClient implements MediaServerClient {
     _seriesCrawledCategoryIds.clear();
     if (result.isEmpty) {
       _seriesFuture = null;
+      _seriesById = null;
     } else {
       _seriesListLoaded = true;
     }
     await _recordMemoStamp(IptvSearchIndex.typeSeries);
     return result;
+  }
+
+  /// The by-id index for the memoized series list (A8). The list itself
+  /// is the source of truth; the map is built once from it and rebuilt
+  /// after any memo clear (every clear site nulls [_seriesById]).
+  Future<Map<int, XtreamSeries>> _seriesByIdMap() async {
+    final list = await _seriesList();
+    return _seriesById ??= {for (final series in list) series.seriesId: series};
   }
 
   /// Disk first (build #11), same shape as [_loadVodStreamsCached]: the
@@ -3458,7 +3480,7 @@ class IptvClient implements MediaServerClient {
   }
 
   Future<String> _fetchM3uPlaylistText() async {
-    final response = await _http.get(Uri.parse(_m3u.playlistUrl)).timeout(const Duration(seconds: 30));
+    final response = await _http.get(Uri.parse(_m3u.playlistUrl)).timeout(MediaServerTimeouts.response);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw MediaServerHttpException(
         type: MediaServerHttpErrorType.unknown,
@@ -4482,6 +4504,7 @@ class IptvClient implements MediaServerClient {
     );
     if (disk == null) return;
     _seriesFuture = Future.value(disk.rows);
+    _seriesById = null;
     _seriesListLoaded = true;
     _seriesLoadSource = 'disk';
     _memoSyncStamp[IptvSearchIndex.typeSeries] = disk.fetchedAt;
@@ -4789,7 +4812,7 @@ class IptvClient implements MediaServerClient {
         if (seriesId == null) return null;
         // 1.2.11: index first — see 'movie' above.
         var found = (await _resolveIndexRow(IptvSearchIndex.typeSeries, seriesId))?.toSeries();
-        found ??= (await _seriesList()).where((s) => s.seriesId == seriesId).firstOrNull;
+        found ??= (await _seriesByIdMap())[seriesId];
         if (found == null) return null;
         final seriesFavorites = await _favoriteItems();
         final seriesCategoryNames = await _seriesCategoryNames();
@@ -4819,7 +4842,7 @@ class IptvClient implements MediaServerClient {
           if (episode == null) continue;
           // 1.2.11: index first for the series row — see 'movie' above.
           var series = (await _resolveIndexRow(IptvSearchIndex.typeSeries, seriesId))?.toSeries();
-          series ??= (await _seriesList()).where((s) => s.seriesId == seriesId).firstOrNull;
+          series ??= (await _seriesByIdMap())[seriesId];
           if (series == null) return null;
           final episodeFavorites = await _favoriteItems();
           final episodeResume = await _resumeItems();
@@ -4880,7 +4903,7 @@ class IptvClient implements MediaServerClient {
       final seriesId = int.tryParse(parts[1]);
       final seasonNum = parts.length >= 3 ? int.tryParse(parts[2]) : null;
       if (seriesId == null || seasonNum == null) return const [];
-      final series = (await _seriesList()).where((s) => s.seriesId == seriesId).firstOrNull;
+      final series = (await _seriesByIdMap())[seriesId];
       if (series == null) return const [];
       final info = await _seriesInfo(seriesId);
       final seasonEpisodes = info.episodesBySeason[seasonNum];
@@ -4908,7 +4931,7 @@ class IptvClient implements MediaServerClient {
     if (parts[0] != 'series') return const [];
     final seriesId = int.tryParse(parts[1]);
     if (seriesId == null) return const [];
-    final series = (await _seriesList()).where((s) => s.seriesId == seriesId).firstOrNull;
+    final series = (await _seriesByIdMap())[seriesId];
     if (series == null) return const [];
     final info = await _seriesInfo(seriesId);
     final seasons = info.episodesBySeason.keys.toList()..sort();

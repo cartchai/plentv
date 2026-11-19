@@ -28,15 +28,13 @@ class DownloadArtworkService {
 
   const DownloadArtworkService({required this.storageService, required this.http});
 
-  static String normalizeKey(String pathOrUrl) => artworkStorageKey(pathOrUrl);
-
   static String? localPathSync(DownloadStorageService storageService, ServerId serverId, String? pathOrUrl) {
     if (pathOrUrl == null || pathOrUrl.isEmpty) return null;
-    return storageService.getArtworkPathSync(serverId, normalizeKey(pathOrUrl));
+    return storageService.getArtworkPathSync(serverId, artworkStorageKey(pathOrUrl));
   }
 
   Future<String> localPath(ServerId serverId, String pathOrUrl) {
-    return storageService.getArtworkPathFromThumb(serverId, normalizeKey(pathOrUrl));
+    return storageService.getArtworkPathFromThumb(serverId, artworkStorageKey(pathOrUrl));
   }
 
   Future<bool> existsUsable(ServerId serverId, String pathOrUrl) async {

@@ -226,6 +226,9 @@ const _seriesLastPlayedRequestTimeout = Duration(seconds: 3);
 const _seriesLastPlayedBudget = Duration(seconds: 4);
 
 const _childrenPageSize = 500;
+
+/// Backend API page size for paged lists — server pagination, deliberately
+/// independent of the shared UI list size ([defaultListPageSize]).
 const _pagedListPageSize = 200;
 
 /// Ceiling on the one dedicated-resume-route window that feeds every Emby

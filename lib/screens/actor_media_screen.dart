@@ -59,7 +59,6 @@ class _ActorMediaScreenState extends BaseMediaListDetailScreen<ActorMediaScreen>
         PaginatedItemLoader<MediaItem, ActorMediaScreen>,
         PaginatedItemUpdatable<ActorMediaScreen>,
         StandardPaginatedView<MediaItem, ActorMediaScreen> {
-  static const int _pageSize = 200;
 
   /// Keeps a long biography to a readable line length on wide layouts.
   static const double _biographyMaxWidth = 800;
@@ -162,7 +161,7 @@ class _ActorMediaScreenState extends BaseMediaListDetailScreen<ActorMediaScreen>
   @override
   Future<void> loadItems() {
     return loadStandardPaginatedItems(
-      pageSize: _pageSize,
+      pageSize: defaultListPageSize,
       errorMessageFor: (error, stackTrace) => localizedLoadErrorMessage(error, stackTrace, context: widget.actorName),
       onLoaded: (loadedCount, totalCount) {
         appLogger.d('Loaded $loadedCount of $totalCount items for actor: ${widget.actorName}');
@@ -289,7 +288,7 @@ class _ActorMediaScreenState extends BaseMediaListDetailScreen<ActorMediaScreen>
             totalItems: totalSize,
             itemAt: (index) => loadedItems[index],
             onRefresh: updateItem,
-            onSkeletonVisible: (index) => ensureIndexLoaded(index, pageSize: _pageSize),
+            onSkeletonVisible: (index) => ensureIndexLoaded(index, pageSize: defaultListPageSize),
             onFirstRowNavigateUp: _biographyExpandable ? _focusBiography : null,
           ),
       ],

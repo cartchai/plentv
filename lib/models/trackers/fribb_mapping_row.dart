@@ -1,5 +1,6 @@
-/// One row of Fribb's `anime-list-mini.json` (Fribb/anime-lists), as the
-/// `fribb` table of anime-mappings carries it.
+/// One row of cross-service anime id mappings (AniDB/MAL/AniList/TVDB/TMDB/
+/// IMDb/Simkl). The mappings file that used to supply these rows was removed
+/// in 1.5.2; the row type stays for the lookup interfaces and their tests.
 class FribbMappingRow {
   final int? anidbId;
   final int? anilistId;
