@@ -667,10 +667,14 @@ void main() {
       var programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to);
       expect(programs.map((p) => p.title), ['Fox 2 Minneapolis News']);
 
-      // Bust the guide, record the parse count, fetch again.
+      // Bust the in-memory caches only (refreshEpgCache is a bust, not
+      // a load — the next fetch lazily re-reads the kept guide) and
+      // record the parse count. The fetch below is NOT forced: the
+      // kept guide is fresh, so no background refresh starts and the
+      // count measures only what the fetch itself triggers.
       final parsesBefore = support.debugFeedParseCount;
       await support.refreshEpgCache();
-      programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to, force: true);
+      programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to);
       expect(programs.map((p) => p.title), ['Fox 2 Minneapolis News']);
       // 1.4.4 F6: the fetch serves the kept store guide, whose window
       // starts empty — _ensureGuideWindow fills it from the store (a
@@ -680,13 +684,7 @@ void main() {
       // fetch re-downloaded + parsed with the window included and the
       // test asserted zero slides — slides are cheap store fills now,
       // their count varies with load timing, so the parse count below
-      // is the guard, not the slide count.) The background refresh
-      // SHA-skips the unchanged feed, so it parses nothing either —
-      // but it lands behind the fetch's return, so poll for the gate
-      // to settle before reading the count.
-      for (var i = 0; i < 600 && IptvHeavyWorkGate.instance.isBusy; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
+      // is the guard, not the slide count.)
       expect(
         support.debugFeedParseCount,
         parsesBefore,
