@@ -194,6 +194,9 @@ void main() {
             callOrder.add('reschedule');
             return (<Task>[], <Task>[]);
           },
+          taskForId: null,
+          pauseTask: null,
+          resumeTask: null,
         ),
       );
       addTearDown(manager.dispose);
@@ -2312,6 +2315,9 @@ void main() {
           },
           cleanUpOrphanedTempFiles: () async => 0,
           rescheduleKilledTasks: () async => (<Task>[], <Task>[]),
+          taskForId: null,
+          pauseTask: null,
+          resumeTask: null,
         ),
       );
       addTearDown(manager.dispose);
@@ -2643,6 +2649,9 @@ void main() {
           resetGroup: () async => 0,
           cleanUpOrphanedTempFiles: () async => 0,
           rescheduleKilledTasks: () async => (<Task>[], <Task>[]),
+          taskForId: null,
+          pauseTask: null,
+          resumeTask: null,
         ),
       );
       addTearDown(manager.dispose);
@@ -2890,6 +2899,9 @@ void main() {
           resetGroup: () async => 0,
           cleanUpOrphanedTempFiles: () async => 0,
           rescheduleKilledTasks: () async => (<Task>[], <Task>[]),
+          taskForId: null,
+          pauseTask: null,
+          resumeTask: null,
         ),
       );
       addTearDown(manager.dispose);

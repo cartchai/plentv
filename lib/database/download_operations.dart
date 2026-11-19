@@ -624,6 +624,25 @@ extension DownloadDatabaseOperations on AppDatabase {
     );
   }
 
+  /// Set the row's error message WITHOUT touching the retry count
+  /// (1.4.4 F3): a pause-with-reason is not a failed attempt, so it
+  /// must not consume one of the app retries.
+  Future<void> setDownloadErrorMessage(String globalKey, String errorMessage) async {
+    await customUpdate(
+      'UPDATE downloaded_media SET error_message = ? WHERE global_key = ?',
+      variables: [Variable<String>(errorMessage), Variable<String>(globalKey)],
+      updates: {downloadedMedia},
+    );
+  }
+
+  /// Store the 1.4.4 F0 Range-probe JSON on the row (see
+  /// [DownloadedMedia.resumeProbe]). A null [probeJson] clears it.
+  Future<void> updateResumeProbe(String globalKey, String? probeJson) async {
+    await (update(downloadedMedia)..where((t) => t.globalKey.equals(globalKey))).write(
+      DownloadedMediaCompanion(resumeProbe: Value(probeJson)),
+    );
+  }
+
   Future<void> clearDownloadError(String globalKey) async {
     await (update(downloadedMedia)..where((t) => t.globalKey.equals(globalKey))).write(
       const DownloadedMediaCompanion(errorMessage: Value(null), retryCount: Value(0)),

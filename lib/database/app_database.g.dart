@@ -276,6 +276,17 @@ class $DownloadedMediaTable extends DownloadedMedia
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _resumeProbeMeta = const VerificationMeta(
+    'resumeProbe',
+  );
+  @override
+  late final GeneratedColumn<String> resumeProbe = GeneratedColumn<String>(
+    'resume_probe',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -302,6 +313,7 @@ class $DownloadedMediaTable extends DownloadedMedia
     mediaSourceId,
     libraryId,
     libraryTitle,
+    resumeProbe,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -499,6 +511,15 @@ class $DownloadedMediaTable extends DownloadedMedia
         ),
       );
     }
+    if (data.containsKey('resume_probe')) {
+      context.handle(
+        _resumeProbeMeta,
+        resumeProbe.isAcceptableOrUnknown(
+          data['resume_probe']!,
+          _resumeProbeMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -604,6 +625,10 @@ class $DownloadedMediaTable extends DownloadedMedia
         DriftSqlType.string,
         data['${effectivePrefix}library_title'],
       ),
+      resumeProbe: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resume_probe'],
+      ),
     );
   }
 
@@ -650,6 +675,14 @@ class DownloadedMediaItem extends DataClass
   /// Null for rows enqueued before v23 or when resolution was skipped/failed.
   final String? libraryId;
   final String? libraryTitle;
+
+  /// 1.4.4 F0: the Range-probe result for this row's download URL, as
+  /// JSON (`{"ranges":bool|null,"etag":"strong"|"weak"|"absent",
+  /// "status":206|200|null,"probedAt":ms,"fromZeroRestarts":n}`).
+  /// Null before the first probe. The retry decision (F2/F3) and the
+  /// Downloads screen read it instead of guessing whether the server
+  /// allows resuming. Never holds the URL itself.
+  final String? resumeProbe;
   const DownloadedMediaItem({
     required this.id,
     required this.serverId,
@@ -675,6 +708,7 @@ class DownloadedMediaItem extends DataClass
     this.mediaSourceId,
     this.libraryId,
     this.libraryTitle,
+    this.resumeProbe,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -730,6 +764,9 @@ class DownloadedMediaItem extends DataClass
     }
     if (!nullToAbsent || libraryTitle != null) {
       map['library_title'] = Variable<String>(libraryTitle);
+    }
+    if (!nullToAbsent || resumeProbe != null) {
+      map['resume_probe'] = Variable<String>(resumeProbe);
     }
     return map;
   }
@@ -788,6 +825,9 @@ class DownloadedMediaItem extends DataClass
       libraryTitle: libraryTitle == null && nullToAbsent
           ? const Value.absent()
           : Value(libraryTitle),
+      resumeProbe: resumeProbe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resumeProbe),
     );
   }
 
@@ -825,6 +865,7 @@ class DownloadedMediaItem extends DataClass
       mediaSourceId: serializer.fromJson<String?>(json['mediaSourceId']),
       libraryId: serializer.fromJson<String?>(json['libraryId']),
       libraryTitle: serializer.fromJson<String?>(json['libraryTitle']),
+      resumeProbe: serializer.fromJson<String?>(json['resumeProbe']),
     );
   }
   @override
@@ -855,6 +896,7 @@ class DownloadedMediaItem extends DataClass
       'mediaSourceId': serializer.toJson<String?>(mediaSourceId),
       'libraryId': serializer.toJson<String?>(libraryId),
       'libraryTitle': serializer.toJson<String?>(libraryTitle),
+      'resumeProbe': serializer.toJson<String?>(resumeProbe),
     };
   }
 
@@ -883,6 +925,7 @@ class DownloadedMediaItem extends DataClass
     Value<String?> mediaSourceId = const Value.absent(),
     Value<String?> libraryId = const Value.absent(),
     Value<String?> libraryTitle = const Value.absent(),
+    Value<String?> resumeProbe = const Value.absent(),
   }) => DownloadedMediaItem(
     id: id ?? this.id,
     serverId: serverId ?? this.serverId,
@@ -920,6 +963,7 @@ class DownloadedMediaItem extends DataClass
         : this.mediaSourceId,
     libraryId: libraryId.present ? libraryId.value : this.libraryId,
     libraryTitle: libraryTitle.present ? libraryTitle.value : this.libraryTitle,
+    resumeProbe: resumeProbe.present ? resumeProbe.value : this.resumeProbe,
   );
   DownloadedMediaItem copyWithCompanion(DownloadedMediaCompanion data) {
     return DownloadedMediaItem(
@@ -975,6 +1019,9 @@ class DownloadedMediaItem extends DataClass
       libraryTitle: data.libraryTitle.present
           ? data.libraryTitle.value
           : this.libraryTitle,
+      resumeProbe: data.resumeProbe.present
+          ? data.resumeProbe.value
+          : this.resumeProbe,
     );
   }
 
@@ -1004,7 +1051,8 @@ class DownloadedMediaItem extends DataClass
           ..write('mediaIndex: $mediaIndex, ')
           ..write('mediaSourceId: $mediaSourceId, ')
           ..write('libraryId: $libraryId, ')
-          ..write('libraryTitle: $libraryTitle')
+          ..write('libraryTitle: $libraryTitle, ')
+          ..write('resumeProbe: $resumeProbe')
           ..write(')'))
         .toString();
   }
@@ -1035,6 +1083,7 @@ class DownloadedMediaItem extends DataClass
     mediaSourceId,
     libraryId,
     libraryTitle,
+    resumeProbe,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -1063,7 +1112,8 @@ class DownloadedMediaItem extends DataClass
           other.mediaIndex == this.mediaIndex &&
           other.mediaSourceId == this.mediaSourceId &&
           other.libraryId == this.libraryId &&
-          other.libraryTitle == this.libraryTitle);
+          other.libraryTitle == this.libraryTitle &&
+          other.resumeProbe == this.resumeProbe);
 }
 
 class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
@@ -1091,6 +1141,7 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
   final Value<String?> mediaSourceId;
   final Value<String?> libraryId;
   final Value<String?> libraryTitle;
+  final Value<String?> resumeProbe;
   const DownloadedMediaCompanion({
     this.id = const Value.absent(),
     this.serverId = const Value.absent(),
@@ -1116,6 +1167,7 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
     this.mediaSourceId = const Value.absent(),
     this.libraryId = const Value.absent(),
     this.libraryTitle = const Value.absent(),
+    this.resumeProbe = const Value.absent(),
   });
   DownloadedMediaCompanion.insert({
     this.id = const Value.absent(),
@@ -1142,6 +1194,7 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
     this.mediaSourceId = const Value.absent(),
     this.libraryId = const Value.absent(),
     this.libraryTitle = const Value.absent(),
+    this.resumeProbe = const Value.absent(),
   }) : serverId = Value(serverId),
        ratingKey = Value(ratingKey),
        globalKey = Value(globalKey),
@@ -1172,6 +1225,7 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
     Expression<String>? mediaSourceId,
     Expression<String>? libraryId,
     Expression<String>? libraryTitle,
+    Expression<String>? resumeProbe,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1200,6 +1254,7 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
       if (mediaSourceId != null) 'media_source_id': mediaSourceId,
       if (libraryId != null) 'library_id': libraryId,
       if (libraryTitle != null) 'library_title': libraryTitle,
+      if (resumeProbe != null) 'resume_probe': resumeProbe,
     });
   }
 
@@ -1228,6 +1283,7 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
     Value<String?>? mediaSourceId,
     Value<String?>? libraryId,
     Value<String?>? libraryTitle,
+    Value<String?>? resumeProbe,
   }) {
     return DownloadedMediaCompanion(
       id: id ?? this.id,
@@ -1254,6 +1310,7 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
       mediaSourceId: mediaSourceId ?? this.mediaSourceId,
       libraryId: libraryId ?? this.libraryId,
       libraryTitle: libraryTitle ?? this.libraryTitle,
+      resumeProbe: resumeProbe ?? this.resumeProbe,
     );
   }
 
@@ -1336,6 +1393,9 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
     if (libraryTitle.present) {
       map['library_title'] = Variable<String>(libraryTitle.value);
     }
+    if (resumeProbe.present) {
+      map['resume_probe'] = Variable<String>(resumeProbe.value);
+    }
     return map;
   }
 
@@ -1365,7 +1425,8 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
           ..write('mediaIndex: $mediaIndex, ')
           ..write('mediaSourceId: $mediaSourceId, ')
           ..write('libraryId: $libraryId, ')
-          ..write('libraryTitle: $libraryTitle')
+          ..write('libraryTitle: $libraryTitle, ')
+          ..write('resumeProbe: $resumeProbe')
           ..write(')'))
         .toString();
   }
@@ -7398,6 +7459,7 @@ typedef $$DownloadedMediaTableCreateCompanionBuilder =
       Value<String?> mediaSourceId,
       Value<String?> libraryId,
       Value<String?> libraryTitle,
+      Value<String?> resumeProbe,
     });
 typedef $$DownloadedMediaTableUpdateCompanionBuilder =
     DownloadedMediaCompanion Function({
@@ -7425,6 +7487,7 @@ typedef $$DownloadedMediaTableUpdateCompanionBuilder =
       Value<String?> mediaSourceId,
       Value<String?> libraryId,
       Value<String?> libraryTitle,
+      Value<String?> resumeProbe,
     });
 
 class $$DownloadedMediaTableFilterComposer
@@ -7553,6 +7616,11 @@ class $$DownloadedMediaTableFilterComposer
 
   ColumnFilters<String> get libraryTitle => $composableBuilder(
     column: $table.libraryTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resumeProbe => $composableBuilder(
+    column: $table.resumeProbe,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7685,6 +7753,11 @@ class $$DownloadedMediaTableOrderingComposer
     column: $table.libraryTitle,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get resumeProbe => $composableBuilder(
+    column: $table.resumeProbe,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DownloadedMediaTableAnnotationComposer
@@ -7795,6 +7868,11 @@ class $$DownloadedMediaTableAnnotationComposer
     column: $table.libraryTitle,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get resumeProbe => $composableBuilder(
+    column: $table.resumeProbe,
+    builder: (column) => column,
+  );
 }
 
 class $$DownloadedMediaTableTableManager
@@ -7858,6 +7936,7 @@ class $$DownloadedMediaTableTableManager
                 Value<String?> mediaSourceId = const Value.absent(),
                 Value<String?> libraryId = const Value.absent(),
                 Value<String?> libraryTitle = const Value.absent(),
+                Value<String?> resumeProbe = const Value.absent(),
               }) => DownloadedMediaCompanion(
                 id: id,
                 serverId: serverId,
@@ -7883,6 +7962,7 @@ class $$DownloadedMediaTableTableManager
                 mediaSourceId: mediaSourceId,
                 libraryId: libraryId,
                 libraryTitle: libraryTitle,
+                resumeProbe: resumeProbe,
               ),
           createCompanionCallback:
               ({
@@ -7910,6 +7990,7 @@ class $$DownloadedMediaTableTableManager
                 Value<String?> mediaSourceId = const Value.absent(),
                 Value<String?> libraryId = const Value.absent(),
                 Value<String?> libraryTitle = const Value.absent(),
+                Value<String?> resumeProbe = const Value.absent(),
               }) => DownloadedMediaCompanion.insert(
                 id: id,
                 serverId: serverId,
@@ -7935,6 +8016,7 @@ class $$DownloadedMediaTableTableManager
                 mediaSourceId: mediaSourceId,
                 libraryId: libraryId,
                 libraryTitle: libraryTitle,
+                resumeProbe: resumeProbe,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

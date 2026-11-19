@@ -77,6 +77,14 @@ class DownloadedMedia extends Table {
   /// Null for rows enqueued before v23 or when resolution was skipped/failed.
   TextColumn get libraryId => text().nullable()();
   TextColumn get libraryTitle => text().nullable()();
+
+  /// 1.4.4 F0: the Range-probe result for this row's download URL, as
+  /// JSON (`{"ranges":bool|null,"etag":"strong"|"weak"|"absent",
+  /// "status":206|200|null,"probedAt":ms,"fromZeroRestarts":n}`).
+  /// Null before the first probe. The retry decision (F2/F3) and the
+  /// Downloads screen read it instead of guessing whether the server
+  /// allows resuming. Never holds the URL itself.
+  TextColumn get resumeProbe => text().nullable()();
 }
 
 /// Profile ownership for shared physical downloads.

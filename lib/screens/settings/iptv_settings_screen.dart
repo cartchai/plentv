@@ -197,6 +197,14 @@ class IptvSettingsScreen extends StatelessWidget {
                   title: t.iptv.largeDownloadsWifiOnly,
                   subtitle: t.iptv.largeDownloadsWifiOnlyDescription,
                 ),
+                // 1.4.4: pause IPTV downloads while a stream plays — off by
+                // default (downloads keep running while you watch).
+                SettingSwitchTile(
+                  pref: settings.SettingsService.iptvPauseDownloadsWhileWatching,
+                  icon: Symbols.pause_rounded,
+                  title: t.iptv.pauseDownloadsWhileWatching,
+                  subtitle: t.iptv.pauseDownloadsWhileWatchingDescription,
+                ),
               ],
             ),
           ),

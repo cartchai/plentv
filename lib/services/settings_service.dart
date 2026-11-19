@@ -736,6 +736,10 @@ class SettingsService extends BaseSharedPreferencesService {
   static const downloadOnWifiOnly = BoolPref('download_on_wifi_only');
   static const autoRemoveWatchedDownloads = BoolPref('auto_remove_watched_downloads');
 
+  /// 1.4.4: pause IPTV downloads while a stream is playing (Settings →
+  /// IPTV). Off by default — downloads keep running while you watch.
+  static const iptvPauseDownloadsWhileWatching = BoolPref('iptv_pause_downloads_while_watching');
+
   /// Set once the user has seen the pre-flight "background downloads are
   /// blocked" dialog. The persistent Downloads-screen banner covers repeat
   /// offenders, so the interrupting dialog is shown exactly once.

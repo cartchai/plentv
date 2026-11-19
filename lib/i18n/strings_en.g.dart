@@ -5872,6 +5872,9 @@ class Translations$downloads$en {
 	/// en: 'the partial download could not be resumed'
 	String get reasonCannotResume => 'the partial download could not be resumed';
 
+	/// en: 'Paused — this download keeps starting over from the beginning because the server does not allow picking up where it left off'
+	String get pausedCannotResume => 'Paused — this download keeps starting over from the beginning because the server does not allow picking up where it left off';
+
 	/// en: 'this device is out of storage'
 	String get reasonDeviceStorageFull => 'this device is out of storage';
 
@@ -7217,6 +7220,12 @@ class Translations$iptv$en {
 
 	/// en: 'Large downloads (guide feed, catalog sync) wait for Wi-Fi instead of using mobile data'
 	String get largeDownloadsWifiOnlyDescription => 'Large downloads (guide feed, catalog sync) wait for Wi-Fi instead of using mobile data';
+
+	/// en: 'Pause downloads while watching'
+	String get pauseDownloadsWhileWatching => 'Pause downloads while watching';
+
+	/// en: 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch'
+	String get pauseDownloadsWhileWatchingDescription => 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch';
 
 	/// en: 'No IPTV connections'
 	String get backgroundSyncNoConnections => 'No IPTV connections';
@@ -12467,6 +12476,7 @@ extension on Translations {
 			'downloads.errorPostProcessing' => ({required Object reason}) => 'Post-processing failed: ${reason}',
 			'downloads.reasonFileNotSaved' => 'the file could not be saved on this device',
 			'downloads.reasonCannotResume' => 'the partial download could not be resumed',
+			'downloads.pausedCannotResume' => 'Paused — this download keeps starting over from the beginning because the server does not allow picking up where it left off',
 			'downloads.reasonDeviceStorageFull' => 'this device is out of storage',
 			'downloads.notificationDownloading' => 'Downloading...',
 			'downloads.notificationComplete' => 'Download complete',
@@ -12677,9 +12687,9 @@ extension on Translations {
 			'metadataEdit.artworkUpdateFailed' => 'Failed to update artwork',
 			'metadataEdit.noArtworkAvailable' => 'No artwork available',
 			'metadataEdit.artworkOption' => ({required Object index}) => 'Artwork option ${index}',
-			'metadataEdit.selectedArtworkOption' => ({required Object index}) => 'Artwork option ${index}, selected',
 			_ => null,
 		} ?? switch (path) {
+			'metadataEdit.selectedArtworkOption' => ({required Object index}) => 'Artwork option ${index}, selected',
 			'metadataEdit.notSet' => 'Not set',
 			'metadataEdit.libraryDefault' => 'Library default',
 			'metadataEdit.accountDefault' => 'Account default',
@@ -12975,6 +12985,8 @@ extension on Translations {
 			'iptv.backgroundSyncMeteredDeferred' => 'Sync incomplete — will finish on Wi-Fi',
 			'iptv.largeDownloadsWifiOnly' => 'Wi-Fi only for large downloads',
 			'iptv.largeDownloadsWifiOnlyDescription' => 'Large downloads (guide feed, catalog sync) wait for Wi-Fi instead of using mobile data',
+			'iptv.pauseDownloadsWhileWatching' => 'Pause downloads while watching',
+			'iptv.pauseDownloadsWhileWatchingDescription' => 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch',
 			'iptv.backgroundSyncNoConnections' => 'No IPTV connections',
 			'iptv.catalogSyncNow' => 'Sync catalog now',
 			'iptv.catalogSyncNowDescription' => 'Download all titles for movies, TV and channels now',
@@ -13189,11 +13201,11 @@ extension on Translations {
 			'iptv.catalogDiagnosticsCategoryCount' => ({required Object count}) => 'Series categories: ${count}',
 			'iptv.catalogDiagnosticsPerCategory' => ({required Object category, required Object count}) => 'In ${category}: ${count}',
 			'iptv.catalogDiagnosticsDisabledInitials' => ({required Object count}) => 'Category initials turned off: ${count}',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.catalogDiagnosticsDisabledCategories' => ({required Object count}) => 'Categories turned off: ${count}',
 			'iptv.guideCoverageTitle' => 'Guide coverage',
 			'iptv.guideCoverageNone' => 'No guide data loaded yet — open Live TV and the guide fills this in.',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.guideCoverageLine' => ({required Object percent, required Object withPrograms, required Object total}) => '${percent}% of guide channels have programmes (${withPrograms} of ${total})',
 			'iptv.guideCoverageSplit' => ({required Object byId, required Object byName, required Object shortEpg, required Object none}) => 'From feed by channel id: ${byId} · by name: ${byName} · short guide: ${shortEpg} · no data: ${none}',
 			'iptv.guideCoverageUnknown' => ({required Object count}) => '${count} from an older cache (source unknown)',

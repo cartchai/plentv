@@ -1,10 +1,12 @@
 // ignore_for_file: prefer_initializing_formals
 
 import 'dart:async';
+import 'dart:convert';
 import '../media/ids.dart';
 import 'dart:io';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/foundation.dart' show listEquals, visibleForTesting;
 import 'package:path/path.dart' as path;
 import 'package:plezy/utils/media_server_http_client.dart';
@@ -22,6 +24,7 @@ import 'api_cache.dart';
 import 'connectivity_probe.dart';
 import 'download_artwork_helpers.dart';
 import 'download_artwork_service.dart';
+import 'iptv/iptv_playback_activity.dart';
 import 'jellyfin_cache_resolver.dart';
 import 'plex_api_cache.dart';
 import 'settings_service.dart';
@@ -56,7 +59,76 @@ typedef NativeDownloaderOps = ({
   Future<int> Function() resetGroup,
   Future<int> Function() cleanUpOrphanedTempFiles,
   Future<(List<Task>, List<Task>)> Function() rescheduleKilledTasks,
+  // 1.4.4: nullable pause/resume seams — present only when a test injects
+  // them; production falls back to the real FileDownloader calls.
+  Future<Task?> Function(String taskId)? taskForId,
+  Future<bool> Function(Task task)? pauseTask,
+  Future<bool> Function(Task task)? resumeTask,
 });
+
+/// 1.4.4 F0/F2: the result of a single `Range: bytes=0-0` probe against a
+/// download URL. Stored as JSON on the `downloaded_media` row (and cached
+/// in-session by URL) so the retry decision can tell "this server does not
+/// allow picking up where it left off" from "never probed".
+class _ResumeProbe {
+  const _ResumeProbe({
+    required this.ranges,
+    required this.etagKind,
+    required this.statusCode,
+    required this.probedAtMs,
+    this.fromZeroRestarts = 0,
+  });
+
+  /// True when the server answered 206 / `Accept-Ranges: bytes`; false when
+  /// it answered 200 without the header; null when the probe never ran or
+  /// errored (unknown — resume is not proven, but not disproven either).
+  final bool? ranges;
+
+  /// 'strong' | 'weak' | 'absent' — a weak or absent ETag kills a resume
+  /// run on the native side even when ranges are advertised.
+  final String etagKind;
+  final int? statusCode;
+  final int probedAtMs;
+
+  /// 1.4.4 F3: how many times this download restarted from 0% after a
+  /// retry. Counted once per restart, capped at 1 — the second failure
+  /// pauses the download with a surfaced reason instead of looping.
+  final int fromZeroRestarts;
+
+  Map<String, Object?> toJson() => {
+    'ranges': ranges,
+    'etag': etagKind,
+    'status': statusCode,
+    'probedAt': probedAtMs,
+    'fromZeroRestarts': fromZeroRestarts,
+  };
+
+  static _ResumeProbe? fromJson(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final map = jsonDecode(raw);
+      if (map is! Map<String, dynamic>) return null;
+      return _ResumeProbe(
+        ranges: map['ranges'] as bool?,
+        etagKind: (map['etag'] as String?) ?? 'absent',
+        statusCode: (map['status'] as num?)?.toInt(),
+        probedAtMs: (map['probedAt'] as num?)?.toInt() ?? 0,
+        fromZeroRestarts: (map['fromZeroRestarts'] as num?)?.toInt() ?? 0,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _ResumeProbe copyWith({bool? ranges, String? etagKind, int? statusCode, int? fromZeroRestarts}) =>
+      _ResumeProbe(
+        ranges: ranges ?? this.ranges,
+        etagKind: etagKind ?? this.etagKind,
+        statusCode: statusCode ?? this.statusCode,
+        probedAtMs: probedAtMs,
+        fromZeroRestarts: fromZeroRestarts ?? this.fromZeroRestarts,
+      );
+}
 
 typedef NativeTaskPartition = ({List<Task> current, List<Task> stale});
 
@@ -200,6 +272,26 @@ class DownloadManagerService {
   static const _nativeRetries = 5;
   static const _defaultAutoRetryDelay = Duration(seconds: 30);
   static const _progressDebounceDelay = Duration(seconds: 2);
+
+  /// 1.4.4 F1: the stable task id for one download file — derived from the
+  /// download's globalKey + part index (SHA-256, never Dart hashCode, which
+  /// is randomized per process), so a retry, a restart, and a re-enqueue all
+  /// address the SAME native task and its resume data instead of a fresh
+  /// random id that makes the partial file look orphaned.
+  static String taskIdForDownload(String globalKey, int partIndex) {
+    final digest = crypto.sha256.convert(utf8.encode('$globalKey:$partIndex'));
+    return 'pleztv-dl-${digest.toString().substring(0, 20)}';
+  }
+
+  // 1.4.4 F0/F2: Range-probe results by download URL, this session.
+  final Map<String, _ResumeProbe> _probeCache = {};
+  // 1.4.4 F3: last progress fraction per download, and the progress it had
+  // when it last entered waitingToRetry — the from-0 restart detector.
+  final Map<String, double> _lastProgress = {};
+  final Map<String, double> _progressBeforeRetry = {};
+  // 1.4.4 settings: downloads the playback gate auto-paused, so only those
+  // resume when playback stops — never one the user paused themselves.
+  final Set<String> _playbackPausedKeys = {};
   static const _videoExtensions = {'.mp4', '.ogv', '.mkv', '.m4v', '.avi'};
 
   // Keys currently being paused — prevents holding queue from promoting them
@@ -318,7 +410,11 @@ class DownloadManagerService {
            downloadPathTypeWriter ??
            ((value) => SettingsService.instance.write(SettingsService.customDownloadPathType, value)),
        _refreshDownloadStorage = downloadStorageRefresher ?? storageService.refreshCustomPath,
-       _artworkService = DownloadArtworkService(storageService: storageService, http: http ?? httpClient);
+       _artworkService = DownloadArtworkService(storageService: storageService, http: http ?? httpClient) {
+    // 1.4.4: the downloads-while-watching setting gates episode downloads
+    // on playback — registered once per manager instance; dispose removes it.
+    IptvPlaybackActivity.instance.isPlayingNotifier.addListener(_onPlaybackActivityChanged);
+  }
 
   bool get downloadsSupported => _downloadsSupportedOverride ?? platformDownloadsSupported;
 
@@ -332,6 +428,10 @@ class DownloadManagerService {
         resetGroup: () => FileDownloader().reset(group: _downloadGroup),
         cleanUpOrphanedTempFiles: FileDownloader().cleanUpOrphanedTempFiles,
         rescheduleKilledTasks: FileDownloader().rescheduleKilledTasks,
+        // 1.4.4: no injected pause/resume seams — the real calls run.
+        taskForId: null,
+        pauseTask: null,
+        resumeTask: null,
       );
 
   bool _skipDownloadsUnsupported(String operation) {
@@ -1108,7 +1208,13 @@ class DownloadManagerService {
 
           Task? bgTask;
           if (item.bgTaskId != null) {
-            bgTask = await FileDownloader().taskForId(item.bgTaskId!);
+            // 1.4.4 F6: enumerate through the injectable ops seam, not
+            // the live downloader — recovery must run (and be provable)
+            // when the downloader is not wired up. Every download task
+            // lives in the download group, so a group enumeration finds
+            // exactly the task taskForId would.
+            final nativeTasks = await _nativeOps.allTasks();
+            bgTask = nativeTasks.where((t) => t.taskId == item.bgTaskId).firstOrNull;
           }
 
           if (bgTask == null) {
@@ -1951,8 +2057,12 @@ class DownloadManagerService {
     }
   }
 
-  /// Cancel any lingering background task and reset progress before re-enqueuing.
-  Future<void> _cleanupStaleDownload(String globalKey) async {
+  /// Cancel any lingering background task before re-enqueuing. The stored
+  /// progress is reset only for a genuinely fresh start: retry/resume paths
+  /// pass `resetProgress: false` so the row keeps the progress the partial
+  /// file on disk backs (1.4.4 F1 — resetting it is what made retries
+  /// report 0% even when the file survived).
+  Future<void> _cleanupStaleDownload(String globalKey, {bool resetProgress = true}) async {
     final existingTaskId = await _database.getBgTaskId(globalKey);
     await _database.updateBgTaskId(globalKey, null);
     _pendingDownloadContext.remove(globalKey);
@@ -1961,7 +2071,7 @@ class DownloadManagerService {
       includeTaskId: existingTaskId,
       reason: 'stale task before re-download',
     );
-    await _database.updateDownloadProgress(globalKey, 0, 0, 0);
+    if (resetProgress) await _database.updateDownloadProgress(globalKey, 0, 0, 0);
   }
 
   Future<void> _requeueDownload(String globalKey, {MediaServerClient? fallbackClient}) async {
@@ -1997,7 +2107,10 @@ class DownloadManagerService {
     if (!_fileDownloaderInitialized && taskIds.isEmpty) return;
 
     try {
-      final nativeTasks = await FileDownloader().allTasks(group: _downloadGroup);
+      // 1.4.4 F1: enumerate through the injectable ops seam (the same
+      // allTasks the recovery paths use), not the live downloader —
+      // the retry path must work when the downloader is not wired up.
+      final nativeTasks = await _nativeOps.allTasks();
       for (final task in nativeTasks) {
         if (task.metaData == globalKey && task.taskId != exceptTaskId) taskIds.add(task.taskId);
       }
@@ -2097,15 +2210,23 @@ class DownloadManagerService {
       }
 
       appLogger.i('Preparing download for $globalKey');
-      await _cleanupStaleDownload(globalKey);
+      // 1.4.4 F1: a retry/resume re-enqueue keeps the row's progress — the
+      // partial file on disk backs it, and the native task resumes it.
+      await _cleanupStaleDownload(globalKey, resetProgress: false);
       if (await _isInactiveForEnqueue(globalKey)) {
         appLogger.d('Skipping enqueue for $globalKey: inactive before transition');
         await _database.removeFromQueue(globalKey);
         return true;
       }
       if (_queueBlockedByStorageFailure) return true;
-      // A stacked download resuming at a later file keeps what its stored files earned.
-      await _transitionStatus(globalKey, DownloadStatus.downloading, progress: _storedPartsPercent(existing));
+      // A single-file resume keeps the progress the row already earned; a
+      // stacked download resuming at a later file keeps what its stored
+      // files earned.
+      await _transitionStatus(
+        globalKey,
+        DownloadStatus.downloading,
+        progress: existing.partCount == 1 ? existing.progress : _storedPartsPercent(existing),
+      );
 
       final parsed = parseGlobalKey(globalKey);
       if (parsed == null) throw Exception('Invalid globalKey: $globalKey');
@@ -2148,6 +2269,13 @@ class DownloadManagerService {
       if (resolution.mediaSourceId != null && resolution.mediaSourceId != existing.mediaSourceId) {
         await _database.updateDownloadMediaSource(globalKey, resolution.mediaSourceId);
       }
+
+      // 1.4.4 F0/F2: probe whether the server allows picking up where a
+      // partial left off, before the task is enqueued; the result is stored
+      // on the row so the retry decision can read it later. The probe never
+      // logs the URL (it embeds credentials).
+      final probe = await _probeResumeSupport(resolution.videoUrl!);
+      await _database.updateResumeProbe(globalKey, jsonEncode(probe.toJson()));
 
       if (await _isCancelledOrDeleted(globalKey)) {
         appLogger.d('Skipping enqueue for $globalKey: cancelled during preparation');
@@ -2323,6 +2451,7 @@ class DownloadManagerService {
         await _cleanupSafTargetFile(safDirUri, fileName);
 
         task = UriDownloadTask(
+          taskId: taskIdForDownload(globalKey, partIndex),
           url: url,
           filename: fileName,
           directoryUri: Uri.parse(safDirUri),
@@ -2352,21 +2481,18 @@ class DownloadManagerService {
         }
         final downloadFilePath = partTarget(firstFilePath);
 
-        // Clean up partial files from previous attempts to prevent
-        // background_downloader from creating numbered copies (File (1).mp4).
-        // The file name carries this item's identity, so anything at the
-        // target is this item's own leftover — never another server's or
-        // library's copy of the same title, nor a user file.
-        await Future.wait([
-          _deleteFileIfExists(File(downloadFilePath), 'stale video before re-download'),
-          _deleteFileIfExists(File('$downloadFilePath.part'), 'stale .part before re-download'),
-        ]);
-
+        // 1.4.4 F1: do NOT delete the target or its .part here. A retry /
+        // restart re-enqueues the same stable task id (below), so the
+        // partial file is the resume base — deleting it is what made every
+        // retry restart from 0%. The downloader itself discards the partial
+        // when it cannot resume (no resume data / server sent 200 to a Range
+        // request), and only then.
         await File(downloadFilePath).parent.create(recursive: true);
 
         final taskLocation = await _storageService.resolveTaskDirectory(downloadFilePath);
 
         task = DownloadTask(
+          taskId: taskIdForDownload(globalKey, partIndex),
           url: url,
           filename: path.basename(downloadFilePath),
           directory: taskLocation.directory,
@@ -2501,6 +2627,19 @@ class DownloadManagerService {
     final speedBytesPerSec = update.hasNetworkSpeed ? update.networkSpeed * 1024 * 1024 : 0.0;
     final fileBytes = update.hasExpectedFileSize ? update.expectedFileSize : 0;
     final fileDownloadedBytes = fileBytes > 0 ? (update.progress * fileBytes).round() : 0;
+
+    // 1.4.4 F3: from-0 restart detection (single-file rows only). When a
+    // retry restarts the file from 0% instead of resuming, the first progress
+    // after the retry is near 0 while the pre-retry progress was substantial.
+    // Count it once per retry (the marker is consumed below) and persist it
+    // on the row's probe — the waiting-to-retry / failed handlers read it.
+    _lastProgress[globalKey] = update.progress;
+    if (partCount == 1) {
+      final before = _progressBeforeRetry.remove(globalKey);
+      if (before != null && before >= 0.10 && update.progress <= 0.05) {
+        await _recordFromZeroRestart(globalKey, before: before);
+      }
+    }
     // The file this task fetches is the row's first one not stored yet.
     final partIndex = existing.nextMissingPartIndex ?? partCount - 1;
     final progress = ((partIndex + update.progress) * 100 / partCount).round().clamp(0, 100);
@@ -2604,7 +2743,7 @@ class DownloadManagerService {
         case TaskStatus.paused:
           appLogger.d('Download paused by system for $globalKey');
         case TaskStatus.waitingToRetry:
-          appLogger.d('Download waiting to retry for $globalKey');
+          await _onDownloadWaitingToRetry(globalKey, update.task, update.exception);
         case TaskStatus.enqueued:
         case TaskStatus.running:
           // If this item is being paused, the holding queue promoted it — cancel it
@@ -2807,6 +2946,15 @@ class DownloadManagerService {
     final hadProgress = existing.downloadedBytes > 0;
 
     if (!isNetworkError && !isServerError && retryCount < _maxAppRetries && client != null) {
+      // 1.4.4 F3: this download already restarted from 0% once after a
+      // retry — the server is not resuming it, so a further retry just
+      // loops from 0 again. Pause with a surfaced reason instead; the user
+      // can Resume or Retry deliberately (both reset the counter).
+      if (await _fromZeroRestarts(globalKey) >= 1) {
+        appLogger.w('Download $globalKey paused: already restarted from 0% once; not auto-retrying');
+        await _pauseDownloadWithReason(globalKey, t.downloads.pausedCannotResume);
+        return;
+      }
       // App-level auto-retry: schedule a fresh download after a delay.
       // Each new task gets 5 native retries with Range-based resume.
       await _scheduleDownloadRetry(globalKey, client, retryCount, errorMessage, processQueueAfterProgress: hadProgress);
@@ -2818,6 +2966,191 @@ class DownloadManagerService {
       await _onDownloadPermanentlyFailed(globalKey, taskId, userMessage);
     }
   }
+
+  /// 1.4.4 F0/F3: a download entered waitingToRetry — log WHY (the old
+  /// code logged only the key), remember the progress it had, and cap the
+  /// from-0-restart loop: if it already restarted from 0 once, pause with
+  /// a surfaced reason instead of retrying into the same loop.
+  Future<void> _onDownloadWaitingToRetry(String globalKey, Task task, TaskException? exception) async {
+    _progressBeforeRetry[globalKey] = _lastProgress[globalKey] ?? 0.0;
+    if (await _fromZeroRestarts(globalKey) >= 1) {
+      appLogger.w(
+        'Download $globalKey paused: already restarted from 0% once; '
+        'the server does not allow resuming',
+      );
+      await _pauseDownloadWithReason(globalKey, t.downloads.pausedCannotResume);
+      return;
+    }
+    final detail = exception == null
+        ? 'no exception'
+        : '${exception.exceptionType}: ${_truncateForLog(exception.description)}';
+    final connectivity = await _connectivitySummary();
+    appLogger.w(
+      'Download $globalKey waiting to retry: $detail '
+      '(retriesRemaining: ${task.retriesRemaining}, '
+      'playing: ${IptvPlaybackActivity.instance.isPlaying}, '
+      'connectivity: $connectivity)',
+    );
+  }
+
+  static String _truncateForLog(String text, [int maxLength = 500]) =>
+      text.length > maxLength ? '${text.substring(0, maxLength)}…' : text;
+
+  /// One-line connectivity summary for failure logs — 'unknown' when the
+  /// probe itself fails (e.g. no platform channel in tests).
+  Future<String> _connectivitySummary() async {
+    try {
+      final results = await ConnectivityProbe.check();
+      return results.map((r) => r.name).join(',');
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
+  /// 1.4.4 F0: one `Range: bytes=0-0` GET against the download URL, before
+  /// the task is enqueued. A 206 / `Accept-Ranges: bytes` answer means the
+  /// server allows picking up where a partial left off; a 200 without the
+  /// header means it does not. The URL is never logged (it embeds
+  /// credentials). Non-http(s) URLs and probe errors are "unknown" — resume
+  /// is not proven, but not disproven either.
+  Future<_ResumeProbe> _probeResumeSupport(String url) async {
+    final cached = _probeCache[url];
+    if (cached != null) return cached;
+    final uri = Uri.tryParse(url);
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return _ResumeProbe(
+        ranges: null,
+        etagKind: 'absent',
+        statusCode: null,
+        probedAtMs: DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+    try {
+      final response = await _http.get(url, headers: const {'Range': 'bytes=0-0'}, timeout: const Duration(seconds: 10));
+      final headers = response.headers;
+      final acceptRanges = (headers['accept-ranges'] ?? '').toLowerCase();
+      final etag = headers['etag'];
+      final ranges = response.statusCode == 206 || acceptRanges.contains('bytes');
+      final etagKind = etag == null ? 'absent' : (etag.startsWith('W/') ? 'weak' : 'strong');
+      final probe = _ResumeProbe(
+        ranges: ranges,
+        etagKind: etagKind,
+        statusCode: response.statusCode,
+        probedAtMs: DateTime.now().millisecondsSinceEpoch,
+      );
+      _probeCache[url] = probe;
+      appLogger.d('Range probe for download: status ${response.statusCode}, ranges=$ranges, etag=$etagKind');
+      return probe;
+    } catch (e) {
+      appLogger.d('Range probe failed; treating resume support as unknown', error: e);
+      return _ResumeProbe(
+        ranges: null,
+        etagKind: 'absent',
+        statusCode: null,
+        probedAtMs: DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+  }
+
+  Future<int> _fromZeroRestarts(String globalKey) async {
+    final row = await _database.getDownloadedMedia(globalKey);
+    return _ResumeProbe.fromJson(row?.resumeProbe)?.fromZeroRestarts ?? 0;
+  }
+
+  Future<void> _recordFromZeroRestart(String globalKey, {required double before}) async {
+    final row = await _database.getDownloadedMedia(globalKey);
+    final current = _ResumeProbe.fromJson(row?.resumeProbe);
+    final next = (current ??
+            _ResumeProbe(
+              ranges: null,
+              etagKind: 'absent',
+              statusCode: null,
+              probedAtMs: DateTime.now().millisecondsSinceEpoch,
+            ))
+        .copyWith(fromZeroRestarts: (current?.fromZeroRestarts ?? 0) + 1);
+    await _database.updateResumeProbe(globalKey, jsonEncode(next.toJson()));
+    appLogger.w(
+      'Download $globalKey restarted from 0% after a retry '
+      '(was ${(before * 100).round()}%) — from-0 restart #${next.fromZeroRestarts}',
+    );
+  }
+
+  Future<void> _resetFromZeroRestarts(String globalKey) async {
+    final row = await _database.getDownloadedMedia(globalKey);
+    final current = _ResumeProbe.fromJson(row?.resumeProbe);
+    if (current == null || current.fromZeroRestarts == 0) return;
+    await _database.updateResumeProbe(
+      globalKey,
+      jsonEncode(current.copyWith(fromZeroRestarts: 0).toJson()),
+    );
+  }
+
+  /// 1.4.4 F3: pause a looping download with a surfaced reason. The native
+  /// task is cancelled (not natively paused — its resume data does not
+  /// exist on a no-ranges server), the row keeps its progress, and the
+  /// reason is stored on the row and emitted on the progress stream so the
+  /// Downloads screen can show it.
+  Future<void> _pauseDownloadWithReason(String globalKey, String reason) async {
+    _cancelDownloadTimers(globalKey);
+    final bgTaskId = await _database.getBgTaskId(globalKey);
+    if (bgTaskId != null) {
+      await _cancelNativeTask(globalKey, bgTaskId, reason: 'from-0 restart cap');
+    }
+    _pendingDownloadContext.remove(globalKey);
+    final row = await _database.getDownloadedMedia(globalKey);
+    await _transitionStatus(globalKey, DownloadStatus.paused, progress: row?.progress, errorMessage: reason);
+    await _database.setDownloadErrorMessage(globalKey, reason);
+    await _database.removeFromQueue(globalKey);
+  }
+
+  /// 1.4.4 settings: playback started or stopped — re-apply the
+  /// downloads-while-watching gate.
+  void _onPlaybackActivityChanged() {
+    unawaited(_applyPlaybackDownloadGate());
+  }
+
+  Future<void> _applyPlaybackDownloadGate() async {
+    if (_disposed) return;
+    final settings = await SettingsService.getInstance();
+    if (!settings.read(SettingsService.iptvPauseDownloadsWhileWatching)) return;
+    if (IptvPlaybackActivity.instance.isPlaying) {
+      await _pauseIptvDownloadsForPlayback();
+    } else {
+      await _resumePlaybackPausedDownloads();
+    }
+  }
+
+  /// Pause every actively downloading IPTV download while a stream plays.
+  /// Keys are recorded so the stop side resumes only those — never one the
+  /// user paused themselves.
+  Future<void> _pauseIptvDownloadsForPlayback() async {
+    final rows = await getAllDownloads();
+    for (final row in rows) {
+      if (row.status != DownloadStatus.downloading.index) continue;
+      if (_playbackPausedKeys.contains(row.globalKey)) continue;
+      final client = await _getClientForDownloadKey(row.globalKey);
+      if (client == null || !_isIptvBackend(client.backend)) continue;
+      _playbackPausedKeys.add(row.globalKey);
+      appLogger.i('Pausing IPTV download ${row.globalKey} while a stream plays');
+      await pauseDownload(row.globalKey);
+    }
+  }
+
+  Future<void> _resumePlaybackPausedDownloads() async {
+    if (_playbackPausedKeys.isEmpty) return;
+    final keys = _playbackPausedKeys.toList();
+    _playbackPausedKeys.clear();
+    for (final globalKey in keys) {
+      final row = await _database.getDownloadedMedia(globalKey);
+      if (row == null || row.status != DownloadStatus.paused.index) continue;
+      final client = await _getClientForDownloadKey(globalKey);
+      if (client == null) continue;
+      appLogger.i('Resuming IPTV download $globalKey now playback stopped');
+      await resumeDownload(globalKey, client);
+    }
+  }
+
+  static bool _isIptvBackend(MediaBackend backend) => backend == MediaBackend.m3u || backend == MediaBackend.xtream;
 
   /// Markers of a transport failure in a native description. The exception
   /// type alone cannot tell: Android and desktop type a DNS failure
@@ -2884,7 +3217,9 @@ class DownloadManagerService {
     }
 
     appLogger.i('Auto-retrying download for $globalKey');
-    await _cleanupStaleDownload(globalKey);
+    // 1.4.4 F1: keep the partial and the row's progress — the stable task
+    // id makes this re-enqueue resume, not restart.
+    await _cleanupStaleDownload(globalKey, resetProgress: false);
     // The retry delay already throttles preparation failures; do not let the
     // immediate queue circuit breaker suppress the next scheduled attempt.
     _consecutiveQueueFailures = 0;
@@ -3491,18 +3826,20 @@ class DownloadManagerService {
       final bgTaskId = await _database.getBgTaskId(globalKey);
       await _cancelNativeTasksForGlobalKey(globalKey, exceptTaskId: bgTaskId, reason: 'duplicate task before pause');
       if (bgTaskId != null && downloadsSupported) {
-        final task = await FileDownloader().taskForId(bgTaskId);
+        // 1.4.4: the task lookup / pause go through the injectable ops so
+        // tests can drive pause without platform channels.
+        final task = await (_nativeOps.taskForId ?? FileDownloader().taskForId)(bgTaskId);
         if (task != null && task is DownloadTask) {
           // App storage and SAF (UriDownloadTask) tasks both pause natively. A
           // task the downloader cannot pause (not started yet, or a SAF task
           // enqueued before SAF tasks allowed pause) is cancelled so it cannot
           // keep running behind the paused row; resume then re-downloads it.
-          if (!await FileDownloader().pause(task)) {
-            await FileDownloader().cancelTaskWithId(bgTaskId);
+          if (!await (_nativeOps.pauseTask ?? FileDownloader().pause)(task)) {
+            await _nativeOps.cancelTaskIds([bgTaskId]);
           }
         } else {
           // Task not found: cancel (re-download on resume)
-          await FileDownloader().cancelTaskWithId(bgTaskId);
+          await _nativeOps.cancelTaskIds([bgTaskId]);
         }
       } else if (bgTaskId != null) {
         await _database.updateBgTaskId(globalKey, null);
@@ -3525,8 +3862,12 @@ class DownloadManagerService {
     // Try native resume first (works for any DownloadTask that was paused)
     if (bgTaskId != null && await _tryResumeNativeTask(globalKey, bgTaskId)) return;
 
-    // Native resume failed or the task was cancelled on pause — re-enqueue from scratch
-    await _cleanupStaleDownload(globalKey);
+    // Native resume failed or the task was cancelled on pause — re-enqueue.
+    // 1.4.4 F1: this is a resume, not a restart — the stable task id and
+    // the kept partial file make the new task pick up where it left off.
+    // A user resume also resets the from-0 restart counter.
+    await _cleanupStaleDownload(globalKey, resetProgress: false);
+    await _resetFromZeroRestarts(globalKey);
     await _requeueDownload(globalKey, fallbackClient: client);
   }
 
@@ -3540,7 +3881,7 @@ class DownloadManagerService {
 
     var markedDownloading = false;
     try {
-      final task = await (taskForId ?? FileDownloader().taskForId)(bgTaskId);
+      final task = await (taskForId ?? _nativeOps.taskForId ?? FileDownloader().taskForId)(bgTaskId);
       if (task == null || task is! DownloadTask) return false;
 
       // The row must read downloading before the task is handed back: the
@@ -3550,7 +3891,7 @@ class DownloadManagerService {
       // so the download would restart from 0%.
       await _transitionStatus(globalKey, DownloadStatus.downloading);
       markedDownloading = true;
-      if (await (resumeTask ?? FileDownloader().resume)(task)) {
+      if (await (resumeTask ?? _nativeOps.resumeTask ?? FileDownloader().resume)(task)) {
         appLogger.i('Resumed download via background_downloader for $globalKey');
         return true;
       }
@@ -3578,7 +3919,10 @@ class DownloadManagerService {
     _rearmQueueForUserAction('manual retry');
 
     _autoRetryTimers.remove(globalKey)?.cancel();
-    await _cleanupStaleDownload(globalKey);
+    // 1.4.4 F1/F3: a user retry keeps the partial and resets the from-0
+    // restart counter — it is a deliberate fresh attempt by the user.
+    await _cleanupStaleDownload(globalKey, resetProgress: false);
+    await _resetFromZeroRestarts(globalKey);
     await _database.clearDownloadError(globalKey);
     await _requeueDownload(globalKey, fallbackClient: client);
   }
@@ -4515,6 +4859,7 @@ class DownloadManagerService {
 
   void dispose() {
     _disposed = true;
+    IptvPlaybackActivity.instance.isPlayingNotifier.removeListener(_onPlaybackActivityChanged);
     for (final timer in _progressDebounceTimers.values) {
       timer.cancel();
     }

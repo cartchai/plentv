@@ -3917,6 +3917,10 @@ class IptvClient implements MediaServerClient {
       title: episode.title.isEmpty ? 'Episode ${episode.episodeNum}' : episode.title,
       summary: episode.plot,
       parentId: 'series:${series.seriesId}',
+      // 1.4.4 F5: the show id the queue lookup filters on — without it
+      // the show's downloads never match their series (the lookup
+      // compares grandparentId against the bare series id).
+      grandparentId: '${series.seriesId}',
       parentTitle: stripCategoryPrefix(series.name, seriesCategoryName),
       parentIndex: season,
       index: episode.episodeNum,

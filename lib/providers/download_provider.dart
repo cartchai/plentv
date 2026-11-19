@@ -103,6 +103,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// Global keys whose [retryDownload] is still in flight.
   final Set<String> _retryingKeys = {};
 
+  /// 1.4.4 F5: entity keys the "no queued downloads" warning has already
+  /// been logged for this session — the aggregate lookup runs on every
+  /// UI rebuild, so without this the warning fires twice per lookup.
+  final Set<String> _warnedNoQueuedDownloads = {};
+
   // Persistent sync rules keyed by profile-scoped globalKey
   // (profileId|serverId:ratingKey). Downloads remain public/shared.
   final Map<String, SyncRuleItem> _syncRules = {};
@@ -1301,7 +1306,16 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
           final meta = _metadata[entry.key];
           if (meta == null || !(meta.isEpisode || meta.kind == MediaKind.track)) return false;
           if (meta.serverId != serverId.value) return false;
-          if (grandparentRatingKey != null && meta.grandparentId != grandparentRatingKey) return false;
+          // 1.4.4 F5: the show filter matches the grandparent id — and,
+          // for episodes whose item never carried one (Xtream episodes
+          // before the fix, or a fetch/merge round-trip that dropped it),
+          // falls back to the parent id, which is always
+          // 'series:<bare series id>'.
+          if (grandparentRatingKey != null &&
+              meta.grandparentId != grandparentRatingKey &&
+              meta.parentId != 'series:$grandparentRatingKey') {
+            return false;
+          }
           if (parentRatingKey != null && meta.parentId != parentRatingKey) return false;
           return true;
         })
@@ -1368,7 +1382,12 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     final int totalEpisodes = episodes.length;
 
     if (totalEpisodes == 0) {
-      appLogger.d('⚠️  No queued downloads for $entityType $ratingKey, returning null');
+      // 1.4.4 F5: once per entity per session — the lookup runs on every
+      // UI rebuild and the warning fired twice per call.
+      final warnKey = '$entityType:$ratingKey';
+      if (_warnedNoQueuedDownloads.add(warnKey)) {
+        appLogger.d('⚠️  No queued downloads for $entityType $ratingKey, returning null');
+      }
       return null;
     }
 
