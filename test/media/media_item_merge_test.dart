@@ -146,4 +146,63 @@ void main() {
 
     expect(merged.single.mediaVersions?.single.videoResolution, '1080');
   });
+
+  // 1.4.6 G2: a re-fetch that leaves the hierarchy titles blank must not
+  // wipe the titles the queued item already carries — the Downloads tree
+  // reads show/season names from them, and a null-out re-labels a queued
+  // episode "Unknown Show" / the series name as its season.
+  group('1.4.6 G2: hierarchy titles survive a blank re-fetch', () {
+    // Backend is plex here only because the test helper has no xtream
+    // fixture — the merge is backend-agnostic; the titles are the point.
+    MediaItem episode({String? grandparentTitle, String? parentTitle, String? grandparentId, String? parentId}) =>
+        testMediaItem(
+          id: 'episode:123:3823',
+          backend: MediaBackend.plex,
+          kind: MediaKind.episode,
+          title: 'Cartman Gets an Anal Probe',
+          serverId: 'xtream-1',
+          grandparentId: grandparentId,
+          grandparentTitle: grandparentTitle,
+          parentId: parentId,
+          parentTitle: parentTitle,
+          parentIndex: 1,
+          index: 1,
+        );
+
+    test('existing grandparent/parent titles are kept when fetched leaves them null', () {
+      final merged = mergeFetchedMediaItem(
+        fetched: episode(),
+        existing: episode(grandparentTitle: 'South Park', parentTitle: 'Season 1', grandparentId: '123', parentId: 'series:123'),
+        fallbackServerId: ServerId('xtream-1'),
+      );
+
+      expect(merged.grandparentTitle, 'South Park');
+      expect(merged.parentTitle, 'Season 1');
+      expect(merged.grandparentId, '123');
+      expect(merged.parentId, 'series:123');
+    });
+
+    test('fetched titles still win when present', () {
+      final merged = mergeFetchedMediaItem(
+        fetched: episode(grandparentTitle: 'South Park', parentTitle: 'Season 2', grandparentId: '123', parentId: 'series:123'),
+        existing: episode(grandparentTitle: 'Old Name', parentTitle: 'Season 1', grandparentId: '123', parentId: 'series:123'),
+        fallbackServerId: ServerId('xtream-1'),
+      );
+
+      expect(merged.grandparentTitle, 'South Park');
+      expect(merged.parentTitle, 'Season 2');
+    });
+
+    test('a null-out on one side only keeps the other side', () {
+      final merged = mergeFetchedMediaItem(
+        fetched: episode(grandparentTitle: 'South Park', parentId: 'series:123'),
+        existing: episode(grandparentTitle: 'Old Name', parentTitle: 'Season 1', grandparentId: '123', parentId: 'series:123'),
+        fallbackServerId: ServerId('xtream-1'),
+      );
+
+      expect(merged.grandparentTitle, 'South Park');
+      expect(merged.parentTitle, 'Season 1');
+      expect(merged.parentId, 'series:123');
+    });
+  });
 }

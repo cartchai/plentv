@@ -1934,6 +1934,9 @@ class IptvClient implements MediaServerClient {
       String? libraryId,
       String? parentId,
       String? parentTitle,
+      // 1.4.6 G1: the show link for episodes (see IptvResumeItem).
+      String? grandparentId,
+      String? grandparentTitle,
       // 1.2.4: the playing item's category id, so the resume row records
       // it (see IptvResumeItem) — the report methods only receive an id.
       String? categoryId,
@@ -3901,6 +3904,20 @@ class IptvClient implements MediaServerClient {
     );
   }
 
+  /// Test seam (1.4.6 G1): builds one episode item from raw series/episode
+  /// data without touching the network — the production path is
+  /// `fetchItem('episode:<seriesId>:<episodeId>')`, which needs a live
+  /// panel. The builder itself is pure (seriesStreamUrl is string
+  /// concatenation), so this delegate exercises the exact production code.
+  @visibleForTesting
+  MediaItem debugEpisodeItem(
+    XtreamSeries series,
+    XtreamEpisode episode,
+    int season, {
+    String? seriesCategoryName,
+  }) =>
+      _episodeItem(series, episode, season, seriesCategoryName: seriesCategoryName);
+
   MediaItem _episodeItem(
     XtreamSeries series,
     XtreamEpisode episode,
@@ -3920,7 +3937,13 @@ class IptvClient implements MediaServerClient {
       // the show's downloads never match their series (the lookup
       // compares grandparentId against the bare series id).
       grandparentId: '${series.seriesId}',
-      parentTitle: stripCategoryPrefix(series.name, seriesCategoryName),
+      // 1.4.6 G1: Plex-shaped hierarchy titles — the Downloads tree reads
+      // the show name from grandparentTitle and the season label from
+      // parentTitle. Before this the series name sat in parentTitle and
+      // grandparentTitle was unset, so the tree showed "Unknown Show" with
+      // the series name as its season.
+      grandparentTitle: stripCategoryPrefix(series.name, seriesCategoryName),
+      parentTitle: 'Season $season',
       parentIndex: season,
       index: episode.episodeNum,
       durationMs: episode.durationSeconds == null ? null : episode.durationSeconds! * 1000,
@@ -5732,6 +5755,8 @@ class IptvClient implements MediaServerClient {
       libraryTitle: entry.kind == 'movie' ? '$_name — Movies' : '$_name — Series',
       parentId: entry.parentId,
       parentTitle: entry.parentTitle,
+      grandparentId: entry.grandparentId,
+      grandparentTitle: entry.grandparentTitle,
       durationMs: entry.durationMs,
       viewOffsetMs: entry.positionMs,
       lastViewedAt: entry.updatedAtMs,
@@ -6114,6 +6139,10 @@ class IptvClient implements MediaServerClient {
         libraryId: item.libraryId,
         parentId: item.parentId,
         parentTitle: item.parentTitle,
+        // 1.4.6 G1: the show link for episodes — parentTitle is the
+        // season now, so the snapshot keeps the show separately.
+        grandparentId: item.grandparentId,
+        grandparentTitle: item.grandparentTitle,
         categoryId: categoryId,
       );
     } else {
@@ -6164,6 +6193,8 @@ class IptvClient implements MediaServerClient {
       libraryId: snapshot.libraryId,
       parentId: snapshot.parentId,
       parentTitle: snapshot.parentTitle,
+      grandparentId: snapshot.grandparentId,
+      grandparentTitle: snapshot.grandparentTitle,
       isFavorite: true,
     );
   }
@@ -6431,6 +6462,10 @@ class IptvClient implements MediaServerClient {
         libraryId: stash?.libraryId ?? (kind == 'movie' ? _moviesLibraryId : _seriesLibraryId),
         parentId: stash?.parentId ?? (kind == 'episode' && parts.length >= 2 ? 'series:${parts[1]}' : null),
         parentTitle: stash?.parentTitle,
+        // 1.4.6 G1: the show link for episodes. The id fallback mirrors
+        // parentId above (an episode's grandparent IS its series).
+        grandparentId: stash?.grandparentId ?? (kind == 'episode' && parts.length >= 2 ? 'series:${parts[1]}' : null),
+        grandparentTitle: stash?.grandparentTitle,
         // 1.2.4: the category id is the precise signal for whether a
         // pruned resume entry needs a refresh (see IptvResumeItem).
         categoryId: stash?.categoryId,
@@ -6474,6 +6509,9 @@ class IptvClient implements MediaServerClient {
         libraryId: item.libraryId,
         parentId: item.parentId,
         parentTitle: item.parentTitle,
+        // 1.4.6 G1: the show link for episodes (see IptvResumeItem).
+        grandparentId: item.grandparentId,
+        grandparentTitle: item.grandparentTitle,
         // 1.2.4: the series category for an episode, the movie category
         // for a movie (see _episodeItem / _movieItem).
         categoryId: item.categoryId,

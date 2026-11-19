@@ -15,6 +15,7 @@ import '../../media/iptv_client.dart';
 import '../../media/iptv_live_tv.dart';
 import '../../services/background_work_diagnostics_service.dart';
 import '../../services/device_performance.dart';
+import '../../services/download_manager_service.dart';
 import '../../services/iptv/iptv_background_sync.dart';
 import '../../services/iptv/iptv_catalog_cache.dart';
 import '../../services/iptv/panel_reachability_store.dart';
@@ -204,6 +205,26 @@ class IptvSettingsScreen extends StatelessWidget {
                   icon: Symbols.pause_rounded,
                   title: t.iptv.pauseDownloadsWhileWatching,
                   subtitle: t.iptv.pauseDownloadsWhileWatchingDescription,
+                ),
+                // 1.4.61: download run timeout — how long one native run
+                // may transfer before it pauses and picks up where it left
+                // off. 2 minutes by default; longer runs need fewer pauses
+                // on slow connections. A change applies to downloads
+                // started after it; a running download keeps its old
+                // timeout. (The write reaches the native config through
+                // SettingsMutationService, like the Wi-Fi-only policy.)
+                SettingSelectionTile<int>(
+                  pref: settings.SettingsService.iptvDownloadRunTimeoutMinutes,
+                  icon: Symbols.timer_rounded,
+                  title: t.iptv.downloadRunTimeout,
+                  subtitleBuilder: (minutes) => t.iptv.downloadRunTimeoutDescription(minutes: minutes),
+                  options: [
+                    for (final minutes in DownloadManagerService.downloadRunTimeoutMinutesOptions)
+                      DialogOption(
+                        value: minutes,
+                        title: t.iptv.downloadRunTimeoutMinutes(minutes: minutes),
+                      ),
+                  ],
                 ),
               ],
             ),

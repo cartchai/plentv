@@ -38,6 +38,18 @@ MediaItem mergeFetchedMediaItem({required MediaItem fetched, required ServerId f
     serverName: existing?.serverName ?? fetched.serverName,
     libraryId: library.libraryId,
     libraryTitle: library.libraryTitle,
+    // 1.4.6 G2: hierarchy titles are sticky — a re-fetch that leaves
+    // grandparent/parent titles (or ids) blank must not wipe the ones the
+    // queued item already carries. The Downloads tree reads the show/season
+    // names from them; a null-out here re-labels a queued episode
+    // "Unknown Show" / the series name as its season.
+    grandparentId: fetched.grandparentId ?? existing?.grandparentId,
+    grandparentTitle: fetched.grandparentTitle ?? existing?.grandparentTitle,
+    parentId: fetched.parentId ?? existing?.parentId,
+    parentTitle: fetched.parentTitle ?? existing?.parentTitle,
+    parentThumbPath: fetched.parentThumbPath ?? existing?.parentThumbPath,
+    grandparentThumbPath: fetched.grandparentThumbPath ?? existing?.grandparentThumbPath,
+    grandparentArtPath: fetched.grandparentArtPath ?? existing?.grandparentArtPath,
   );
 }
 

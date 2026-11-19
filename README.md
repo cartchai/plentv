@@ -5,7 +5,7 @@
 
 A fork of [Plezy](https://github.com/edde746/plezy) that adds IPTV: M3U playlists and Xtream Codes accounts, with live TV in the Live TV section and on-demand movies and series in the Library.
 
-PlezTV is beta. 1.1 is the functioning update — TV, movies and live TV all play and search — with lots left to do.
+PlezTV is still in beta and not fully working yet. There is much more to do before it is in a usable state. The name and icon may change further on.
 
 <p>
   <a href="#plezy-upstream">Plezy (upstream)</a> ·

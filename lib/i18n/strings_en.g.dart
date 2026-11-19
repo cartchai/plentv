@@ -3899,6 +3899,14 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2324 => [
+		'Fixed: a download that times out partway now picks up where it left off instead of starting again from 0% — the half-downloaded file is no longer deleted when the run times out',
+		'Fixed: when a download run times out it now pauses and carries on from the same spot instead of failing and starting over',
+		'New: Settings → IPTV now has a download run timeout — 2, 3, 4, 6 or 9 minutes, 2 by default',
+		'Fixed: the pause message no longer blames the server when a download restarts from the beginning — it says what actually happened',
+		'Fixed: the debug log now records why a download is waiting to retry, instead of always saying "no exception"',
+		'Fixed: a download\'s place is now remembered even if the app is closed before it retries',
+	];
 	List<String> get changelog2323 => [
 		'Updated: the app is now built on the latest Plezy release, with a newer video engine under the hood',
 		'New: libraries now have a Genres tab for movies and shows, so you can browse by genre',
@@ -3906,6 +3914,14 @@ class Translations$about$en {
 		'New: shuffle now works on Plex and Jellyfin libraries',
 		'New: when a server refuses a video, the app now offers to play a converted version instead of just failing',
 		'Fixed: pictures and posters now load with fewer repeated downloads, so browsing a big library is smoother',
+	];
+	List<String> get changelog2322 => [
+		'Fixed: downloaded episodes now group under their show name and season in Downloads, instead of each episode showing up as its own show',
+		'Fixed: episodes you already downloaded now show under the right show and season without having to download them again',
+		'Fixed: a download the system stops partway now picks up where it left off instead of starting again from 0%',
+		'Fixed: a download that restarts from 0% once now pauses and tells you why, instead of looping back to 0% again and again',
+		'New: downloads are now less likely to be stopped by the system in the middle of a transfer',
+		'New: the debug log now records when the system stops a download and whether it resumes or starts over',
 	];
 	List<String> get changelog2321 => [
 		'New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings',
@@ -5915,8 +5931,8 @@ class Translations$downloads$en {
 	/// en: 'the partial download could not be resumed'
 	String get reasonCannotResume => 'the partial download could not be resumed';
 
-	/// en: 'Paused — this download keeps starting over from the beginning because the server does not allow picking up where it left off'
-	String get pausedCannotResume => 'Paused — this download keeps starting over from the beginning because the server does not allow picking up where it left off';
+	/// en: 'Paused — this download restarted from the beginning instead of resuming'
+	String get pausedCannotResume => 'Paused — this download restarted from the beginning instead of resuming';
 
 	/// en: 'this device is out of storage'
 	String get reasonDeviceStorageFull => 'this device is out of storage';
@@ -7269,6 +7285,15 @@ class Translations$iptv$en {
 
 	/// en: 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch'
 	String get pauseDownloadsWhileWatchingDescription => 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch';
+
+	/// en: 'Download run timeout'
+	String get downloadRunTimeout => 'Download run timeout';
+
+	/// en: 'One download run may transfer for ${minutes} minutes before it pauses and picks up where it left off. Longer runs need fewer pauses on slow connections; a change applies to downloads started after it'
+	String downloadRunTimeoutDescription({required Object minutes}) => 'One download run may transfer for ${minutes} minutes before it pauses and picks up where it left off. Longer runs need fewer pauses on slow connections; a change applies to downloads started after it';
+
+	/// en: '${minutes} minutes'
+	String downloadRunTimeoutMinutes({required Object minutes}) => '${minutes} minutes';
 
 	/// en: 'No IPTV connections'
 	String get backgroundSyncNoConnections => 'No IPTV connections';
@@ -11579,12 +11604,24 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2324.0' => 'Fixed: a download that times out partway now picks up where it left off instead of starting again from 0% — the half-downloaded file is no longer deleted when the run times out',
+			'about.changelog2324.1' => 'Fixed: when a download run times out it now pauses and carries on from the same spot instead of failing and starting over',
+			'about.changelog2324.2' => 'New: Settings → IPTV now has a download run timeout — 2, 3, 4, 6 or 9 minutes, 2 by default',
+			'about.changelog2324.3' => 'Fixed: the pause message no longer blames the server when a download restarts from the beginning — it says what actually happened',
+			'about.changelog2324.4' => 'Fixed: the debug log now records why a download is waiting to retry, instead of always saying "no exception"',
+			'about.changelog2324.5' => 'Fixed: a download\'s place is now remembered even if the app is closed before it retries',
 			'about.changelog2323.0' => 'Updated: the app is now built on the latest Plezy release, with a newer video engine under the hood',
 			'about.changelog2323.1' => 'New: libraries now have a Genres tab for movies and shows, so you can browse by genre',
 			'about.changelog2323.2' => 'New: if you leave a video paused and come back later, the app now asks which profile to continue with instead of resuming silently',
 			'about.changelog2323.3' => 'New: shuffle now works on Plex and Jellyfin libraries',
 			'about.changelog2323.4' => 'New: when a server refuses a video, the app now offers to play a converted version instead of just failing',
 			'about.changelog2323.5' => 'Fixed: pictures and posters now load with fewer repeated downloads, so browsing a big library is smoother',
+			'about.changelog2322.0' => 'Fixed: downloaded episodes now group under their show name and season in Downloads, instead of each episode showing up as its own show',
+			'about.changelog2322.1' => 'Fixed: episodes you already downloaded now show under the right show and season without having to download them again',
+			'about.changelog2322.2' => 'Fixed: a download the system stops partway now picks up where it left off instead of starting again from 0%',
+			'about.changelog2322.3' => 'Fixed: a download that restarts from 0% once now pauses and tells you why, instead of looping back to 0% again and again',
+			'about.changelog2322.4' => 'New: downloads are now less likely to be stopped by the system in the middle of a transfer',
+			'about.changelog2322.5' => 'New: the debug log now records when the system stops a download and whether it resumes or starts over',
 			'about.changelog2321.0' => 'New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings',
 			'about.changelog2321.1' => 'New: Downloads moved out of the bottom bar and into the profile menu',
 			'about.changelog2321.2' => 'New: Search moved to the far left of the bottom bar, before Home — Home is still the screen you land on when the app opens',
@@ -11702,6 +11739,8 @@ extension on Translations {
 			'about.changelog2265.1' => 'Series search: when a search comes up empty it now checks the missing categories faster, and a repair that finds missing shows saves them, so the next search does not have to look again',
 			'about.changelog2265.2' => 'A half-empty list from the provider can no longer overwrite the good saved list on the phone',
 			'about.changelog2265.3' => 'Game of Thrones in Trex series still depends on the provider fixing its series list — it is currently returning only a few hundred shows, and no app can find one it does not list',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2266.0' => 'Quest: the TV interface stays, and the controller can now drive it — the thumbstick moves through Discover and the rows, and the controller works as a mouse in the player',
 			'about.changelog2266.1' => 'Scrolling on Quest now follows the controller, and every menu has a button you can click instead of pulling down',
 			'about.changelog2266.2' => 'This update only changes how the app is driven on Quest — nothing else in the app changed',
@@ -11714,8 +11753,6 @@ extension on Translations {
 			'about.changelog2263.2' => 'Series search: “game of thrones” in Trex — Series now finds the show on a cold start, and if matches are hidden by turned-off categories the empty state says so',
 			'about.changelog2263.3' => 'Series detail now shows real Season rows with their episodes instead of treating episodes as seasons',
 			'about.changelog2263.4' => 'Catch-up: when the provider has no recording for a programme, the mini-player says so plainly and offers Watch live instead of a generic failure',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2263.5' => 'Mini-player: the black layers covering the video are gone and the video position is sent before playback starts (still unproven on a real phone — Settings → IPTV shows the video position and whether a frame arrived)',
 			'about.changelog2263.6' => 'Long-press a channel in the guide for a menu: Hide channel or Add to favourites; hidden channels can be un-hidden in Settings → IPTV',
 			'about.changelog2263.7' => 'The guide has a category picker (Live TV categories only, only the ones you left turned on) — it filters the loaded rows, no re-fetch',
@@ -12216,6 +12253,8 @@ extension on Translations {
 			'collections.deleted' => 'Collection deleted',
 			'collections.deleteFailed' => 'Failed to delete collection',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Failed to delete collection: ${error}',
+			_ => null,
+		} ?? switch (path) {
 			'collections.selectCollection' => 'Select Collection',
 			'collections.collectionName' => 'Collection Name',
 			'collections.enterCollectionName' => 'Enter collection name',
@@ -12228,8 +12267,6 @@ extension on Translations {
 			'collections.removeFromCollectionFailed' => 'Failed to remove from collection',
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Error removing from collection: ${error}',
 			'collections.searchCollections' => 'Search collections...',
-			_ => null,
-		} ?? switch (path) {
 			'playlists.title' => 'Playlists',
 			'playlists.playlist' => 'Playlist',
 			'playlists.noPlaylists' => 'No playlists found',
@@ -12555,7 +12592,7 @@ extension on Translations {
 			'downloads.errorPostProcessing' => ({required Object reason}) => 'Post-processing failed: ${reason}',
 			'downloads.reasonFileNotSaved' => 'the file could not be saved on this device',
 			'downloads.reasonCannotResume' => 'the partial download could not be resumed',
-			'downloads.pausedCannotResume' => 'Paused — this download keeps starting over from the beginning because the server does not allow picking up where it left off',
+			'downloads.pausedCannotResume' => 'Paused — this download restarted from the beginning instead of resuming',
 			'downloads.reasonDeviceStorageFull' => 'this device is out of storage',
 			'downloads.notificationDownloading' => 'Downloading...',
 			'downloads.notificationComplete' => 'Download complete',
@@ -12730,6 +12767,8 @@ extension on Translations {
 			'externalPlayer.playerNameHint' => 'My Player',
 			'externalPlayer.playerCommand' => 'Command',
 			'externalPlayer.playerPackage' => 'Package Name',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL Scheme',
 			'externalPlayer.off' => 'Off',
 			'externalPlayer.launchFailed' => 'Failed to open external player',
@@ -12742,8 +12781,6 @@ extension on Translations {
 			'metadataEdit.advancedSettings' => 'Advanced Settings',
 			'metadataEdit.title' => 'Title',
 			'metadataEdit.sortTitle' => 'Sort Title',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Original Title',
 			'metadataEdit.releaseDate' => 'Release Date',
 			'metadataEdit.contentRating' => 'Content Rating',
@@ -13066,6 +13103,9 @@ extension on Translations {
 			'iptv.largeDownloadsWifiOnlyDescription' => 'Large downloads (guide feed, catalog sync) wait for Wi-Fi instead of using mobile data',
 			'iptv.pauseDownloadsWhileWatching' => 'Pause downloads while watching',
 			'iptv.pauseDownloadsWhileWatchingDescription' => 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch',
+			'iptv.downloadRunTimeout' => 'Download run timeout',
+			'iptv.downloadRunTimeoutDescription' => ({required Object minutes}) => 'One download run may transfer for ${minutes} minutes before it pauses and picks up where it left off. Longer runs need fewer pauses on slow connections; a change applies to downloads started after it',
+			'iptv.downloadRunTimeoutMinutes' => ({required Object minutes}) => '${minutes} minutes',
 			'iptv.backgroundSyncNoConnections' => 'No IPTV connections',
 			'iptv.catalogSyncNow' => 'Sync catalog now',
 			'iptv.catalogSyncNowDescription' => 'Download all titles for movies, TV and channels now',
@@ -13241,6 +13281,8 @@ extension on Translations {
 			'iptv.epgDetailsPrograms' => 'Programmes',
 			'iptv.epgDetailsProgramsCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} programme', other: '${n} programmes', ), 
 			'iptv.epgDetailsLastFetch' => 'Last fetched',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgDetailsNextFetch' => 'Next refresh',
 			'iptv.epgDetailsWhyNoMatch' => 'Why no guide',
 			'iptv.epgDetailsRefresh' => 'Refresh this channel',
@@ -13256,8 +13298,6 @@ extension on Translations {
 			'iptv.epgUpdateOnPlaylistChange' => 'Update when the channel list changes',
 			'iptv.epgUpdateOnPlaylistChangeDescription' => 'Refresh the guide when the provider adds or removes channels',
 			'iptv.epgSourceAdded' => 'EPG source added',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgPresetSectionTitle' => 'Suggested guides',
 			'iptv.epgPresetAdded' => ({required Object name}) => 'Added ${name}',
 			'iptv.epgSourceDeleted' => 'EPG source deleted',

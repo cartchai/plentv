@@ -109,6 +109,17 @@ class _DownloadTreeViewState extends State<DownloadTreeView> with UnsuppressFocu
     );
   }
 
+  /// The stored show row's title for [episode]'s series, looked up by the
+  /// show's globalKey in the metadata map — the 1.4.6 G3 fallback for an
+  /// old leaf whose grandparentTitle was never set. Null when no show row
+  /// was ever stored (then the leaf's own parentTitle is the last resort).
+  String? _storedShowTitle(MediaItem? episode) {
+    final serverId = episode?.serverId;
+    final showId = episode?.grandparentId;
+    if (serverId == null || showId == null || showId == 'unknown') return null;
+    return widget.metadata[buildGlobalKey(ServerId(serverId), showId)]?.title;
+  }
+
   List<DownloadTreeNode> _buildTree() {
     final Map<String, List<MapEntry<String, DownloadProgress>>> showGroups = {};
     final Map<String, List<MapEntry<String, DownloadProgress>>> albumGroups = {};
@@ -152,7 +163,13 @@ class _DownloadTreeViewState extends State<DownloadTreeView> with UnsuppressFocu
       if (episodes.isEmpty) continue;
 
       final firstEpisode = widget.metadata[episodes.first.key];
-      final showTitle = firstEpisode?.grandparentTitle ?? t.downloads.unknownShow;
+      // 1.4.6 G3: already-queued downloads relabel without re-queueing.
+      // An episode queued before 1.4.6 carries the series name in
+      // parentTitle and nothing in grandparentTitle, so the show name is
+      // recovered from the stored show row, then from parentTitle (which
+      // IS the show name on those old leaves — new leaves always carry
+      // grandparentTitle, so parentTitle can never be a season label here).
+      final showTitle = firstEpisode?.grandparentTitle ?? _storedShowTitle(firstEpisode) ?? firstEpisode?.parentTitle ?? t.downloads.unknownShow;
 
       final Map<String, List<MapEntry<String, DownloadProgress>>> seasonGroups = {};
       for (final episode in episodes) {
@@ -173,8 +190,12 @@ class _DownloadTreeViewState extends State<DownloadTreeView> with UnsuppressFocu
 
         final firstEpisode = widget.metadata[seasonEpisodes.first.key];
         final seasonNumber = firstEpisode?.parentIndex;
-        final seasonTitle = firstEpisode?.parentTitle?.isNotEmpty == true
-            ? firstEpisode!.parentTitle!
+        // 1.4.6 G3: on old leaves parentTitle IS the show name, so a
+        // parentTitle equal to the show title means "no season label" —
+        // fall through to "Season N" instead of repeating the show name.
+        final firstParentTitle = firstEpisode?.parentTitle;
+        final seasonTitle = firstParentTitle != null && firstParentTitle.isNotEmpty && firstParentTitle != showTitle
+            ? firstParentTitle
             : seasonNumber != null
             ? t.common.seasonNumber(number: seasonNumber)
             : t.downloads.unknownSeason;

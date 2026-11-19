@@ -19,6 +19,12 @@ class IptvResumeItem {
   final String? parentId;
   final String? parentTitle;
 
+  /// 1.4.6 G1: the show link for episodes (parentTitle is the season
+  /// since 1.4.6, not the show). Null for rows saved before 1.4.6, which
+  /// fall back to parentTitle — the show name under the old semantics.
+  final String? grandparentId;
+  final String? grandparentTitle;
+
   /// The item's category id (1.2.4, catalog memory): the precise signal
   /// for whether a pruned resume entry needs a refresh — see
   /// [IptvFavoriteItem.categoryId]. For an episode this is the SERIES
@@ -45,6 +51,8 @@ class IptvResumeItem {
     this.libraryId,
     this.parentId,
     this.parentTitle,
+    this.grandparentId,
+    this.grandparentTitle,
     this.categoryId,
     required this.positionMs,
     required this.durationMs,
@@ -59,6 +67,8 @@ class IptvResumeItem {
     if (libraryId != null) 'libraryId': libraryId,
     if (parentId != null) 'parentId': parentId,
     if (parentTitle != null) 'parentTitle': parentTitle,
+    if (grandparentId != null) 'grandparentId': grandparentId,
+    if (grandparentTitle != null) 'grandparentTitle': grandparentTitle,
     if (categoryId != null) 'categoryId': categoryId,
     'positionMs': positionMs,
     'durationMs': durationMs,
@@ -94,6 +104,8 @@ class IptvResumeItem {
       libraryId: json['libraryId'] as String?,
       parentId: json['parentId'] as String?,
       parentTitle: json['parentTitle'] as String?,
+      grandparentId: json['grandparentId'] as String?,
+      grandparentTitle: json['grandparentTitle'] as String?,
       categoryId: json['categoryId'] as String?,
       positionMs: positionMs,
       durationMs: durationMs,

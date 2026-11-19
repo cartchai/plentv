@@ -744,6 +744,12 @@ class SettingsService extends BaseSharedPreferencesService {
   /// IPTV). Off by default — downloads keep running while you watch.
   static const iptvPauseDownloadsWhileWatching = BoolPref('iptv_pause_downloads_while_watching');
 
+  /// 1.4.61: download run timeout in whole minutes (Settings → IPTV):
+  /// how long one expedited native run may transfer before the worker
+  /// pauses it as a resume checkpoint. 2 by default; 9 is the library's
+  /// non-expedited run cap. The native side clamps to 2–9.
+  static const iptvDownloadRunTimeoutMinutes = IntPref('iptv_download_run_timeout_minutes', defaultValue: 2);
+
   /// Set once the user has seen the pre-flight "background downloads are
   /// blocked" dialog. The persistent Downloads-screen banner covers repeat
   /// offenders, so the interrupting dialog is shown exactly once.
