@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/side_navigation_rail.dart';
+import 'navigation_tabs.dart';
 
 /// Dependency aspects for [MainScreenFocusScope].
 ///
@@ -29,6 +30,11 @@ class MainScreenFocusScope extends InheritedModel<MainScreenScopeAspect> {
   final void Function(String libraryGlobalKey)? selectLibrary;
   final VoidCallback? openSettings;
 
+  /// Selects a tab by id (1.4.5: the Accounts menu's Downloads entry
+  /// routes through this on TV/desktop, where the scope exists; the
+  /// phone bar menu calls MainScreen's own tab selection directly).
+  final void Function(NavigationTabId)? selectTab;
+
   const MainScreenFocusScope({
     super.key,
     required this.focusSidebar,
@@ -39,6 +45,7 @@ class MainScreenFocusScope extends InheritedModel<MainScreenScopeAspect> {
     this.viewportWidth,
     this.selectLibrary,
     this.openSettings,
+    this.selectTab,
     required super.child,
   });
 

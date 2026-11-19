@@ -24,6 +24,12 @@ class MobileNavigationRail extends StatelessWidget {
     this.isOffline = false,
     this.isReconnecting = false,
     this.onReconnect,
+    // 1.4.5: the Accounts destination appended after the tabs — the same
+    // destination the phone bar appends. It is not a NavigationTab, so it
+    // travels as a plain destination plus its own selection callback.
+    this.extraDestination,
+    this.onExtraDestinationSelected,
+    this.isExtraDestinationSelected = false,
   });
 
   final List<NavigationTab> tabs;
@@ -34,6 +40,9 @@ class MobileNavigationRail extends StatelessWidget {
   final bool isOffline;
   final bool isReconnecting;
   final VoidCallback? onReconnect;
+  final NavigationRailDestination? extraDestination;
+  final VoidCallback? onExtraDestinationSelected;
+  final bool isExtraDestinationSelected;
 
   /// Material 3 rail indicator size; the long-press target matches it so the
   /// hold works anywhere on the visible pill, not only on the glyph.
@@ -56,22 +65,36 @@ class MobileNavigationRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedIndex = tabs.indexWhere((tab) => tab.id == selectedTab);
+    final extraIndex = extraDestination == null ? -1 : tabs.length;
+    final selectedIndex = isExtraDestinationSelected
+        ? extraIndex
+        : tabs.indexWhere((tab) => tab.id == selectedTab);
     return LayoutBuilder(
       builder: (context, constraints) {
         final height = constraints.maxHeight;
-        final labelled = showLabels && labelsFit(destinations: tabs.length, hasLeading: isOffline, height: height);
+        final destinationCount = tabs.length + (extraDestination == null ? 0 : 1);
+        final labelled =
+            showLabels && labelsFit(destinations: destinationCount, hasLeading: isOffline, height: height);
         final rail = NavigationRail(
           selectedIndex: selectedIndex >= 0 ? selectedIndex : null,
-          onDestinationSelected: (index) => onDestinationSelected(tabs[index].id),
+          onDestinationSelected: (index) {
+            if (index == extraIndex) {
+              onExtraDestinationSelected?.call();
+            } else {
+              onDestinationSelected(tabs[index].id);
+            }
+          },
           labelType: labelled ? NavigationRailLabelType.all : NavigationRailLabelType.none,
           groupAlignment: 0,
           leading: isOffline ? _reconnectAction(context) : null,
-          destinations: [for (final tab in tabs) _destination(context, tab)],
+          destinations: [
+            for (final tab in tabs) _destination(context, tab),
+            ?extraDestination,
+          ],
         );
         // NavigationRail needs a bounded height. Give it at least the viewport
         // and let it grow past that inside a scroll view when even icon-only
-        // destinations cannot fit (seven tabs plus reconnect on a small phone).
+        // destinations cannot fit (six destinations plus reconnect on a small phone).
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: height),

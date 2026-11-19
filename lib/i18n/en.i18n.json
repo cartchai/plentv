@@ -1535,6 +1535,11 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2321": [
+      "New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings",
+      "New: Downloads moved out of the bottom bar and into the profile menu",
+      "New: Search moved to the far left of the bottom bar, before Home — Home is still the screen you land on when the app opens"
+    ],
     "changelog2320": [
       "Fixed: a download that gets cut off now picks up where it left off instead of starting over from 0% — the app keeps the part it already downloaded and resumes it",
       "Fixed: if a download can't resume because the panel won't allow it, it now pauses with the reason shown instead of silently starting over again and again",
@@ -2017,7 +2022,8 @@
     "libraries": "Libraries",
     "downloads": "Downloads",
     "liveTv": "Live TV",
-    "explore": "Explore"
+    "explore": "Explore",
+    "accounts": "Accounts"
   },
   "explore": {
     "title": "Explore",

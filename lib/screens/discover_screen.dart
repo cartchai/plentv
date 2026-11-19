@@ -8,7 +8,6 @@ import 'package:plezy/widgets/app_icon.dart';
 import '../widgets/server_activities_button.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
-import '../connection/connection.dart';
 import '../focus/focusable_action_bar.dart';
 import '../focus/hub_vertical_navigation.dart';
 import '../focus/locked_hub_controller.dart';
@@ -34,11 +33,8 @@ import '../widgets/app_menu.dart';
 import '../widgets/clickable_cursor.dart';
 import '../widgets/loading_indicator_box.dart';
 import '../widgets/profile_switching_overlay.dart';
-import 'profile/profile_switch_screen.dart';
-import 'profile/profile_teardown.dart';
+import 'profile/user_menu.dart';
 import '../profiles/active_profile_provider.dart';
-import '../profiles/profile.dart';
-import '../profiles/profile_activation.dart';
 import '../profiles/profile_avatar.dart';
 import '../services/settings_service.dart';
 import '../widgets/settings_builder.dart';
@@ -49,7 +45,6 @@ import '../mixins/refreshable.dart';
 import '../mixins/tab_visibility_aware.dart';
 import '../i18n/strings.g.dart';
 import '../utils/app_logger.dart';
-import '../utils/dialogs.dart';
 import '../utils/formatters.dart';
 import '../utils/hub_icons.dart';
 import '../utils/media_navigation_helper.dart';
@@ -63,31 +58,10 @@ import '../theme/mono_tokens.dart';
 import 'libraries/content_state_builder.dart';
 import 'libraries/state_messages.dart';
 import 'main_screen.dart';
-import '../navigation/settings_shortcut.dart';
 import '../watch_together/watch_together.dart';
 import '../providers/companion_remote_provider.dart';
 import '../widgets/companion_remote/remote_session_dialog.dart';
 import 'companion_remote/mobile_remote_screen.dart';
-
-/// 1.3.25 §68 (b): one "Sign out of {account}" menu entry per Plex
-/// account, so a multi-account user can drop one account without the
-/// full Log out — which deletes every connection (including IPTV),
-/// every profile, and all settings. IPTV and Jellyfin connections are
-/// not Plex accounts, so they get no entry. The `signout_plex:`
-/// value is handled in [_DiscoverScreenState._handleUserMenuAction].
-/// Top-level (and annotated) so the entry list is unit-testable
-/// without pumping the whole Discover screen.
-@visibleForTesting
-List<AppMenuItem<String>> plexAccountSignOutMenuItems(Iterable<Connection> connections) {
-  return [
-    for (final account in connections.whereType<PlexAccountConnection>())
-      AppMenuItem<String>(
-        value: 'signout_plex:${account.id}',
-        icon: Symbols.logout_rounded,
-        label: t.profiles.signOutPlexAccount(displayName: account.displayLabel),
-      ),
-  ];
-}
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -704,45 +678,14 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     return serverIds.length > 1;
   }
 
-  Future<void> _handleLogout() async {
-    final confirm = await showConfirmDialog(
-      context,
-      title: t.common.logout,
-      message: t.messages.logoutConfirm,
-      confirmText: t.common.logout,
-      isDestructive: true,
-    );
-
-    if (confirm && mounted) {
-      await logoutAllProfiles(context);
-    }
-  }
-
-  void _handleSwitchProfile(BuildContext context) {
-    Navigator.of(
-      context,
-      rootNavigator: true,
-    ).push(MaterialPageRoute(builder: (context) => const ProfileSwitchScreen()));
-  }
-
-  void _handleOpenSettings(BuildContext context) {
-    final mainScope = MainScreenFocusScope.of(context, listen: false);
-    if (mainScope != null) {
-      mainScope.openSettings?.call();
-      return;
-    }
-
-    Navigator.push(context, buildSettingsRoute());
-  }
-
   /// Build the [FocusableAction] wrapping the user menu.
-  /// Pulls live state from [ActiveProfileProvider]; the menu reuses
-  /// [_userMenuItems] for the menu contents so d-pad and tap paths
-  /// stay in sync.
+  /// Pulls live state from [ActiveProfileProvider]; the menu contents
+  /// and handling live in the shared helper ([userMenuEntriesForContext],
+  /// [handleUserMenuSelection]) so the phone Accounts tab and this
+  /// button cannot drift.
   FocusableAction _buildUserMenuAction(BuildContext context) {
     final activeProvider = context.watch<ActiveProfileProvider>();
     final active = activeProvider.active;
-    final profiles = activeProvider.profiles;
 
     return FocusableAction(
       onPressed: _switchingProfile ? null : () => _userMenuKey.currentState?.showButtonMenu(focusFirstItem: true),
@@ -756,79 +699,18 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         adaptiveSheet: true,
         anchorAlignment: AppMenuAnchorAlignment.end,
         onSelected: (value) => unawaited(_handleUserMenuAction(context, value)),
-        entriesBuilder: (context) =>
-            _userMenuItems(context, activeProfile: active, profiles: profiles, activeProvider: activeProvider),
+        entriesBuilder: (context) => userMenuEntriesForContext(context),
       ),
     );
   }
 
-  List<AppMenuEntry<String>> _userMenuItems(
-    BuildContext context, {
-    required Profile? activeProfile,
-    required List<Profile> profiles,
-    required ActiveProfileProvider activeProvider,
-  }) {
-    final theme = Theme.of(context);
-    final switchable = profiles.where((p) => p.id != activeProfile?.id).toList();
-    // 1.3.25 §68 (b): per-account Plex sign-out sits in this menu, right
-    // above the full Log out — the user reaches for it instead of the
-    // wipe when they only mean to drop one account.
-    final plexSignOutItems = plexAccountSignOutMenuItems(activeProvider.connectionsById.values);
-
-    return [
-      for (final p in switchable)
-        AppMenuItem<String>(
-          value: 'profile:${p.id}',
-          leading: ProfileAvatar(profile: p, size: 24, avatarUrl: activeProvider.avatarUrlFor(p.id)),
-          label: p.displayName,
-          trailing: p.isPinProtected
-              ? AppIcon(Symbols.lock_rounded, fill: 1, size: 14, color: theme.colorScheme.onSurfaceVariant)
-              : null,
-        ),
-      if (switchable.isNotEmpty) const AppMenuDivider(),
-      AppMenuItem<String>(value: 'manage_profiles', icon: Symbols.group_rounded, label: t.profiles.sectionTitle),
-      AppMenuItem<String>(value: 'settings', icon: Symbols.settings_rounded, label: t.common.settings),
-      if (plexSignOutItems.isNotEmpty) ...[
-        const AppMenuDivider(),
-        ...plexSignOutItems,
-      ],
-      AppMenuItem<String>(value: 'logout', icon: Symbols.logout_rounded, label: t.common.logout),
-    ];
-  }
-
+  /// Delegates to the shared accounts-menu handler; the flag only keeps
+  /// the button disabled while an action runs, as before.
   Future<void> _handleUserMenuAction(BuildContext context, String value) async {
-    if (_switchingProfile) return;
-    if (value == 'logout') {
-      unawaited(_handleLogout());
-      return;
-    }
-    if (value.startsWith('signout_plex:')) {
-      final accountId = value.substring('signout_plex:'.length);
-      unawaited(confirmAndSignOutPlexAccount(context, accountConnectionId: accountId));
-      return;
-    }
-    if (value == 'manage_profiles') {
-      _handleSwitchProfile(context);
-      return;
-    }
-    if (value == 'settings') {
-      _handleOpenSettings(context);
-      return;
-    }
-    if (value.startsWith('profile:')) {
-      final id = value.substring('profile:'.length);
-      final active = context.read<ActiveProfileProvider>();
-      final target = active.profiles.where((p) => p.id == id).firstOrNull;
-      if (target == null) return;
-      await _switchProfileFromMenu(target);
-    }
-  }
-
-  Future<void> _switchProfileFromMenu(Profile profile) async {
     if (_switchingProfile) return;
     setState(() => _switchingProfile = true);
     try {
-      await switchProfileFromUi(context, profile);
+      await handleUserMenuSelection(context, value);
     } finally {
       if (mounted) {
         setState(() => _switchingProfile = false);
@@ -952,8 +834,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                       onPressed: () => _serverActivitiesButtonKey.currentState?.togglePanel(),
                       child: ServerActivitiesButton(key: _serverActivitiesButtonKey),
                     ),
-                  // User menu — profiles + sign out
-                  _buildUserMenuAction(context),
+                  // User menu — profiles + sign out. 1.4.5: the avatar
+                  // only shows where there is no bottom bar to carry it
+                  // (TV/desktop); on phones the Accounts tab opens it.
+                  if (!PlatformDetector.isMobile(context)) _buildUserMenuAction(context),
                 ],
               );
             },

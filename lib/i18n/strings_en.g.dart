@@ -3875,6 +3875,11 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2321 => [
+		'New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings',
+		'New: Downloads moved out of the bottom bar and into the profile menu',
+		'New: Search moved to the far left of the bottom bar, before Home — Home is still the screen you land on when the app opens',
+	];
 	List<String> get changelog2320 => [
 		'Fixed: a download that gets cut off now picks up where it left off instead of starting over from 0% — the app keeps the part it already downloaded and resumes it',
 		'Fixed: if a download can\'t resume because the panel won\'t allow it, it now pauses with the reason shown instead of silently starting over again and again',
@@ -4541,6 +4546,9 @@ class Translations$navigation$en {
 
 	/// en: 'Explore'
 	String get explore => 'Explore';
+
+	/// en: 'Accounts'
+	String get accounts => 'Accounts';
 }
 
 // Path: explore
@@ -11518,6 +11526,9 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2321.0' => 'New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings',
+			'about.changelog2321.1' => 'New: Downloads moved out of the bottom bar and into the profile menu',
+			'about.changelog2321.2' => 'New: Search moved to the far left of the bottom bar, before Home — Home is still the screen you land on when the app opens',
 			'about.changelog2320.0' => 'Fixed: a download that gets cut off now picks up where it left off instead of starting over from 0% — the app keeps the part it already downloaded and resumes it',
 			'about.changelog2320.1' => 'Fixed: if a download can\'t resume because the panel won\'t allow it, it now pauses with the reason shown instead of silently starting over again and again',
 			'about.changelog2320.2' => 'Fixed: reassigning a channel\'s guide now refreshes that row straight away — you no longer have to close and reopen the guide to see the new programmes',
@@ -11659,11 +11670,11 @@ extension on Translations {
 			'about.changelog2261.7' => 'Every IPTV library (Movies, TV/Series) has a Favourites tab — long-press a movie or show to add it',
 			'about.changelog2260.0' => 'Turning a country or region off or on now takes effect straight away — before, the lists could take up to two minutes to catch up',
 			'about.changelog2260.1' => 'Refreshing playlists or switching a library now updates the lists straight away too',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2260.2' => 'Settings now shows the last crash the app recorded, so a crash can be figured out from the phone',
 			'about.changelog2260.3' => 'If the app closed without shutting down cleanly, Settings says so — even when no crash was recorded',
 			'about.changelog2260.4' => 'The “Last search” readout in IPTV settings now shows straight away instead of waiting on the series check',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2260.5' => 'Fixed the Discover header overflowing on narrow phones',
 			'about.changelog2259.0' => 'Live TV channels can be searched now, just like movies and TV shows — searching finds channels too',
 			'about.changelog2259.1' => 'TV show search is fixed: it no longer gives up while the show list is still loading',
@@ -11865,6 +11876,7 @@ extension on Translations {
 			'navigation.downloads' => 'Downloads',
 			'navigation.liveTv' => 'Live TV',
 			'navigation.explore' => 'Explore',
+			'navigation.accounts' => 'Accounts',
 			'explore.title' => 'Explore',
 			'explore.selectSource' => 'Select source',
 			'explore.rows.watchlist' => 'Watchlist',
@@ -12172,12 +12184,12 @@ extension on Translations {
 			'playlists.itemRemoved' => 'Removed from playlist',
 			'playlists.selectPlaylist' => 'Select Playlist',
 			'playlists.searchPlaylists' => 'Search playlists...',
+			_ => null,
+		} ?? switch (path) {
 			'playlists.errorCreating' => 'Failed to create playlist',
 			'playlists.errorDeleting' => 'Failed to delete playlist',
 			'playlists.errorLoading' => 'Failed to load playlists',
 			'playlists.errorAdding' => 'Failed to add to playlist',
-			_ => null,
-		} ?? switch (path) {
 			'playlists.errorReordering' => 'Failed to reorder playlist item',
 			'playlists.errorRemoving' => 'Failed to remove from playlist',
 			'music.goToAlbum' => 'Go to album',
@@ -12686,12 +12698,12 @@ extension on Translations {
 			'metadataEdit.imageUrl' => 'Image URL',
 			'metadataEdit.metadataUpdated' => 'Metadata updated',
 			'metadataEdit.metadataUpdateFailed' => 'Failed to update metadata',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.artworkUpdated' => 'Artwork updated',
 			'metadataEdit.artworkUpdateFailed' => 'Failed to update artwork',
 			'metadataEdit.noArtworkAvailable' => 'No artwork available',
 			'metadataEdit.artworkOption' => ({required Object index}) => 'Artwork option ${index}',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.selectedArtworkOption' => ({required Object index}) => 'Artwork option ${index}, selected',
 			'metadataEdit.notSet' => 'Not set',
 			'metadataEdit.libraryDefault' => 'Library default',
@@ -13200,12 +13212,12 @@ extension on Translations {
 			'iptv.catalogDiagnosticsTitle' => 'Series catalog',
 			'iptv.catalogDiagnosticsHint' => 'What this phone loaded from the series catalog — send a screenshot if TV search still finds nothing.',
 			'iptv.catalogDiagnosticsLoading' => 'Loading catalog…',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.catalogDiagnosticsFailed' => 'Could not load the catalog details.',
 			'iptv.catalogDiagnosticsUnfilteredRows' => ({required Object count}) => 'Series loaded (all categories): ${count}',
 			'iptv.catalogDiagnosticsCategoryCount' => ({required Object count}) => 'Series categories: ${count}',
 			'iptv.catalogDiagnosticsPerCategory' => ({required Object category, required Object count}) => 'In ${category}: ${count}',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.catalogDiagnosticsDisabledInitials' => ({required Object count}) => 'Category initials turned off: ${count}',
 			'iptv.catalogDiagnosticsDisabledCategories' => ({required Object count}) => 'Categories turned off: ${count}',
 			'iptv.guideCoverageTitle' => 'Guide coverage',

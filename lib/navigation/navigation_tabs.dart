@@ -77,15 +77,16 @@ class NavigationTab {
   }
 }
 
-/// Sections offered as a startup destination, in navigation order. Live TV and
+/// Sections offered as a startup destination, in the phone bar's order
+/// (1.4.5: Search far left, Home next). Live TV and
 /// Explore are listed even while unavailable: startup opens Home and switches
 /// once a server or catalog source provides them.
 const startupSectionTabs = [
+  NavigationTabId.search,
   NavigationTabId.discover,
   NavigationTabId.libraries,
   NavigationTabId.liveTv,
   NavigationTabId.explore,
-  NavigationTabId.search,
 ];
 
 // Label getters (must be top-level for const constructor)

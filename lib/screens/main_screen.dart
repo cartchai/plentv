@@ -23,6 +23,7 @@ import '../utils/app_logger.dart';
 import '../utils/media_server_timeouts.dart';
 import '../widgets/auth_error_banner.dart';
 import '../widgets/app_icon.dart';
+import '../widgets/app_menu.dart';
 import '../utils/platform_detector.dart';
 import '../utils/snackbar_helper.dart';
 import '../utils/update_dialog.dart';
@@ -39,6 +40,8 @@ import '../connection/connection_registry.dart';
 import '../profiles/active_profile_provider.dart';
 import '../profiles/plex_home_service.dart';
 import '../profiles/profile_selection_policy.dart';
+import '../profiles/profile_avatar.dart';
+import '../profiles/profile.dart';
 import '../providers/catalog_sources_provider.dart';
 import '../providers/account_preferences_controller.dart';
 import '../providers/download_provider.dart';
@@ -79,6 +82,7 @@ import 'search_screen.dart';
 import 'downloads/downloads_screen.dart';
 import 'settings/settings_screen.dart';
 import 'profile/profile_switch_screen.dart';
+import 'profile/user_menu.dart';
 import 'video_player_screen.dart';
 import 'profile/profile_teardown.dart';
 import '../watch_together/watch_together.dart';
@@ -259,10 +263,62 @@ List<NavigationTab> mainScreenBottomNavigationTabs({
   required NavigationTabId currentTab,
 }) {
   if (!isMobile) return visibleTabs;
-  return visibleTabs.where((tab) {
+  // 1.4.5: the phone bar is Search, Home, Libraries, Live TV, Explore —
+  // Search moved to the far left, Downloads left the bar for the Accounts
+  // menu (its destination is appended by the bar builder instead).
+  // Home stays the default tab on launch: that is decided by
+  // NavigationTab.resolveDefaultTab over the canonical list, not by the
+  // bar order, so reordering here cannot change it.
+  final tabs = visibleTabs.where((tab) {
+    if (tab.id == NavigationTabId.downloads) return false;
     if (tab.id != NavigationTabId.settings) return true;
     return isOffline || currentTab == NavigationTabId.settings;
   }).toList();
+  tabs.sort((a, b) => _phoneBarOrder(a.id).compareTo(_phoneBarOrder(b.id)));
+  return tabs;
+}
+
+/// Position of a tab in the 1.4.5 phone bar: Search far left, Home next.
+/// Tabs not in the bar (Downloads, Settings) sort last; they are filtered
+/// out or appended separately by the caller.
+int _phoneBarOrder(NavigationTabId id) {
+  switch (id) {
+    case NavigationTabId.search:
+      return 0;
+    case NavigationTabId.discover:
+      return 1;
+    case NavigationTabId.libraries:
+      return 2;
+    case NavigationTabId.liveTv:
+      return 3;
+    case NavigationTabId.explore:
+      return 4;
+    case NavigationTabId.downloads:
+      return 5;
+    case NavigationTabId.settings:
+      return 6;
+  }
+}
+
+/// The Accounts icon shared by the portrait bar and the landscape rail:
+/// the active profile's avatar — the same avatar that used to sit in the
+/// Discover top bar — with the generic account icon when there is no
+/// active profile. No lock badge: at bar size it is noise, and the menu
+/// itself still shows each profile's lock.
+@visibleForTesting
+Widget accountsIcon({required Profile? activeProfile, required String? avatarUrl}) {
+  if (activeProfile == null) return const AppIcon(Symbols.account_circle_rounded, fill: 1);
+  return ProfileAvatar(profile: activeProfile, size: 24, avatarUrl: avatarUrl, showLockBadge: false);
+}
+
+/// The Accounts destination appended last in the phone bar (and the
+/// landscape rail) in 1.4.5.
+@visibleForTesting
+NavigationDestination accountsNavigationDestination({required Profile? activeProfile, required String? avatarUrl}) {
+  return NavigationDestination(
+    icon: accountsIcon(activeProfile: activeProfile, avatarUrl: avatarUrl),
+    label: t.navigation.accounts,
+  );
 }
 
 @visibleForTesting
@@ -1934,6 +1990,40 @@ class _MainScreenState extends State<MainScreen>
     Navigator.push(context, buildSettingsRoute());
   }
 
+  /// 1.4.5: opens the accounts menu from the phone bar's Accounts
+  /// destination — the same menu the Discover top-bar avatar used to
+  /// open (profiles, Settings, Downloads, per-account sign-out,
+  /// Log out), built by the shared helper so the two cannot drift.
+  Future<void> _openAccountsMenu() async {
+    final selected = await showAdaptiveAppMenu<String>(
+      context,
+      entries: userMenuEntriesForContext(context),
+      anchorAlignment: AppMenuAnchorAlignment.end,
+      focusFirstItem: true,
+    );
+    if (selected == null || !mounted) return;
+    await handleUserMenuSelection(
+      context,
+      selected,
+      onSelectDownloads: () => _selectTab(NavigationTabId.downloads),
+      onOpenSettings: _openSettings,
+    );
+  }
+
+  /// 1.4.5: the Accounts destination for the landscape rail — the same
+  /// avatar + label as the portrait bar's appended destination.
+  NavigationRailDestination _accountsRailDestination(BuildContext context) {
+    final activeProvider = context.read<ActiveProfileProvider>();
+    final activeProfile = activeProvider.active;
+    return NavigationRailDestination(
+      icon: accountsIcon(
+        activeProfile: activeProfile,
+        avatarUrl: activeProfile == null ? null : activeProvider.avatarUrlFor(activeProfile.id),
+      ),
+      label: Text(t.navigation.accounts),
+    );
+  }
+
   void _handleLibrariesScreenSelected(String libraryGlobalKey) {
     if (_selectedLibraryGlobalKey == libraryGlobalKey) return;
     setState(() => _selectedLibraryGlobalKey = libraryGlobalKey);
@@ -2039,16 +2129,33 @@ class _MainScreenState extends State<MainScreen>
 
   Widget _buildBottomNavigationBar(BuildContext context, {required bool hideLabels}) {
     final tabs = _getBottomNavigationTabs(context);
-    final selectedIndex = tabs.indexWhere((tab) => tab.id == _currentTab);
+    // 1.4.5: Accounts is appended last, in Downloads' old far-right spot.
+    // Downloads has no destination of its own any more, so while it is
+    // current the Accounts destination reads selected.
+    final activeProvider = context.watch<ActiveProfileProvider>();
+    final activeProfile = activeProvider.active;
+    final accountsDestination = accountsNavigationDestination(
+      activeProfile: activeProfile,
+      avatarUrl: activeProfile == null ? null : activeProvider.avatarUrlFor(activeProfile.id),
+    );
+    final destinations = [...tabs.map((tab) => tab.toDestination()), accountsDestination];
+    final accountsIndex = tabs.length;
+    final selectedIndex = _currentTab == NavigationTabId.downloads
+        ? accountsIndex
+        : tabs.indexWhere((tab) => tab.id == _currentTab);
     final navigationBar = NavigationBar(
       selectedIndex: selectedIndex >= 0 ? selectedIndex : 0,
       onDestinationSelected: (i) {
-        if (i >= 0 && i < tabs.length) _selectTab(tabs[i].id);
+        if (i == accountsIndex) {
+          unawaited(_openAccountsMenu());
+        } else if (i >= 0 && i < tabs.length) {
+          _selectTab(tabs[i].id);
+        }
       },
       labelBehavior: hideLabels
           ? NavigationDestinationLabelBehavior.alwaysHide
           : NavigationDestinationLabelBehavior.alwaysShow,
-      destinations: tabs.map((tab) => tab.toDestination()).toList(),
+      destinations: destinations,
     );
 
     final librariesIndex = tabs.indexWhere((tab) => tab.id == NavigationTabId.libraries);
@@ -2060,11 +2167,11 @@ class _MainScreenState extends State<MainScreen>
 
         // A destination gets an equal share of the bar and spends all of it on
         // the label, so that share is what the labels have to fit into.
-        final itemWidth = constraints.maxWidth / tabs.length;
+        final itemWidth = constraints.maxWidth / destinations.length;
         final bar = hideLabels
             ? navigationBar
             : NavigationLabelScale(
-                labels: [for (final tab in tabs) tab.getLabel()],
+                labels: [for (final tab in tabs) tab.getLabel(), t.navigation.accounts],
                 labelWidth: itemWidth,
                 style: navigationBarLabelStyle(context),
                 child: navigationBar,
@@ -2174,6 +2281,7 @@ class _MainScreenState extends State<MainScreen>
                     viewportWidth: viewportWidth,
                     selectLibrary: _selectLibrary,
                     openSettings: _openSettings,
+                    selectTab: _selectTab,
                     child: SideNavigationScope(
                       child: Stack(
                         clipBehavior: Clip.hardEdge,
@@ -2304,6 +2412,11 @@ class _MainScreenState extends State<MainScreen>
                     isOffline: _isOffline,
                     isReconnecting: _isReconnecting,
                     onReconnect: _triggerReconnect,
+                    // 1.4.5: Accounts appended last, mirroring the portrait
+                    // bar; Downloads reads selected through it.
+                    extraDestination: _accountsRailDestination(context),
+                    onExtraDestinationSelected: () => unawaited(_openAccountsMenu()),
+                    isExtraDestinationSelected: _currentTab == NavigationTabId.downloads,
                   );
                 },
               ),

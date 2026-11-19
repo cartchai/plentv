@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plezy/connection/connection.dart';
-import 'package:plezy/screens/discover_screen.dart';
+import 'package:plezy/screens/profile/user_menu.dart';
 
 void main() {
   PlexAccountConnection plexAccount(String id, String label) => PlexAccountConnection(
