@@ -13,6 +13,9 @@ import '../exceptions/media_server_exceptions.dart';
 import '../media/artist_discography.dart';
 import '../media/download_resolution.dart';
 import '../media/ids.dart';
+import '../media/iptv_playlist_fingerprint.dart';
+
+export '../media/iptv_playlist_fingerprint.dart' show iptvPlaylistFingerprint, iptvPlaylistRowHash;
 import '../media/library_change_event.dart';
 import '../media/library_filter_result.dart';
 import '../media/library_query.dart';
@@ -94,16 +97,11 @@ class _BackgroundPlaybackActive implements Exception {
   const _BackgroundPlaybackActive();
 }
 
-/// Order-insensitive playlist fingerprint (1.3.24 §67 F6): the
-/// fingerprint names the SET of rows, not their order, so the same
-/// playlist hashed from the network path (Reload), the index path and
-/// the memo path agrees. The per-row hashes are sorted before
-/// [Object.hashAll] — the network order and the index order are
-/// unrelated, and a re-ordered playlist is not a changed playlist.
-int iptvPlaylistFingerprint(Iterable<int> rowHashes) {
-  final sorted = rowHashes.toList(growable: false)..sort();
-  return Object.hashAll(sorted);
-}
+// The playlist fingerprint lives in iptv_playlist_fingerprint.dart
+// (1.4.5 F0): it must be process-stable, so it is FNV-1a over UTF-8
+// bytes in its own pure-Dart module — see the file for why
+// Object.hash can never be used here. Re-exported above so existing
+// importers keep working.
 
 class IptvClient implements MediaServerClient {
   /// The connection this client serves. Replaced only via
@@ -6597,7 +6595,7 @@ class IptvClient implements MediaServerClient {
             _lastGuideIndexLastSync = lastSync;
             _lastGuideIndexRowCount = rowCount;
             await _maybeRefreshEpgForPlaylistChange(
-              iptvPlaylistFingerprint(rows.map((r) => Object.hash(r.streamId, r.name, r.epgChannelId))),
+              iptvPlaylistFingerprint(rows.map((r) => iptvPlaylistRowHash([r.streamId, r.name, r.epgChannelId]))),
             );
           }
           // 1.2.18 C-1: cache the list + key→index map for the next
@@ -6624,7 +6622,7 @@ class IptvClient implements MediaServerClient {
       }
       if (wasFresh) {
         await _maybeRefreshEpgForPlaylistChange(
-          iptvPlaylistFingerprint(streams.map((s) => Object.hash(s.streamId, s.name, s.epgChannelId))),
+          iptvPlaylistFingerprint(streams.map((s) => iptvPlaylistRowHash([s.streamId, s.name, s.epgChannelId]))),
         );
       }
       return channels;
@@ -6642,7 +6640,7 @@ class IptvClient implements MediaServerClient {
     }
     if (wasFresh) {
       await _maybeRefreshEpgForPlaylistChange(
-        iptvPlaylistFingerprint(entries.map((e) => Object.hash(e.tvgId, e.url, e.name))),
+        iptvPlaylistFingerprint(entries.map((e) => iptvPlaylistRowHash([e.tvgId, e.url, e.name]))),
       );
     }
     return channels;
@@ -6836,7 +6834,7 @@ class IptvClient implements MediaServerClient {
         // (_liveStreams() returns visible-only; the index seed prunes
         // hidden rows). Saving the all-rows hash made every Reload
         // look like a playlist change whenever a category was hidden.
-        iptvPlaylistFingerprint(visible.map((r) => Object.hash(r.streamId, r.name, r.epgChannelId))),
+        iptvPlaylistFingerprint(visible.map((r) => iptvPlaylistRowHash([r.streamId, r.name, r.epgChannelId]))),
       );
     } else {
       _m3uEntriesFuture = null;

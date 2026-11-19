@@ -3879,6 +3879,9 @@ class Translations$about$en {
 		'New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings',
 		'New: Downloads moved out of the bottom bar and into the profile menu',
 		'New: Search moved to the far left of the bottom bar, before Home — Home is still the screen you land on when the app opens',
+		'Fixed: restarting the app no longer re-downloads the whole TV guide every time — the app now recognises the channel list it already has instead of thinking it changed on every launch',
+		'New: opening the app no longer starts a guide download when the saved guide is still fresh — it refreshes once a day around 04:00, when the channel list really changes, or when you tap Reload',
+		'Fixed: a memory warning on a powerful phone no longer throws the guide out of memory right after it loaded — it only drops the guide when the phone is genuinely short on memory',
 	];
 	List<String> get changelog2320 => [
 		'Fixed: a download that gets cut off now picks up where it left off instead of starting over from 0% — the app keeps the part it already downloaded and resumes it',
@@ -11529,6 +11532,9 @@ extension on Translations {
 			'about.changelog2321.0' => 'New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings',
 			'about.changelog2321.1' => 'New: Downloads moved out of the bottom bar and into the profile menu',
 			'about.changelog2321.2' => 'New: Search moved to the far left of the bottom bar, before Home — Home is still the screen you land on when the app opens',
+			'about.changelog2321.3' => 'Fixed: restarting the app no longer re-downloads the whole TV guide every time — the app now recognises the channel list it already has instead of thinking it changed on every launch',
+			'about.changelog2321.4' => 'New: opening the app no longer starts a guide download when the saved guide is still fresh — it refreshes once a day around 04:00, when the channel list really changes, or when you tap Reload',
+			'about.changelog2321.5' => 'Fixed: a memory warning on a powerful phone no longer throws the guide out of memory right after it loaded — it only drops the guide when the phone is genuinely short on memory',
 			'about.changelog2320.0' => 'Fixed: a download that gets cut off now picks up where it left off instead of starting over from 0% — the app keeps the part it already downloaded and resumes it',
 			'about.changelog2320.1' => 'Fixed: if a download can\'t resume because the panel won\'t allow it, it now pauses with the reason shown instead of silently starting over again and again',
 			'about.changelog2320.2' => 'Fixed: reassigning a channel\'s guide now refreshes that row straight away — you no longer have to close and reopen the guide to see the new programmes',
@@ -11667,11 +11673,11 @@ extension on Translations {
 			'about.changelog2261.4' => 'Settings → Live TV has a switch per server, so Plex live TV can be turned off while Trex stays on',
 			'about.changelog2261.5' => 'Categories are now one screen per connection — every category listed with its count, every switch takes effect straight away',
 			'about.changelog2261.6' => 'The Live TV guide now loads from a saved copy of the programme guide, so it opens fast instead of loading forever',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2261.7' => 'Every IPTV library (Movies, TV/Series) has a Favourites tab — long-press a movie or show to add it',
 			'about.changelog2260.0' => 'Turning a country or region off or on now takes effect straight away — before, the lists could take up to two minutes to catch up',
 			'about.changelog2260.1' => 'Refreshing playlists or switching a library now updates the lists straight away too',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2260.2' => 'Settings now shows the last crash the app recorded, so a crash can be figured out from the phone',
 			'about.changelog2260.3' => 'If the app closed without shutting down cleanly, Settings says so — even when no crash was recorded',
 			'about.changelog2260.4' => 'The “Last search” readout in IPTV settings now shows straight away instead of waiting on the series check',
@@ -12181,11 +12187,11 @@ extension on Translations {
 			'playlists.created' => 'Playlist created',
 			'playlists.deleted' => 'Playlist deleted',
 			'playlists.itemAdded' => 'Added to playlist',
+			_ => null,
+		} ?? switch (path) {
 			'playlists.itemRemoved' => 'Removed from playlist',
 			'playlists.selectPlaylist' => 'Select Playlist',
 			'playlists.searchPlaylists' => 'Search playlists...',
-			_ => null,
-		} ?? switch (path) {
 			'playlists.errorCreating' => 'Failed to create playlist',
 			'playlists.errorDeleting' => 'Failed to delete playlist',
 			'playlists.errorLoading' => 'Failed to load playlists',
@@ -12695,11 +12701,11 @@ extension on Translations {
 			'metadataEdit.fromUrl' => 'From URL',
 			'metadataEdit.uploadFile' => 'Upload File',
 			'metadataEdit.enterImageUrl' => 'Enter image URL',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.imageUrl' => 'Image URL',
 			'metadataEdit.metadataUpdated' => 'Metadata updated',
 			'metadataEdit.metadataUpdateFailed' => 'Failed to update metadata',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.artworkUpdated' => 'Artwork updated',
 			'metadataEdit.artworkUpdateFailed' => 'Failed to update artwork',
 			'metadataEdit.noArtworkAvailable' => 'No artwork available',
@@ -13209,11 +13215,11 @@ extension on Translations {
 			'iptv.initialsLoading' => 'Loading initials…',
 			'iptv.initialsLoadFailed' => 'Could not load the category initials. Check the connection and try again.',
 			'iptv.initialsNoneFound' => 'No repeating initials found in this connection’s categories.',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.catalogDiagnosticsTitle' => 'Series catalog',
 			'iptv.catalogDiagnosticsHint' => 'What this phone loaded from the series catalog — send a screenshot if TV search still finds nothing.',
 			'iptv.catalogDiagnosticsLoading' => 'Loading catalog…',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.catalogDiagnosticsFailed' => 'Could not load the catalog details.',
 			'iptv.catalogDiagnosticsUnfilteredRows' => ({required Object count}) => 'Series loaded (all categories): ${count}',
 			'iptv.catalogDiagnosticsCategoryCount' => ({required Object count}) => 'Series categories: ${count}',

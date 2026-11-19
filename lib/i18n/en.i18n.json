@@ -1538,7 +1538,10 @@
     "changelog2321": [
       "New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings",
       "New: Downloads moved out of the bottom bar and into the profile menu",
-      "New: Search moved to the far left of the bottom bar, before Home — Home is still the screen you land on when the app opens"
+      "New: Search moved to the far left of the bottom bar, before Home — Home is still the screen you land on when the app opens",
+      "Fixed: restarting the app no longer re-downloads the whole TV guide every time — the app now recognises the channel list it already has instead of thinking it changed on every launch",
+      "New: opening the app no longer starts a guide download when the saved guide is still fresh — it refreshes once a day around 04:00, when the channel list really changes, or when you tap Reload",
+      "Fixed: a memory warning on a powerful phone no longer throws the guide out of memory right after it loaded — it only drops the guide when the phone is genuinely short on memory"
     ],
     "changelog2320": [
       "Fixed: a download that gets cut off now picks up where it left off instead of starting over from 0% — the app keeps the part it already downloaded and resumes it",

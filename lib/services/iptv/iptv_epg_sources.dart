@@ -490,7 +490,13 @@ class IptvEpgSourcesStore {
   String get _precedenceKey => 'iptv_epg_added_sources_first:$connectionId';
   String get _mappingKey => 'iptv_epg_mapping:$connectionId';
   String get _statusKey => 'iptv_epg_source_status:$connectionId';
-  String get _fingerprintKey => 'iptv_epg_channel_fingerprint:$connectionId';
+  // 1.4.5 F0: the v1 key held Object.hash values (seeded per process,
+  // so they could never match across restarts). The v2 key holds the
+  // stable FNV-1a fingerprint; the first run after the fix treats it
+  // as absent (first-load, no refresh) instead of one final spurious
+  // refresh. The v1 key is removed on save so no stale value lingers.
+  String get _fingerprintKey => 'iptv_epg_channel_fingerprint_v2:$connectionId';
+  String get _fingerprintKeyV1 => 'iptv_epg_channel_fingerprint:$connectionId';
 
   Future<List<IptvEpgSourceConfig>> loadUserSources() async {
     final prefs = await SharedPreferences.getInstance();
@@ -638,6 +644,7 @@ class IptvEpgSourcesStore {
   Future<void> saveChannelFingerprint(int fingerprint) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_fingerprintKey, fingerprint);
+    await prefs.remove(_fingerprintKeyV1);
   }
 
   String get _validatorsKey => 'iptv_epg_feed_validators:$connectionId';

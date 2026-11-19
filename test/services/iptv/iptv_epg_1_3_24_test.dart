@@ -311,14 +311,11 @@ void main() {
     // Category '2' is hidden on the connection; category '1' is
     // visible. The Reload must save the visible set — the set the
     // index and memo paths hash — not the all-rows hash. The expected
-    // values are computed inline (sorted row hashes, hashed together)
-    // so this test references no new API and can fail by assertion on
-    // the base; the helper itself is unit-tested in
+    // values are computed with the stable fingerprint functions
+    // (1.4.5 F0: the stored value is FNV-1a now, not Object.hash);
+    // the helper itself is unit-tested in
     // iptv_epg_1_3_24_helpers_test.dart.
-    int setHash(List<int> rowHashes) {
-      final sorted = [...rowHashes]..sort();
-      return Object.hashAll(sorted);
-    }
+    int setHash(List<int> rowHashes) => iptvPlaylistFingerprint(rowHashes);
 
     api.liveStreams = const [
       XtreamLiveStream(streamId: 100, name: 'Channel 100', categoryId: '1', epgChannelId: 'ch100'),
@@ -331,10 +328,10 @@ void main() {
     expect(channels, hasLength(1), reason: 'the Reload publishes the visible rows only');
     expect(channels.single.key, '100');
     final stored = await IptvEpgSourcesStore('trex').loadChannelFingerprint();
-    final visibleFingerprint = setHash([Object.hash(100, 'Channel 100', 'ch100')]);
+    final visibleFingerprint = setHash([iptvPlaylistRowHash([100, 'Channel 100', 'ch100'])]);
     final allRowsFingerprint = setHash([
-      Object.hash(100, 'Channel 100', 'ch100'),
-      Object.hash(200, 'Channel 200', 'ch200'),
+      iptvPlaylistRowHash([100, 'Channel 100', 'ch100']),
+      iptvPlaylistRowHash([200, 'Channel 200', 'ch200']),
     ]);
     expect(visibleFingerprint, isNot(allRowsFingerprint), reason: 'the fixture really distinguishes the two sets');
     expect(stored, visibleFingerprint);

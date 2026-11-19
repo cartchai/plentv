@@ -94,4 +94,56 @@ void main() {
       );
     });
   });
+
+  group('keepEpgOnComfortableMemory (1.4.5 F3)', () {
+    const fullTierRss = 350 << 20;
+    const watchdogThreshold = 1536 << 20;
+
+    test('full-tier + comfortable RSS keeps the guide', () {
+      expect(
+        keepEpgOnComfortableMemory(
+          isFullTier: true,
+          rssBytes: fullTierRss,
+          rssHotThresholdBytes: watchdogThreshold,
+        ),
+        isTrue,
+        reason: 'the didHaveMemoryPressure callback gates on this, like the level-20 trim',
+      );
+    });
+
+    test('a low-end device sheds everything', () {
+      expect(
+        keepEpgOnComfortableMemory(
+          isFullTier: false,
+          rssBytes: fullTierRss,
+          rssHotThresholdBytes: watchdogThreshold,
+        ),
+        isFalse,
+        reason: 'genuine pressure on low-end devices must still shed everything',
+      );
+    });
+
+    test('hot RSS sheds everything even on a full-tier device', () {
+      expect(
+        keepEpgOnComfortableMemory(
+          isFullTier: true,
+          rssBytes: watchdogThreshold,
+          rssHotThresholdBytes: watchdogThreshold,
+        ),
+        isFalse,
+        reason: 'RSS at the watchdog threshold is hot, not comfortable',
+      );
+    });
+
+    test('one byte below the threshold still keeps the guide', () {
+      expect(
+        keepEpgOnComfortableMemory(
+          isFullTier: true,
+          rssBytes: watchdogThreshold - 1,
+          rssHotThresholdBytes: watchdogThreshold,
+        ),
+        isTrue,
+      );
+    });
+  });
 }

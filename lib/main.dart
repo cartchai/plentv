@@ -1662,16 +1662,37 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     super.didHaveMemoryPressure();
     // L-55: the structured RELIEF line — the valve's value is the
     // after-number, which the old prose line never carried.
-    final rssBeforeMb = ProcessInfo.currentRss >> 20;
+    final rssBefore = ProcessInfo.currentRss;
+    final rssBeforeMb = rssBefore >> 20;
     final imageCacheMbBefore = PaintingBinding.instance.imageCache.currentSizeBytes >> 20;
-    appLogger.w('System memory pressure, evicting image caches + IPTV catalogs/EPG');
+    // 1.4.5 F3: the same gate the level-20 trim already has — a
+    // pressure callback on a full-tier device with comfortable RSS
+    // drops the catalogs but keeps the guide (it just parsed at great
+    // cost, and the store re-serves rows anyway). Genuine pressure on
+    // low-end devices, and hot RSS anywhere, still shed everything.
+    // The RSS watchdog and the low-end background shed are unchanged
+    // (already gated on RSS / tier).
+    final keepEpg = keepEpgOnComfortableMemory(
+      isFullTier: !DevicePerformance.isLowEndHardware,
+      rssBytes: rssBefore,
+      rssHotThresholdBytes: DevicePerformance.watchdogThresholdBytes,
+    );
+    appLogger.w(
+      keepEpg
+          ? 'System memory pressure, evicting image caches + IPTV catalogs (keeping EPG)'
+          : 'System memory pressure, evicting image caches + IPTV catalogs/EPG',
+    );
     _evictImageCaches();
     // 1.2.4 (catalog memory, item 1): the memo heap + guide are the
     // actual hogs (the owner's Fold: RSS 700MB with the image cache at
     // 0–6MB) — shedding them here is what makes the pressure callback
     // do anything. Relief valve only: the next browse/search/guide
     // re-reads from disk, no network.
-    _serverManager.dropIptvCachesFromMemory();
+    if (keepEpg) {
+      _serverManager.dropIptvCachesFromMemoryKeepEpg();
+    } else {
+      _serverManager.dropIptvCachesFromMemory();
+    }
     final rssAfterMb = ProcessInfo.currentRss >> 20;
     final iptvStats = _serverManager.iptvMemoryStats();
     // 1.4 (F5): the RELIEF line goes out 3 s after the drop with the
@@ -1681,7 +1702,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       reason: 'memory-pressure',
       rssBeforeMb: rssBeforeMb,
       rssAfterMb: rssAfterMb,
-      dropped: 'iptv-catalogs+epg+image-caches',
+      dropped: keepEpg ? 'iptv-catalogs+image-caches' : 'iptv-catalogs+epg+image-caches',
       memoDropped: true,
       epgWindowPrograms: iptvStats['retainedFeedPrograms'] as int?,
       epgCacheLen: iptvStats['epgCacheEntries'] as int?,

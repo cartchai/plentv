@@ -37,6 +37,24 @@ const trimMemoryUiHidden = 20;
 /// re-downloads the feed. Keep the guide only when the device is
 /// full-tier (not low-end) and RSS is comfortable (below the watchdog
 /// threshold) — genuinely critical trims and hot RSS still drop it.
+/// Whether the EPG guide is kept under memory pressure (1.4.5 F3):
+/// the full-tier + comfortable-RSS half of [keepEpgOnTrim], shared
+/// with the engine's `didHaveMemoryPressure` callback, which has no
+/// trim level to test. A pressure callback on a full-tier device with
+/// comfortable RSS drops the catalogs but keeps the guide — it just
+/// parsed at great cost, and the store re-serves rows anyway.
+/// Genuine pressure on low-end devices, and hot RSS anywhere, still
+/// shed everything.
+bool keepEpgOnComfortableMemory({
+  required bool isFullTier,
+  required int rssBytes,
+  required int rssHotThresholdBytes,
+}) {
+  if (!isFullTier) return false;
+  if (rssBytes >= rssHotThresholdBytes) return false;
+  return true;
+}
+
 bool keepEpgOnTrim({
   required int level,
   required bool isFullTier,
@@ -44,9 +62,11 @@ bool keepEpgOnTrim({
   required int rssHotThresholdBytes,
 }) {
   if (level != trimMemoryUiHidden) return false;
-  if (!isFullTier) return false;
-  if (rssBytes >= rssHotThresholdBytes) return false;
-  return true;
+  return keepEpgOnComfortableMemory(
+    isFullTier: isFullTier,
+    rssBytes: rssBytes,
+    rssHotThresholdBytes: rssHotThresholdBytes,
+  );
 }
 
 NativeTrimEviction evictionForTrimLevel(int level) {
