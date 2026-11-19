@@ -522,9 +522,12 @@ void main() {
     image = tester.widget<Image>(find.byType(Image));
     resizeProvider = image.image as ResizeImage;
     cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
-    expect(cachedProvider.url, contains('maxWidth=480&maxHeight=720'));
-    expect(resizeProvider.width, 480);
-    expect(resizeProvider.height, 720);
+    // Fork 1.2.18 C-6: grid tiles decode at display density, so at DPR 1.0
+    // the fetch density is 1.0 (upstream: 1.5) — 300x450 commits as 320x480,
+    // not upstream's 480x720. The debounce behaviour is what this proves.
+    expect(cachedProvider.url, contains('maxWidth=320&maxHeight=480'));
+    expect(resizeProvider.width, 320);
+    expect(resizeProvider.height, 480);
   });
 
   testWidgets('cancels pending upgrade when layout shrinks before debounce expires', (tester) async {
@@ -670,7 +673,7 @@ void main() {
       tester.view.display.reset();
     });
 
-    final sizeNotifier = ValueNotifier<Size>(const Size(200, 200));
+    final sizeNotifier = ValueNotifier<Size>(const Size(200, 300));
     addTearDown(sizeNotifier.dispose);
 
     await tester.pumpWidget(
@@ -694,11 +697,15 @@ void main() {
     var image = tester.widget<Image>(find.byType(Image));
     var resizeProvider = image.image as ResizeImage;
     var cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
-    expect(cachedProvider.url, contains('maxWidth=320&maxHeight=300'));
-    expect(resizeProvider.width, 320);
+    // Fork 1.2.18 C-6: logos decode at display density (fetch density 1.0
+    // at DPR 1.0, upstream: 1.5) — 200x300 commits as 200x300, not 320x300.
+    // Initial height 300 (not 200) so the retention below stays observable:
+    // the pending 60-high layout buckets to the 240 floor either way.
+    expect(cachedProvider.url, contains('maxWidth=200&maxHeight=300'));
+    expect(resizeProvider.width, 200);
     expect(resizeProvider.height, 300);
 
-    // Logo resize: width expands (200 -> 400), height shrinks (200 -> 60)
+    // Logo resize: width expands (200 -> 400), height shrinks (300 -> 60)
     sizeNotifier.value = const Size(400, 60);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
@@ -707,9 +714,9 @@ void main() {
     resizeProvider = image.image as ResizeImage;
     cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
 
-    // Width upgraded to 600, while height retention is preserved at 300 instead of dropping to 240
-    expect(cachedProvider.url, contains('maxWidth=600&maxHeight=300'));
-    expect(resizeProvider.width, 600);
+    // Width upgraded to 400, while height retention is preserved at 300 instead of dropping to 240
+    expect(cachedProvider.url, contains('maxWidth=400&maxHeight=300'));
+    expect(resizeProvider.width, 400);
     expect(resizeProvider.height, 300);
   });
 
@@ -749,10 +756,12 @@ void main() {
     var cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
     expect(cachedProvider.url, contains('maxWidth=160&maxHeight=240'));
 
-    // Resize to 300x200: target bucket is 200x300, which is >= committed on both axes.
-    // It should commit 200x300 directly rather than combining max width (300) and max height (450)
-    // which would have requested an over-sized 480x720 bucket.
-    sizeNotifier.value = const Size(300, 200);
+    // Resize to 600x400: target bucket is 280x420, which is >= committed on both axes.
+    // It should commit 280x420 directly rather than combining max width (600) and max height (450)
+    // which would have requested an over-sized 320x480 bucket. (Fork C-6:
+    // fetch density 1.0 at DPR 1.0, so the buckets are the display-density
+    // ones, not upstream's 1.5x-supersampled 200x300 / 480x720.)
+    sizeNotifier.value = const Size(600, 400);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -760,9 +769,9 @@ void main() {
     resizeProvider = image.image as ResizeImage;
     cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
 
-    expect(cachedProvider.url, contains('maxWidth=200&maxHeight=300'));
-    expect(resizeProvider.width, 480);
-    expect(resizeProvider.height, 300);
+    expect(cachedProvider.url, contains('maxWidth=280&maxHeight=420'));
+    expect(resizeProvider.width, 600);
+    expect(resizeProvider.height, 420);
   });
 
   testWidgets('pending upgrade refreshes logical size across DPR change', (tester) async {
@@ -864,24 +873,24 @@ void main() {
       ),
     );
 
-    // Initial 200x300 @ 1x (fetch density 1.5) produces bucket 320x480
+    // Initial 200x300 @ 1x (fork C-6 fetch density 1.0, upstream: 1.5) produces bucket 200x300
     var image = tester.widget<Image>(find.byType(Image));
     var resizeProvider = image.image as ResizeImage;
     var cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
-    expect(cachedProvider.url, contains('maxWidth=320&maxHeight=480'));
-    expect(resizeProvider.width, 320);
-    expect(resizeProvider.height, 480);
+    expect(cachedProvider.url, contains('maxWidth=200&maxHeight=300'));
+    expect(resizeProvider.width, 200);
+    expect(resizeProvider.height, 300);
 
-    // Shrink to 128x192: shrink retention keeps the larger 320x480 decode
+    // Shrink to 128x192: shrink retention keeps the larger 200x300 decode
     sizeNotifier.value = const Size(128, 192);
     await tester.pump();
 
     image = tester.widget<Image>(find.byType(Image));
     resizeProvider = image.image as ResizeImage;
     cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
-    expect(cachedProvider.url, contains('maxWidth=320&maxHeight=480'));
-    expect(resizeProvider.width, 320);
-    expect(resizeProvider.height, 480);
+    expect(cachedProvider.url, contains('maxWidth=200&maxHeight=300'));
+    expect(resizeProvider.width, 200);
+    expect(resizeProvider.height, 300);
 
     // Window moves to higher-DPI monitor: DPR becomes 3.0 (fetch density 3.0) with layout unchanged.
     // Retention from the 200x300 slot resets to the current 128x192 layout, requesting 400x600 instead
@@ -928,17 +937,18 @@ void main() {
       ),
     );
 
-    // Initial 300x300 layout @ 1.5 fetch density produces bucket 480x480
+    // Initial 300x300 layout @ 1.0 fetch density (fork C-6, upstream: 1.5) produces bucket 320x300
     var image = tester.widget<Image>(find.byType(Image));
     var resizeProvider = image.image as ResizeImage;
     var cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
-    expect(cachedProvider.url, contains('maxWidth=480&maxHeight=480'));
-    expect(resizeProvider.width, 480);
-    expect(resizeProvider.height, 480);
+    expect(cachedProvider.url, contains('maxWidth=320&maxHeight=300'));
+    expect(resizeProvider.width, 320);
+    expect(resizeProvider.height, 300);
 
     // Resize to 900x200: width expands, height shrinks (axes diverge).
-    // Raw logical max would give 900x300, lifting the 16/9 cap to request 800x480.
-    // Clamping width to height * 16/9 before taking max gives 355.5x300 -> 560x480.
+    // Raw logical max would give 900x300, lifting the 16/9 cap to request 560x300.
+    // Clamping width to height * 16/9 before taking max gives 355.5x300 -> 360x300
+    // (fork C-6 fetch density 1.0; upstream's 1.5x numbers were 800x480 / 560x480).
     sizeNotifier.value = const Size(900, 200);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
@@ -947,9 +957,9 @@ void main() {
     resizeProvider = image.image as ResizeImage;
     cachedProvider = resizeProvider.imageProvider as CachedNetworkImageProvider;
 
-    expect(cachedProvider.url, contains('maxWidth=560&maxHeight=480'));
-    expect(resizeProvider.width, 560);
-    expect(resizeProvider.height, 480);
+    expect(cachedProvider.url, contains('maxWidth=360&maxHeight=300'));
+    expect(resizeProvider.width, 360);
+    expect(resizeProvider.height, 300);
   });
 }
 

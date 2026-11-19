@@ -18,6 +18,7 @@ import '../media/iptv_playlist_fingerprint.dart';
 export '../media/iptv_playlist_fingerprint.dart' show iptvPlaylistFingerprint, iptvPlaylistRowHash;
 import '../media/library_change_event.dart';
 import '../media/library_filter_result.dart';
+import '../media/library_genre.dart';
 import '../media/library_query.dart';
 import '../media/live_tv_support.dart';
 import '../media/lyrics.dart';
@@ -4677,6 +4678,14 @@ class IptvClient implements MediaServerClient {
 
   @override
   Future<List<MediaSort>> fetchSortOptions(String libraryId, {String? libraryType}) async => [];
+
+  @override
+  Future<List<LibraryGenre>> fetchLibraryGenres(String libraryId, {required MediaKind libraryKind}) {
+    // Genres tab is Plex/Jellyfin only in 1.5 (upstream 2.26.0): IPTV
+    // libraries never offer the tab (see visibleLibraryTabs), so this is
+    // a compile stub matching the other unsupported-operation stubs below.
+    throw UnsupportedError('IPTV: fetchLibraryGenres not supported');
+  }
 
   @override
   Future<void> refreshLibraryMetadata(String libraryId) {
