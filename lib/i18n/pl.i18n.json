@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Wszędzie",
     "playerScopeLibrary": "Na bibliotekę",
     "playerScopeTitle": "Na serial lub film",
-    "exportDialogTitle": "Eksport ustawień PlezTV"
+    "exportDialogTitle": "Eksport ustawień PlezTV",
+    "scopeZoom": "Powiększenie"
   },
   "themeEditor": {
     "builtIn": "Wbudowane",
@@ -908,7 +909,10 @@
     "forcedTrack": "${label} (wymuszone)",
     "osdSubtitlesOff": "Napisy: wył.",
     "osdSubtitles": "Napisy: ${track}",
-    "osdAudio": "Audio: ${track}"
+    "osdAudio": "Audio: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Napisy nie pojawiły się na czas. Pobieranie mogło się nie udać"
   },
   "userStatus": {},
   "messages": {
@@ -983,7 +987,8 @@
     "streamSelectionUnavailable": "Wybór strumieni nie jest dostępny dla tego źródła",
     "streamSelectionFailed": "Nie udało się zastosować wybranych strumieni",
     "trackSelectionNotRemembered": "Ten wybór ścieżki dotyczy tylko bieżącego odtwarzania.",
-    "serverUnavailableForProfile": "Brak dostępnego serwera dla aktywnego profilu"
+    "serverUnavailableForProfile": "Brak dostępnego serwera dla aktywnego profilu",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Tekst",
@@ -1211,6 +1216,7 @@
     "tvShow": "Serial TV",
     "minutesLeft": "Pozostało ${minutes} min",
     "moreLikeThis": "Więcej podobnych",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} tytuł",
       "few": "${n} tytuły",
@@ -1288,11 +1294,14 @@
     "noCollections": "Brak kolekcji w tej bibliotece",
     "noFoldersFound": "Nie znaleziono folderów",
     "folders": "foldery",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Polecane",
       "browse": "Przeglądaj",
       "collections": "Kolekcje",
-      "playlists": "Playlisty"
+      "playlists": "Playlisty",
+      "genres": ""
     },
     "groupings": {
       "title": "Grupowanie",
@@ -1620,7 +1629,9 @@
       "unairedEpisodes": "${n} jeszcze nie wyemitowano",
       "recommendedByPercent": "Polecany przez ${percent} widzów",
       "relatedTitles": "Powiązane tytuły",
-      "background": "Tło"
+      "background": "Tło",
+      "trailerUnavailable": "Nie udało się otworzyć zwiastuna na tym urządzeniu",
+      "linkUnavailable": "Nie udało się otworzyć linku na tym urządzeniu"
     },
     "totalResults": {
       "one": "${n} wynik",

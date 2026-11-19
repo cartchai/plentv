@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Hamma joyda",
     "playerScopeLibrary": "Kutubxona boʻyicha",
     "playerScopeTitle": "Serial yoki film boʻyicha",
-    "exportDialogTitle": "PlezTV sozlamalarini eksport qilish"
+    "exportDialogTitle": "PlezTV sozlamalarini eksport qilish",
+    "scopeZoom": "Masshtab"
   },
   "themeEditor": {
     "builtIn": "Oʻrnatilgan",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (Majburiy)",
     "osdSubtitlesOff": "Subtitr: Oʻchirilgan",
     "osdSubtitles": "Subtitr: ${track}",
-    "osdAudio": "Ovoz: ${track}"
+    "osdAudio": "Ovoz: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Subtitr oʻz vaqtida paydo boʻlmadi. Yuklab olish muvaffaqiyatsiz boʻlgan boʻlishi mumkin"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "Bu manba uchun oqim tanlash imkoni yoʻq",
     "streamSelectionFailed": "Tanlangan oqimlarni qoʻllab boʻlmadi",
     "trackSelectionNotRemembered": "Bu trek tanlovi faqat joriy ijroga qoʻllanadi.",
-    "serverUnavailableForProfile": "Faol profil uchun hech qanday server mavjud emas"
+    "serverUnavailableForProfile": "Faol profil uchun hech qanday server mavjud emas",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Matn",
@@ -1203,6 +1208,7 @@
     "tvShow": "TV Shou",
     "minutesLeft": "${minutes} daq qoldi",
     "moreLikeThis": "Oʻxshashlar",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} ta nom",
       "other": "${n} ta nom"
@@ -1278,11 +1284,14 @@
     "noCollections": "Ushbu kutubxonada toʻplamlar yoʻq",
     "noFoldersFound": "Jildlar topilmadi",
     "folders": "jildlar",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Tavsiya etilganlar",
       "browse": "Koʻrib chiqish",
       "collections": "Toʻplamlar",
-      "playlists": "Ijro roʻyxatlari"
+      "playlists": "Ijro roʻyxatlari",
+      "genres": ""
     },
     "groupings": {
       "title": "Guruhlash",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} hali efirga chiqmagan",
       "recommendedByPercent": "Tomoshabinlarning ${percent} tavsiya qilgan",
       "relatedTitles": "Bogʻliq nomlar",
-      "background": "Orqa fon"
+      "background": "Orqa fon",
+      "trailerUnavailable": "Bu qurilmada treylerni ochib boʻlmadi",
+      "linkUnavailable": "Bu qurilmada havolani ochib boʻlmadi"
     },
     "totalResults": {
       "one": "${n} ta natija",

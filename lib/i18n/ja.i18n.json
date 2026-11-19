@@ -512,7 +512,8 @@
     "playerScopeGlobal": "すべて",
     "playerScopeLibrary": "ライブラリごと",
     "playerScopeTitle": "作品ごと",
-    "exportDialogTitle": "PlezTVの設定をエクスポート"
+    "exportDialogTitle": "PlezTVの設定をエクスポート",
+    "scopeZoom": "ズーム"
   },
   "themeEditor": {
     "builtIn": "標準",
@@ -899,7 +900,10 @@
     "forcedTrack": "${label}（強制）",
     "osdSubtitlesOff": "字幕: オフ",
     "osdSubtitles": "字幕: ${track}",
-    "osdAudio": "音声: ${track}"
+    "osdAudio": "音声: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "字幕が時間内に追加されませんでした。ダウンロードに失敗した可能性があります"
   },
   "userStatus": {},
   "messages": {
@@ -971,7 +975,8 @@
     "streamSelectionUnavailable": "このソースではストリームを選択できません",
     "streamSelectionFailed": "選択したストリームを適用できませんでした",
     "trackSelectionNotRemembered": "このトラック選択は現在の再生にのみ適用されます。",
-    "serverUnavailableForProfile": "現在のプロフィールで利用可能なサーバーがありません"
+    "serverUnavailableForProfile": "現在のプロフィールで利用可能なサーバーがありません",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "テキスト",
@@ -1199,6 +1204,7 @@
     "tvShow": "テレビ番組",
     "minutesLeft": "残り${minutes}分",
     "moreLikeThis": "似ている作品",
+    "selectVersion": "",
     "titleCount": {
       "other": "${n}作品"
     },
@@ -1273,11 +1279,14 @@
     "noCollections": "このライブラリにコレクションがありません",
     "noFoldersFound": "フォルダが見つかりません",
     "folders": "フォルダ",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "おすすめ",
       "browse": "ブラウズ",
       "collections": "コレクション",
-      "playlists": "プレイリスト"
+      "playlists": "プレイリスト",
+      "genres": ""
     },
     "groupings": {
       "title": "グループ",
@@ -1593,7 +1602,9 @@
       "unairedEpisodes": "未放送 ${n}話",
       "recommendedByPercent": "視聴者の${percent}がおすすめ",
       "relatedTitles": "関連作品",
-      "background": "背景"
+      "background": "背景",
+      "trailerUnavailable": "この端末では予告編を開けませんでした",
+      "linkUnavailable": "この端末ではリンクを開けませんでした"
     },
     "totalResults": {
       "other": "${n}件の結果"

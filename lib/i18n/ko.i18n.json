@@ -512,7 +512,8 @@
     "playerScopeGlobal": "모든 곳",
     "playerScopeLibrary": "라이브러리별",
     "playerScopeTitle": "시리즈 또는 영화별",
-    "exportDialogTitle": "PlezTV 설정 내보내기"
+    "exportDialogTitle": "PlezTV 설정 내보내기",
+    "scopeZoom": "확대/축소"
   },
   "themeEditor": {
     "builtIn": "기본 제공",
@@ -899,7 +900,10 @@
     "forcedTrack": "${label} (강제)",
     "osdSubtitlesOff": "자막: 꺼짐",
     "osdSubtitles": "자막: ${track}",
-    "osdAudio": "오디오: ${track}"
+    "osdAudio": "오디오: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "자막이 제시간에 나타나지 않았습니다. 다운로드에 실패했을 수 있습니다"
   },
   "userStatus": {},
   "messages": {
@@ -971,7 +975,8 @@
     "streamSelectionUnavailable": "이 소스에서는 스트림을 선택할 수 없습니다",
     "streamSelectionFailed": "선택한 스트림을 적용할 수 없습니다",
     "trackSelectionNotRemembered": "이 트랙 선택은 현재 재생에만 적용됩니다.",
-    "serverUnavailableForProfile": "활성 프로필에 사용할 수 있는 서버가 없습니다"
+    "serverUnavailableForProfile": "활성 프로필에 사용할 수 있는 서버가 없습니다",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "텍스트",
@@ -1199,6 +1204,7 @@
     "tvShow": "TV 시리즈",
     "minutesLeft": "${minutes}분 남음",
     "moreLikeThis": "비슷한 콘텐츠",
+    "selectVersion": "",
     "titleCount": {
       "other": "${n}개 타이틀"
     },
@@ -1273,11 +1279,14 @@
     "noCollections": "이 미디어 라이브러리에는 컬렉션이 없습니다",
     "noFoldersFound": "폴더를 찾을 수 없습니다",
     "folders": "폴더",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "추천",
       "browse": "찾아보기",
       "collections": "컬렉션",
-      "playlists": "재생 목록"
+      "playlists": "재생 목록",
+      "genres": ""
     },
     "groupings": {
       "title": "그룹",
@@ -1593,7 +1602,9 @@
       "unairedEpisodes": "미방영 ${n}개",
       "recommendedByPercent": "시청자의 ${percent} 추천",
       "relatedTitles": "관련 작품",
-      "background": "배경"
+      "background": "배경",
+      "trailerUnavailable": "이 기기에서 예고편을 열 수 없습니다",
+      "linkUnavailable": "이 기기에서 링크를 열 수 없습니다"
     },
     "totalResults": {
       "other": "결과 ${n}개"

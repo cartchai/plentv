@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Overal",
     "playerScopeLibrary": "Per bibliotheek",
     "playerScopeTitle": "Per serie of film",
-    "exportDialogTitle": "PlezTV-instellingen exporteren"
+    "exportDialogTitle": "PlezTV-instellingen exporteren",
+    "scopeZoom": "Zoom"
   },
   "themeEditor": {
     "builtIn": "Ingebouwd",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (Geforceerd)",
     "osdSubtitlesOff": "Ondertitels: uit",
     "osdSubtitles": "Ondertitels: ${track}",
-    "osdAudio": "Audio: ${track}"
+    "osdAudio": "Audio: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "De ondertiteling verscheen niet op tijd. Het downloaden is mogelijk mislukt"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "Streamselectie is niet beschikbaar voor deze bron",
     "streamSelectionFailed": "Kon de geselecteerde streams niet toepassen",
     "trackSelectionNotRemembered": "Deze trackkeuze geldt alleen voor het huidige afspelen.",
-    "serverUnavailableForProfile": "Er is geen server beschikbaar voor het actieve profiel"
+    "serverUnavailableForProfile": "Er is geen server beschikbaar voor het actieve profiel",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Tekst",
@@ -1203,6 +1208,7 @@
     "tvShow": "Tv-serie",
     "minutesLeft": "nog ${minutes} min",
     "moreLikeThis": "Meer zoals dit",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} titel",
       "other": "${n} titels"
@@ -1278,11 +1284,14 @@
     "noCollections": "Geen collecties in deze bibliotheek",
     "noFoldersFound": "Geen mappen gevonden",
     "folders": "mappen",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Aanbevolen",
       "browse": "Bladeren",
       "collections": "Collecties",
-      "playlists": "Afspeellijsten"
+      "playlists": "Afspeellijsten",
+      "genres": ""
     },
     "groupings": {
       "title": "Groepering",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} nog niet uitgezonden",
       "recommendedByPercent": "Aanbevolen door ${percent} van de kijkers",
       "relatedTitles": "Gerelateerde titels",
-      "background": "Achtergrond"
+      "background": "Achtergrond",
+      "trailerUnavailable": "Kan de trailer niet openen op dit apparaat",
+      "linkUnavailable": "Kan de link niet openen op dit apparaat"
     },
     "totalResults": {
       "one": "${n} resultaat",

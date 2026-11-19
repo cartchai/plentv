@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Her yerde",
     "playerScopeLibrary": "Kitaplık başına",
     "playerScopeTitle": "Dizi veya film başına",
-    "exportDialogTitle": "PlezTV ayarlarını dışa aktar"
+    "exportDialogTitle": "PlezTV ayarlarını dışa aktar",
+    "scopeZoom": "Yakınlaştırma"
   },
   "themeEditor": {
     "builtIn": "Yerleşik",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (Zorunlu)",
     "osdSubtitlesOff": "Altyazı: Kapalı",
     "osdSubtitles": "Altyazı: ${track}",
-    "osdAudio": "Ses: ${track}"
+    "osdAudio": "Ses: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Altyazı zamanında görünmedi. İndirme başarısız olmuş olabilir"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "Akış seçimi bu kaynak için kullanılamıyor",
     "streamSelectionFailed": "Seçilen akışlar uygulanamadı",
     "trackSelectionNotRemembered": "Bu parça seçimi yalnızca mevcut oynatma için geçerlidir.",
-    "serverUnavailableForProfile": "Etkin profil için kullanılabilir sunucu yok"
+    "serverUnavailableForProfile": "Etkin profil için kullanılabilir sunucu yok",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Metin",
@@ -1203,6 +1208,7 @@
     "tvShow": "TV Dizisi",
     "minutesLeft": "${minutes} dk kaldı",
     "moreLikeThis": "Buna Benzerler",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} başlık",
       "other": "${n} başlık"
@@ -1278,11 +1284,14 @@
     "noCollections": "Bu kitaplıkta koleksiyon yok",
     "noFoldersFound": "Klasör bulunamadı",
     "folders": "klasörler",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Önerilenler",
       "browse": "Göz At",
       "collections": "Koleksiyonlar",
-      "playlists": "Oynatma Listeleri"
+      "playlists": "Oynatma Listeleri",
+      "genres": ""
     },
     "groupings": {
       "title": "Gruplama",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} henüz yayınlanmadı",
       "recommendedByPercent": "İzleyicilerin ${percent} tarafından önerildi",
       "relatedTitles": "İlgili yapımlar",
-      "background": "Arka plan"
+      "background": "Arka plan",
+      "trailerUnavailable": "Bu cihazda fragman açılamadı",
+      "linkUnavailable": "Bu cihazda bağlantı açılamadı"
     },
     "totalResults": {
       "one": "${n} sonuç",

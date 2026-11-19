@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Mindenhol",
     "playerScopeLibrary": "Könyvtáronként",
     "playerScopeTitle": "Sorozatonként vagy filmenként",
-    "exportDialogTitle": "PlezTV-beállítások exportálása"
+    "exportDialogTitle": "PlezTV-beállítások exportálása",
+    "scopeZoom": "Nagyítás"
   },
   "themeEditor": {
     "builtIn": "Beépített",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (kényszerített)",
     "osdSubtitlesOff": "Feliratok: ki",
     "osdSubtitles": "Feliratok: ${track}",
-    "osdAudio": "Hang: ${track}"
+    "osdAudio": "Hang: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "A felirat nem jelent meg időben. Lehet, hogy a letöltés nem sikerült"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "Ehhez a forráshoz nem érhető el a streamek kiválasztása",
     "streamSelectionFailed": "Nem sikerült alkalmazni a kiválasztott streameket",
     "trackSelectionNotRemembered": "Ez a sávválasztás csak az aktuális lejátszásra érvényes.",
-    "serverUnavailableForProfile": "Az aktív profilhoz nem érhető el szerver"
+    "serverUnavailableForProfile": "Az aktív profilhoz nem érhető el szerver",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Szöveg",
@@ -1203,6 +1208,7 @@
     "tvShow": "TV-sorozat",
     "minutesLeft": "${minutes} perc van hátra",
     "moreLikeThis": "Hasonló tartalmak",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} cím",
       "other": "${n} cím"
@@ -1278,11 +1284,14 @@
     "noCollections": "Nincsenek gyűjtemények ebben a könyvtárban",
     "noFoldersFound": "Nem találhatók mappák",
     "folders": "mappák",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Ajánlott",
       "browse": "Böngészés",
       "collections": "Gyűjtemények",
-      "playlists": "Lejátszási listák"
+      "playlists": "Lejátszási listák",
+      "genres": ""
     },
     "groupings": {
       "title": "Csoportosítás",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} még nem került adásba",
       "recommendedByPercent": "A nézők ${percent}-a ajánlja",
       "relatedTitles": "Kapcsolódó címek",
-      "background": "Háttér"
+      "background": "Háttér",
+      "trailerUnavailable": "Ezen az eszközön nem sikerült megnyitni az előzetest",
+      "linkUnavailable": "Ezen az eszközön nem sikerült megnyitni a hivatkozást"
     },
     "totalResults": {
       "one": "${n} találat",

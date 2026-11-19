@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Барлық жерде",
     "playerScopeLibrary": "Кітапхана бойынша",
     "playerScopeTitle": "Сериал немесе фильм бойынша",
-    "exportDialogTitle": "PlezTV параметрлерін экспорттау"
+    "exportDialogTitle": "PlezTV параметрлерін экспорттау",
+    "scopeZoom": "Масштаб"
   },
   "themeEditor": {
     "builtIn": "Кірістірілген",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (Мәжбүрлі)",
     "osdSubtitlesOff": "Субтитр: өшірулі",
     "osdSubtitles": "Субтитр: ${track}",
-    "osdAudio": "Дыбыс: ${track}"
+    "osdAudio": "Дыбыс: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Субтитр уақытында пайда болмады. Жүктеу сәтсіз болуы мүмкін"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "Бұл көз үшін ағынды таңдау қолжетімді емес",
     "streamSelectionFailed": "Таңдалған ағындарды қолдану мүмкін болмады",
     "trackSelectionNotRemembered": "Бұл жол таңдауы тек ағымдағы ойнатуға қолданылады.",
-    "serverUnavailableForProfile": "Белсенді профиль үшін қолжетімді сервер жоқ"
+    "serverUnavailableForProfile": "Белсенді профиль үшін қолжетімді сервер жоқ",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Мәтін",
@@ -1203,6 +1208,7 @@
     "tvShow": "TV Шоу",
     "minutesLeft": "${minutes} мин қалды",
     "moreLikeThis": "Ұқсастар",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} атау",
       "other": "${n} атау"
@@ -1278,11 +1284,14 @@
     "noCollections": "Бұл кітапханада топтамалар жоқ",
     "noFoldersFound": "Қапшықтар табылмады",
     "folders": "қапшықтар",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Ұсынылатындар",
       "browse": "Шолу",
       "collections": "Топтамалар",
-      "playlists": "Ойнату тізімдері"
+      "playlists": "Ойнату тізімдері",
+      "genres": ""
     },
     "groupings": {
       "title": "Топтау",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} әлі көрсетілмеген",
       "recommendedByPercent": "Көрермендердің ${percent} ұсынады",
       "relatedTitles": "Қатысты атаулар",
-      "background": "Фон"
+      "background": "Фон",
+      "trailerUnavailable": "Бұл құрылғыда трейлер ашылмады",
+      "linkUnavailable": "Бұл құрылғыда сілтеме ашылмады"
     },
     "totalResults": {
       "one": "${n} нәтиже",

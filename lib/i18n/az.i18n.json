@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Hər yerdə",
     "playerScopeLibrary": "Kitabxana üzrə",
     "playerScopeTitle": "Serial və ya film üzrə",
-    "exportDialogTitle": "PlezTV tənzimləmələrini ixrac et"
+    "exportDialogTitle": "PlezTV tənzimləmələrini ixrac et",
+    "scopeZoom": "Miqyas"
   },
   "themeEditor": {
     "builtIn": "Daxili",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (Məcburi)",
     "osdSubtitlesOff": "Altyazı: Söndürülüb",
     "osdSubtitles": "Altyazı: ${track}",
-    "osdAudio": "Səs: ${track}"
+    "osdAudio": "Səs: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Altyazı vaxtında görünmədi. Yükləmə uğursuz olmuş ola bilər"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "Bu mənbə üçün yayım seçimi mövcud deyil",
     "streamSelectionFailed": "Seçilmiş yayımları tətbiq etmək olmadı",
     "trackSelectionNotRemembered": "Bu trek seçimi yalnız cari oynatmaya tətbiq olunur.",
-    "serverUnavailableForProfile": "Aktiv profil üçün heç bir server mövcud deyil"
+    "serverUnavailableForProfile": "Aktiv profil üçün heç bir server mövcud deyil",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Mətn",
@@ -1203,6 +1208,7 @@
     "tvShow": "TV Şou",
     "minutesLeft": "${minutes} dəq qaldı",
     "moreLikeThis": "Buna bənzərlər",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} başlıq",
       "other": "${n} başlıq"
@@ -1278,11 +1284,14 @@
     "noCollections": "Bu kitabxanada kolleksiya yoxdur",
     "noFoldersFound": "Qovluq tapılmadı",
     "folders": "qovluqlar",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Tövsiyə olunanlar",
       "browse": "Baxış",
       "collections": "Kolleksiyalar",
-      "playlists": "Oynatma siyahıları"
+      "playlists": "Oynatma siyahıları",
+      "genres": ""
     },
     "groupings": {
       "title": "Qruplaşdırma",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} hələ yayımlanmayıb",
       "recommendedByPercent": "İzləyicilərin ${percent}-i tövsiyə edir",
       "relatedTitles": "Əlaqəli başlıqlar",
-      "background": "Arxa fon"
+      "background": "Arxa fon",
+      "trailerUnavailable": "Bu cihazda treyler açıla bilmədi",
+      "linkUnavailable": "Bu cihazda bu keçid açıla bilmədi"
     },
     "totalResults": {
       "one": "${n} nəticə",

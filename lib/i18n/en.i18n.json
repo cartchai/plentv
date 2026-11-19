@@ -282,7 +282,7 @@
     "liveLowLatencyZappingDescription": "Switch live channels faster by buffering less before playback starts. May stutter on slow or unstable Wi-Fi.",
     "clearDecoderMemo": "Clear saved decoder choices",
     "clearDecoderMemoDescription": "Forget which live channels start on the software video output instead of the hardware plane",
-    "clearDecoderMemoDone": "Saved decoder choices cleared", 
+    "clearDecoderMemoDone": "Saved decoder choices cleared",
     "playbackBuffer": "Playback Buffer",
     "playbackBufferAuto": "Auto (Recommended)",
     "playbackBufferLarge": "Large",
@@ -450,7 +450,7 @@
     "matchContentFrameRateDescription": "Match display refresh rate to video content",
     "surfaceRenderMode": "Surface render mode (trial)",
     "surfaceRenderModeDescription": "Renders the interface directly to a surface instead of a texture. Needs a restart. Turn off if menus, the mini-player, or picture-in-picture hide behind video.",
-    "storageAlmostFull": "Storage almost full \u2014 guide and artwork limited",
+    "storageAlmostFull": "Storage almost full — guide and artwork limited",
     "storageAlmostFullDetail": "${free} free. Free some space to restore the full guide and artwork.",
     "ui1080pMode": "1080p interface mode (trial)",
     "ui1080pModeDescription": "Runs menus and the guide at 1080p and switches up to 4K only while video plays. Turn off if the picture looks soft or the black flash bothers you.",
@@ -564,7 +564,8 @@
     "playerScopeGlobal": "Everywhere",
     "playerScopeLibrary": "Per library",
     "playerScopeTitle": "Per show or movie",
-    "exportDialogTitle": "Export PlezTV settings"
+    "exportDialogTitle": "Export PlezTV settings",
+    "scopeZoom": "Zoom"
   },
   "themeEditor": {
     "builtIn": "Built-in",
@@ -970,7 +971,10 @@
     "forcedTrack": "${label} (Forced)",
     "osdSubtitlesOff": "Subtitles: Off",
     "osdSubtitles": "Subtitles: ${track}",
-    "osdAudio": "Audio: ${track}"
+    "osdAudio": "Audio: ${track}",
+    "tapToUnlock": "Tap to unlock",
+    "tapAgainToUnlock": "Tap again to unlock",
+    "subtitleDownloadTimedOut": "The subtitle didn't appear in time. The download may have failed"
   },
   "userStatus": {},
   "messages": {
@@ -1048,7 +1052,8 @@
     "autoDumpPathCopied": "Auto-dump path copied",
     "autoDumpShareFailed": "Could not share the auto-dump",
     "githubIssue": "GitHub issue",
-    "logSubmitNotConfigured": "Log submit isn't set up in this build yet."
+    "logSubmitNotConfigured": "Log submit isn't set up in this build yet.",
+    "serverLimitTranscode": "Try transcoding"
   },
   "subtitlingStyling": {
     "text": "Text",
@@ -1279,6 +1284,7 @@
     "tvShow": "TV Show",
     "minutesLeft": "${minutes} min left",
     "moreLikeThis": "More Like This",
+    "selectVersion": "Select Version",
     "titleCount": {
       "one": "${n} title",
       "other": "${n} titles"
@@ -1372,7 +1378,8 @@
       "collections": "Collections",
       "playlists": "Playlists",
       "categories": "Categories",
-      "favorites": "Favourites"
+      "favorites": "Favourites",
+      "genres": "Genres"
     },
     "groupings": {
       "title": "Grouping",
@@ -1454,7 +1461,9 @@
       "one": "${n} item",
       "other": "${n} items"
     },
-    "noFavorites": "No favourites yet — long-press a movie or show to add it here."
+    "noFavorites": "No favourites yet — long-press a movie or show to add it here.",
+    "shuffleLibrary": "Shuffle library",
+    "noGenres": "No genres in this library"
   },
   "about": {
     "changelog2295": [
@@ -2202,7 +2211,9 @@
       "unairedEpisodes": "${n} not aired yet",
       "recommendedByPercent": "Recommended by ${percent} of viewers",
       "relatedTitles": "Related titles",
-      "background": "Background"
+      "background": "Background",
+      "trailerUnavailable": "Couldn't open the trailer on this device",
+      "linkUnavailable": "Couldn't open this link on this device"
     },
     "totalResults": {
       "one": "${n} result",

@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Везде",
     "playerScopeLibrary": "Для библиотеки",
     "playerScopeTitle": "Для сериала или фильма",
-    "exportDialogTitle": "Экспорт настроек PlezTV"
+    "exportDialogTitle": "Экспорт настроек PlezTV",
+    "scopeZoom": "Масштаб"
   },
   "themeEditor": {
     "builtIn": "Встроенные",
@@ -908,7 +909,10 @@
     "forcedTrack": "${label} (принудительная)",
     "osdSubtitlesOff": "Субтитры: выкл.",
     "osdSubtitles": "Субтитры: ${track}",
-    "osdAudio": "Аудио: ${track}"
+    "osdAudio": "Аудио: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Субтитры не появились вовремя. Возможно, загрузка не удалась"
   },
   "userStatus": {},
   "messages": {
@@ -983,7 +987,8 @@
     "streamSelectionUnavailable": "Выбор потоков недоступен для этого источника",
     "streamSelectionFailed": "Не удалось применить выбранные потоки",
     "trackSelectionNotRemembered": "Этот выбор дорожки действует только для текущего воспроизведения.",
-    "serverUnavailableForProfile": "Для активного профиля нет доступных серверов"
+    "serverUnavailableForProfile": "Для активного профиля нет доступных серверов",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Текст",
@@ -1211,6 +1216,7 @@
     "tvShow": "Сериал",
     "minutesLeft": "Осталось ${minutes} мин",
     "moreLikeThis": "Похожее",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} название",
       "few": "${n} названия",
@@ -1288,11 +1294,14 @@
     "noCollections": "В этой библиотеке нет коллекций",
     "noFoldersFound": "Папки не найдены",
     "folders": "папки",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Рекомендуемые",
       "browse": "Обзор",
       "collections": "Коллекции",
-      "playlists": "Плейлисты"
+      "playlists": "Плейлисты",
+      "genres": ""
     },
     "groupings": {
       "title": "Группировка",
@@ -1620,7 +1629,9 @@
       "unairedEpisodes": "${n} ещё не вышли",
       "recommendedByPercent": "Рекомендуют ${percent} зрителей",
       "relatedTitles": "Связанные названия",
-      "background": "Фон"
+      "background": "Фон",
+      "trailerUnavailable": "Не удалось открыть трейлер на этом устройстве",
+      "linkUnavailable": "Не удалось открыть ссылку на этом устройстве"
     },
     "totalResults": {
       "one": "${n} результат",

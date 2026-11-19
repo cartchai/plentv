@@ -512,7 +512,8 @@
     "playerScopeGlobal": "全部",
     "playerScopeLibrary": "依媒體庫",
     "playerScopeTitle": "依影集或電影",
-    "exportDialogTitle": "匯出 PlezTV 設定"
+    "exportDialogTitle": "匯出 PlezTV 設定",
+    "scopeZoom": "縮放"
   },
   "themeEditor": {
     "builtIn": "內建",
@@ -899,7 +900,10 @@
     "forcedTrack": "${label}（強制）",
     "osdSubtitlesOff": "字幕：關閉",
     "osdSubtitles": "字幕：${track}",
-    "osdAudio": "音訊：${track}"
+    "osdAudio": "音訊：${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "字幕未及時出現，下載可能已失敗"
   },
   "userStatus": {},
   "messages": {
@@ -971,7 +975,8 @@
     "streamSelectionUnavailable": "此來源不支援選擇串流",
     "streamSelectionFailed": "無法套用所選串流",
     "trackSelectionNotRemembered": "此軌道選擇僅套用於目前播放。",
-    "serverUnavailableForProfile": "使用中的使用者設定檔沒有可用的伺服器"
+    "serverUnavailableForProfile": "使用中的使用者設定檔沒有可用的伺服器",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "文字",
@@ -1199,6 +1204,7 @@
     "tvShow": "影集",
     "minutesLeft": "剩餘 ${minutes} 分鐘",
     "moreLikeThis": "更多類似內容",
+    "selectVersion": "",
     "titleCount": {
       "other": "${n} 部作品"
     },
@@ -1273,11 +1279,14 @@
     "noCollections": "此媒體庫中沒有收藏集",
     "noFoldersFound": "找不到資料夾",
     "folders": "資料夾",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "推薦",
       "browse": "瀏覽",
       "collections": "收藏集",
-      "playlists": "播放清單"
+      "playlists": "播放清單",
+      "genres": ""
     },
     "groupings": {
       "title": "分組",
@@ -1593,7 +1602,9 @@
       "unairedEpisodes": "尚有 ${n} 集未播出",
       "recommendedByPercent": "${percent} 的觀眾推薦",
       "relatedTitles": "相關作品",
-      "background": "背景介紹"
+      "background": "背景介紹",
+      "trailerUnavailable": "無法在這部裝置上開啟預告片",
+      "linkUnavailable": "無法在這部裝置上開啟連結"
     },
     "totalResults": {
       "other": "${n} 筆結果"

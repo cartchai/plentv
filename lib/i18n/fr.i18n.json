@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Partout",
     "playerScopeLibrary": "Par bibliothèque",
     "playerScopeTitle": "Par série ou film",
-    "exportDialogTitle": "Exporter les paramètres de PlezTV"
+    "exportDialogTitle": "Exporter les paramètres de PlezTV",
+    "scopeZoom": "Zoom"
   },
   "themeEditor": {
     "builtIn": "Intégrés",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (forcé)",
     "osdSubtitlesOff": "Sous-titres : désactivés",
     "osdSubtitles": "Sous-titres : ${track}",
-    "osdAudio": "Audio : ${track}"
+    "osdAudio": "Audio : ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Le sous-titre n’est pas apparu à temps. Le téléchargement a peut-être échoué"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "La sélection des flux n’est pas disponible pour cette source",
     "streamSelectionFailed": "Impossible d’appliquer les flux sélectionnés",
     "trackSelectionNotRemembered": "Ce choix de piste ne s’applique qu’à la lecture en cours.",
-    "serverUnavailableForProfile": "Aucun serveur n’est disponible pour le profil actif"
+    "serverUnavailableForProfile": "Aucun serveur n’est disponible pour le profil actif",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Texte",
@@ -1203,6 +1208,7 @@
     "tvShow": "Série TV",
     "minutesLeft": "${minutes} min restantes",
     "moreLikeThis": "Plus de contenus similaires",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} titre",
       "other": "${n} titres"
@@ -1278,11 +1284,14 @@
     "noCollections": "Aucune collection dans cette bibliothèque",
     "noFoldersFound": "Aucun dossier trouvé",
     "folders": "dossiers",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Recommandé",
       "browse": "Parcourir",
       "collections": "Collections",
-      "playlists": "Playlists"
+      "playlists": "Playlists",
+      "genres": ""
     },
     "groupings": {
       "title": "Regroupement",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} pas encore diffusés",
       "recommendedByPercent": "Recommandé par ${percent} des spectateurs",
       "relatedTitles": "Titres liés",
-      "background": "Contexte"
+      "background": "Contexte",
+      "trailerUnavailable": "Impossible d’ouvrir la bande-annonce sur cet appareil",
+      "linkUnavailable": "Impossible d’ouvrir ce lien sur cet appareil"
     },
     "totalResults": {
       "one": "${n} résultat",

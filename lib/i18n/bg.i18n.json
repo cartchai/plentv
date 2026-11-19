@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Навсякъде",
     "playerScopeLibrary": "По библиотека",
     "playerScopeTitle": "По сериал или филм",
-    "exportDialogTitle": "Експортиране на настройките на PlezTV"
+    "exportDialogTitle": "Експортиране на настройките на PlezTV",
+    "scopeZoom": "Мащаб"
   },
   "themeEditor": {
     "builtIn": "Вградени",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (Принудителни)",
     "osdSubtitlesOff": "Субтитри: изкл.",
     "osdSubtitles": "Субтитри: ${track}",
-    "osdAudio": "Аудио: ${track}"
+    "osdAudio": "Аудио: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Субтитърът не се появи навреме. Изтеглянето може да е неуспешно"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "Изборът на потоци не е наличен за този източник",
     "streamSelectionFailed": "Избраните потоци не можаха да бъдат приложени",
     "trackSelectionNotRemembered": "Този избор на пътечка важи само за текущото възпроизвеждане.",
-    "serverUnavailableForProfile": "Няма наличен сървър за активния профил"
+    "serverUnavailableForProfile": "Няма наличен сървър за активния профил",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Текст",
@@ -1203,6 +1208,7 @@
     "tvShow": "ТВ сериал",
     "minutesLeft": "Остават ${minutes} мин",
     "moreLikeThis": "Подобно на това",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} заглавие",
       "other": "${n} заглавия"
@@ -1278,11 +1284,14 @@
     "noCollections": "Няма колекции в тази библиотека",
     "noFoldersFound": "Не са намерени папки",
     "folders": "папки",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Препоръчани",
       "browse": "Преглед",
       "collections": "Колекции",
-      "playlists": "Плейлисти"
+      "playlists": "Плейлисти",
+      "genres": ""
     },
     "groupings": {
       "title": "Групиране",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} все още не са излъчени",
       "recommendedByPercent": "Препоръчан от ${percent} от зрителите",
       "relatedTitles": "Свързани заглавия",
-      "background": "Фон"
+      "background": "Фон",
+      "trailerUnavailable": "Трейлърът не можа да се отвори на това устройство",
+      "linkUnavailable": "Връзката не можа да се отвори на това устройство"
     },
     "totalResults": {
       "one": "${n} резултат",

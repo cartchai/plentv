@@ -1639,6 +1639,9 @@ class Translations$settings$en {
 
 	/// en: 'Export PlezTV settings'
 	String get exportDialogTitle => 'Export PlezTV settings';
+
+	/// en: 'Zoom'
+	String get scopeZoom => 'Zoom';
 }
 
 // Path: themeEditor
@@ -2697,6 +2700,15 @@ class Translations$videoControls$en {
 
 	/// en: 'Audio: ${track}'
 	String osdAudio({required Object track}) => 'Audio: ${track}';
+
+	/// en: 'Tap to unlock'
+	String get tapToUnlock => 'Tap to unlock';
+
+	/// en: 'Tap again to unlock'
+	String get tapAgainToUnlock => 'Tap again to unlock';
+
+	/// en: 'The subtitle didn't appear in time. The download may have failed'
+	String get subtitleDownloadTimedOut => 'The subtitle didn\'t appear in time. The download may have failed';
 }
 
 // Path: messages
@@ -2925,6 +2937,9 @@ class Translations$messages$en {
 
 	/// en: 'Log submit isn't set up in this build yet.'
 	String get logSubmitNotConfigured => 'Log submit isn\'t set up in this build yet.';
+
+	/// en: 'Try transcoding'
+	String get serverLimitTranscode => 'Try transcoding';
 }
 
 // Path: subtitlingStyling
@@ -3526,6 +3541,9 @@ class Translations$discover$en {
 	/// en: 'More Like This'
 	String get moreLikeThis => 'More Like This';
 
+	/// en: 'Select Version'
+	String get selectVersion => 'Select Version';
+
 	/// en: '(one) {${n} title} (other) {${n} titles}'
 	String titleCount({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
 		one: '${n} title',
@@ -3788,6 +3806,12 @@ class Translations$libraries$en {
 
 	/// en: 'No favourites yet — long-press a movie or show to add it here.'
 	String get noFavorites => 'No favourites yet — long-press a movie or show to add it here.';
+
+	/// en: 'Shuffle library'
+	String get shuffleLibrary => 'Shuffle library';
+
+	/// en: 'No genres in this library'
+	String get noGenres => 'No genres in this library';
 }
 
 // Path: about
@@ -8707,6 +8731,9 @@ class Translations$libraries$tabs$en {
 
 	/// en: 'Favourites'
 	String get favorites => 'Favourites';
+
+	/// en: 'Genres'
+	String get genres => 'Genres';
 }
 
 // Path: libraries.groupings
@@ -9400,6 +9427,12 @@ class Translations$explore$detail$en {
 
 	/// en: 'Background'
 	String get background => 'Background';
+
+	/// en: 'Couldn't open the trailer on this device'
+	String get trailerUnavailable => 'Couldn\'t open the trailer on this device';
+
+	/// en: 'Couldn't open this link on this device'
+	String get linkUnavailable => 'Couldn\'t open this link on this device';
 }
 
 // Path: liveTv.recordSettings
@@ -10675,6 +10708,7 @@ extension on Translations {
 			'settings.playerScopeLibrary' => 'Per library',
 			'settings.playerScopeTitle' => 'Per show or movie',
 			'settings.exportDialogTitle' => 'Export PlezTV settings',
+			'settings.scopeZoom' => 'Zoom',
 			'themeEditor.builtIn' => 'Built-in',
 			'themeEditor.presets' => 'Presets',
 			'themeEditor.custom' => 'Custom',
@@ -11035,6 +11069,9 @@ extension on Translations {
 			'videoControls.osdSubtitlesOff' => 'Subtitles: Off',
 			'videoControls.osdSubtitles' => ({required Object track}) => 'Subtitles: ${track}',
 			'videoControls.osdAudio' => ({required Object track}) => 'Audio: ${track}',
+			'videoControls.tapToUnlock' => 'Tap to unlock',
+			'videoControls.tapAgainToUnlock' => 'Tap again to unlock',
+			'videoControls.subtitleDownloadTimedOut' => 'The subtitle didn\'t appear in time. The download may have failed',
 			'messages.markedAsWatched' => 'Marked as watched',
 			'messages.markedAsUnwatched' => 'Marked as unwatched',
 			'messages.markedAsWatchedOffline' => 'Marked as watched (will sync when online)',
@@ -11107,6 +11144,7 @@ extension on Translations {
 			'messages.autoDumpShareFailed' => 'Could not share the auto-dump',
 			'messages.githubIssue' => 'GitHub issue',
 			'messages.logSubmitNotConfigured' => 'Log submit isn\'t set up in this build yet.',
+			'messages.serverLimitTranscode' => 'Try transcoding',
 			'subtitlingStyling.text' => 'Text',
 			'subtitlingStyling.border' => 'Border',
 			'subtitlingStyling.background' => 'Background',
@@ -11154,13 +11192,13 @@ extension on Translations {
 			'profiles.addPlezTVProfile' => 'Add PlezTV profile',
 			'profiles.switchingProfile' => 'Switching profile…',
 			'profiles.deleteThisProfileTitle' => 'Delete this profile?',
+			_ => null,
+		} ?? switch (path) {
 			'profiles.deleteThisProfileMessage' => ({required Object displayName}) => 'Remove ${displayName}. Connections aren\'t affected.',
 			'profiles.active' => 'Active',
 			'profiles.manage' => 'Manage',
 			'profiles.delete' => 'Delete',
 			'profiles.signOut' => 'Sign out',
-			_ => null,
-		} ?? switch (path) {
 			'profiles.signOutPlexTitle' => 'Sign out of Plex?',
 			'profiles.signOutPlexMessage' => ({required Object displayName}) => 'Remove ${displayName} and all Plex Home users? Sign back in anytime.',
 			'profiles.signOutPlexDeleteDownloads' => 'Also delete downloads',
@@ -11313,6 +11351,7 @@ extension on Translations {
 			'discover.tvShow' => 'TV Show',
 			'discover.minutesLeft' => ({required Object minutes}) => '${minutes} min left',
 			'discover.moreLikeThis' => 'More Like This',
+			'discover.selectVersion' => 'Select Version',
 			'discover.titleCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} title', other: '${n} titles', ), 
 			'discover.person.born' => 'Born',
 			'discover.person.died' => 'Died',
@@ -11395,6 +11434,7 @@ extension on Translations {
 			'libraries.tabs.playlists' => 'Playlists',
 			'libraries.tabs.categories' => 'Categories',
 			'libraries.tabs.favorites' => 'Favourites',
+			'libraries.tabs.genres' => 'Genres',
 			'libraries.groupings.title' => 'Grouping',
 			'libraries.groupings.all' => 'All',
 			'libraries.groupings.movies' => 'Movies',
@@ -11465,6 +11505,8 @@ extension on Translations {
 			'libraries.noCategories' => 'No categories in this library',
 			'libraries.categoryItemCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} item', other: '${n} items', ), 
 			'libraries.noFavorites' => 'No favourites yet — long-press a movie or show to add it here.',
+			'libraries.shuffleLibrary' => 'Shuffle library',
+			'libraries.noGenres' => 'No genres in this library',
 			'about.changelog2295.0' => 'Debug logging now always saves to a file on the device — there is no logging switch any more',
 			'about.changelog2295.1' => 'After three starts in a row that never finish loading, the app saves a debug file by itself, in the app\'s folder on the device\'s storage, so a crashing TV leaves evidence behind',
 			'about.changelog2295.2' => 'Settings → Logs shows the last automatically saved debug file, its location, and a Share button — and the debug export is now a labelled row, not a bare download icon',
@@ -11664,6 +11706,8 @@ extension on Translations {
 			'about.changelog2263.8' => 'Guide programmes now also match by channel name when the provider\'s channel ids don\'t line up, and Settings → IPTV shows how much of the guide has programmes',
 			'about.changelog2262.0' => 'Categories now scroll smoothly — the list only builds the rows on screen instead of all 1,200 at once',
 			'about.changelog2262.1' => 'Live TV mini-player should show video now: the app finally tells Android where the video goes, so the picture sits in the mini-player instead of hidden behind the guide',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2262.2' => 'Catch-up now plays from the start of a past programme — the app was asking the provider for the time in a format it does not accept',
 			'about.changelog2262.3' => 'When a channel will not start, Settings → IPTV now says why instead of just showing “Could not start the live channel”',
 			'about.changelog2261.0' => 'Live TV mini-player should show video now, not just sound — it reveals itself even when the player never reports its first frame',
@@ -11673,8 +11717,6 @@ extension on Translations {
 			'about.changelog2261.4' => 'Settings → Live TV has a switch per server, so Plex live TV can be turned off while Trex stays on',
 			'about.changelog2261.5' => 'Categories are now one screen per connection — every category listed with its count, every switch takes effect straight away',
 			'about.changelog2261.6' => 'The Live TV guide now loads from a saved copy of the programme guide, so it opens fast instead of loading forever',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2261.7' => 'Every IPTV library (Movies, TV/Series) has a Favourites tab — long-press a movie or show to add it',
 			'about.changelog2260.0' => 'Turning a country or region off or on now takes effect straight away — before, the lists could take up to two minutes to catch up',
 			'about.changelog2260.1' => 'Refreshing playlists or switching a library now updates the lists straight away too',
@@ -12026,6 +12068,8 @@ extension on Translations {
 			'explore.detail.recommendedByPercent' => ({required Object percent}) => 'Recommended by ${percent} of viewers',
 			'explore.detail.relatedTitles' => 'Related titles',
 			'explore.detail.background' => 'Background',
+			'explore.detail.trailerUnavailable' => 'Couldn\'t open the trailer on this device',
+			'explore.detail.linkUnavailable' => 'Couldn\'t open this link on this device',
 			'explore.totalResults' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} result', other: '${n} results', ), 
 			'liveTv.title' => 'Live TV',
 			'liveTv.settingsDescription' => 'Choose which servers show Live TV',
@@ -12176,6 +12220,8 @@ extension on Translations {
 			'playlists.create' => 'Create Playlist',
 			'playlists.playlistName' => 'Playlist Name',
 			'playlists.enterPlaylistName' => 'Enter playlist name',
+			_ => null,
+		} ?? switch (path) {
 			'playlists.delete' => 'Delete Playlist',
 			'playlists.removeItem' => 'Remove from Playlist',
 			'playlists.smartPlaylist' => 'Smart Playlist',
@@ -12187,8 +12233,6 @@ extension on Translations {
 			'playlists.created' => 'Playlist created',
 			'playlists.deleted' => 'Playlist deleted',
 			'playlists.itemAdded' => 'Added to playlist',
-			_ => null,
-		} ?? switch (path) {
 			'playlists.itemRemoved' => 'Removed from playlist',
 			'playlists.selectPlaylist' => 'Select Playlist',
 			'playlists.searchPlaylists' => 'Search playlists...',
@@ -12690,6 +12734,8 @@ extension on Translations {
 			'metadataEdit.studio' => 'Studio',
 			'metadataEdit.tagline' => 'Tagline',
 			'metadataEdit.summary' => 'Summary',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.poster' => 'Poster',
 			'metadataEdit.background' => 'Background',
 			'metadataEdit.logo' => 'Logo',
@@ -12701,8 +12747,6 @@ extension on Translations {
 			'metadataEdit.fromUrl' => 'From URL',
 			'metadataEdit.uploadFile' => 'Upload File',
 			'metadataEdit.enterImageUrl' => 'Enter image URL',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.imageUrl' => 'Image URL',
 			'metadataEdit.metadataUpdated' => 'Metadata updated',
 			'metadataEdit.metadataUpdateFailed' => 'Failed to update metadata',
@@ -13204,6 +13248,8 @@ extension on Translations {
 			'iptv.epgAssigned' => 'Guide assigned',
 			'iptv.epgAssignmentCleared' => 'Assignment cleared',
 			'iptv.xtreamSection' => 'Xtream Codes',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.xtreamUserAgent' => 'Xtream User-Agent',
 			'iptv.xtreamUserAgentVlc' => 'VLC',
 			'iptv.xtreamUserAgentSmarters' => 'IPTVSmartersPro',
@@ -13215,8 +13261,6 @@ extension on Translations {
 			'iptv.initialsLoading' => 'Loading initials…',
 			'iptv.initialsLoadFailed' => 'Could not load the category initials. Check the connection and try again.',
 			'iptv.initialsNoneFound' => 'No repeating initials found in this connection’s categories.',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.catalogDiagnosticsTitle' => 'Series catalog',
 			'iptv.catalogDiagnosticsHint' => 'What this phone loaded from the series catalog — send a screenshot if TV search still finds nothing.',
 			'iptv.catalogDiagnosticsLoading' => 'Loading catalog…',

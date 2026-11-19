@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Overalt",
     "playerScopeLibrary": "Pr. bibliotek",
     "playerScopeTitle": "Pr. serie eller film",
-    "exportDialogTitle": "Eksportér PlezTV-indstillinger"
+    "exportDialogTitle": "Eksportér PlezTV-indstillinger",
+    "scopeZoom": "Zoom"
   },
   "themeEditor": {
     "builtIn": "Indbygget",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (tvunget)",
     "osdSubtitlesOff": "Undertekster: Fra",
     "osdSubtitles": "Undertekster: ${track}",
-    "osdAudio": "Lyd: ${track}"
+    "osdAudio": "Lyd: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "Underteksten dukkede ikke op i tide. Downloaden er muligvis mislykkedes"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "Valg af stream er ikke tilgængeligt for denne kilde",
     "streamSelectionFailed": "Kunne ikke anvende de valgte streams",
     "trackSelectionNotRemembered": "Dette sporvalg gælder kun for den aktuelle afspilning.",
-    "serverUnavailableForProfile": "Ingen server er tilgængelig for den aktive profil"
+    "serverUnavailableForProfile": "Ingen server er tilgængelig for den aktive profil",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Tekst",
@@ -1203,6 +1208,7 @@
     "tvShow": "TV-serie",
     "minutesLeft": "${minutes} min tilbage",
     "moreLikeThis": "Mere som dette",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} titel",
       "other": "${n} titler"
@@ -1278,11 +1284,14 @@
     "noCollections": "Ingen samlinger i dette bibliotek",
     "noFoldersFound": "Ingen mapper fundet",
     "folders": "mapper",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Anbefalet",
       "browse": "Gennemse",
       "collections": "Samlinger",
-      "playlists": "Playlister"
+      "playlists": "Playlister",
+      "genres": ""
     },
     "groupings": {
       "title": "Gruppering",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} ikke sendt endnu",
       "recommendedByPercent": "Anbefalet af ${percent} af seerne",
       "relatedTitles": "Relaterede titler",
-      "background": "Baggrund"
+      "background": "Baggrund",
+      "trailerUnavailable": "Kunne ikke åbne traileren på denne enhed",
+      "linkUnavailable": "Kunne ikke åbne linket på denne enhed"
     },
     "totalResults": {
       "one": "${n} resultat",

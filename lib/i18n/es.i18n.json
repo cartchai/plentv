@@ -512,7 +512,8 @@
     "playerScopeGlobal": "En todas partes",
     "playerScopeLibrary": "Por biblioteca",
     "playerScopeTitle": "Por serie o película",
-    "exportDialogTitle": "Exportar ajustes de PlezTV"
+    "exportDialogTitle": "Exportar ajustes de PlezTV",
+    "scopeZoom": "Zoom"
   },
   "themeEditor": {
     "builtIn": "Integrados",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (Forzada)",
     "osdSubtitlesOff": "Subtítulos: desactivados",
     "osdSubtitles": "Subtítulos: ${track}",
-    "osdAudio": "Audio: ${track}"
+    "osdAudio": "Audio: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "El subtítulo no apareció a tiempo. Es posible que la descarga haya fallado"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "La selección de flujos no está disponible para esta fuente",
     "streamSelectionFailed": "No se pudieron aplicar los flujos seleccionados",
     "trackSelectionNotRemembered": "Esta selección de pista solo se aplica a la reproducción actual.",
-    "serverUnavailableForProfile": "No hay ningún servidor disponible para el perfil activo"
+    "serverUnavailableForProfile": "No hay ningún servidor disponible para el perfil activo",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Texto",
@@ -1203,6 +1208,7 @@
     "tvShow": "Serie de TV",
     "minutesLeft": "quedan ${minutes} min",
     "moreLikeThis": "Más contenido similar",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} título",
       "other": "${n} títulos"
@@ -1278,11 +1284,14 @@
     "noCollections": "No hay colecciones en esta biblioteca",
     "noFoldersFound": "No se encontraron carpetas",
     "folders": "carpetas",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Recomendado",
       "browse": "Explorar",
       "collections": "Colecciones",
-      "playlists": "Listas de reproducción"
+      "playlists": "Listas de reproducción",
+      "genres": ""
     },
     "groupings": {
       "title": "Agrupación",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} sin estrenar",
       "recommendedByPercent": "Recomendada por el ${percent} de los espectadores",
       "relatedTitles": "Títulos relacionados",
-      "background": "Antecedentes"
+      "background": "Antecedentes",
+      "trailerUnavailable": "No se pudo abrir el tráiler en este dispositivo",
+      "linkUnavailable": "No se pudo abrir el enlace en este dispositivo"
     },
     "totalResults": {
       "one": "${n} resultado",

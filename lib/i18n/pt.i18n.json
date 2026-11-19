@@ -512,7 +512,8 @@
     "playerScopeGlobal": "Em todos os lugares",
     "playerScopeLibrary": "Por biblioteca",
     "playerScopeTitle": "Por série ou filme",
-    "exportDialogTitle": "Exportar configurações do PlezTV"
+    "exportDialogTitle": "Exportar configurações do PlezTV",
+    "scopeZoom": "Zoom"
   },
   "themeEditor": {
     "builtIn": "Integrados",
@@ -902,7 +903,10 @@
     "forcedTrack": "${label} (Forçada)",
     "osdSubtitlesOff": "Legendas: desativadas",
     "osdSubtitles": "Legendas: ${track}",
-    "osdAudio": "Áudio: ${track}"
+    "osdAudio": "Áudio: ${track}",
+    "tapToUnlock": "",
+    "tapAgainToUnlock": "",
+    "subtitleDownloadTimedOut": "A legenda não apareceu a tempo. O download pode ter falhado"
   },
   "userStatus": {},
   "messages": {
@@ -975,7 +979,8 @@
     "streamSelectionUnavailable": "A seleção de fluxos não está disponível para esta fonte",
     "streamSelectionFailed": "Não foi possível aplicar os fluxos selecionados",
     "trackSelectionNotRemembered": "Esta escolha de faixa se aplica apenas à reprodução atual.",
-    "serverUnavailableForProfile": "Nenhum servidor está disponível para o perfil ativo"
+    "serverUnavailableForProfile": "Nenhum servidor está disponível para o perfil ativo",
+    "serverLimitTranscode": ""
   },
   "subtitlingStyling": {
     "text": "Texto",
@@ -1203,6 +1208,7 @@
     "tvShow": "Série de TV",
     "minutesLeft": "${minutes} min restantes",
     "moreLikeThis": "Títulos semelhantes",
+    "selectVersion": "",
     "titleCount": {
       "one": "${n} título",
       "other": "${n} títulos"
@@ -1278,11 +1284,14 @@
     "noCollections": "Nenhuma coleção nesta biblioteca",
     "noFoldersFound": "Nenhuma pasta encontrada",
     "folders": "pastas",
+    "shuffleLibrary": "",
+    "noGenres": "",
     "tabs": {
       "recommended": "Recomendados",
       "browse": "Navegar",
       "collections": "Coleções",
-      "playlists": "Playlists"
+      "playlists": "Playlists",
+      "genres": ""
     },
     "groupings": {
       "title": "Agrupamento",
@@ -1602,7 +1611,9 @@
       "unairedEpisodes": "${n} ainda não exibidos",
       "recommendedByPercent": "Recomendado por ${percent} dos espectadores",
       "relatedTitles": "Títulos relacionados",
-      "background": "Contexto"
+      "background": "Contexto",
+      "trailerUnavailable": "Não foi possível abrir o trailer neste dispositivo",
+      "linkUnavailable": "Não foi possível abrir o link neste dispositivo"
     },
     "totalResults": {
       "one": "${n} resultado",
