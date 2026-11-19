@@ -8,6 +8,7 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/foundation.dart' show listEquals, visibleForTesting;
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:plezy/utils/media_server_http_client.dart';
 import '../exceptions/media_server_exceptions.dart';
@@ -77,6 +78,7 @@ class _ResumeProbe {
     required this.etagKind,
     required this.statusCode,
     required this.probedAtMs,
+    this.plainAcceptRanges,
     this.fromZeroRestarts = 0,
   });
 
@@ -84,6 +86,13 @@ class _ResumeProbe {
   /// it answered 200 without the header; null when the probe never ran or
   /// errored (unknown — resume is not proven, but not disproven either).
   final bool? ranges;
+
+  /// 1.4.6 G0b: what a PLAIN GET (no Range) answered for `Accept-Ranges`.
+  /// The native handoff reads the plain response's headers, so a panel
+  /// that answers Range with 206 but omits the header on a plain 200
+  /// looks non-resumable to the handoff even though [ranges] is true.
+  /// Null when the plain probe never ran or errored.
+  final bool? plainAcceptRanges;
 
   /// 'strong' | 'weak' | 'absent' — a weak or absent ETag kills a resume
   /// run on the native side even when ranges are advertised.
@@ -101,6 +110,7 @@ class _ResumeProbe {
     'etag': etagKind,
     'status': statusCode,
     'probedAt': probedAtMs,
+    'plainAcceptRanges': plainAcceptRanges,
     'fromZeroRestarts': fromZeroRestarts,
   };
 
@@ -114,6 +124,7 @@ class _ResumeProbe {
         etagKind: (map['etag'] as String?) ?? 'absent',
         statusCode: (map['status'] as num?)?.toInt(),
         probedAtMs: (map['probedAt'] as num?)?.toInt() ?? 0,
+        plainAcceptRanges: map['plainAcceptRanges'] as bool?,
         fromZeroRestarts: (map['fromZeroRestarts'] as num?)?.toInt() ?? 0,
       );
     } catch (_) {
@@ -121,9 +132,10 @@ class _ResumeProbe {
     }
   }
 
-  _ResumeProbe copyWith({bool? ranges, String? etagKind, int? statusCode, int? fromZeroRestarts}) =>
+  _ResumeProbe copyWith({bool? ranges, bool? plainAcceptRanges, String? etagKind, int? statusCode, int? fromZeroRestarts}) =>
       _ResumeProbe(
         ranges: ranges ?? this.ranges,
+        plainAcceptRanges: plainAcceptRanges ?? this.plainAcceptRanges,
         etagKind: etagKind ?? this.etagKind,
         statusCode: statusCode ?? this.statusCode,
         probedAtMs: probedAtMs,
@@ -286,10 +298,13 @@ class DownloadManagerService {
 
   // 1.4.4 F0/F2: Range-probe results by download URL, this session.
   final Map<String, _ResumeProbe> _probeCache = {};
-  // 1.4.4 F3: last progress fraction per download, and the progress it had
-  // when it last entered waitingToRetry — the from-0 restart detector.
+  // 1.4.4 F3, reworked 1.4.6 G2: last progress fraction per download, and
+  // which downloads already had a from-0 drop counted for their current
+  // fall. The detector reads the drop directly in [_handleTaskProgress] —
+  // the old marker armed only on waitingToRetry, so the silent stops (the
+  // worker dies with no error and no retry marker) were never counted.
   final Map<String, double> _lastProgress = {};
-  final Map<String, double> _progressBeforeRetry = {};
+  final Set<String> _countedFromZeroDrop = {};
   // 1.4.4 settings: downloads the playback gate auto-paused, so only those
   // resume when playback stops — never one the user paused themselves.
   final Set<String> _playbackPausedKeys = {};
@@ -1063,6 +1078,13 @@ class DownloadManagerService {
           paused: TaskNotification('{displayName}', t.downloads.notificationPaused),
           progressBar: true,
         );
+
+    // 1.4.6 G0a: native worker lifecycle lines (system stops, handoff
+    // store/delete, resume-vs-fresh starts) arrive on the vendored
+    // downloader's `workerLog` channel and land in the debug log — the
+    // native side otherwise only writes to logcat, which a debug export
+    // never sees.
+    NativeDownloader.onWorkerLog = debugWorkerLogLine;
 
     // Protect native writes even while Flutter is suspended. Plex servers can
     // also reject concurrent media downloads.
@@ -1957,6 +1979,12 @@ class DownloadManagerService {
     }
 
     if (outcome == QueueDownloadOutcome.admitted) {
+      // 1.4.6 G2: a fresh queue starts the drop detector from scratch —
+      // a stale last-progress (e.g. 90% from a completed download being
+      // re-queued) would otherwise count the new run's first 0% as a
+      // from-0 restart.
+      _lastProgress.remove(globalKey);
+      _countedFromZeroDrop.remove(globalKey);
       if (prior != null && prior.additionalPartPathList != null) await _discardStackedAttempt(prior);
       // Metadata pinning is useful for offline preparation, but the durable
       // download request must remain executable if cache persistence fails.
@@ -2149,7 +2177,13 @@ class DownloadManagerService {
       'Ignoring stale download $event for $globalKey from task $taskId '
       '(current task: ${currentTaskId ?? 'none'}, status: ${existing?.status ?? 'none'})',
     );
-    if (cancelStale) {
+    // 1.4.6 G3: cancel ONLY when the event's task is genuinely not the
+    // current one (a zombie from an old session, or no row at all). When
+    // the task ids match but the row moved on — e.g. the F3 cap paused the
+    // row while the native task was still reporting — cancelling would
+    // kill the current task and discard the resume data its pause is
+    // producing. The event is ignored either way.
+    if (cancelStale && (existing == null || currentTaskId != taskId)) {
       await _cancelNativeTask(globalKey, taskId, reason: 'stale $event');
     }
     return null;
@@ -2282,10 +2316,11 @@ class DownloadManagerService {
         await _database.updateDownloadMediaSource(globalKey, resolution.mediaSourceId);
       }
 
-      // 1.4.4 F0/F2: probe whether the server allows picking up where a
-      // partial left off, before the task is enqueued; the result is stored
-      // on the row so the retry decision can read it later. The probe never
-      // logs the URL (it embeds credentials).
+      // 1.4.4 F0/F2 (+ 1.4.6 G5): probe what the server advertises about
+      // resuming, before the task is enqueued; the result is stored on the
+      // row for the log and the Downloads screen. It is DIAGNOSTIC — no
+      // Dart-side decision reads it. The resume decision is the native
+      // worker's own 206 + ETag checks on the resume run.
       final probe = await _probeResumeSupport(resolution.videoUrl!);
       await _database.updateResumeProbe(globalKey, jsonEncode(probe.toJson()));
 
@@ -2471,6 +2506,11 @@ class DownloadManagerService {
           updates: Updates.statusAndProgress,
           requiresWiFi: requiresWiFi,
           retries: _nativeRetries,
+          // 1.4.6 G7: priority 4 (< 5) makes the WorkManager task
+          // expedited, so a system stop is less likely to kill it
+          // mid-transfer. Priority 0 would need RUN_USER_INITIATED_JOBS
+          // on Android 14+; 4 needs no permission.
+          priority: 4,
           allowPause: true,
           metaData: globalKey,
           displayName: displayName,
@@ -2513,6 +2553,11 @@ class DownloadManagerService {
           updates: Updates.statusAndProgress,
           requiresWiFi: requiresWiFi,
           retries: _nativeRetries,
+          // 1.4.6 G7: priority 4 (< 5) makes the WorkManager task
+          // expedited, so a system stop is less likely to kill it
+          // mid-transfer. Priority 0 would need RUN_USER_INITIATED_JOBS
+          // on Android 14+; 4 needs no permission.
+          priority: 4,
           allowPause: true,
           metaData: globalKey,
           displayName: displayName,
@@ -2640,16 +2685,22 @@ class DownloadManagerService {
     final fileBytes = update.hasExpectedFileSize ? update.expectedFileSize : 0;
     final fileDownloadedBytes = fileBytes > 0 ? (update.progress * fileBytes).round() : 0;
 
-    // 1.4.4 F3: from-0 restart detection (single-file rows only). When a
-    // retry restarts the file from 0% instead of resuming, the first progress
-    // after the retry is near 0 while the pre-retry progress was substantial.
-    // Count it once per retry (the marker is consumed below) and persist it
-    // on the row's probe — the waiting-to-retry / failed handlers read it.
+    // 1.4.6 G2: from-0 restart detection (single-file rows only), read
+    // straight off the progress stream. When a run restarts the file from
+    // 0% instead of resuming, progress falls from substantial (≥10%) to
+    // near 0 (≤5%) with no error and no waitingToRetry in between — the
+    // silent-stop shape. Count it once per fall (re-armed when progress
+    // recovers past 10%) and persist it on the row's probe — the
+    // waiting-to-retry / failed handlers read it for the restart cap.
+    final previousProgress = _lastProgress[globalKey];
     _lastProgress[globalKey] = update.progress;
     if (partCount == 1) {
-      final before = _progressBeforeRetry.remove(globalKey);
-      if (before != null && before >= 0.10 && update.progress <= 0.05) {
-        await _recordFromZeroRestart(globalKey, before: before);
+      if (previousProgress != null && previousProgress >= 0.10 && update.progress <= 0.05) {
+        if (_countedFromZeroDrop.add(globalKey)) {
+          await _recordFromZeroRestart(globalKey, before: previousProgress);
+        }
+      } else if (update.progress >= 0.10) {
+        _countedFromZeroDrop.remove(globalKey);
       }
     }
     // The file this task fetches is the row's first one not stored yet.
@@ -2724,6 +2775,16 @@ class DownloadManagerService {
 
   @visibleForTesting
   Future<void> debugHandleTaskStatus(TaskStatusUpdate update) => _handleTaskStatusChanged(update);
+
+  /// 1.4.6 G0a: one native worker lifecycle line (system stop, handoff
+  /// outcome, resume-vs-fresh start) forwarded from the vendored
+  /// background_downloader's `workerLog` channel — the sink the app wires
+  /// in [_initializeFileDownloader]. The line carries a task id, byte
+  /// counts and a stop reason, never a URL.
+  @visibleForTesting
+  static void debugWorkerLogLine(Task task, String line) {
+    appLogger.i('Download worker ${task.taskId}: $line');
+  }
 
   Future<void> _handleTaskStatusChanged(TaskStatusUpdate update) async {
     if (_disposed) return;
@@ -2980,11 +3041,21 @@ class DownloadManagerService {
   }
 
   /// 1.4.4 F0/F3: a download entered waitingToRetry — log WHY (the old
-  /// code logged only the key), remember the progress it had, and cap the
-  /// from-0-restart loop: if it already restarted from 0 once, pause with
-  /// a surfaced reason instead of retrying into the same loop.
+  /// code logged only the key), and cap the from-0-restart loop: if it
+  /// already restarted from 0 once, pause with a surfaced reason instead
+  /// of retrying into the same loop. The restarts themselves are counted
+  /// by the drop detector in [_handleTaskProgress] (1.4.6 G2) — this
+  /// handler only reads the count.
   Future<void> _onDownloadWaitingToRetry(String globalKey, Task task, TaskException? exception) async {
-    _progressBeforeRetry[globalKey] = _lastProgress[globalKey] ?? 0.0;
+    if (_pausingKeys.contains(globalKey)) {
+      appLogger.d('Download $globalKey waiting to retry while pausing; standing down');
+      return;
+    }
+    final row = await _database.getDownloadedMedia(globalKey);
+    if (row != null && row.status == DownloadStatus.paused.index) {
+      appLogger.d('Download $globalKey waiting to retry while paused; standing down');
+      return;
+    }
     if (await _fromZeroRestarts(globalKey) >= 1) {
       appLogger.w(
         'Download $globalKey paused: already restarted from 0% once; '
@@ -3019,12 +3090,17 @@ class DownloadManagerService {
     }
   }
 
-  /// 1.4.4 F0: one `Range: bytes=0-0` GET against the download URL, before
-  /// the task is enqueued. A 206 / `Accept-Ranges: bytes` answer means the
-  /// server allows picking up where a partial left off; a 200 without the
-  /// header means it does not. The URL is never logged (it embeds
-  /// credentials). Non-http(s) URLs and probe errors are "unknown" — resume
-  /// is not proven, but not disproven either.
+  /// 1.4.4 F0 (+ 1.4.6 G0b/G5): one `Range: bytes=0-0` GET against the
+  /// download URL, before the task is enqueued, plus a plain GET alongside
+  /// it. The probe is DIAGNOSTIC, not a gate: nothing on the Dart side
+  /// decides resume from it — the resume run itself decides, from the
+  /// native worker's 206 + ETag checks. What the probe records is what the
+  /// server ADVERTISES: a 206 / `Accept-Ranges: bytes` Range answer, and
+  /// separately what a plain GET answers (the native handoff reads the
+  /// PLAIN response's headers, so the two can disagree — and on this panel
+  /// they do). The URL is never logged (it embeds credentials). Non-http(s)
+  /// URLs and probe errors are "unknown" — resume is not proven, but not
+  /// disproven either.
   Future<_ResumeProbe> _probeResumeSupport(String url) async {
     final cached = _probeCache[url];
     if (cached != null) return cached;
@@ -3044,14 +3120,18 @@ class DownloadManagerService {
       final etag = headers['etag'];
       final ranges = response.statusCode == 206 || acceptRanges.contains('bytes');
       final etagKind = etag == null ? 'absent' : (etag.startsWith('W/') ? 'weak' : 'strong');
+      final plainAcceptRanges = await _probePlainAcceptRanges(uri);
       final probe = _ResumeProbe(
         ranges: ranges,
         etagKind: etagKind,
         statusCode: response.statusCode,
         probedAtMs: DateTime.now().millisecondsSinceEpoch,
+        plainAcceptRanges: plainAcceptRanges,
       );
       _probeCache[url] = probe;
-      appLogger.d('Range probe for download: status ${response.statusCode}, ranges=$ranges, etag=$etagKind');
+      appLogger.d(
+        'Range probe for download: status ${response.statusCode}, ranges=$ranges, etag=$etagKind, plainAcceptRanges=$plainAcceptRanges',
+      );
       return probe;
     } catch (e) {
       appLogger.d('Range probe failed; treating resume support as unknown', error: e);
@@ -3061,6 +3141,24 @@ class DownloadManagerService {
         statusCode: null,
         probedAtMs: DateTime.now().millisecondsSinceEpoch,
       );
+    }
+  }
+
+  /// 1.4.6 G0b: plain-GET header probe alongside the Range probe. The body
+  /// is aborted after the headers arrive — the URL names a video file, and
+  /// downloading it to read one header would waste the whole file. Returns
+  /// null when the plain request fails (unknown).
+  Future<bool?> _probePlainAcceptRanges(Uri uri) async {
+    try {
+      final streamed = await _http.inner.send(http.Request('GET', uri)).timeout(const Duration(seconds: 10));
+      try {
+        return (streamed.headers['accept-ranges'] ?? '').toLowerCase().contains('bytes');
+      } finally {
+        await streamed.stream.listen(null).cancel();
+      }
+    } catch (e) {
+      appLogger.d('Plain-GET probe failed; treating plain Accept-Ranges as unknown', error: e);
+      return null;
     }
   }
 
@@ -3103,16 +3201,25 @@ class DownloadManagerService {
   /// reason is stored on the row and emitted on the progress stream so the
   /// Downloads screen can show it.
   Future<void> _pauseDownloadWithReason(String globalKey, String reason) async {
-    _cancelDownloadTimers(globalKey);
-    final bgTaskId = await _database.getBgTaskId(globalKey);
-    if (bgTaskId != null) {
-      await _cancelNativeTask(globalKey, bgTaskId, reason: 'from-0 restart cap');
+    // 1.4.6 G4: mark the row pausing for the whole pause, so a
+    // waitingToRetry (or progress) arriving mid-pause stands down instead
+    // of starting a second pause and cancelling the task whose resume data
+    // this pause is producing.
+    _pausingKeys.add(globalKey);
+    try {
+      _cancelDownloadTimers(globalKey);
+      final bgTaskId = await _database.getBgTaskId(globalKey);
+      if (bgTaskId != null) {
+        await _cancelNativeTask(globalKey, bgTaskId, reason: 'from-0 restart cap');
+      }
+      _pendingDownloadContext.remove(globalKey);
+      final row = await _database.getDownloadedMedia(globalKey);
+      await _transitionStatus(globalKey, DownloadStatus.paused, progress: row?.progress, errorMessage: reason);
+      await _database.setDownloadErrorMessage(globalKey, reason);
+      await _database.removeFromQueue(globalKey);
+    } finally {
+      _pausingKeys.remove(globalKey);
     }
-    _pendingDownloadContext.remove(globalKey);
-    final row = await _database.getDownloadedMedia(globalKey);
-    await _transitionStatus(globalKey, DownloadStatus.paused, progress: row?.progress, errorMessage: reason);
-    await _database.setDownloadErrorMessage(globalKey, reason);
-    await _database.removeFromQueue(globalKey);
   }
 
   /// 1.4.4 settings: playback started or stopped — re-apply the
