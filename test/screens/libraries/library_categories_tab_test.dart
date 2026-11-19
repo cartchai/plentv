@@ -174,11 +174,11 @@ void main() {
   });
 
   group('visibleLibraryTabs', () {
-  test('Plex libraries keep Collections and gain no Categories tab', () {
+  test('Plex libraries keep Collections, gain a Genres tab and no Categories tab', () {
     const plex = MediaLibrary(id: 'movies', backend: MediaBackend.plex, title: 'Movies', kind: MediaKind.movie);
     expect(
       visibleLibraryTabs(plex),
-      [LibraryTabType.recommended, LibraryTabType.browse, LibraryTabType.collections, LibraryTabType.playlists],
+      [LibraryTabType.recommended, LibraryTabType.browse, LibraryTabType.collections, LibraryTabType.playlists, LibraryTabType.genres],
     );
   });
 
