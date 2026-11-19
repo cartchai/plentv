@@ -5118,12 +5118,10 @@ class IptvLiveTvSupport implements LiveTvSupport {
       if (IptvFeedRowStore.isValid(dbPath: dbPath, expectedSha256: feedShaHex)) {
         final reused = await _readFeedRowsFromStore(cacheKey, retainIds: retainIds);
         if (reused != null) {
-          if (tempFile != null) {
-            try {
-              tempFile.deleteSync();
-            } catch (_) {
-              // Best-effort: the temp file is gone or already deleted.
-            }
+          try {
+            tempFile.deleteSync();
+          } catch (_) {
+            // Best-effort: the temp file is gone or already deleted.
           }
           final guide = reused.withFetchedAt(DateTime.now());
           _xmltvCache[cacheKey] = guide;

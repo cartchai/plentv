@@ -604,7 +604,7 @@ void main() {
       // Unit-level: toJson/fromJson round-trip carries origin, and a
       // mapping JSON without origin defaults to manual (old backups).
       final roundTripped = IptvEpgMapping.fromJson(
-        (await storedFoxPick())!.toJson() as Map<String, dynamic>,
+        (await storedFoxPick())!.toJson(),
       );
       expect(roundTripped.toJson()['origin'], 'guessed-affiliate');
       final oldFormat = IptvEpgMapping.fromJson(const {
