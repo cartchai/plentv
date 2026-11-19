@@ -109,6 +109,14 @@ class SettingsMutationService {
         settings.read(SettingsService.downloadOnWifiOnly),
       );
     }),
+    // The native downloader's expedited run timeout (1.4.61): every
+    // change — tile, import, reset — must reach the native config prefs,
+    // or runs started after the change keep the old timeout.
+    _SettingsEffect(SettingsService.iptvDownloadRunTimeoutMinutes, (context, settings, _) async {
+      await context.read<DownloadProvider?>()?.applyDownloadRunTimeout(
+        settings.read(SettingsService.iptvDownloadRunTimeoutMinutes),
+      );
+    }),
   ];
 
   /// [Pref] compares by identity and [SettingsService.scrobblePref] mints a

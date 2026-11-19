@@ -249,6 +249,7 @@ class DownloadManagerService {
   final NativeDownloaderOps? _nativeOpsOverride;
   final Future<bool> Function(RequireWiFi requirement)? _requireWiFiOverride;
   final Future<bool> Function(Task task)? _enqueueTaskOverride;
+  final Future<void> Function(List<(String, dynamic)> globalConfig)? _configureOverride;
 
   final DownloadLocationSnapshot Function()? _downloadLocationReader;
   final Future<void> Function(String?) _writeDownloadPath;
@@ -402,6 +403,7 @@ class DownloadManagerService {
     @visibleForTesting NativeDownloaderOps? nativeOpsOverride,
     @visibleForTesting Future<bool> Function(RequireWiFi requirement)? requireWiFiOverride,
     @visibleForTesting Future<bool> Function(Task task)? enqueueTaskOverride,
+    @visibleForTesting Future<void> Function(List<(String, dynamic)>)? configureOverride,
     @visibleForTesting DownloadLocationSnapshot Function()? downloadLocationReader,
     @visibleForTesting Future<void> Function(String?)? downloadPathWriter,
     @visibleForTesting Future<void> Function(String?)? downloadPathTypeWriter,
@@ -415,6 +417,7 @@ class DownloadManagerService {
        _nativeOpsOverride = nativeOpsOverride,
        _requireWiFiOverride = requireWiFiOverride,
        _enqueueTaskOverride = enqueueTaskOverride,
+       _configureOverride = configureOverride,
        _storageService = storageService,
        _clientResolver = clientResolver,
        _http = http ?? httpClient,
@@ -1094,6 +1097,9 @@ class DownloadManagerService {
     // Bring the downloader's persisted policy in line with the setting (it
     // may have been changed, e.g. by a settings import, while not running).
     await applyDownloadOnWifiOnly((await SettingsService.getInstance()).read(SettingsService.downloadOnWifiOnly));
+    // Bring the native run timeout in line with the setting for the same
+    // reason (1.4.61, Settings → IPTV).
+    await applyDownloadRunTimeout((await SettingsService.getInstance()).read(SettingsService.iptvDownloadRunTimeoutMinutes));
 
     await FileDownloader().trackTasks();
     // Deliver status updates from iOS background-to-foreground transitions
@@ -1116,6 +1122,31 @@ class DownloadManagerService {
     } catch (e, st) {
       appLogger.w('Failed to apply Wi-Fi-only download policy ($requirement)', error: e, stackTrace: st);
     }
+  }
+
+  /// Apply the "download run timeout" preference (Settings → IPTV,
+  /// 1.4.61) to the native downloader: how long one expedited run may
+  /// transfer before the worker pauses it as a resume checkpoint. The
+  /// value is pushed into the native config prefs, so it applies to runs
+  /// started after the setting changes; a running worker keeps the
+  /// timeout it started with. Options are 2/3/4/6/9 minutes; the native
+  /// side clamps to 2–9.
+  static const downloadRunTimeoutMinutesOptions = <int>[2, 3, 4, 6, 9];
+
+  Future<void> applyDownloadRunTimeout(int minutes) async {
+    if (!downloadsSupported) return;
+    final clamped = minutes.clamp(2, 9);
+    try {
+      await (_configureOverride ?? _configureDownloader)([(Config.downloadRunTimeout, clamped)]);
+    } catch (e, st) {
+      appLogger.w('Failed to apply download run timeout ($clamped min)', error: e, stackTrace: st);
+    }
+  }
+
+  /// Default configure path (overridable in tests): one global-config
+  /// item through the vendored downloader.
+  Future<void> _configureDownloader(List<(String, dynamic)> globalConfig) async {
+    await FileDownloader().configure(globalConfig: globalConfig);
   }
 
   /// Recover downloads that were interrupted when the app was killed.
@@ -3057,9 +3088,12 @@ class DownloadManagerService {
       return;
     }
     if (await _fromZeroRestarts(globalKey) >= 1) {
+      // 1.4.61 F5: the old wording blamed the server, but the probe
+      // proves the server answers Range with 206 — what happened is the
+      // download restarted from the beginning instead of resuming.
       appLogger.w(
         'Download $globalKey paused: already restarted from 0% once; '
-        'the server does not allow resuming',
+        'it restarted from the beginning instead of resuming',
       );
       await _pauseDownloadWithReason(globalKey, t.downloads.pausedCannotResume);
       return;

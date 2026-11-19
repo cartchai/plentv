@@ -1535,6 +1535,14 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2324": [
+      "Fixed: a download that times out partway now picks up where it left off instead of starting again from 0% — the half-downloaded file is no longer deleted when the run times out",
+      "Fixed: when a download run times out it now pauses and carries on from the same spot instead of failing and starting over",
+      "New: Settings → IPTV now has a download run timeout — 2, 3, 4, 6 or 9 minutes, 2 by default",
+      "Fixed: the pause message no longer blames the server when a download restarts from the beginning — it says what actually happened",
+      "Fixed: the debug log now records why a download is waiting to retry, instead of always saying \"no exception\"",
+      "Fixed: a download's place is now remembered even if the app is closed before it retries"
+    ],
     "changelog2322": [
       "Fixed: downloaded episodes now group under their show name and season in Downloads, instead of each episode showing up as its own show",
       "Fixed: episodes you already downloaded now show under the right show and season without having to download them again",
@@ -2716,7 +2724,7 @@
     "errorPostProcessing": "Post-processing failed: ${reason}",
     "reasonFileNotSaved": "the file could not be saved on this device",
     "reasonCannotResume": "the partial download could not be resumed",
-    "pausedCannotResume": "Paused — this download keeps starting over from the beginning because the server does not allow picking up where it left off",
+    "pausedCannotResume": "Paused — this download restarted from the beginning instead of resuming",
     "reasonDeviceStorageFull": "this device is out of storage",
     "notificationDownloading": "Downloading...",
     "notificationComplete": "Download complete",
@@ -3275,6 +3283,9 @@
     "largeDownloadsWifiOnlyDescription": "Large downloads (guide feed, catalog sync) wait for Wi-Fi instead of using mobile data",
     "pauseDownloadsWhileWatching": "Pause downloads while watching",
     "pauseDownloadsWhileWatchingDescription": "IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch",
+    "downloadRunTimeout": "Download run timeout",
+    "downloadRunTimeoutDescription": "One download run may transfer for ${minutes} minutes before it pauses and picks up where it left off. Longer runs need fewer pauses on slow connections; a change applies to downloads started after it",
+    "downloadRunTimeoutMinutes": "${minutes} minutes",
     "backgroundSyncNoConnections": "No IPTV connections",
     "catalogSyncNow": "Sync catalog now",
     "catalogSyncNowDescription": "Download all titles for movies, TV and channels now",

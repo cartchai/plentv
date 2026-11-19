@@ -2337,6 +2337,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// only" setting changed.
   Future<void> applyDownloadOnWifiOnly(bool wifiOnly) => _downloadManager.applyDownloadOnWifiOnly(wifiOnly);
 
+  /// Push the "download run timeout" setting (Settings → IPTV, 1.4.61)
+  /// to the native downloader: how long one run may transfer before the
+  /// worker pauses it as a resume checkpoint.
+  Future<void> applyDownloadRunTimeout(int minutes) => _downloadManager.applyDownloadRunTimeout(minutes);
+
   /// Backend-aware metadata lookup for offline UI. Routes through
   /// [DownloadManagerService] which dispatches to [PlexApiCache] or
   /// [JellyfinApiCache] based on the connection's `kind`.

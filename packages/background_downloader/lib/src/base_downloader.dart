@@ -1072,7 +1072,13 @@ abstract base class BaseDownloader {
     if (update.status == TaskStatus.failed &&
         !isDownloadStorageFailure(update.exception) &&
         (task.retriesRemaining > 0 || (!isConnected && isConnectionError))) {
-      _emitStatusUpdate(TaskStatusUpdate(task, TaskStatus.waitingToRetry));
+      // 1.4.61 F4 (PlezTV fork): carry the failed run's exception into the
+      // synthesized waitingToRetry update — the old code dropped it, so the
+      // app's "log WHY" always printed "no exception" on this path (the
+      // native timeout reason lives here).
+      _emitStatusUpdate(
+        TaskStatusUpdate(task, TaskStatus.waitingToRetry, update.exception),
+      );
       _emitProgressUpdate(TaskProgressUpdate(task, progressWaitingToRetry));
 
       // If device is offline, hold without decrementing retry budget
