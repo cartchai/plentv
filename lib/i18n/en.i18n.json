@@ -1544,6 +1544,14 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2325": [
+      "Fixed: downloaded TV episodes and movies from IPTV now stay listed in Downloads after you restart the app — they used to vanish from the list even though the file was still on your phone",
+      "Fixed: opening Downloads now fills in any missing episode details once your TV service is connected",
+      "New: the app now saves each download's show, season and episode details together with the download, so the list works even when your TV service can't be reached",
+      "Fixed: if a download's details were never saved, the app now rebuilds them from the file on your phone instead of showing an empty list",
+      "Fixed: a rebuilt listing is replaced with the proper details from your TV service as soon as they're available",
+      "Fixed: deleting a download now also clears its saved details, so nothing stale is left behind"
+    ],
     "changelog2324": [
       "Fixed: a download that times out partway now picks up where it left off instead of starting again from 0% — the half-downloaded file is no longer deleted when the run times out",
       "Fixed: when a download run times out it now pauses and carries on from the same spot instead of failing and starting over",

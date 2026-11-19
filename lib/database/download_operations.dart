@@ -657,6 +657,43 @@ extension DownloadDatabaseOperations on AppDatabase {
     return (select(downloadedMedia)..where((t) => t.globalKey.equals(globalKey))).getSingleOrNull();
   }
 
+  /// Durable per-item metadata for downloads whose backend has no ApiCache
+  /// row to pin (IPTV). Stores the [MediaItem] JSON as-is, keyed by public
+  /// globalKey. Never Plex-shaped JSON: readers parse it with
+  /// [MediaItem.fromJson] only.
+  Future<void> putDownloadMetadata({
+    required String globalKey,
+    required String serverId,
+    required String itemId,
+    required String data,
+  }) async {
+    await into(downloadMetadata).insertOnConflictUpdate(
+      DownloadMetadataCompanion.insert(
+        globalKey: globalKey,
+        serverId: serverId,
+        itemId: itemId,
+        data: data,
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
+  }
+
+  Future<DownloadMetadataItem?> getDownloadMetadata(String globalKey) {
+    return (select(downloadMetadata)..where((t) => t.globalKey.equals(globalKey))).getSingleOrNull();
+  }
+
+  /// Every durable metadata row in one select. The refresh/load loops
+  /// consult this bulk snapshot instead of issuing one select per
+  /// download — the cold-hydration select count must stay constant as
+  /// downloads grow (see the `constant number of selects` test).
+  Future<List<DownloadMetadataItem>> getAllDownloadMetadata() {
+    return select(downloadMetadata).get();
+  }
+
+  Future<void> deleteDownloadMetadata(String globalKey) async {
+    await (delete(downloadMetadata)..where((t) => t.globalKey.equals(globalKey))).go();
+  }
+
   /// Removes the physical row and all dependent queue/owner state atomically,
   /// returning the row's SAF root only after the transaction commits.
   ///
@@ -669,6 +706,10 @@ extension DownloadDatabaseOperations on AppDatabase {
       await (delete(downloadOwners)..where((t) => t.globalKey.equals(globalKey))).go();
       await (delete(downloadedMedia)..where((t) => t.globalKey.equals(globalKey))).go();
       await (delete(downloadQueue)..where((t) => t.mediaGlobalKey.equals(globalKey))).go();
+      // The durable metadata row belongs to the physical download: once
+      // the row is gone there is nothing left to list, so drop the saved
+      // details with it instead of leaving a stale row behind.
+      await (delete(downloadMetadata)..where((t) => t.globalKey.equals(globalKey))).go();
     });
     return safRootUri;
   }

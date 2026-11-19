@@ -1432,6 +1432,370 @@ class DownloadedMediaCompanion extends UpdateCompanion<DownloadedMediaItem> {
   }
 }
 
+class $DownloadMetadataTable extends DownloadMetadata
+    with TableInfo<$DownloadMetadataTable, DownloadMetadataItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DownloadMetadataTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _globalKeyMeta = const VerificationMeta(
+    'globalKey',
+  );
+  @override
+  late final GeneratedColumn<String> globalKey = GeneratedColumn<String>(
+    'global_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+    'item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dataMeta = const VerificationMeta('data');
+  @override
+  late final GeneratedColumn<String> data = GeneratedColumn<String>(
+    'data',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    globalKey,
+    serverId,
+    itemId,
+    data,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'download_metadata';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DownloadMetadataItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('global_key')) {
+      context.handle(
+        _globalKeyMeta,
+        globalKey.isAcceptableOrUnknown(data['global_key']!, _globalKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_globalKeyMeta);
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_serverIdMeta);
+    }
+    if (data.containsKey('item_id')) {
+      context.handle(
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('data')) {
+      context.handle(
+        _dataMeta,
+        this.data.isAcceptableOrUnknown(data['data']!, _dataMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dataMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {globalKey};
+  @override
+  DownloadMetadataItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DownloadMetadataItem(
+      globalKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}global_key'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      )!,
+      itemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_id'],
+      )!,
+      data: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}data'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DownloadMetadataTable createAlias(String alias) {
+    return $DownloadMetadataTable(attachedDatabase, alias);
+  }
+}
+
+class DownloadMetadataItem extends DataClass
+    implements Insertable<DownloadMetadataItem> {
+  final String globalKey;
+  final String serverId;
+  final String itemId;
+  final String data;
+  final int updatedAt;
+  const DownloadMetadataItem({
+    required this.globalKey,
+    required this.serverId,
+    required this.itemId,
+    required this.data,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['global_key'] = Variable<String>(globalKey);
+    map['server_id'] = Variable<String>(serverId);
+    map['item_id'] = Variable<String>(itemId);
+    map['data'] = Variable<String>(data);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  DownloadMetadataCompanion toCompanion(bool nullToAbsent) {
+    return DownloadMetadataCompanion(
+      globalKey: Value(globalKey),
+      serverId: Value(serverId),
+      itemId: Value(itemId),
+      data: Value(data),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory DownloadMetadataItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DownloadMetadataItem(
+      globalKey: serializer.fromJson<String>(json['globalKey']),
+      serverId: serializer.fromJson<String>(json['serverId']),
+      itemId: serializer.fromJson<String>(json['itemId']),
+      data: serializer.fromJson<String>(json['data']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'globalKey': serializer.toJson<String>(globalKey),
+      'serverId': serializer.toJson<String>(serverId),
+      'itemId': serializer.toJson<String>(itemId),
+      'data': serializer.toJson<String>(data),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  DownloadMetadataItem copyWith({
+    String? globalKey,
+    String? serverId,
+    String? itemId,
+    String? data,
+    int? updatedAt,
+  }) => DownloadMetadataItem(
+    globalKey: globalKey ?? this.globalKey,
+    serverId: serverId ?? this.serverId,
+    itemId: itemId ?? this.itemId,
+    data: data ?? this.data,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  DownloadMetadataItem copyWithCompanion(DownloadMetadataCompanion data) {
+    return DownloadMetadataItem(
+      globalKey: data.globalKey.present ? data.globalKey.value : this.globalKey,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      data: data.data.present ? data.data.value : this.data,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadMetadataItem(')
+          ..write('globalKey: $globalKey, ')
+          ..write('serverId: $serverId, ')
+          ..write('itemId: $itemId, ')
+          ..write('data: $data, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(globalKey, serverId, itemId, data, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DownloadMetadataItem &&
+          other.globalKey == this.globalKey &&
+          other.serverId == this.serverId &&
+          other.itemId == this.itemId &&
+          other.data == this.data &&
+          other.updatedAt == this.updatedAt);
+}
+
+class DownloadMetadataCompanion extends UpdateCompanion<DownloadMetadataItem> {
+  final Value<String> globalKey;
+  final Value<String> serverId;
+  final Value<String> itemId;
+  final Value<String> data;
+  final Value<int> updatedAt;
+  final Value<int> rowid;
+  const DownloadMetadataCompanion({
+    this.globalKey = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.itemId = const Value.absent(),
+    this.data = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DownloadMetadataCompanion.insert({
+    required String globalKey,
+    required String serverId,
+    required String itemId,
+    required String data,
+    required int updatedAt,
+    this.rowid = const Value.absent(),
+  }) : globalKey = Value(globalKey),
+       serverId = Value(serverId),
+       itemId = Value(itemId),
+       data = Value(data),
+       updatedAt = Value(updatedAt);
+  static Insertable<DownloadMetadataItem> custom({
+    Expression<String>? globalKey,
+    Expression<String>? serverId,
+    Expression<String>? itemId,
+    Expression<String>? data,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (globalKey != null) 'global_key': globalKey,
+      if (serverId != null) 'server_id': serverId,
+      if (itemId != null) 'item_id': itemId,
+      if (data != null) 'data': data,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DownloadMetadataCompanion copyWith({
+    Value<String>? globalKey,
+    Value<String>? serverId,
+    Value<String>? itemId,
+    Value<String>? data,
+    Value<int>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return DownloadMetadataCompanion(
+      globalKey: globalKey ?? this.globalKey,
+      serverId: serverId ?? this.serverId,
+      itemId: itemId ?? this.itemId,
+      data: data ?? this.data,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (globalKey.present) {
+      map['global_key'] = Variable<String>(globalKey.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (data.present) {
+      map['data'] = Variable<String>(data.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadMetadataCompanion(')
+          ..write('globalKey: $globalKey, ')
+          ..write('serverId: $serverId, ')
+          ..write('itemId: $itemId, ')
+          ..write('data: $data, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $DownloadOwnersTable extends DownloadOwners
     with TableInfo<$DownloadOwnersTable, DownloadOwnerItem> {
   @override
@@ -7308,6 +7672,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DownloadedMediaTable downloadedMedia = $DownloadedMediaTable(
     this,
   );
+  late final $DownloadMetadataTable downloadMetadata = $DownloadMetadataTable(
+    this,
+  );
   late final $DownloadOwnersTable downloadOwners = $DownloadOwnersTable(this);
   late final $DownloadQueueTable downloadQueue = $DownloadQueueTable(this);
   late final $ApiCacheTable apiCache = $ApiCacheTable(this);
@@ -7387,6 +7754,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     downloadedMedia,
+    downloadMetadata,
     downloadOwners,
     downloadQueue,
     apiCache,
@@ -8045,6 +8413,216 @@ typedef $$DownloadedMediaTableProcessedTableManager =
         >,
       ),
       DownloadedMediaItem,
+      PrefetchHooks Function()
+    >;
+typedef $$DownloadMetadataTableCreateCompanionBuilder =
+    DownloadMetadataCompanion Function({
+      required String globalKey,
+      required String serverId,
+      required String itemId,
+      required String data,
+      required int updatedAt,
+      Value<int> rowid,
+    });
+typedef $$DownloadMetadataTableUpdateCompanionBuilder =
+    DownloadMetadataCompanion Function({
+      Value<String> globalKey,
+      Value<String> serverId,
+      Value<String> itemId,
+      Value<String> data,
+      Value<int> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$DownloadMetadataTableFilterComposer
+    extends Composer<_$AppDatabase, $DownloadMetadataTable> {
+  $$DownloadMetadataTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get globalKey => $composableBuilder(
+    column: $table.globalKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get data => $composableBuilder(
+    column: $table.data,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DownloadMetadataTableOrderingComposer
+    extends Composer<_$AppDatabase, $DownloadMetadataTable> {
+  $$DownloadMetadataTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get globalKey => $composableBuilder(
+    column: $table.globalKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get data => $composableBuilder(
+    column: $table.data,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DownloadMetadataTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DownloadMetadataTable> {
+  $$DownloadMetadataTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get globalKey =>
+      $composableBuilder(column: $table.globalKey, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<String> get data =>
+      $composableBuilder(column: $table.data, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$DownloadMetadataTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DownloadMetadataTable,
+          DownloadMetadataItem,
+          $$DownloadMetadataTableFilterComposer,
+          $$DownloadMetadataTableOrderingComposer,
+          $$DownloadMetadataTableAnnotationComposer,
+          $$DownloadMetadataTableCreateCompanionBuilder,
+          $$DownloadMetadataTableUpdateCompanionBuilder,
+          (
+            DownloadMetadataItem,
+            BaseReferences<
+              _$AppDatabase,
+              $DownloadMetadataTable,
+              DownloadMetadataItem
+            >,
+          ),
+          DownloadMetadataItem,
+          PrefetchHooks Function()
+        > {
+  $$DownloadMetadataTableTableManager(
+    _$AppDatabase db,
+    $DownloadMetadataTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DownloadMetadataTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DownloadMetadataTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DownloadMetadataTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> globalKey = const Value.absent(),
+                Value<String> serverId = const Value.absent(),
+                Value<String> itemId = const Value.absent(),
+                Value<String> data = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DownloadMetadataCompanion(
+                globalKey: globalKey,
+                serverId: serverId,
+                itemId: itemId,
+                data: data,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String globalKey,
+                required String serverId,
+                required String itemId,
+                required String data,
+                required int updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => DownloadMetadataCompanion.insert(
+                globalKey: globalKey,
+                serverId: serverId,
+                itemId: itemId,
+                data: data,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DownloadMetadataTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DownloadMetadataTable,
+      DownloadMetadataItem,
+      $$DownloadMetadataTableFilterComposer,
+      $$DownloadMetadataTableOrderingComposer,
+      $$DownloadMetadataTableAnnotationComposer,
+      $$DownloadMetadataTableCreateCompanionBuilder,
+      $$DownloadMetadataTableUpdateCompanionBuilder,
+      (
+        DownloadMetadataItem,
+        BaseReferences<
+          _$AppDatabase,
+          $DownloadMetadataTable,
+          DownloadMetadataItem
+        >,
+      ),
+      DownloadMetadataItem,
       PrefetchHooks Function()
     >;
 typedef $$DownloadOwnersTableCreateCompanionBuilder =
@@ -11523,6 +12101,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$DownloadedMediaTableTableManager get downloadedMedia =>
       $$DownloadedMediaTableTableManager(_db, _db.downloadedMedia);
+  $$DownloadMetadataTableTableManager get downloadMetadata =>
+      $$DownloadMetadataTableTableManager(_db, _db.downloadMetadata);
   $$DownloadOwnersTableTableManager get downloadOwners =>
       $$DownloadOwnersTableTableManager(_db, _db.downloadOwners);
   $$DownloadQueueTableTableManager get downloadQueue =>

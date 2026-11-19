@@ -699,6 +699,14 @@ class DownloadManagerService {
       final persisted = await JellyfinCacheResolver(_database).findProfileScopeId(serverId, activeProfileId);
       return persisted ?? activeClientScopeIdForServer(serverId);
     }
+    // IPTV backends (Xtream/M3U) have no per-profile cache namespace — the
+    // public server id IS the namespace (their live client exposes no
+    // scoped id). A Plex-shaped scope here would point every lookup at a
+    // namespace that can never hold an IPTV row, and would stop the live
+    // client resolving in fetchAndPinMetadata (its cacheServerId is the
+    // public id, never the profile scope). Return null so callers fall
+    // back to the unscoped path instead of short-circuiting.
+    if (_isIptvBackend(backend)) return null;
     return buildPlexProfileScopeId(serverId: serverId, profileId: activeProfileId);
   }
 
@@ -786,11 +794,32 @@ class DownloadManagerService {
     String itemId, {
     bool preferActiveScope = false,
     String? activeProfileId,
+    /// Bulk snapshot from [loadDurableMetadata]. When provided, the
+    /// durable-first check reads this map instead of issuing one select
+    /// per download; when null it falls back to the single-row read.
+    Map<String, MediaItem>? durableByKey,
   }) async {
+    // The durable download-metadata store is scope-free (keyed by public
+    // globalKey) and backend-agnostic JSON, so it answers before any scope
+    // resolution — IPTV rows live here, Plex/MediaBrowser rows never do.
+    final durable = durableByKey != null
+        ? durableByKey[buildGlobalKey(serverId, itemId)]
+        : await lookupDownloadMetadata(serverId, itemId);
+    if (durable != null) return durable;
+
     if (preferActiveScope) {
       final activeScopeId = await profileClientScopeIdForServer(serverId, activeProfileId);
-      if (activeScopeId == null) return null;
-      return _lookupMetadata(serverId, itemId, clientScopeId: activeScopeId);
+      if (activeScopeId == null) {
+        // IPTV backends have no per-profile cache namespace (their scope
+        // is the public server id), so a null scope must not kill the
+        // lookup the way it does for Plex/MediaBrowser — fall through to
+        // the unscoped fan-out below. Anything else keeps the old
+        // behaviour: a null scope means the backend cannot be resolved.
+        final backend = await _backendForServer(serverId);
+        if (backend != MediaBackend.xtream && backend != MediaBackend.m3u) return null;
+      } else {
+        return _lookupMetadata(serverId, itemId, clientScopeId: activeScopeId);
+      }
     }
 
     final download = await _database.getDownloadedMedia(buildGlobalKey(serverId, itemId));
@@ -823,20 +852,97 @@ class DownloadManagerService {
     String? clientScopeId;
     if (preferActiveScope) {
       clientScopeId = await profileClientScopeIdForServer(serverId, activeProfileId);
-      if (clientScopeId == null) return null;
+      if (clientScopeId == null) {
+        // Same null-scope rule as [lookupMetadata]: IPTV backends have
+        // no per-profile cache namespace, so a null scope falls back to
+        // the unscoped live client instead of returning null. Anything
+        // else keeps the old behaviour.
+        final backend = await _backendForServer(serverId);
+        if (backend != MediaBackend.xtream && backend != MediaBackend.m3u) return null;
+      }
     } else {
       clientScopeId = download?.clientScopeId;
     }
     final client = _getClient(serverId, clientScopeId: clientScopeId);
-    if (client == null || (preferActiveScope && client.cacheServerId != clientScopeId)) return null;
+    // The scope-match guard only applies when a scope was actually
+    // resolved: an IPTV client exposes the public server id, never a
+    // profile scope, so an unscoped (null) lookup must not fail it.
+    if (client == null || (preferActiveScope && clientScopeId != null && client.cacheServerId != clientScopeId)) {
+      return null;
+    }
     try {
       final metadata = await client.fetchItem(itemId);
       if (metadata == null) return null;
-      await ApiCache.forBackend(client.backend).pinForOffline(ServerId(client.cacheServerId), itemId);
+      if (_isIptvBackend(client.backend)) {
+        // IPTV has no ApiCache row to pin — persist the fetched item
+        // durably instead, so the next restart lists it without the
+        // server. The pin call below is structurally a no-op for IPTV.
+        await persistDownloadMetadata(metadata);
+      } else {
+        await ApiCache.forBackend(client.backend).pinForOffline(ServerId(client.cacheServerId), itemId);
+      }
       return metadata;
     } catch (e) {
       appLogger.d('fetchAndPinMetadata failed for $serverId:$itemId', error: e);
       return null;
+    }
+  }
+
+  /// Read a durably persisted download [MediaItem] for [serverId]:[itemId]
+  /// from the `download_metadata` table (Fix 2). The row holds the item
+  /// JSON as-is, keyed by public globalKey — never Plex-shaped JSON — and
+  /// is parsed only with [MediaItem.fromJson]. Returns null when there is
+  /// no row, or when the row is malformed (a malformed row must not break
+  /// the metadata refresh; the synthesis net can still recover the leaf).
+  Future<MediaItem?> lookupDownloadMetadata(ServerId serverId, String itemId) async {
+    final row = await _database.getDownloadMetadata(buildGlobalKey(serverId, itemId));
+    if (row == null) return null;
+    return _parseDurableMetadataRow(row);
+  }
+
+  /// Bulk-load every durable download-metadata row once (one select),
+  /// keyed by globalKey. The refresh/load loops consult this snapshot
+  /// instead of issuing one select per download — the cold-hydration
+  /// select count must stay constant as downloads grow.
+  Future<Map<String, MediaItem>> loadDurableMetadata() async {
+    final items = <String, MediaItem>{};
+    for (final row in await _database.getAllDownloadMetadata()) {
+      final item = _parseDurableMetadataRow(row);
+      if (item != null) items[row.globalKey] = item;
+    }
+    return items;
+  }
+
+  MediaItem? _parseDurableMetadataRow(DownloadMetadataItem row) {
+    try {
+      final json = jsonDecode(row.data) as Map<String, dynamic>;
+      return MediaItem.fromJson(json);
+    } catch (e) {
+      appLogger.w('Durable download metadata for ${row.globalKey} is malformed; ignoring', error: e);
+      return null;
+    }
+  }
+
+  /// Persist [metadata] durably in the `download_metadata` table so the
+  /// Downloads screen can list the download after a restart with no server
+  /// reachable. Best effort: a storage failure is logged, never thrown —
+  /// the in-memory item still lists for this session, and the synthesis
+  /// net can recover it later from the file on disk.
+  Future<void> persistDownloadMetadata(MediaItem metadata) async {
+    final serverId = metadata.serverId;
+    if (serverId == null) {
+      appLogger.w('Cannot persist download metadata without serverId');
+      return;
+    }
+    try {
+      await _database.putDownloadMetadata(
+        globalKey: metadata.globalKey,
+        serverId: serverId,
+        itemId: metadata.id,
+        data: jsonEncode(metadata.toJson()),
+      );
+    } catch (e) {
+      appLogger.w('Failed to persist download metadata for ${metadata.globalKey}', error: e);
     }
   }
 
@@ -859,9 +965,20 @@ class DownloadManagerService {
       'jellyfin' => MediaBackend.jellyfin,
       'emby' => MediaBackend.emby,
       'plex' => MediaBackend.plex,
+      // IPTV connections resolve here too: without this, every metadata
+      // lookup for an Xtream/M3U download short-circuits to null at
+      // startup (no live client yet) and the Downloads screen stays
+      // empty after any restart.
+      'xtream' => MediaBackend.xtream,
+      'm3u' => MediaBackend.m3u,
       _ => null,
     };
   }
+
+  /// Public view of [_backendForServer] for callers that need the backend
+  /// of a download row without a live client (e.g. synthesizing display
+  /// metadata for an IPTV download from its file on disk).
+  Future<MediaBackend?> backendForServer(ServerId serverId) => _backendForServer(serverId);
 
   /// Backend-aware metadata lookup. Dispatches to the right `getMetadata`
   /// helper so callers don't have to thread backend identity through every
@@ -996,10 +1113,21 @@ class DownloadManagerService {
   /// extras; Jellyfin can additionally cache native media segments. Other
   /// backends only need the item metadata row. Then pin cached rows so they
   /// survive general cache eviction.
+  ///
+  /// IPTV backends (Xtream/M3U) have no ApiCache row to pin — `IptvClient`
+  /// never writes cache rows, and `pin()` only flips `pinned` on an
+  /// existing row — so their metadata is persisted durably as JSON instead
+  /// (see [persistDownloadMetadata]). The ApiCache pin below is
+  /// structurally a no-op for IPTV and is skipped, not "fixed" by writing
+  /// Plex-shaped JSON for IPTV items.
   Future<void> _pinMetadataForOffline(MediaServerClient client, MediaItem metadata) async {
     final serverId = metadata.serverId;
     if (serverId == null) {
       appLogger.w('Cannot pin metadata without serverId');
+      return;
+    }
+    if (_isIptvBackend(client.backend)) {
+      await persistDownloadMetadata(metadata);
       return;
     }
     if (client.backend.usesMediaBrowserApi) {

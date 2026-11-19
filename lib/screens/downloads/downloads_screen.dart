@@ -23,6 +23,7 @@ import '../../services/settings_service.dart';
 import '../../widgets/settings_builder.dart';
 import '../../utils/global_key_utils.dart';
 import '../../mixins/tab_navigation_mixin.dart';
+import '../../mixins/tab_visibility_aware.dart';
 import '../../mixins/refreshable.dart';
 import '../../utils/media_image_helper.dart';
 import '../../utils/platform_detector.dart';
@@ -46,7 +47,7 @@ class DownloadsScreen extends StatefulWidget {
 }
 
 class DownloadsScreenState extends State<DownloadsScreen>
-    with TickerProviderStateMixin, TabNavigationMixin, FocusableTab {
+    with TickerProviderStateMixin, TabNavigationMixin, TabVisibilityAware, FocusableTab {
   final _queueTabChipFocusNode = FocusNode(debugLabel: 'tab_chip_queue');
   final _tvShowsTabChipFocusNode = FocusNode(debugLabel: 'tab_chip_tv_shows');
   final _moviesTabChipFocusNode = FocusNode(debugLabel: 'tab_chip_movies');
@@ -70,6 +71,18 @@ class DownloadsScreenState extends State<DownloadsScreen>
     super.initState();
     initTabNavigation();
   }
+
+  @override
+  void onTabShown() {
+    // The screen lives in an IndexedStack (kept alive), so initState runs
+    // once — entering the tab is the moment to fill any metadata that was
+    // still missing at startup, when no IPTV connection existed yet. A
+    // no-op when every owned completed download already has metadata.
+    unawaited(context.read<DownloadProvider>().refreshMetadataIfIncomplete());
+  }
+
+  @override
+  void onTabHidden() {}
 
   @override
   void dispose() {

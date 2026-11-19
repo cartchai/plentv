@@ -28,6 +28,9 @@ extension DownloadFixtures on AppDatabase {
     required int status,
     int mediaIndex = 0,
     String? mediaSourceId,
+    String? videoFilePath,
+    String? thumbPath,
+    int? downloadedAt,
   }) async {
     await customUpdate(
       '''
@@ -43,8 +46,11 @@ extension DownloadFixtures on AppDatabase {
         library_title,
         status,
         media_index,
-        media_source_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        media_source_id,
+        video_file_path,
+        thumb_path,
+        downloaded_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(global_key) DO UPDATE SET
         server_id = excluded.server_id,
         client_scope_id = excluded.client_scope_id,
@@ -61,7 +67,13 @@ extension DownloadFixtures on AppDatabase {
         error_message = NULL,
         retry_count = 0,
         media_index = excluded.media_index,
-        media_source_id = excluded.media_source_id
+        media_source_id = excluded.media_source_id,
+        -- Physical fields are preserved when the re-insert does not
+        -- supply them: a metadata/status refresh must never wipe the
+        -- file path, thumb, or download time of an existing row.
+        video_file_path = COALESCE(excluded.video_file_path, downloaded_media.video_file_path),
+        thumb_path = COALESCE(excluded.thumb_path, downloaded_media.thumb_path),
+        downloaded_at = COALESCE(excluded.downloaded_at, downloaded_media.downloaded_at)
       ''',
       variables: [
         Variable<String>(serverId),
@@ -76,6 +88,9 @@ extension DownloadFixtures on AppDatabase {
         Variable<int>(status),
         Variable<int>(mediaIndex),
         Variable<String>(mediaSourceId),
+        Variable<String>(videoFilePath),
+        Variable<String>(thumbPath),
+        Variable<int>(downloadedAt),
       ],
       updates: {downloadedMedia},
     );

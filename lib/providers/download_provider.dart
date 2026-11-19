@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:path/path.dart' as path;
 import '../media/ids.dart';
 import 'package:flutter/foundation.dart';
 import '../i18n/strings.g.dart';
@@ -82,6 +84,19 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   // Metadata and artwork cache lifecycle is isolated from queue ownership.
   late final _DownloadMetadataStore _metadataStore;
   Map<String, MediaItem> get _metadata => _metadataStore.items;
+
+  /// Global keys whose current metadata was synthesized at launch from the
+  /// Drift row + file on disk (Fix 3 safety net). A synthesized leaf is a
+  /// stand-in: the next successful live fetch replaces it with the real
+  /// item. The mark also stops a failed metadata refresh from discarding
+  /// the stand-in — without it the row would vanish again on the next
+  /// refresh, exactly the bug this fix removes.
+  final Set<String> _synthesizedMetadataKeys = {};
+
+  /// Test seam: whether [globalKey]'s metadata is currently a synthesized
+  /// stand-in (see [_synthesizedMetadataKeys]).
+  @visibleForTesting
+  bool isSynthesizedMetadata(String globalKey) => _synthesizedMetadataKeys.contains(globalKey);
   Map<String, DownloadedArtwork> get _artworkPaths => _metadataStore.artworkPaths;
 
   // Track items currently being queued (building download queue)
@@ -451,6 +466,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         ),
       );
 
+      // One select for every durable metadata row: the per-item hydration
+      // below consults this snapshot instead of issuing one select per
+      // download (the cold-hydration select count stays constant).
+      final durableByKey = await _downloadManager.loadDurableMetadata();
+
       for (final item in downloads) {
         _downloads[item.globalKey] = DownloadProgress(
           globalKey: item.globalKey,
@@ -466,7 +486,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         _downloadLibraries[item.globalKey] = (libraryId: item.libraryId, libraryTitle: item.libraryTitle);
 
         if (_ownsDownloadKey(item.globalKey)) {
-          await _hydrateDownloadMetadata(item.globalKey, pinned);
+          await _hydrateDownloadMetadata(item.globalKey, pinned, durableByKey: durableByKey);
         }
       }
 
@@ -478,9 +498,15 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       // state from previous sessions until those actions sync to the server.
       await _applyOfflineWatchOverlay();
 
+      // Safety net: rows with a file on disk but no metadata anywhere
+      // (pre-1.5.1 IPTV rows, no server reachable yet) still list, from a
+      // leaf synthesized from the row + file path.
+      final synthesizedCount = await _synthesizeMissingMetadata();
+
       appLogger.i(
         'Loaded ${_downloads.length} downloads, ${_metadata.length} metadata entries, '
-        'and ${_syncRules.length} sync rules',
+        'and ${_syncRules.length} sync rules'
+        '${synthesizedCount > 0 ? ', $synthesizedCount synthesized from files on disk' : ''}',
       );
       safeNotifyListeners();
     } catch (e) {
@@ -508,7 +534,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// Resolve a leaf's parent rows (show + season, artist + album) that the
   /// map load above missed, one DB lookup each. Only the missing ones are
   /// read — a parent shared by many downloaded siblings is fetched once.
-  Future<void> _hydrateMissingParents(MediaItem leaf, {String? clientScopeId}) async {
+  Future<void> _hydrateMissingParents(
+    MediaItem leaf, {
+    String? clientScopeId,
+    Map<String, MediaItem>? durableByKey,
+  }) async {
     final serverId = leaf.serverId;
     if (serverId == null) return;
     for (final parentId in [leaf.grandparentId, leaf.parentId]) {
@@ -524,6 +554,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         parentId,
         preferActiveScope: true,
         activeProfileId: _activeProfileId,
+        durableByKey: durableByKey,
       );
       if (parent == null) continue;
       _metadata[parentKey] = parent;
@@ -581,6 +612,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     ({Map<String, MediaItem> items, Map<String, String?> scopesByServer}) pinned, {
     bool fetchOnMiss = false,
     bool Function()? isStale,
+    Map<String, MediaItem>? durableByKey,
   }) async {
     final parsed = parseGlobalKey(globalKey);
     if (parsed == null) return (metadata: null, networkFilled: false, stale: false);
@@ -597,6 +629,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
           parsed.ratingKey,
           preferActiveScope: true,
           activeProfileId: _activeProfileId,
+          durableByKey: durableByKey,
         );
     if (isStale?.call() ?? false) return (metadata: null, networkFilled: false, stale: true);
 
@@ -615,9 +648,17 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     if (cached == null) {
       // Parent rows can be shared by multiple downloaded siblings. A missing
       // leaf invalidates only that leaf; profile changes clear the whole store.
-      _metadata.remove(globalKey);
+      // A synthesized stand-in still lists the row, so keep it instead of
+      // removing it — without this guard the next refresh would un-list the
+      // download again, the exact failure this fix removes. Rows with no
+      // metadata at all stay unlisted, as before.
+      if (!_synthesizedMetadataKeys.contains(globalKey)) {
+        _metadata.remove(globalKey);
+      }
     }
     if (cached != null) {
+      // A real item replaces any synthesized stand-in.
+      _synthesizedMetadataKeys.remove(globalKey);
       // The row's stamped library identity wins only when the cached item
       // lacks its own — pre-v23 rows and offline enqueues stay useful.
       final library = _downloadLibraries[globalKey];
@@ -635,7 +676,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         // 1.2.18 S-14: with no bulk pinned map the parent rows are not in
         // `pinned.items` — resolve the missing ones per item instead, so
         // show/season (or artist/album) rows keep their stored metadata.
-        await _hydrateMissingParents(cached, clientScopeId: clientScopeId);
+        await _hydrateMissingParents(cached, clientScopeId: clientScopeId, durableByKey: durableByKey);
       }
     }
     return (metadata: cached, networkFilled: networkFilled, stale: false);
@@ -2358,6 +2399,162 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   ///
   /// This is more lightweight than full refresh() - only updates metadata
   /// without reloading download progress from database.
+  /// Launch-time safety net (Fix 3): for owned completed rows whose file is
+  /// on disk but which still have no metadata — because the durable store
+  /// was never written for them (pre-1.5.1 rows) and no server is reachable —
+  /// build a display leaf from the Drift row + file path so the download
+  /// still lists in Downloads. Scoped strictly to rows that exist in Drift;
+  /// nothing is created for rows with no file, and nothing is re-downloaded.
+  ///
+  /// A synthesized leaf is marked in [_synthesizedMetadataKeys] and is
+  /// replaced by the real item on the next successful live fetch (see
+  /// [_hydrateDownloadMetadata]); a failed refresh never discards it.
+  /// Returns how many leaves were synthesized.
+  Future<int> _synthesizeMissingMetadata() async {
+    var synthesized = 0;
+    for (final entry in _downloads.entries) {
+      final globalKey = entry.key;
+      final progress = entry.value;
+      if (!_ownsDownloadKey(globalKey)) continue;
+      if (progress.status != DownloadStatus.completed) continue;
+      if (_metadata.containsKey(globalKey)) continue;
+      final parsed = parseGlobalKey(globalKey);
+      if (parsed == null) continue;
+      final row = await _database.getDownloadedMedia(globalKey);
+      if (row == null) continue;
+      final backend = await _downloadManager.backendForServer(parsed.serverId);
+      if (backend == null) continue;
+      if (backend != MediaBackend.xtream && backend != MediaBackend.m3u) continue;
+      final storedPath = row.videoFilePath;
+      if (storedPath == null || storedPath.startsWith('content://')) continue;
+      late final String absolutePath;
+      try {
+        absolutePath = await DownloadStorageService.instance.ensureAbsolutePath(storedPath);
+      } catch (e) {
+        appLogger.d('Skipping metadata synthesis for $globalKey: cannot resolve path ($e)');
+        continue;
+      }
+      if (!await File(absolutePath).exists()) continue;
+      final leaf = _synthesizeLeafFromPath(
+        serverId: parsed.serverId.value,
+        itemId: parsed.ratingKey,
+        kind: MediaKind.fromString(row.type),
+        backend: backend,
+        absolutePath: absolutePath,
+      );
+      if (leaf == null) continue;
+      _metadata[globalKey] = leaf;
+      _synthesizedMetadataKeys.add(globalKey);
+      synthesized++;
+    }
+    if (synthesized > 0) {
+      appLogger.i('Synthesized metadata for $synthesized downloads from files on disk');
+    }
+    return synthesized;
+  }
+
+  /// Build a display leaf for [absolutePath] (a file under
+  /// `downloads/TV Shows|Movies|Music/...`). Returns null when the path
+  /// does not match the download layout, or the row kind is not a leaf
+  /// (episode/movie/track). Parents are NOT synthesized as separate rows:
+  /// the leaf's grandparent/parent fields let the existing
+  /// `downloadedShows`/`downloadedSeasons`/tree logic derive them.
+  MediaItem? _synthesizeLeafFromPath({
+    required String serverId,
+    required String itemId,
+    required MediaKind kind,
+    required MediaBackend backend,
+    required String absolutePath,
+  }) {
+    final segments = path.split(absolutePath);
+    final downloadsIndex = segments.lastIndexOf('downloads');
+    if (downloadsIndex < 0 || segments.length < downloadsIndex + 3) return null;
+    final rel = segments.sublist(downloadsIndex + 1);
+    final fileName = segments.last;
+    // The item tag is an 8-hex md5 prefix of the global key, appended to
+    // every downloaded file name: strip it (and the extension) to get the
+    // display title.
+    String stripTagAndExtension(String name) {
+      final withoutExtension = path.withoutExtension(name);
+      return withoutExtension.replaceFirst(RegExp(r' \[[0-9a-f]{8}\]$'), '');
+    }
+
+    late final String title;
+    String? grandparentId;
+    String? grandparentTitle;
+    String? parentId;
+    String? parentTitle;
+    int? parentIndex;
+    int? index;
+
+    switch (kind) {
+      case MediaKind.episode:
+        // downloads/TV Shows/<show folder>/Season NN/SxxExx - <title> [tag].ext
+        if (rel.length < 4 || rel[0] != 'TV Shows') return null;
+        final showFolder = rel[1];
+        final seasonFolder = rel[2];
+        final seasonMatch = RegExp(r'^Season (\d{1,3})$').firstMatch(seasonFolder);
+        final episodeMatch = RegExp(r'^S(\d{1,3})E(\d{1,3}) - (.+?) \[[0-9a-f]{8}\]\.[^.]+$').firstMatch(fileName);
+        if (seasonMatch == null || episodeMatch == null) return null;
+        title = episodeMatch.group(3)!;
+        grandparentId = showFolder;
+        grandparentTitle = showFolder;
+        parentId = '$showFolder/$seasonFolder';
+        parentTitle = seasonFolder;
+        parentIndex = int.parse(seasonMatch.group(1)!);
+        index = int.parse(episodeMatch.group(2)!);
+      case MediaKind.movie:
+        // downloads/Movies/<movie folder>/<movie folder> [tag].ext
+        if (rel.length < 3 || rel[0] != 'Movies') return null;
+        title = rel[1];
+      case MediaKind.track:
+        // downloads/Music/<artist>/<album>/[disc-]NN - <title> [tag].ext
+        if (rel.length < 4 || rel[0] != 'Music') return null;
+        final artist = rel[1];
+        final album = rel[2];
+        final trackName = stripTagAndExtension(fileName).replaceFirst(RegExp(r'^\d{1,2} - '), '');
+        title = trackName;
+        grandparentId = artist;
+        grandparentTitle = artist;
+        parentId = '$artist/$album';
+        parentTitle = album;
+      default:
+        return null;
+    }
+
+    // Build with the backend-specific factory (the generic MediaItem
+    // factory lacks grandparent/parent fields), so the existing
+    // downloadedShows/downloadedSeasons/tree logic can derive the parents
+    // from this leaf.
+    return switch (backend) {
+      MediaBackend.xtream => MediaItem.xtream(
+          id: itemId,
+          kind: kind,
+          title: title,
+          serverId: serverId,
+          parentId: parentId,
+          parentTitle: parentTitle,
+          parentIndex: parentIndex,
+          index: index,
+          grandparentId: grandparentId,
+          grandparentTitle: grandparentTitle,
+        ),
+      MediaBackend.m3u => MediaItem.m3u(
+          id: itemId,
+          kind: kind,
+          title: title,
+          serverId: serverId,
+          parentId: parentId,
+          parentTitle: parentTitle,
+          parentIndex: parentIndex,
+          index: index,
+          grandparentId: grandparentId,
+          grandparentTitle: grandparentTitle,
+        ),
+      _ => null,
+    };
+  }
+
   Future<void> refreshMetadataFromCache() async {
     final profileGeneration = _profileGeneration;
     bool isStale() => isDisposed || profileGeneration != _profileGeneration;
@@ -2387,13 +2584,22 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       ),
     );
     if (isStale()) return;
+    // One select for every durable metadata row (see the load site).
+    final durableByKey = await _downloadManager.loadDurableMetadata();
+    if (isStale()) return;
     int cacheHits = 0;
     int networkFills = 0;
     int misses = 0;
 
     for (final globalKey in keys) {
       try {
-        final result = await _hydrateDownloadMetadata(globalKey, pinned, fetchOnMiss: true, isStale: isStale);
+        final result = await _hydrateDownloadMetadata(
+          globalKey,
+          pinned,
+          fetchOnMiss: true,
+          isStale: isStale,
+          durableByKey: durableByKey,
+        );
         if (result.stale) return;
         if (result.metadata == null) {
           misses++;
@@ -2406,6 +2612,13 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         appLogger.d('Failed to refresh metadata for $globalKey: $e');
       }
     }
+    // Safety net: rows that stayed unresolved (no cache row, no live item)
+    // but whose file is on disk still list, from a leaf synthesized from
+    // the row + file path.
+    final synthesizedCount = await _synthesizeMissingMetadata();
+    if (synthesizedCount > 0) {
+      misses = keys.where((key) => !_metadata.containsKey(key)).length;
+    }
     await _loadDownloadCollections(pinned);
     if (isStale()) return;
 
@@ -2414,14 +2627,33 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     await _applyOfflineWatchOverlay(expectedProfileGeneration: profileGeneration);
     if (isStale()) return;
 
-    final updatedCount = cacheHits + networkFills;
+    final updatedCount = cacheHits + networkFills + synthesizedCount;
     appLogger.i(
       'refreshMetadataFromCache: walked ${keys.length} keys → '
-      '$cacheHits cache hits, $networkFills network fills, $misses unresolved',
+      '$cacheHits cache hits, $networkFills network fills, $synthesizedCount synthesized, $misses unresolved',
     );
     if (updatedCount > 0) {
       safeNotifyListeners();
     }
+  }
+
+  /// Re-run the metadata refresh only when an owned completed download
+  /// still lacks metadata — the case that leaves Downloads empty after a
+  /// restart. Called when the Downloads tab is shown (and by
+  /// `onServersConnected` flows): at startup the refresh runs before any
+  /// IPTV connection exists, so a second run once the client is live (or
+  /// the tab is entered) is what actually fills IPTV rows. A no-op when
+  /// every owned completed row already has metadata.
+  Future<void> refreshMetadataIfIncomplete() async {
+    await ensureInitialized();
+    final incomplete = _downloads.entries.any(
+      (entry) =>
+          _ownsDownloadKey(entry.key) &&
+          entry.value.status == DownloadStatus.completed &&
+          !_metadata.containsKey(entry.key),
+    );
+    if (!incomplete) return;
+    await refreshMetadataFromCache();
   }
 
   /// Deletes [globalKey] if it is a completed episode/movie download; returns

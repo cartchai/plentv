@@ -49,6 +49,7 @@ final class AppDatabaseBootstrap {
 @DriftDatabase(
   tables: [
     DownloadedMedia,
+    DownloadMetadata,
     DownloadOwners,
     DownloadQueue,
     ApiCache,
@@ -368,7 +369,7 @@ class AppDatabase extends _$AppDatabase {
   static const FormatException _invalidRecoveryImage = FormatException('Invalid tvOS database recovery image');
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration {
@@ -771,6 +772,10 @@ class AppDatabase extends _$AppDatabase {
             'DownloadedMedia.resumeProbe column',
             () => m.addColumn(downloadedMedia, downloadedMedia.resumeProbe),
           );
+        }
+        if (from < 27) {
+          appLogger.i('Adding DownloadMetadata table (v27 migration)');
+          await _ignoreAlreadyExists('DownloadMetadata table', () => m.createTable(downloadMetadata));
         }
       },
     );

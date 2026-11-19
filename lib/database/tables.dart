@@ -87,6 +87,28 @@ class DownloadedMedia extends Table {
   TextColumn get resumeProbe => text().nullable()();
 }
 
+/// Durable per-item metadata for downloads whose backend has no ApiCache
+/// row to pin (IPTV: Xtream/M3U). Stores the leaf/parent [MediaItem] JSON
+/// as-is, keyed by public globalKey, so the Downloads screen can list a
+/// completed download after a restart with no server reachable.
+///
+/// Never Plex-shaped JSON: rows are written by
+/// [DownloadManagerService.persistDownloadMetadata] and read back only
+/// through [DownloadManagerService.lookupDownloadMetadata], parsed with
+/// [MediaItem.fromJson] — never through the Plex cache parser. A row is
+/// removed only when its physical download is deleted.
+@DataClassName('DownloadMetadataItem')
+class DownloadMetadata extends Table {
+  TextColumn get globalKey => text()();
+  TextColumn get serverId => text()();
+  TextColumn get itemId => text()();
+  TextColumn get data => text()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {globalKey};
+}
+
 /// Profile ownership for shared physical downloads.
 ///
 /// [DownloadedMedia] stores one physical row per public serverId:ratingKey so
