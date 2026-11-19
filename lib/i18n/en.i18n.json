@@ -1544,6 +1544,14 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2323": [
+      "Updated: the app is now built on the latest Plezy release, with a newer video engine under the hood",
+      "New: libraries now have a Genres tab for movies and shows, so you can browse by genre",
+      "New: if you leave a video paused and come back later, the app now asks which profile to continue with instead of resuming silently",
+      "New: shuffle now works on Plex and Jellyfin libraries",
+      "New: when a server refuses a video, the app now offers to play a converted version instead of just failing",
+      "Fixed: pictures and posters now load with fewer repeated downloads, so browsing a big library is smoother"
+    ],
     "changelog2321": [
       "New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings",
       "New: Downloads moved out of the bottom bar and into the profile menu",
