@@ -5107,9 +5107,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // no validators from the panel, downloading is the only way to know
     // the content is unchanged. It saves the ~4 s parse + rebuild and
     // the memory spike.)
-    if (!debugDisablePersistedEpg && !debugDisableFeedRowStore && feedShaHex != null) {
-      final storeDir = tempFile?.parent.path ?? (await _xmltvFeedFile(cacheKey)).parent.path;
-      final dbPath = IptvFeedRowStore.dbPathForDirAndKey(storeDir, _fileSafe(cacheKey));
+    // The store lives next to the temp file: when there is no temp
+    // file (persistence disabled, or the cache directory unavailable
+    // so the download parsed in memory) there is no store to reuse —
+    // never resolve the feed-file path here to find it. That call
+    // throws when the cache directory is unavailable, and this check
+    // must not fail a load the in-memory parse below would serve.
+    if (!debugDisablePersistedEpg && !debugDisableFeedRowStore && feedShaHex != null && tempFile != null) {
+      final dbPath = IptvFeedRowStore.dbPathForDirAndKey(tempFile.parent.path, _fileSafe(cacheKey));
       if (IptvFeedRowStore.isValid(dbPath: dbPath, expectedSha256: feedShaHex)) {
         final reused = await _readFeedRowsFromStore(cacheKey, retainIds: retainIds);
         if (reused != null) {

@@ -18,6 +18,7 @@ import 'package:plezy/connection/connection.dart';
 import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/iptv_live_tv.dart';
+import 'package:plezy/services/iptv/iptv_heavy_work_gate.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/settings_service.dart';
 
@@ -124,6 +125,14 @@ void main() {
   tearDown(() async {
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = null;
     IptvLiveTvSupport.debugDisableFeedRowStore = false;
+    // Never delete the temp dir under a feed parse still in flight in
+    // the process-global gate — it strands the gate and the NEXT
+    // test's first feed load never parses (1.4.4 F6: refreshes land
+    // behind the Reload's return, so a test can end with one in
+    // flight even when every assertion already passed).
+    for (var i = 0; i < 600 && IptvHeavyWorkGate.instance.isBusy; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         if (await tempDir.exists()) await tempDir.delete(recursive: true);
@@ -187,17 +196,40 @@ void main() {
         await support.fetchEpgForChannel(key, from: window.from, to: window.to);
       }
       // The store build is disabled, so the Reload's download leaves
-      // no store behind for the slide to read.
+      // no store behind for the slide to read. Delete the store the
+      // setup fetches built: on the old base the Reload's bust deleted
+      // the persisted feed (store included), so the file was absent
+      // after the Reload for that reason; on 1.4.4 the Reload keeps
+      // the feed, so the setup-built store would survive the Reload
+      // and the assertion below would pass for the wrong reason.
+      // Deleting it first keeps the test about what the RELOAD
+      // builds (nothing). The Reload then reads the kept persisted
+      // XML (warm-start parse) and its download parses too.
+      // Poll for the store file first: the build rides the parse job,
+      // and under load a fetch can return before the store file is
+      // visible.
+      File? db;
+      for (var i = 0; i < 200 && (db = storeDbFile()) == null; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      expect(db, isNotNull);
+      db!.deleteSync();
       IptvLiveTvSupport.debugDisableFeedRowStore = true;
       final parsesBefore = support.debugFeedParseCount;
       final result = await support.reloadTvDetails();
       expect(result.withGuide, 100, reason: 'a failed slide never turns a successful Reload into a failure');
       expect(result.windowSlide.slid, isFalse);
       expect(result.windowSlide.reason, 'store-unavailable');
+      // 1.4.4 F6: the refresh's parse lands BEHIND the Reload's
+      // return — asserting the count immediately reads only the
+      // warm-start parse. Poll until the background parse lands.
+      for (var i = 0; i < 200 && support.debugFeedParseCount < parsesBefore + 2; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
       expect(
         support.debugFeedParseCount,
-        parsesBefore + 1,
-        reason: 'the hard rule: the Reload adds exactly one parse (its own download) and the slide adds none — no re-parse slide inside the Reload',
+        parsesBefore + 2,
+        reason: 'the hard rule: the slide adds no parse — the +2 is the Reload reading the kept persisted feed (warm-start XML parse) plus its own download parse. On the old base the bust deleted the feed, so the Reload parsed only its download (+1).',
       );
       expect(storeDbFile(), isNull, reason: 'no store was built while the seam was off');
     });
@@ -213,7 +245,13 @@ void main() {
       // Remove the store the first fetch built, and disable the build
       // so the Reload's download does not rebuild it: this is the
       // first Reload after upgrade, before any store exists.
-      final db = storeDbFile();
+      // Poll for the store file first: the build rides the parse job,
+      // and under load the fetch can return a row before the store
+      // file is visible — asserting on its absence then is a race.
+      File? db;
+      for (var i = 0; i < 200 && (db = storeDbFile()) == null; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
       expect(db, isNotNull);
       db!.deleteSync();
       IptvLiveTvSupport.debugDisableFeedRowStore = true;

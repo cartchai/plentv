@@ -9,6 +9,7 @@ import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/iptv_live_tv.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/iptv_epg_sources.dart';
+import 'package:plezy/services/iptv/iptv_heavy_work_gate.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -29,6 +30,14 @@ const _testPassword = 'pa' 'ss';
 /// F6b: when the feed cannot load at all, Reload still ends in a
 /// report naming the failure (kind `failed`, with the plain-words
 /// reason), and the rows keep serving from short-EPG.
+///
+/// 1.4.4 F1/F6 update: the bust no longer deletes the persisted feed,
+/// so a failed refresh keeps the old guide — the outcome is now
+/// `loaded` from the kept store guide, the rows serve the kept feed
+/// (fuller than short-EPG), and the failure is recorded in the
+/// per-source status instead of the outcome. The layered chain's
+/// bottom rung is unchanged in spirit (the guide never goes blank),
+/// only the rung that serves it moved up one level.
 ///
 /// Verify-first on the 1.2.21 base: both behaviours are pre-existing
 /// (the warm-start fallback and the Reload failure report); these
@@ -99,6 +108,12 @@ void main() {
       IptvCatalogDiskCache.debugDisableDisk = false;
       IptvPlaybackActivity.instance.markIdle();
       IptvPlaybackActivity.debugResetInstance();
+      // Never delete the temp dir under a feed parse still in flight
+      // in the process-global gate — it strands the gate and the NEXT
+      // test's first feed load never parses.
+      for (var i = 0; i < 600 && IptvHeavyWorkGate.instance.isBusy; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
       for (var attempt = 0; attempt < 2; attempt++) {
         try {
           if (await tempDir.exists()) await tempDir.delete(recursive: true);
@@ -207,11 +222,27 @@ void main() {
       final result = await support.reloadTvDetails();
       expect(result.channelsLoaded, 2);
       expect(result.feedOutcomes, hasLength(1));
-      expect(result.feedOutcomes.first.kind, IptvEpgFeedOutcomeKind.failed);
-      expect(result.feedOutcomes.first.reason, isNotEmpty);
+      // 1.4.4 F1/F6: the Reload keeps the old guide when the fresh
+      // feed fails — the outcome is `loaded` from the kept store
+      // guide, not `failed`, and the rows serve the kept feed (fuller
+      // than the short-EPG stub). The failure is not lost: it lands in
+      // the per-source status (the chip on the EPG sources screen) —
+      // poll for it, since the refresh fails behind the Reload's
+      // return. (On the old base the bust deleted the feed, so the
+      // Reload had no guide to serve and reported `failed`.)
+      expect(result.feedOutcomes.first.kind, IptvEpgFeedOutcomeKind.loaded);
 
       final served = await support.fetchEpgForChannel('100', from: window.from, to: window.to);
-      expect(served.map((p) => p.title), ['Short Show']);
+      expect(served.map((p) => p.title), ['XMLTV Morning']);
+
+      var statuses = await IptvEpgSourcesStore('trex').loadStatuses();
+      for (var i = 0; i < 200 && statuses[IptvEpgSourceConfig.providerId]?.lastFailure == null; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        statuses = await IptvEpgSourcesStore('trex').loadStatuses();
+      }
+      final status = statuses[IptvEpgSourceConfig.providerId];
+      expect(status?.lastFailure, isNotNull, reason: 'the failed refresh must be recorded in the source status');
+      expect(status?.lastFailureReason, isNotEmpty);
     });
   });
 }

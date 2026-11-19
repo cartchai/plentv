@@ -8,6 +8,7 @@ import 'package:plezy/connection/connection.dart';
 import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/iptv_live_tv.dart';
+import 'package:plezy/services/iptv/iptv_heavy_work_gate.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -176,6 +177,14 @@ void main() {
     IptvLiveTvSupport.xmltvNegativeCacheTtl = const Duration(minutes: 5);
     IptvPlaybackActivity.instance.markIdle();
     IptvPlaybackActivity.debugResetInstance();
+    // Never delete the temp dir under a feed parse still in flight in
+    // the process-global gate — it strands the gate and the NEXT
+    // test's first feed load never parses (1.4.4 F6: refreshes land
+    // behind the Reload's return, so a test can end with one in
+    // flight even when every assertion already passed).
+    for (var i = 0; i < 600 && IptvHeavyWorkGate.instance.isBusy; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         if (await tempDir.exists()) await tempDir.delete(recursive: true);
@@ -455,7 +464,7 @@ void main() {
   });
 
   group('D7 — a refreshed feed never reaches already-visited channels', () {
-    test('D7 a refreshed feed reaches channels already visited', () async {
+    test('D7 a refreshed feed reaches channels already visited', timeout: const Timeout(Duration(minutes: 2)), () async {
       // Stale-while-revalidate refreshes the feed in the background —
       // but the per-channel entry stamped from the OLD feed stays fresh
       // for the whole update interval, so the refresh only benefits
@@ -513,7 +522,16 @@ void main() {
         reason: 'stale-while-revalidate serves the old feed while the refresh runs',
       );
       await _waitFor(() => api.xmltvCalls >= 2);
-      final afterRefresh = await supportB.fetchEpgForChannel('100', from: window.from, to: window.to);
+      // 1.4.4 F6: the wait above only proves the refresh download
+      // STARTED — the fetch serves the stale guide while it runs, so
+      // asserting on the first post-start fetch reads 'Show A' (the
+      // old behaviour blocked on the in-flight download instead).
+      // Poll until the refreshed feed lands behind the served guide.
+      var afterRefresh = await supportB.fetchEpgForChannel('100', from: window.from, to: window.to);
+      for (var i = 0; i < 200 && !afterRefresh.map((p) => p.title).contains('Show B'); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        afterRefresh = await supportB.fetchEpgForChannel('100', from: window.from, to: window.to);
+      }
       expect(
         afterRefresh.map((p) => p.title),
         ['Show B'],

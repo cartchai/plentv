@@ -68,6 +68,7 @@ import 'package:plezy/media/iptv_live_tv.dart';
 import 'package:plezy/services/fork_backup_service.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/iptv_epg_sources.dart';
+import 'package:plezy/services/iptv/iptv_heavy_work_gate.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/lowend/epg_cadence_log.dart';
@@ -298,6 +299,14 @@ void main() {
     IptvCatalogDiskCache.debugDisableDisk = false;
     IptvPlaybackActivity.instance.markIdle();
     IptvPlaybackActivity.debugResetInstance();
+    // Never delete the temp dir under a feed parse still in flight in
+    // the process-global gate — it strands the gate and the NEXT
+    // test's first feed load never parses (1.4.4 F6: refreshes land
+    // behind the Reload's return, so a test can end with one in
+    // flight even when every assertion already passed).
+    for (var i = 0; i < 600 && IptvHeavyWorkGate.instance.isBusy; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
     if (await tempDir.exists()) await tempDir.delete(recursive: true);
   });
 
@@ -334,7 +343,7 @@ void main() {
       expect(stored.toJson()['origin'], 'guessed-affiliate');
     });
 
-    test('(b) determinism across a rotated feed — the stored pick survives', () async {
+    test('(b) determinism across a rotated feed — the stored pick survives', timeout: const Timeout(Duration(minutes: 2)), () async {
       final window = windowAround(DateTime.now());
       // First load: guess + persist Minneapolis.
       var programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to);
@@ -362,7 +371,29 @@ void main() {
       // the stored pick (not a stale cache) held the row.
       await support.clearEpgAssignment('301');
       expect(await storedFoxPick(), isNull, reason: 'clear removes the stored pick');
+      // 1.4.4 F6: wait for a refresh to LAND (a new source success)
+      // before fetching once — and fetch only once. Two waits do NOT
+      // work here: polling the row re-guesses from the kept
+      // (pre-rotation) guide and persists the OLD affiliate before
+      // the new feed lands; polling the parse caller misses when the
+      // control refresh joins the main part's in-flight refresh or
+      // SHA-skips the unchanged bytes (no new parse starts). Any
+      // success recorded after the rotation means the rotated feed is
+      // served — the main and control refreshes download the same
+      // rotated bytes.
+      final statusesBefore = await IptvEpgSourcesStore('trex').loadStatuses();
+      final successBefore = statusesBefore[IptvEpgSourceConfig.providerId]?.lastSuccess;
       await support.refreshEpgCache();
+      DateTime? landed;
+      for (var i = 0; i < 200; i++) {
+        final s = (await IptvEpgSourcesStore('trex').loadStatuses())[IptvEpgSourceConfig.providerId]?.lastSuccess;
+        if (s != null && (successBefore == null || s.isAfter(successBefore))) {
+          landed = s;
+          break;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      expect(landed, isNotNull, reason: 'the rotated feed must land (a new source success) before the control fetch');
       programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to, force: true);
       expect(
         programs.map((p) => p.title),
@@ -460,7 +491,7 @@ void main() {
       expect(stored?.toJson()['origin'], 'guessed-affiliate');
     });
 
-    test('(f) stored affiliate removed from the feed — re-guess and replace', () async {
+    test('(f) stored affiliate removed from the feed — re-guess and replace', timeout: const Timeout(Duration(minutes: 2)), () async {
       final window = windowAround(DateTime.now());
       // First load: guess + persist Minneapolis.
       var programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to);
@@ -470,7 +501,14 @@ void main() {
       // Swap in a feed with no Minneapolis at all.
       api.providerXmltvBody = _foxOnlyStLouisFeedXml(DateTime.now());
       await support.refreshEpgCache();
+      // 1.4.4 F6: the forced fetch serves the kept guide while the
+      // swapped feed downloads behind it — poll until the re-guess
+      // lands instead of asserting on the first fetch.
       programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to, force: true);
+      for (var i = 0; i < 200 && !programs.map((p) => p.title).contains('Fox 2 St. Louis News'); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to, force: true);
+      }
       expect(
         programs.map((p) => p.title),
         ['Fox 2 St. Louis News'],
@@ -484,7 +522,7 @@ void main() {
       expect(stored?.toJson()['origin'], 'guessed-affiliate');
     });
 
-    test('(g) stored affiliate present but out-of-window — the pick is kept', () async {
+    test('(g) stored affiliate present but out-of-window — the pick is kept', timeout: const Timeout(Duration(minutes: 2)), () async {
       final window = windowAround(DateTime.now());
       // First load: guess + persist Minneapolis.
       var programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to);
@@ -494,7 +532,14 @@ void main() {
       // stored id is still in the feed, just outside the match window.
       api.providerXmltvBody = _futureFeedXml(DateTime.now());
       await support.refreshEpgCache();
+      // 1.4.4 F6: the forced fetch serves the kept guide while the
+      // future feed downloads behind it — poll until the window
+      // empties instead of asserting on the first fetch.
       programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to, force: true);
+      for (var i = 0; i < 200 && programs.isNotEmpty; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to, force: true);
+      }
       expect(programs, isEmpty, reason: 'nothing is in-window on the future feed');
       final detail = await support.channelEpgDetail('301', from: window.from, to: window.to);
       expect(detail.hasGuide, isFalse);
@@ -616,24 +661,36 @@ void main() {
       expect(oldRestored['301']?.toJson()['origin'], 'manual');
     });
 
-    test('(k) window includes the stored pick first — no slide on the second load', () async {
+    test('(k) window includes the stored pick first — served from the kept guide, no re-parse', timeout: const Timeout(Duration(minutes: 2)), () async {
       final window = windowAround(DateTime.now());
       // First load: guess + persist Minneapolis.
       var programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to);
       expect(programs.map((p) => p.title), ['Fox 2 Minneapolis News']);
 
-      // Bust the guide, record the slide count, fetch again.
+      // Bust the guide, record the parse count, fetch again.
+      final parsesBefore = support.debugFeedParseCount;
       await support.refreshEpgCache();
-      final slidesBefore = EpgCadenceLog.windowSlideCount;
       programs = await support.fetchEpgForChannel('301', from: window.from, to: window.to, force: true);
       expect(programs.map((p) => p.title), ['Fox 2 Minneapolis News']);
-      // No slide: the stored pick is in the window from the first
-      // parse — the fetch serves it without re-parsing the feed for a
-      // wider window.
+      // 1.4.4 F6: the fetch serves the kept store guide, whose window
+      // starts empty — _ensureGuideWindow fills it from the store (a
+      // cheap DB read, not a re-parse), so the stored pick is in the
+      // window from the fill and no parse is needed for a wider
+      // window. (On the old base the bust deleted the feed, so the
+      // fetch re-downloaded + parsed with the window included and the
+      // test asserted zero slides — slides are cheap store fills now,
+      // their count varies with load timing, so the parse count below
+      // is the guard, not the slide count.) The background refresh
+      // SHA-skips the unchanged feed, so it parses nothing either —
+      // but it lands behind the fetch's return, so poll for the gate
+      // to settle before reading the count.
+      for (var i = 0; i < 600 && IptvHeavyWorkGate.instance.isBusy; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
       expect(
-        EpgCadenceLog.windowSlideCount,
-        slidesBefore,
-        reason: 'the stored pick is in the window from the first parse — no slide needed',
+        support.debugFeedParseCount,
+        parsesBefore,
+        reason: 'the stored pick is served from the kept guide — no re-parse for a wider window',
       );
       final detail = await support.channelEpgDetail('301', from: window.from, to: window.to);
       expect(detail.matchedXmltvId, 'loc.FOX (KMSP-DT9) Minneapolis, MN');
