@@ -1535,6 +1535,14 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2322": [
+      "Fixed: downloaded episodes now group under their show name and season in Downloads, instead of each episode showing up as its own show",
+      "Fixed: episodes you already downloaded now show under the right show and season without having to download them again",
+      "Fixed: a download the system stops partway now picks up where it left off instead of starting again from 0%",
+      "Fixed: a download that restarts from 0% once now pauses and tells you why, instead of looping back to 0% again and again",
+      "New: downloads are now less likely to be stopped by the system in the middle of a transfer",
+      "New: the debug log now records when the system stops a download and whether it resumes or starts over"
+    ],
     "changelog2321": [
       "New: the profile picture now sits in the bottom bar, on the far right — tap it for your profiles, Downloads and settings",
       "New: Downloads moved out of the bottom bar and into the profile menu",
