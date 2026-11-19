@@ -75,3 +75,7 @@ maestro/**/*.png
 
 server/deploy.sh
 server/Caddyfile
+
+# Vendored background_downloader: its own generated build output and lockfile
+packages/background_downloader/build/
+packages/background_downloader/pubspec.lock

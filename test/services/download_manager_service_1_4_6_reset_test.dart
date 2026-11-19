@@ -41,6 +41,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plezy/database/app_database.dart';
 import 'package:plezy/database/download_operations.dart';
+import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/download_resolution.dart';
 import 'package:plezy/media/ids.dart';
 import 'package:plezy/media/media_backend.dart';
@@ -382,6 +383,24 @@ void main() {
       final row = await fixture.db.getDownloadedMedia(fixture.globalKey);
       expect(row?.status, DownloadStatus.paused.index, reason: 'after from-0 restarts, waitingToRetry must pause with a reason instead of looping');
       expect(row?.errorMessage, isNotNull);
+      // 1.4.61 F5: the pause reason must say the download restarted from
+      // the beginning instead of resuming. The old wording blamed the
+      // server ("does not allow picking up where it left off") — the probe
+      // proves the server answers Range with 206, so that diagnosis was
+      // wrong. The literal assertion is the discriminating one: it fails
+      // on base (old wording in the JSON) and passes on the fix. The
+      // t.downloads assertion pins that the service uses the i18n string,
+      // not a hardcoded literal.
+      expect(
+        t.downloads.pausedCannotResume,
+        'Paused — this download restarted from the beginning instead of resuming',
+        reason: 'the i18n value itself is the new F5 wording',
+      );
+      expect(
+        row?.errorMessage,
+        t.downloads.pausedCannotResume,
+        reason: 'the surfaced pause reason is the i18n string',
+      );
       expect(cancelled, contains(task.taskId));
     });
 
