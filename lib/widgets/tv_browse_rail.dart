@@ -1374,7 +1374,10 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, theme.scaffoldBackgroundColor.withValues(alpha: 0.7)],
+                          colors: [
+                            theme.scaffoldBackgroundColor.withValues(alpha: 0),
+                            theme.scaffoldBackgroundColor.withValues(alpha: 0.7),
+                          ],
                         ),
                       ),
                     ),
