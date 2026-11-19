@@ -71,6 +71,7 @@ import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 import com.pleztv.app.AndroidRuntimeDiagnostics
 import com.pleztv.app.DeviceTier
+import com.edde746.mpv.MediaCodecQuery
 import com.edde746.plezy.libass.media.AssHandler
 import com.edde746.plezy.libass.media.parser.AssSubtitleParserFactory
 import com.edde746.plezy.libass.media.widget.AssSubtitleSurfaceView
@@ -78,7 +79,6 @@ import com.pleztv.app.shared.AudioFocusManager
 import com.pleztv.app.shared.DeviceQuirks
 import com.pleztv.app.shared.FlutterOverlayHelper
 import com.pleztv.app.shared.FrameRateManager
-import com.pleztv.app.shared.MediaCodecQuery
 import com.pleztv.app.shared.PlayerSurfaceHost
 import com.pleztv.app.shared.SurfacePlayerCore
 import java.util.concurrent.Executors
