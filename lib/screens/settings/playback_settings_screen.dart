@@ -57,6 +57,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
             PlatformDetector.isAppleTV() ||
             (Platform.isWindows &&
                 (svc.read(SettingsService.matchRefreshRate) || svc.read(SettingsService.matchDynamicRange))) ||
+            (Platform.isMacOS && svc.read(SettingsService.matchRefreshRate)) ||
             (Platform.isAndroid &&
                 (svc.read(SettingsService.matchContentFrameRate) || svc.read(SettingsService.matchContentResolution)));
         // Android mpv and Apple TV only: ExoPlayer is not taking new features, and
@@ -91,7 +92,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                 if (Platform.isAndroid && PlatformDetector.isTV()) _matchContentResolutionTile(),
                 if (Platform.isAndroid && PlatformDetector.isTV()) _surfaceRenderModeTile(),
                 if (Platform.isAndroid && PlatformDetector.isTV()) _ui1080pModeTile(),
-                if (Platform.isWindows) _matchRefreshRateTile(),
+                if (Platform.isWindows || Platform.isMacOS) _matchRefreshRateTile(),
                 if (Platform.isWindows) _matchDynamicRangeTile(),
                 if (showDisplaySwitchDelay) _displaySwitchDelayTile(),
                 if (showDisableDolbyVision) _disableDolbyVisionTile(),
@@ -216,6 +217,11 @@ class PlaybackSettingsScreen extends StatelessWidget {
         pref: SettingsService.boxFitScope,
         icon: Symbols.aspect_ratio_rounded,
         title: t.settings.scopeAspectRatio,
+      ),
+      _playerScopeTile(
+        pref: SettingsService.videoZoomScope,
+        icon: Symbols.zoom_in_rounded,
+        title: t.settings.scopeZoom,
       ),
       _playerScopeTile(
         pref: SettingsService.syncOffsetScope,
