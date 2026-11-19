@@ -2177,6 +2177,12 @@ class IptvLiveTvSupport implements LiveTvSupport {
   }
 
   Future<void> _writePersistedEpg(String channelKey, _CachedChannelEpg entry) async {
+    // 1.4.4: a tombstoned key must not be re-written — a fetch's
+    // fire-and-forget persist landing after an Assign/Clear invalidation
+    // would otherwise resurrect the stale entry on disk (the read side
+    // already guards it, but the stale file would surface after a
+    // restart, once the heal's re-fetch has consumed the tombstone).
+    if (_epgInvalidatedKeys.contains(channelKey)) return;
     try {
       final file = await _epgCacheFile(channelKey);
       await file.parent.create(recursive: true);
@@ -6078,7 +6084,12 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // not when the cached entry happens to expire (up to 24 h later) —
     // drop the channel's cached entry so it re-matches through the new
     // mapping. The persisted file goes too; the refetch re-writes it.
-    await _dropCachedEpgForChannel(channelKey);
+    // 1.4.4: forced invalidation, not just the drop — the tombstone
+    // stops a lagging persist from resurrecting the stale entry, and
+    // the channel-scoped bump makes the open guide heal exactly this
+    // row in place (no Reload, no reopen).
+    appLogger.i('IPTV EPG $channelKey: assigned ${xmltvId.trim()} via manual');
+    _invalidateEpgForChannel(channelKey, force: true);
   }
 
   /// Clear a manual assignment: the channel goes back to auto-matching.
@@ -6087,19 +6098,11 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// until the entry expired.
   Future<void> clearEpgAssignment(String channelKey) async {
     await _epgStore.clearMapping(channelKey);
-    await _dropCachedEpgForChannel(channelKey);
-  }
-
-  Future<void> _dropCachedEpgForChannel(String channelKey) async {
-    _epgCache.remove(channelKey);
-    try {
-      final file = await _epgCacheFile(channelKey);
-      if (file.existsSync()) file.deleteSync();
-    } catch (_) {
-      // Best-effort: the in-memory entry is already gone, so the next
-      // fetch re-matches; a stale persisted file is only re-read when
-      // the in-memory entry is missing, and the refetch re-writes it.
-    }
+    // 1.4.4: same forced invalidation as [assignEpg] — the open guide
+    // heals this row in place instead of keeping the old programmes
+    // until a Reload or reopen.
+    appLogger.i('IPTV EPG $channelKey: manual assignment cleared');
+    _invalidateEpgForChannel(channelKey, force: true);
   }
 
   /// The manual assignment for [channelKey], if one exists.
@@ -6922,10 +6925,13 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
   /// persisted delete is fire-and-forget, and the tombstone stops a
   /// stale persisted read from resurrecting the entry before the
   /// delete lands. The channel-scoped bump makes the guide tab heal
-  /// the row (drop its loaded-empty marks and re-fetch).
-  void _invalidateEpgForChannel(String channelKey) {
+  /// the row (drop its loaded-empty marks and re-fetch). With
+  /// [force] (1.4.4, Assign/Clear) the entry is dropped even when it
+  /// holds programmes — an assignment's whole point is replacing the
+  /// programmes a loaded row is showing.
+  void _invalidateEpgForChannel(String channelKey, {bool force = false}) {
     final cached = _epgCache[channelKey];
-    if (cached != null && cached.programs.isNotEmpty) return;
+    if (!force && cached != null && cached.programs.isNotEmpty) return;
     _epgCache.remove(channelKey);
     _epgInvalidatedKeys.add(channelKey);
     unawaited(_deletePersistedEpgFile(channelKey));
