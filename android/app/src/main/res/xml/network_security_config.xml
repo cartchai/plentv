@@ -43,8 +43,6 @@
         <domain includeSubdomains="true">simkl.com</domain>
         <!-- data.simkl.in (lib/services/trackers/simkl/simkl_constants.dart:22). -->
         <domain includeSubdomains="true">simkl.in</domain>
-        <!-- cdn.jsdelivr.net: appcast (lib/services/update_service.dart:19). -->
-        <domain includeSubdomains="true">jsdelivr.net</domain>
         <!-- Release check (lib/services/update_service.dart:161). -->
         <domain includeSubdomains="true">api.github.com</domain>
         <!-- Releases page (lib/services/update_service.dart:33);
