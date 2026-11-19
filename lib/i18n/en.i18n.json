@@ -1535,6 +1535,14 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2320": [
+      "Fixed: a download that gets cut off now picks up where it left off instead of starting over from 0% — the app keeps the part it already downloaded and resumes it",
+      "Fixed: if a download can't resume because the panel won't allow it, it now pauses with the reason shown instead of silently starting over again and again",
+      "Fixed: reassigning a channel's guide now refreshes that row straight away — you no longer have to close and reopen the guide to see the new programmes",
+      "Fixed: Reload now keeps showing the guide you already have while the new one downloads in the background, instead of emptying the guide for a minute",
+      "New: a setting under Settings, IPTV lets you choose whether downloads keep running while you watch something, or pause until you stop watching — downloads keep running by default",
+      "Fixed: the Downloads screen now shows the real progress of a show's episode while it downloads, instead of saying nothing is queued"
+    ],
     "changelog2319": [
       "Fixed: once the panel refuses access, the app now stops asking it again for five minutes instead of retrying for minutes on end — retrying during a block can stretch it out",
       "Fixed: the guide now spaces out its channel requests so it stays under the panel's flood limit instead of firing them all at once",
