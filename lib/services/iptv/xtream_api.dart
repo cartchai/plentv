@@ -1125,6 +1125,7 @@ class XtreamApi {
       // A 304 has no body by definition: the feed the caller already
       // holds is current. The response validators are the ones to send
       // next time (a server may rotate them on a 304).
+      _logFeedFetch(statusCode: 304, headers: streamed.headers, sentEtag: etag, sentLastModified: lastModified);
       return (
         bytes: const Stream<List<int>>.empty(),
         notModified: true,
@@ -1155,11 +1156,42 @@ class XtreamApi {
         requestUri: uri,
       );
     }
+    // 1.4.4 F4/F5: one log line per feed fetch — what the panel actually
+    // sent (Content-Encoding / Content-Length) and which validators were
+    // sent and received. The panel is expected to send neither gzip nor
+    // validators (dynamic xmltv.php); the line turns that inference into
+    // a measured fact on the next debug export. If it ever shows gzip,
+    // the download is already fast (IOClient auto-decompresses); if it
+    // ever shows validators, the 304 path above already reuses the guide.
+    _logFeedFetch(statusCode: streamed.statusCode, headers: streamed.headers, sentEtag: etag, sentLastModified: lastModified);
     return (
       bytes: streamed.stream.timeout(timeout),
       notModified: false,
       etag: streamed.headers['etag'],
       lastModified: streamed.headers['last-modified'],
+    );
+  }
+
+  /// Render the F4/F5 feed-fetch log line (see [getXmltvFeed]).
+  static void _logFeedFetch({
+    required int statusCode,
+    required Map<String, String> headers,
+    String? sentEtag,
+    String? sentLastModified,
+  }) {
+    String validators(String? etag, String? lastModified) {
+      final parts = <String>[];
+      if (etag != null) parts.add('etag $etag');
+      if (lastModified != null) parts.add('last-modified $lastModified');
+      return parts.isEmpty ? 'none' : parts.join(', ');
+    }
+
+    appLogger.i(
+      'IPTV: XMLTV feed fetch: status $statusCode, '
+      'content-encoding: ${headers['content-encoding'] ?? 'none'}, '
+      'content-length: ${headers['content-length'] ?? 'none'}, '
+      'validators sent: ${validators(sentEtag, sentLastModified)}, '
+      'validators received: ${validators(headers['etag'], headers['last-modified'])}',
     );
   }
 

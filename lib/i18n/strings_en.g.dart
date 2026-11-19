@@ -7473,6 +7473,9 @@ class Translations$iptv$en {
 	/// en: '${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match'
 	String epgReloadTvDetailsResult({required Object channels, required Object withGuide, required Object withoutGuide}) => '${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match';
 
+	/// en: 'The guide is still downloading the latest programmes in the background — the counts above are from the guide you already had, and the new programmes will appear when the download finishes'
+	String get epgReloadFeedRefreshingBackground => 'The guide is still downloading the latest programmes in the background — the counts above are from the guide you already had, and the new programmes will appear when the download finishes';
+
 	/// en: 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}'
 	String epgReloadMatchBreakdown({required Object manual, required Object tvgId, required Object name, required Object loose, required Object affiliate}) => 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}';
 
@@ -13066,6 +13069,7 @@ extension on Translations {
 			'iptv.epgReloadTvDetails' => 'Reload TV details',
 			'iptv.epgReloadTvDetailsDescription' => 'Re-fetch the channel list and the guide, and report what loaded',
 			'iptv.epgReloadTvDetailsResult' => ({required Object channels, required Object withGuide, required Object withoutGuide}) => '${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match',
+			'iptv.epgReloadFeedRefreshingBackground' => 'The guide is still downloading the latest programmes in the background — the counts above are from the guide you already had, and the new programmes will appear when the download finishes',
 			'iptv.epgReloadMatchBreakdown' => ({required Object manual, required Object tvgId, required Object name, required Object loose, required Object affiliate}) => 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}',
 			'iptv.epgReloadUnmatchedBreakdown' => ({required Object ambiguous, required Object foreign, required Object noTvgId, required Object tvgIdNotInFeed, required Object matchedButNoProgrammes}) => 'No match — ambiguous: ${ambiguous}, foreign: ${foreign}, no tvg-id: ${noTvgId}, tvg-id not in feed: ${tvgIdNotInFeed}, matched but no programmes: ${matchedButNoProgrammes}',
 			'iptv.epgReloadFeedSample' => ({required Object samples}) => 'Feed sample: ${samples}',
@@ -13200,9 +13204,9 @@ extension on Translations {
 			'iptv.catalogDiagnosticsUnfilteredRows' => ({required Object count}) => 'Series loaded (all categories): ${count}',
 			'iptv.catalogDiagnosticsCategoryCount' => ({required Object count}) => 'Series categories: ${count}',
 			'iptv.catalogDiagnosticsPerCategory' => ({required Object category, required Object count}) => 'In ${category}: ${count}',
-			'iptv.catalogDiagnosticsDisabledInitials' => ({required Object count}) => 'Category initials turned off: ${count}',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.catalogDiagnosticsDisabledInitials' => ({required Object count}) => 'Category initials turned off: ${count}',
 			'iptv.catalogDiagnosticsDisabledCategories' => ({required Object count}) => 'Categories turned off: ${count}',
 			'iptv.guideCoverageTitle' => 'Guide coverage',
 			'iptv.guideCoverageNone' => 'No guide data loaded yet — open Live TV and the guide fills this in.',

@@ -1029,6 +1029,13 @@ class IptvReloadTvDetailsResult {
   /// match counts above are still reported.
   final ({bool slid, int channelCount, String? reason}) windowSlide;
 
+  /// 1.4.4 F6: true when the counts above come from the PREVIOUS feed
+  /// because the fresh feed was still downloading in the background
+  /// when the Reload returned. The dialog says so plainly instead of
+  /// presenting the old counts as fresh — the new programmes swap in
+  /// when the download lands.
+  final bool feedRefreshBackground;
+
   const IptvReloadTvDetailsResult({
     required this.channelsLoaded,
     required this.withGuide,
@@ -1049,6 +1056,7 @@ class IptvReloadTvDetailsResult {
     this.foreignSamples = const [],
     this.foreignLanguageTaggedCandidateCount = 0,
     this.windowSlide = (slid: false, channelCount: 0, reason: null),
+    this.feedRefreshBackground = false,
   });
 }
 
@@ -1059,7 +1067,12 @@ class IptvReloadTvDetailsResult {
 class IptvEpgUpdateNowResult {
   final List<IptvEpgFeedOutcome> feedOutcomes;
 
-  const IptvEpgUpdateNowResult({required this.feedOutcomes});
+  /// 1.4.4 F6: same as [IptvReloadTvDetailsResult.feedRefreshBackground]
+  /// — the outcomes above describe the previous feed because the fresh
+  /// one was still downloading when Update now returned.
+  final bool feedRefreshBackground;
+
+  const IptvEpgUpdateNowResult({required this.feedOutcomes, this.feedRefreshBackground = false});
 }
 
 /// Which source served a channel's EPG (build #17, §10) — the split the

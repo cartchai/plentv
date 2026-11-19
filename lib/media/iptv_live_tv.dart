@@ -24,6 +24,7 @@ import '../services/iptv/iptv_call_pacer.dart';
 import '../services/iptv/iptv_epg_sources.dart';
 import '../services/iptv/iptv_feed_row_store.dart';
 import '../services/iptv/iptv_heavy_work_gate.dart';
+import '../services/iptv/iptv_feed_refresh_activity.dart';
 import '../services/iptv/iptv_playback_activity.dart';
 import '../services/iptv/m3u_parser.dart';
 import '../services/iptv/metered_network.dart';
@@ -1539,6 +1540,15 @@ class IptvLiveTvSupport implements LiveTvSupport {
   @visibleForTesting
   static String? debugLastFeedParseCaller;
 
+  /// Test-only (1.4.4 F10): how many times the pre-parse trim actually
+  /// dropped something before a heavy job (image cache cleared or
+  /// short-EPG entries evicted). The trim only logs when it trims, so
+  /// the count — not the log — is the proof the trim fires before the
+  /// feed parse. Reset by tests in setUp; the `after` trims are not
+  /// counted (they clean up after the spike, they do not prevent it).
+  @visibleForTesting
+  static int debugTrimBeforeHeavyJobCount = 0;
+
   /// Feed parses performed by this support (1.2.12 debug hook):
   /// incremented in [_loadXmltvGuide] and [_readPersistedXmltv]
   /// whenever a feed file is parsed — a window slide re-parses, so
@@ -1603,6 +1613,10 @@ class IptvLiveTvSupport implements LiveTvSupport {
     final imageTrimmed = IptvHeavyWorkGate.trimImageCacheBeforeHeavyJob();
     final epgEvicted = trimEpgCacheBeyondWindow();
     if (imageTrimmed || epgEvicted > 0) {
+      // 1.4.4 F10: count the before-job trims so a test can prove the
+      // pre-parse trim fires (the log alone only appears when something
+      // was there to drop).
+      if (!after) debugTrimBeforeHeavyJobCount++;
       appLogger.i(
         'IPTV: cache trim ${after ? 'after' : 'before'} $job (image cache cleared: $imageTrimmed, short-EPG entries evicted: $epgEvicted)',
       );
@@ -4047,7 +4061,13 @@ class IptvLiveTvSupport implements LiveTvSupport {
   }) async {
     final before = _xmltvCache[cacheKey]?.fetchedAt;
     final guide = await _xmltvGuideForKey(cacheKey, fetchFeed, ttl, force: force, retainIds: retainIds, attempt: attempt);
-    return (guide, before == null || guide.fetchedAt != before);
+    // 1.4.4 F6: a guide served while its background refresh is still
+    // in flight is the OLD guide, not a fresh load — it must not stamp
+    // "last updated" (the refresh stamps when it lands, via
+    // _recordBackgroundFeedLoad). Without this, a Reload's warm-start
+    // serve would certify stale data as fresh, because the bust left
+    // `before` null.
+    return (guide, (before == null || guide.fetchedAt != before) && !_xmltvGuideFutures.containsKey(cacheKey));
   }
 
   /// One source's last download record (1.2.15 R4): the stashed facts
@@ -4450,6 +4470,10 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // only if no job landed while it was deferred (a landed feed IS
     // the fresh state; deleting now would remove it).
     _feedJobsInFlight++;
+    // 1.4.4 guide-first: a feed download or parse is running — the
+    // download manager defers STARTING new downloads until the last
+    // job settles.
+    IptvFeedRefreshActivity.instance.markActive();
     final future = _loadXmltvGuide(
       cacheKey,
       ({bool useValidators = true}) => fetchFeed(abort.trigger, useValidators: useValidators),
@@ -4467,7 +4491,12 @@ class IptvLiveTvSupport implements LiveTvSupport {
           .whenComplete(() {
             _activeEpgAborts.remove(abort);
             _feedJobsInFlight--;
-            if (_feedJobsInFlight == 0) _drainDeferredEpgDelete();
+            if (_feedJobsInFlight == 0) {
+              _drainDeferredEpgDelete();
+              // 1.4.4 guide-first: the last feed job settled — downloads
+              // deferred while the guide refreshed can start now.
+              IptvFeedRefreshActivity.instance.markIdle();
+            }
           }),
     );
     return future;
@@ -4520,9 +4549,16 @@ class IptvLiveTvSupport implements LiveTvSupport {
       }
     }
 
-    final inFlight = _xmltvGuideFutures[cacheKey];
-    if (inFlight != null) return inFlight;
-
+    // 1.4.4 F6: NO early return for an in-flight download here. A load
+    // arriving while a download runs must serve the guide it already
+    // has (in-memory / store / persisted file below) and let the
+    // download finish in the background — returning the shared future
+    // would make a Reload that arrives mid-download BLOCK on it (up
+    // to ~a minute on the real panel), which is exactly the wait this
+    // release removes. The fully-cold path at the bottom still shares
+    // the in-flight future (there is nothing else to serve), and each
+    // servable branch below guards against starting a second download
+    // while one runs.
     // Stale-while-revalidate: a stale in-memory guide still answers while
     // the refresh runs in the background — the guide never waits on a
     // download for programmes it already has.
@@ -4533,16 +4569,36 @@ class IptvLiveTvSupport implements LiveTvSupport {
       // exactly the background work that gets a one-connection line
       // blocked.
       if (IptvPlaybackActivity.instance.isPlaying) return cached;
+      // 1.4.4 F6: a concurrent caller may have started the refresh
+      // while this one ran — share it instead of starting a second
+      // download for the same key (the guard the store/persisted
+      // branches below already have; the old top-of-function
+      // in-flight return used to cover this branch and is gone).
+      if (_xmltvGuideFutures[cacheKey] != null) return cached;
       // The background refresh keeps the current window's rows: a
       // metadata-only refresh would empty the window the guide is
       // showing and force a re-parse on the next fetch.
       final refreshStarted = DateTime.now();
       final future = _startXmltvDownload(cacheKey, fetchFeed, retainIds: cached.windowFeedIds);
       _xmltvGuideFutures[cacheKey] = future;
+      // 1.4.4 F6: unregister the moment the refresh settles — BEFORE
+      // the success/failure recording runs. The recording does async
+      // work, and until it finishes the future would still read as
+      // "in flight": a Reload returning in that window would report
+      // feedRefreshBackground=true for a refresh that already failed
+      // (or already landed), and its dialog would contradict the
+      // outcome lines beside it. The whenComplete below stays as a
+      // belt-and-braces (the removal is idempotent).
       unawaited(
         future
-            .then<void>((guide) => _recordBackgroundFeedLoad(attempt, guide, refreshStarted))
-            .catchError((Object e) => _recordBackgroundFeedFailure(attempt, e))
+            .then<void>((guide) {
+              _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
+              return _recordBackgroundFeedLoad(attempt, guide, refreshStarted);
+            })
+            .catchError((Object e) {
+              _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
+              return _recordBackgroundFeedFailure(attempt, e);
+            })
             .whenComplete(() {
           _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
         }),
@@ -4562,16 +4618,30 @@ class IptvLiveTvSupport implements LiveTvSupport {
     );
     if (fromStore != null) {
       _xmltvCache[cacheKey] = fromStore;
-      if (!fresh(fromStore)) {
+      // 1.4.4 F6: a forced load (Reload / "Update now" / Assign
+      // refresh) starts the background refresh even when the stored
+      // guide is still fresh — the user asked for fresh data, and the
+      // refresh runs behind the served guide instead of blocking it.
+      // Without this, a Reload on a fresh feed would silently do
+      // nothing (pre-1.4.4 Reload always re-downloaded).
+      if (!fresh(fromStore) || force) {
         if (IptvPlaybackActivity.instance.isPlaying) return fromStore;
         if (_xmltvGuideFutures[cacheKey] != null) return fromStore;
         final refreshStarted = DateTime.now();
         final future = _startXmltvDownload(cacheKey, fetchFeed, retainIds: fromStore.windowFeedIds);
         _xmltvGuideFutures[cacheKey] = future;
+        // 1.4.4 F6: unregister on settle, before the recording — see
+        // the stale-cache branch above.
         unawaited(
           future
-              .then<void>((guide) => _recordBackgroundFeedLoad(attempt, guide, refreshStarted))
-              .catchError((Object e) => _recordBackgroundFeedFailure(attempt, e))
+              .then<void>((guide) {
+                _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
+                return _recordBackgroundFeedLoad(attempt, guide, refreshStarted);
+              })
+              .catchError((Object e) {
+                _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
+                return _recordBackgroundFeedFailure(attempt, e);
+              })
               .whenComplete(() {
             _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
           }),
@@ -4582,7 +4652,10 @@ class IptvLiveTvSupport implements LiveTvSupport {
     final persisted = await _readPersistedXmltv(cacheKey, retainIds: retainIds, caller: 'warm-start');
     if (persisted != null) {
       _xmltvCache[cacheKey] = persisted;
-      if (!fresh(persisted)) {
+      // 1.4.4 F6: same forced-refresh rule as the row-store branch
+      // above — a forced load re-downloads in the background even
+      // when the persisted guide is still fresh.
+      if (!fresh(persisted) || force) {
         // Build #28: while a stream is playing, the persisted feed
         // answers and the refresh download waits — see the stale-cache
         // branch above.
@@ -4594,10 +4667,18 @@ class IptvLiveTvSupport implements LiveTvSupport {
         final refreshStarted = DateTime.now();
         final future = _startXmltvDownload(cacheKey, fetchFeed, retainIds: persisted.windowFeedIds);
         _xmltvGuideFutures[cacheKey] = future;
+        // 1.4.4 F6: unregister on settle, before the recording — see
+        // the stale-cache branch above.
         unawaited(
           future
-              .then<void>((guide) => _recordBackgroundFeedLoad(attempt, guide, refreshStarted))
-              .catchError((Object e) => _recordBackgroundFeedFailure(attempt, e))
+              .then<void>((guide) {
+                _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
+                return _recordBackgroundFeedLoad(attempt, guide, refreshStarted);
+              })
+              .catchError((Object e) {
+                _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
+                return _recordBackgroundFeedFailure(attempt, e);
+              })
               .whenComplete(() {
             _xmltvGuideFutures.removeWhere((key, value) => key == cacheKey && identical(value, future));
           }),
@@ -5014,6 +5095,55 @@ class IptvLiveTvSupport implements LiveTvSupport {
     feedShaHex ??= shaDigestSink.value?.toString();
     feedEtag ??= fetch.etag;
     feedLastModified ??= fetch.lastModified;
+    // 1.4.4 F2: the new download is byte-identical to the previous one
+    // (same SHA-256, and the row store's generation record matches it)
+    // — skip the parse + store rebuild entirely and reuse the stored
+    // guide. The persisted feed file is NOT touched: its mtime is part
+    // of the store's generation record, and touching it would make the
+    // store read as invalid on the next warm start. The guide's fetch
+    // time is bumped in memory (like the 304 path) so the TTL restarts.
+    // The temp file is deleted — the persisted feed already holds
+    // these exact bytes. (This does not save the download itself: with
+    // no validators from the panel, downloading is the only way to know
+    // the content is unchanged. It saves the ~4 s parse + rebuild and
+    // the memory spike.)
+    if (!debugDisablePersistedEpg && !debugDisableFeedRowStore && feedShaHex != null) {
+      final storeDir = tempFile?.parent.path ?? (await _xmltvFeedFile(cacheKey)).parent.path;
+      final dbPath = IptvFeedRowStore.dbPathForDirAndKey(storeDir, _fileSafe(cacheKey));
+      if (IptvFeedRowStore.isValid(dbPath: dbPath, expectedSha256: feedShaHex)) {
+        final reused = await _readFeedRowsFromStore(cacheKey, retainIds: retainIds);
+        if (reused != null) {
+          if (tempFile != null) {
+            try {
+              tempFile.deleteSync();
+            } catch (_) {
+              // Best-effort: the temp file is gone or already deleted.
+            }
+          }
+          final guide = reused.withFetchedAt(DateTime.now());
+          _xmltvCache[cacheKey] = guide;
+          _xmltvFailedAt.remove(cacheKey);
+          _lastFeedDownloads[cacheKey] = (
+            notModified: true,
+            bytesDownloaded: downloadedBytes,
+            sha256: feedShaHex,
+            channelsParsed: guide.channelsParsed,
+            channelsRetained: guide.programCountByChannel.length,
+            programsParsed: guide.programsParsed,
+            programsRetained: guide.totalProgramCount,
+            etag: feedEtag,
+            lastModified: feedLastModified,
+            fetchedAt: guide.fetchedAt,
+            resumed: feedResumed,
+            resumedBytes: feedResumedFromBytes,
+          );
+          appLogger.i(
+            'IPTV: feed for $cacheKey unchanged (SHA matches the previous download) — reusing the stored guide, parse skipped',
+          );
+          return guide;
+        }
+      }
+    }
     // 1.2.18 S-1: parse the downloaded temp file in a worker isolate
     // BEFORE promoting it — the old "only a parseable feed is
     // persisted" invariant holds: a failed parse deletes the temp file
@@ -5579,6 +5709,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
     if (streamed.statusCode == 304) {
       // A 304 has no body by definition: the feed the caller already
       // holds is current.
+      _logM3uFeedFetch(statusCode: 304, headers: streamed.headers, sentEtag: etag, sentLastModified: lastModified);
       client.close();
       return (
         bytes: const Stream<List<int>>.empty(),
@@ -5591,11 +5722,40 @@ class IptvLiveTvSupport implements LiveTvSupport {
       client.close();
       throw StateError('XMLTV fetch failed with HTTP ${streamed.statusCode}');
     }
+    // 1.4.4 F4/F5: same one-line fetch record as XtreamApi.getXmltvFeed
+    // (see XtreamApi._logFeedFetch) — Content-Encoding / Content-Length
+    // and validators sent/received, so the next debug export proves
+    // what the M3U panel actually sends.
+    _logM3uFeedFetch(statusCode: streamed.statusCode, headers: streamed.headers, sentEtag: etag, sentLastModified: lastModified);
     return (
       bytes: _closeClientOnDone(_gunzipFeedIfNeeded(streamed.stream.timeout(const Duration(seconds: 120))), client),
       notModified: false,
       etag: streamed.headers['etag'],
       lastModified: streamed.headers['last-modified'],
+    );
+  }
+
+  /// Render the F4/F5 M3U feed-fetch log line (same shape as
+  /// XtreamApi._logFeedFetch).
+  static void _logM3uFeedFetch({
+    required int statusCode,
+    required Map<String, String> headers,
+    String? sentEtag,
+    String? sentLastModified,
+  }) {
+    String validators(String? etag, String? lastModified) {
+      final parts = <String>[];
+      if (etag != null) parts.add('etag $etag');
+      if (lastModified != null) parts.add('last-modified $lastModified');
+      return parts.isEmpty ? 'none' : parts.join(', ');
+    }
+
+    appLogger.i(
+      'IPTV: XMLTV feed fetch: status $statusCode, '
+      'content-encoding: ${headers['content-encoding'] ?? 'none'}, '
+      'content-length: ${headers['content-length'] ?? 'none'}, '
+      'validators sent: ${validators(sentEtag, sentLastModified)}, '
+      'validators received: ${validators(headers['etag'], headers['last-modified'])}',
     );
   }
 
@@ -7101,6 +7261,10 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
     // D9: loading the feeds is an attempt — stamp it, so "Last attempt"
     // certifies the activity even when the list or the feed then fails.
     _noteEpgAttempt(DateTime.now());
+    // 1.4.4 F6: the Reload's start — download facts recorded before it
+    // belong to an earlier download (the seed, or a previous Reload)
+    // and must not be reported as this Reload's download.
+    final reloadStarted = DateTime.now();
     final outcome = await _loadEnabledFeeds(attempts, ttl, force: true);
     final mappings = await _epgStore.loadMappings();
     final now = DateTime.now();
@@ -7259,11 +7423,15 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
     }
     final feedChannelIds = outcome.loaded.expand((e) => e.guide.programCountByChannel.keys).toSet().length;
     // 1.2.15 R4: one download record per source whose feed was fetched
-    // for this Reload (bytes, SHA, 304-vs-200, User-Agent).
+    // for this Reload (bytes, SHA, 304-vs-200, User-Agent). 1.4.4 F6:
+    // only facts recorded during THIS Reload — the stash also holds
+    // the previous download's facts, and a Reload whose refresh
+    // failed (or is still running) must not report the old download's
+    // bytes/SHA as its own.
     final feedDownloads = <IptvEpgFeedDownload>[];
     for (final entry in outcome.loaded) {
       final download = _feedDownloadFor(entry.attempt);
-      if (download != null) feedDownloads.add(download);
+      if (download != null && !download.fetchedAt.isBefore(reloadStarted)) feedDownloads.add(download);
     }
     // Feed sample: the first loaded feed's first 5 ids, sorted, with
     // their display names — what the feed actually calls its channels.
@@ -7293,6 +7461,15 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
     // screen) so the guide opens with programmes on it. Best-effort
     // and reported honestly — it never changes the match counts.
     final windowSlide = await _slideReloadWindow(outcome, channels, mappings);
+    // 1.4.4 F6: snapshot the flag HERE, at result-assembly time — not
+    // right after the feed load. The match counts, samples and window
+    // slide above take real time, and a refresh that fails (or lands)
+    // in that window must read as settled, not "still downloading":
+    // the flag describes the state when the result is produced, so
+    // the dialog never contradicts the outcome lines beside it. A
+    // slow download is still running here, so the flag stays true
+    // for it.
+    final feedRefreshBackground = outcome.loaded.any((e) => _xmltvGuideFutures.containsKey(e.attempt.cacheKey));
     appLogger.i(
       'IPTV EPG reload: ${channels.length} channels, $withGuide with guide '
       '(manual $manualMatches, tvg-id $tvgIdMatches, name $nameMatches, loose-name $looseNameMatches, affiliate-guess $affiliateGuessMatches; '
@@ -7311,7 +7488,8 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
       'guide rows showing programmes BEFORE THIS RELOAD: ${guideCoverageSample.withPrograms} of ${guideCoverageSample.sampled} sampled '
       '(quick guide ${guideCoverageSample.fromShortEpg}, big guide by id ${guideCoverageSample.fromFeedById}, by name ${guideCoverageSample.fromFeedByName}, mixed ${guideCoverageSample.fromMixed}, no data ${guideCoverageSample.none}, never fetched ${guideCoverageSample.notFetched}, scope ${guideCoverageSample.scope.name}); '
       'feed sample: ${feedSamples.map((e) => e.xmltvId).join(', ')}; '
-      'unmatched sample: ${sampleUnmatched.map((e) => e.channelName).join(', ')}',
+      'unmatched sample: ${sampleUnmatched.map((e) => e.channelName).join(', ')}; '
+      'feed refresh in background: $feedRefreshBackground',
     );
     return IptvReloadTvDetailsResult(
       channelsLoaded: channels.length,
@@ -7356,6 +7534,7 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
       foreignSamples: foreignSamples,
       foreignLanguageTaggedCandidateCount: foreignLanguageTaggedCandidateCount,
       windowSlide: windowSlide,
+      feedRefreshBackground: feedRefreshBackground,
     );
   }
 
@@ -7396,12 +7575,18 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
       _client.fullLiveChannelsFromLastRefresh,
       mappings,
     );
+    // 1.4.4 F6: snapshot the flag HERE, at result-assembly time —
+    // same reasoning as reloadTvDetails above: a refresh that fails
+    // (or lands) during the slide must read as settled.
+    final feedRefreshBackground = outcome.loaded.any((e) => _xmltvGuideFutures.containsKey(e.attempt.cacheKey));
     appLogger.i(
       'IPTV EPG update now: $feedSummary; '
-      'window slide: ${windowSlide.slid ? 'ready for ${windowSlide.channelCount} rows' : 'skipped (${windowSlide.reason ?? 'silent'})'}',
+      'window slide: ${windowSlide.slid ? 'ready for ${windowSlide.channelCount} rows' : 'skipped (${windowSlide.reason ?? 'silent'})'}; '
+      'feed refresh in background: $feedRefreshBackground',
     );
     return IptvEpgUpdateNowResult(
       feedOutcomes: _feedOutcomes(outcome, null, mappings, settings, from, to),
+      feedRefreshBackground: feedRefreshBackground,
     );
   }
 
@@ -7535,7 +7720,20 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
   /// This is the "Clear guide" behaviour: [fetchEpgForChannel] stays empty
   /// until something refreshes ([refreshEpgCache] or the start-up refresh),
   /// so the guide shows "No information available" hour blocks.
-  Future<void> clearEpgCache() async {
+  /// 1.4.4 F1: when [keepPersistedFeed] is true (every refresh path —
+  /// Reload, "Update now", the quiet-hour refresh), the bust clears the
+  /// per-channel caches, the in-memory guide, the validators and the
+  /// failure records, but KEEPS the persisted feed XML + row-store DB
+  /// until the new parse promotes. The old guide then keeps serving
+  /// while the new feed downloads (F6), and a failed download or parse
+  /// falls back to it — the invariant the download path already
+  /// promises but Reload used to void by deleting first. The whole
+  /// directory delete stays only behind the explicit "Clear guide"
+  /// settings action (keepPersistedFeed false), where the user asked
+  /// for everything to go. When the feed is kept, the guide is not
+  /// empty, so [_epgCleared] stays false and the "last updated" stamp
+  /// is left alone.
+  Future<void> clearEpgCache({bool keepPersistedFeed = false}) async {
     _epgCache.clear();
     _xmltvCache.clear();
     // 1.4 F1: a clear is a fresh start for the shared metadata too.
@@ -7560,28 +7758,32 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
         }
       })(),
     );
-    // Best-effort and fire-and-forget: the in-memory caches are already
-    // empty and the guide is cleared, so don't gate the settings action
-    // (or the guide) on the disk delete — it completes in the background.
-    // 1.3.24 §67 F2: the persisted delete never runs under a feed
-    // promotion. When no feed job is in flight it is awaited, so a
-    // Reload's bust finishes before its feed download starts; while a
-    // job is in flight the delete is deferred until the job settles
-    // (and dropped if the feed lands — the promotion IS the fresh
-    // state). All callers already await this method, so the await
-    // blocks no UI thread.
-    if (_feedJobsInFlight > 0) {
-      _epgDeleteDeferred = true;
-      _epgDeleteDeferredLanded = false;
-      EpgCadenceLog.recordEpgClearDeferred(reason: 'feed-job-in-flight');
+    if (!keepPersistedFeed) {
+      // Best-effort and fire-and-forget: the in-memory caches are already
+      // empty and the guide is cleared, so don't gate the settings action
+      // (or the guide) on the disk delete — it completes in the background.
+      // 1.3.24 §67 F2: the persisted delete never runs under a feed
+      // promotion. When no feed job is in flight it is awaited, so a
+      // Reload's bust finishes before its feed download starts; while a
+      // job is in flight the delete is deferred until the job settles
+      // (and dropped if the feed lands — the promotion IS the fresh
+      // state). All callers already await this method, so the await
+      // blocks no UI thread.
+      if (_feedJobsInFlight > 0) {
+        _epgDeleteDeferred = true;
+        _epgDeleteDeferredLanded = false;
+        EpgCadenceLog.recordEpgClearDeferred(reason: 'feed-job-in-flight');
+      } else {
+        await _deletePersistedEpg();
+      }
+      _bumpEpgVersion();
+      _epgCleared = true;
+      _lastEpgUpdatedAt = null;
+      final settings = await SettingsService.getInstance();
+      await settings.write(SettingsService.iptvEpgLastUpdated, '');
     } else {
-      await _deletePersistedEpg();
+      _bumpEpgVersion();
     }
-    _bumpEpgVersion();
-    _epgCleared = true;
-    _lastEpgUpdatedAt = null;
-    final settings = await SettingsService.getInstance();
-    await settings.write(SettingsService.iptvEpgLastUpdated, '');
   }
 
   /// Bust the EPG cache AND force a fresh fetch on the guide's next build
@@ -7606,7 +7808,9 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
   }
 
   Future<void> _refreshEpgCacheLocked() async {
-    await clearEpgCache();
+    // 1.4.4 F1: a refresh busts the caches but keeps the persisted feed
+    // + store — the old guide serves while the new feed downloads.
+    await clearEpgCache(keepPersistedFeed: true);
     _epgCleared = false;
   }
 

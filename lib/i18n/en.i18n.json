@@ -3346,6 +3346,7 @@
     "epgReloadTvDetails": "Reload TV details",
     "epgReloadTvDetailsDescription": "Re-fetch the channel list and the guide, and report what loaded",
     "epgReloadTvDetailsResult": "${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match",
+    "epgReloadFeedRefreshingBackground": "The guide is still downloading the latest programmes in the background — the counts above are from the guide you already had, and the new programmes will appear when the download finishes",
     "epgReloadMatchBreakdown": "Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}",
     "epgReloadUnmatchedBreakdown": "No match — ambiguous: ${ambiguous}, foreign: ${foreign}, no tvg-id: ${noTvgId}, tvg-id not in feed: ${tvgIdNotInFeed}, matched but no programmes: ${matchedButNoProgrammes}",
     "epgReloadFeedSample": "Feed sample: ${samples}",

@@ -468,6 +468,13 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
     _stopReloadProgress();
     setState(() => _reloading = false);
     final lines = <String>[];
+    // 1.4.4 F6: the counts in the header are the previous feed's — the
+    // fresh feed is still downloading in the background. Say so first,
+    // before any count, or the report reads as if the Reload finished
+    // the download.
+    if (result.feedRefreshBackground) {
+      lines.add(t.iptv.epgReloadFeedRefreshingBackground);
+    }
     // 1.3.27 §P0-3 (C3): the last playlist check's verdict, first —
     // the Reload dialog reads as a per-source verdict (feed matched /
     // short-EPG coverage / button result), not a single count.

@@ -589,14 +589,14 @@ class IptvSettingsScreen extends StatelessWidget {
     final registry = context.read<ConnectionRegistry>();
     final multiServer = context.read<MultiServerProvider>();
     final connections = await registry.list();
-    final reports = <({String name, List<IptvEpgFeedOutcome> outcomes})>[];
+    final reports = <({String name, List<IptvEpgFeedOutcome> outcomes, bool feedRefreshBackground})>[];
     for (final connection in connections) {
       if (connection is! M3uConnection && connection is! XtreamConnection) continue;
       final client = multiServer.getClientForServer(ServerId(connection.id));
       final liveTv = client?.liveTv;
       if (liveTv is IptvLiveTvSupport) {
         final result = await liveTv.updateEpgNow();
-        reports.add((name: connection.displayName, outcomes: result.feedOutcomes));
+        reports.add((name: connection.displayName, outcomes: result.feedOutcomes, feedRefreshBackground: result.feedRefreshBackground));
       }
     }
     if (!context.mounted) return;
@@ -618,6 +618,13 @@ class IptvSettingsScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Text(report.name, style: Theme.of(context).textTheme.titleSmall),
+                  ),
+                // 1.4.4 F6: the outcomes below are the previous feed's —
+                // the fresh feed is still downloading in the background.
+                if (report.feedRefreshBackground)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(t.iptv.epgReloadFeedRefreshingBackground),
                   ),
                 if (report.outcomes.isEmpty)
                   Text(t.iptv.epgUpdated)

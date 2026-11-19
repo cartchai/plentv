@@ -416,6 +416,10 @@ class FeedRowStoreWriter {
     _db = sqlite3.open(tmpDbPath);
     _db.execute('PRAGMA journal_mode = DELETE');
     _db.execute('PRAGMA synchronous = NORMAL');
+    // 1.4.4 F10: cap the page cache at 1 MB for the store build — the
+    // build inserts hundreds of thousands of rows, and the default
+    // cache holds dirty pages the spike does not need.
+    _db.execute('PRAGMA cache_size = -1024');
     _db.execute('PRAGMA user_version = ${IptvFeedRowStore.schemaVersion}');
     _db.execute('CREATE TABLE feed_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
     _db.execute(

@@ -41,6 +41,7 @@ import 'package:plezy/media/media_source_info.dart';
 import 'package:plezy/models/download_models.dart';
 import 'package:plezy/services/download_manager_service.dart';
 import 'package:plezy/services/download_storage_service.dart';
+import 'package:plezy/services/iptv/iptv_feed_refresh_activity.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
 import 'package:plezy/services/jellyfin_api_cache.dart';
 import 'package:plezy/services/plex_api_cache.dart';
@@ -168,6 +169,7 @@ Future<_ResumeFixture> _createFixture() async {
   SettingsService.resetForTesting();
   DownloadStorageService.resetForTesting();
   IptvPlaybackActivity.debugResetInstance();
+  IptvFeedRefreshActivity.debugResetInstance();
   MemoryLogOutput.clearLogs();
   final tempDir = await Directory.systemTemp.createTemp('download_manager_1_4_4_resume_');
   final previousPathProvider = PathProviderPlatform.instance;
@@ -576,6 +578,31 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 300));
       final row = await fixture.db.getDownloadedMedia(fixture.globalKey);
       expect(row?.status, DownloadStatus.downloading.index, reason: 'with the setting off, downloads keep running while you watch');
+    });
+
+    test('Guide-first: a queued download does not start while a guide refresh is active, and starts when it clears', () async {
+      final fixture = await _createFixture();
+      final probe = _ProbeHttpClient('ranges');
+      final client = _ResumeClient(
+        metadata: fixture.metadata,
+        resolution: () => const DownloadResolution(videoUrl: 'https://example.test/video'),
+      );
+      final enqueued = <Task>[];
+      final cancelled = <String>[];
+      final manager = _managerFor(fixture, client, probe, enqueued: enqueued, cancelled: cancelled);
+
+      // Drive the gate directly: a feed refresh is downloading/parsing.
+      IptvFeedRefreshActivity.instance.markActive();
+      await manager.queueDownload(metadata: fixture.metadata, client: client, downloadSubtitles: false, downloadArtwork: false);
+      // Let the queue drain run — it must hit the gate and start nothing.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(enqueued, isEmpty, reason: 'no download may START while a guide refresh is running');
+      final queuedRow = await fixture.db.getDownloadedMedia(fixture.globalKey);
+      expect(queuedRow?.status, DownloadStatus.queued.index, reason: 'the item stays queued, not dropped');
+
+      // The refresh clears — the queue re-drives itself, no second call.
+      IptvFeedRefreshActivity.instance.markIdle();
+      await _waitForEnqueue(enqueued, 1);
     });
   });
 }

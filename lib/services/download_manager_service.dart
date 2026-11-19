@@ -24,6 +24,7 @@ import 'api_cache.dart';
 import 'connectivity_probe.dart';
 import 'download_artwork_helpers.dart';
 import 'download_artwork_service.dart';
+import 'iptv/iptv_feed_refresh_activity.dart';
 import 'iptv/iptv_playback_activity.dart';
 import 'jellyfin_cache_resolver.dart';
 import 'plex_api_cache.dart';
@@ -414,6 +415,9 @@ class DownloadManagerService {
     // 1.4.4: the downloads-while-watching setting gates episode downloads
     // on playback — registered once per manager instance; dispose removes it.
     IptvPlaybackActivity.instance.isPlayingNotifier.addListener(_onPlaybackActivityChanged);
+    // 1.4.4 guide-first: a feed refresh defers STARTING new downloads —
+    // registered once per manager instance; dispose removes it.
+    IptvFeedRefreshActivity.instance.isActiveNotifier.addListener(_onFeedRefreshActivityChanged);
   }
 
   bool get downloadsSupported => _downloadsSupportedOverride ?? platformDownloadsSupported;
@@ -2024,6 +2028,14 @@ class DownloadManagerService {
         // next lookup so the drain advances instead of re-reading the same row.
         final skippedGlobalKeys = <String>{};
         while (!_queueBlockedByStorageFailure) {
+          // 1.4.4 guide-first: a feed refresh is downloading or parsing
+          // — do not START new downloads until it finishes. Items stay
+          // queued; [_onFeedRefreshActivityChanged] re-drives the queue
+          // when the refresh clears. In-flight downloads are untouched.
+          if (IptvFeedRefreshActivity.instance.isActive) {
+            appLogger.i('Deferring download starts while a guide refresh is running');
+            break;
+          }
           if (_consecutiveQueueFailures >= _maxConsecutiveFailures) {
             appLogger.w('Circuit breaker: $_consecutiveQueueFailures consecutive failures, pausing queue');
             break;
@@ -3107,6 +3119,20 @@ class DownloadManagerService {
   /// downloads-while-watching gate.
   void _onPlaybackActivityChanged() {
     unawaited(_applyPlaybackDownloadGate());
+  }
+
+  /// 1.4.4 guide-first: a feed refresh finished — re-drive the queue so
+  /// downloads deferred while the guide downloaded can start now. The
+  /// active side needs no action: [_processQueue] checks the flag before
+  /// starting each item, so a refresh that starts mid-drain simply
+  /// leaves the rest queued. In-flight downloads are never paused.
+  void _onFeedRefreshActivityChanged() {
+    if (_disposed) return;
+    if (IptvFeedRefreshActivity.instance.isActive) return;
+    final client = _fallbackClient;
+    if (client == null) return;
+    appLogger.i('Guide refresh finished — re-driving the download queue');
+    unawaited(_processQueue(client));
   }
 
   Future<void> _applyPlaybackDownloadGate() async {
@@ -4860,6 +4886,7 @@ class DownloadManagerService {
   void dispose() {
     _disposed = true;
     IptvPlaybackActivity.instance.isPlayingNotifier.removeListener(_onPlaybackActivityChanged);
+    IptvFeedRefreshActivity.instance.isActiveNotifier.removeListener(_onFeedRefreshActivityChanged);
     for (final timer in _progressDebounceTimers.values) {
       timer.cancel();
     }
