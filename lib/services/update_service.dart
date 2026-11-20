@@ -16,10 +16,10 @@ import 'base_shared_preferences_service.dart';
 /// and the fork never used it (`useNativeUpdater` was hard-coded false).
 /// Every platform uses the GitHub API check + browser link dialog.
 ///
-/// PlezTV fork notes (build #6):
-/// - The check points at the FORK repo (cartchai/pleztv), not upstream
+/// PlenTV fork notes (build #6):
+/// - The check points at the FORK repo (cartchai/plentv), not upstream
 ///   edde746/plezy — an update must never offer an upstream Plezy build.
-///   1.3.23: the repo is the new `pleztv` repo; until its first release
+///   1.6: the repo is the new `plentv` repo; until its first release
 ///   lands, the check quietly reports no update (a non-200 answer reads
 ///   as "no update", never an error).
 /// - On Android the flow is: check -> dialog with version + changelog ->
@@ -152,7 +152,7 @@ class UpdateService {
           'releaseNotes': data['body'] as String? ?? '',
           'publishedAt': data['published_at'] as String? ?? '',
           // The .apk asset is how Android installs over the top. GitHub
-          // stores a spaced asset name with dots (PlezTV.v2.25.2.apk), so
+          // stores a spaced asset name with dots (PlenTV.v2.25.2.apk), so
           // match on the .apk suffix, never an exact filename. A release
           // with no .apk asset (e.g. v2.25.1 shipped source-only) still
           // reports the update — the dialog says plainly there is no APK
@@ -207,7 +207,7 @@ class UpdateService {
   /// First version token inside a release tag, or null when the tag
   /// carries no version ("v2.25.2", "2.25.2", "PlezTV v2.25.2" all yield
   /// "2.25.2"; "nightly-build" yields null). Build #18: the token keeps
-  /// the upstream suffix of PlezTV's own scheme ("v1.0.0-2.25.0" yields
+  /// the upstream suffix of PlenTV's own scheme ("v1.0.0-2.25.0" yields
   /// "1.0.0-2.25.0", not "1.0.0") — dropping it made 1.0.0 read older
   /// than 2.25.13, so the updater would never offer the new scheme.
   static String? _extractVersion(String tag) {
@@ -352,7 +352,7 @@ class UpdateService {
     }).toList();
   }
 
-  /// A parsed release version: the core number plus, for PlezTV's own
+  /// A parsed release version: the core number plus, for PlenTV's own
   /// scheme (build #18), the upstream Plezy version after the dash
   /// ("1.0.0-2.25.0" → core [1, 0, 0], upstream [2, 25, 0]). A bare
   /// version ("2.25.13") has no upstream. A suffix that is not a version
@@ -386,11 +386,11 @@ class UpdateService {
   /// Compare two version strings
   /// Returns true if newVersion is newer than currentVersion
   ///
-  /// Build #18: PlezTV moved to its own numbering (1.0.0-2.25.0) after
-  /// the last bare Plezy-numbered release (2.25.13). A PlezTV-scheme
+  /// Build #18: PlenTV moved to its own numbering (1.0.0-2.25.0) after
+  /// the last bare Plezy-numbered release (2.25.13). A PlenTV-scheme
   /// version is therefore always newer than a bare one — without this
   /// rule 1.0.0 compares older than 2.25.13 and the updater never offers
-  /// it. Among PlezTV-scheme versions the core compares first, then the
+  /// it. Among PlenTV-scheme versions the core compares first, then the
   /// upstream suffix (so a 2.25.1 rebase reads newer than 2.25.0).
   static bool _isNewerVersion(String newVersion, String currentVersion) {
     try {

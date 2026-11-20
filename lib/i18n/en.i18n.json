@@ -1553,6 +1553,14 @@
       "Fixed: on low-memory devices the player now caps how far ahead it caches a stream by time as well as size",
       "Cleanup: removed leftover unused code from the 2.26.0 update"
     ],
+    "changelog2328": [
+      "New: PlenTV is the new name — same app, new name and icon",
+      "New: your old PlezTV backups still restore, and old links still open",
+      "New: Quest headsets are now detected, so the controller thumbstick scrolls the right way",
+      "New: bug reports and debug logs now go to our own GitHub issues",
+      "Removed: the app no longer points at the old PlezTV services or funding page",
+      "Cleanup: the unused crash-reporting code is gone"
+    ],
     "changelog2326": [
       "Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show",
       "Removed: the anime title mappings are gone — the app no longer downloads anything from the creator's servers, and AniList and MyAnimeList entries no longer get extra IDs from that file",
