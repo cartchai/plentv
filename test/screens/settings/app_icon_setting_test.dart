@@ -349,7 +349,9 @@ void main() {
         await pumpPicker(tester, supporter: supporter, appIcons: await appIconsFor(supporter));
       }
 
-      Finder defaultLogo() => find.descendant(of: tile(defaultAppIconId), matching: find.byType(SvgPicture));
+      // 1.6: the default icon is a raster PNG (assets/plentv.png), not the
+      // old SVG triangle — the logo in the tile is an Image on every device.
+      Finder defaultLogo() => find.descendant(of: tile(defaultAppIconId), matching: find.byType(Image));
 
       Color plate(WidgetTester tester) =>
           tester.widget<ColoredBox>(find.ancestor(of: defaultLogo(), matching: find.byType(ColoredBox)).first).color;
@@ -361,13 +363,13 @@ void main() {
 
         final image = tester.widget<Image>(find.descendant(of: tile(defaultAppIconId), matching: find.byType(Image)));
         expect((image.image as AssetImage).assetName, defaultAppIconTvosPreview);
-        expect(defaultLogo(), findsNothing);
       });
 
       testWidgets('on Android phones: white, or #1A1A1A in night mode', (tester) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.android;
         try {
           await pumpDefault(tester);
+          expect((tester.widget<Image>(defaultLogo()).image as AssetImage).assetName, 'assets/plentv.png');
           expect(plate(tester), const Color(0xFFFFFFFF));
 
           tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
