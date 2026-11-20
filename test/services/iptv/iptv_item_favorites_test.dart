@@ -171,7 +171,7 @@ void main() {
       // The episode keeps its show link so the detail screen can show it.
       // 1.4.6 G1: the show lives in grandparentTitle now; parentTitle is
       // the season.
-      expect(favs.first.parentId, 'series:10');
+      expect(favs.first.parentId, 'season:10:1');
       expect(favs.first.grandparentTitle, 'Alpha Show');
       expect(favs.first.parentTitle, 'Season 1');
     });

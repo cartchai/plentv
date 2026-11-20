@@ -130,7 +130,7 @@ void main() {
     final rows = await client.fetchContinueWatching();
     expect(rows, hasLength(1));
     expect(rows.single.id, 'episode:10:100');
-    expect(rows.single.parentId, 'series:10');
+    expect(rows.single.parentId, 'season:10:1');
     expect(rows.single.viewOffsetMs, 10 * 60 * 1000);
     expect(rows.single.durationMs, 45 * 60 * 1000);
   });
