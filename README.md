@@ -1,25 +1,25 @@
-<h1>
-  <img src="assets/plezy.png" alt="PlezTV logo" height="24" style="vertical-align: middle;" />
-  PlezTV
-</h1>
+![PlenTV wordmark](assets/plentv-wordmark-banner.png)
+
+# PlenTV
 
 A fork of [Plezy](https://github.com/edde746/plezy) that adds IPTV: M3U playlists and Xtream Codes accounts, with live TV in the Live TV section and on-demand movies and series in the Library.
 
-PlezTV is still in beta and not fully working yet. There is much more to do before it is in a usable state. The name and icon may change further on.
+PlenTV is still in beta and under active development — expect rough edges and frequent updates. The name and icon are settled as of 1.6.
+
+PlenTV is an **unofficial fork**, not affiliated with or endorsed by Plezy's creator. It has its own name, icon, links, and services: it never sends anything to Plezy's servers, carries no trackers, and crash reporting has been removed.
 
 <p>
   <a href="#plezy-upstream">Plezy (upstream)</a> ·
-  <a href="#what-pleztv-adds">What PlezTV adds</a> ·
+  <a href="#what-plentv-adds">What PlenTV adds</a> ·
   <a href="#install">Install</a> ·
+  <a href="#report-a-bug">Report a bug</a> ·
   <a href="CONTRIBUTING.md">Contributing</a> ·
   <a href="LICENSE">License</a>
 </p>
 
-## What PlezTV adds
+## What PlenTV adds
 
 Everything in Plezy, plus IPTV.
-
-### Shipped in 1.1
 
 - **M3U and Xtream Codes import** — Add connection → M3U or Xtream Codes. Each library is given a name when you add it, and labelled by its source (M3U or Xtream Codes).
 - **Live TV from IPTV in the Live TV tab** — IPTV channels appear in Live TV, not as a library. A source picker above the guide switches between live TV sources (All sources, or one server at a time).
@@ -33,30 +33,44 @@ Everything in Plezy, plus IPTV.
 - **Live-channel favourites** — favourite live channels from the channel menu.
 - **Catch-up badge** — guide channels that offer catch-up show a badge, so you can see it at a glance. Catch-up itself is gated on the channel offering an archive.
 - **In-app updater** — new versions are offered in the app and install over the top. The updater compares version names.
-- **Version scheme** — our version first, then upstream's: `1.5.0-2.26.0` means PlezTV 1.5.0 on Plezy 2.26.0.
+- **Meta Quest** — PlenTV runs on Quest 2, Quest Pro, Quest 3, and Quest 3S as a 2D panel app you drive with the controller; the thumbstick moves along the rails. **3D movie support is coming** — the flat panel can't show true 3D yet, and that's the next step, not this release.
+- **Alternate app icons** — 23 variants (Midnight, Ember, Paper, Ocean, Gold, and more) in Settings, all with the new TV mark.
+- **Layout refresh in progress** — the bottom bar and Accounts menu are changing; expect the layout to keep moving for a few releases.
+- **Bug reporting** — Settings → Logs → Submit log to GitHub files an issue on this repo, with your debug log redacted on the device first.
+- **Version scheme** — our version first, then upstream's: `1.6.0-2.26.0` means PlenTV 1.6.0 on Plezy 2.26.0.
 
 ## Plezy (upstream)
 
-Plezy is a modern client for Plex, Jellyfin, and Emby on desktop, mobile, and TV, built with Flutter. It is a separate project by [edde746](https://github.com/edde746) and contributors — PlezTV is based on Plezy 2.26.0.
+Plezy is a modern client for Plex, Jellyfin, and Emby on desktop, mobile, and TV, built with Flutter. It is a separate project by [edde746](https://github.com/edde746) and contributors — PlenTV is based on Plezy 2.26.0.
 
 - Upstream repo: https://github.com/edde746/plezy
 - Upstream releases and updates: https://github.com/edde746/plezy/releases
-- The full Plezy feature list (playback, DVR, Explore, Watch Together, and more) lives in the [upstream README](https://github.com/edde746/plezy#readme). Anything listed there is Plezy's work, not PlezTV's.
+- The full Plezy feature list (playback, DVR, Explore, Watch Together, and more) lives in the [upstream README](https://github.com/edde746/plezy#readme). Anything listed there is Plezy's work, not PlenTV's.
 
 ## Install
 
-PlezTV is **not on any app store** — no Google Play, App Store, F-Droid, or Amazon listing exists, and there is nothing to download from a store.
+PlenTV is **not on any app store** — no Google Play, App Store, F-Droid, or Amazon listing exists, and there is nothing to download from a store.
 
-- **Android:** APKs are published as [GitHub Releases](https://github.com/cartchai/pleztv/releases). The in-app updater offers new versions and installs them over the top.
-- PlezTV installs alongside the original Plezy (package `com.pleztv.app`), so your Plezy install is untouched.
+- **Android phone or tablet:** APKs are published as [GitHub Releases](https://github.com/cartchai/plentv/releases). Pick the APK for your device (arm64-v8a on most modern phones), install it, and the in-app updater offers new versions and installs them over the top.
+- **Android TV / Fire TV:** the same APK — sideload it with the Downloader app or `adb install`, then open it from your launcher. The TV interface is D-pad driven.
+- **Meta Quest:** the same APK sideloaded (SideQuest or `adb install`) — it runs as a 2D panel app. 3D movie support is coming.
+- **iOS, macOS, Windows, Linux:** not currently built or distributed — Android only for now.
+
+PlenTV installs alongside the original Plezy (package `com.pleztv.app`), so your Plezy install is untouched. Updates keep your data: the same signing key is used for every release, so a new version installs over the old one.
+
+## Report a bug
+
+Found something broken? Settings → Logs → **Submit log to GitHub** files an issue on this repo with your debug log attached — the log is redacted on your device first, so no passwords, tokens, or server addresses leave it. Or open an issue directly at https://github.com/cartchai/plentv/issues.
+
+Reports are report-only: filing one puts it in front of us, it doesn't auto-fix anything. Include what you were doing when it broke and which device (phone, TV, Quest) it happened on.
 
 ## Building
 
-Prerequisites: Flutter SDK 3.47.9, and Java 17 for the Android build. Releases are built by GitHub Actions (`.github/workflows/android-release.yml`) — push a tag like `v1.5-2.26.0` and the workflow builds the APK and creates the release. Codemagic is the backup builder — see [codemagic.yaml](codemagic.yaml).
+Prerequisites: Flutter SDK 3.47.9, and Java 17 for the Android build. Releases are built by GitHub Actions (`.github/workflows/android-release.yml`) — push a tag like `v1.6.0-2.26.0` and the workflow builds the APK and creates the release. Codemagic is the backup builder — see [codemagic.yaml](codemagic.yaml).
 
 ```bash
-git clone https://github.com/cartchai/pleztv.git
-cd pleztv
+git clone https://github.com/cartchai/plentv.git
+cd plentv
 flutter pub get
 scripts/codegen.sh
 flutter build apk --debug
@@ -79,11 +93,11 @@ After modifying model classes or other generated sources, re-run `scripts/codege
 - Extras — trailers, deleted scenes, behind-the-scenes
 
 ### <img src="assets/readme_icons/explore.svg" height="20" alt="" align="center" /> Explore & Requests
-- Explore tab — watchlist, trending, popular, and recommendation rows from Plex Discover[^plex], Trakt, MyAnimeList, AniList, Simkl, and Seerr[^connect]
+- Explore tab — watchlist, trending, popular, and recommendation rows from Plex Discover[^plex] and Seerr[^connect]
 - Search any connected catalog source
 - Catalog titles matched back to your own libraries by external ID
 - Seerr — request movies and shows with per-season, 4K, and advanced destination options, and see request status inline
-- Watchlist sync — add and remove titles on Plex, Trakt, MyAnimeList, AniList, and Simkl from anywhere in the app
+- Watchlist sync — add and remove titles on Plex from anywhere in the app
 
 ### <img src="assets/readme_icons/playback.svg" height="20" alt="" align="center" /> Playback
 - Wide codec support (HEVC, AV1, VP9, and more)
@@ -127,18 +141,17 @@ After modifying model classes or other generated sources, re-run `scripts/codege
 - Offline browsing with watch state sync-back on reconnect
 
 ### <img src="assets/readme_icons/watch-together.svg" height="20" alt="" align="center" /> Watch Together
-- Rooms on [Open Watch Party](https://openwatch.party) — share a six-character code; friends join from Plezy or another Open Watch Party app
+- Rooms on [Open Watch Party](https://openwatch.party) — share a six-character code; friends join from PlenTV or another Open Watch Party app
 - Everyone plays their own copy from their own server — Plex, Jellyfin, or Emby — matched by catalogue IDs, with a picker when several copies fit
 - Synchronized play / pause / seek, host or shared control, room lock, and host handoff
-- Public relays by default, or point Plezy at your own self-hosted relay
+- Public relays by default, or point PlenTV at your own self-hosted relay
 
 ### <img src="assets/readme_icons/integrations.svg" height="20" alt="" align="center" /> Integrations
 - Discord Rich Presence[^desktop]
-- Trakt, MyAnimeList, AniList, and Simkl — ratings, watched sync, and real-time scrobbling[^rt]
-- Scores from connected trackers on detail pages — Trakt, Simkl, MyAnimeList, and AniList, plus Rotten Tomatoes, Metacritic, Letterboxd, IMDb, and TMDB through MDBList
-- Plezy Remote — control desktop and TV from mobile
+- Scores from MDBList on detail pages — Rotten Tomatoes, Metacritic, Letterboxd, IMDb, and TMDB
+- PlenTV Remote — control desktop and TV from mobile
 - Watch Next row and tvOS Top Shelf[^shelf]
-- [`plezy://` links](#plezy-links) to open a profile, play a title, or tune a channel from Home Assistant, launchers, or an NFC tag; any movie, show, or episode menu shows its link[^links]
+- [`plentv://` links](#plentv-links) to open a profile, play a title, or tune a channel from Home Assistant, launchers, or an NFC tag; any movie, show, or episode menu shows its link[^links]
 
 ### <img src="assets/readme_icons/customization.svg" height="20" alt="" align="center" /> Platform & Customization
 - Desktop, mobile, and TV — full D-pad, keyboard, and gamepad support
@@ -165,29 +178,30 @@ After modifying model classes or other generated sources, re-run `scripts/codege
 [^bgaudio]: tvOS pauses music when the app is backgrounded.
 [^dl]: Not available on tvOS.
 [^desktop]: Desktop only.
-[^rt]: Real-time scrobbling on Trakt and Simkl; MyAnimeList and AniList update on completion.
 [^shelf]: Android TV / Fire TV and tvOS.
 [^links]: Android, iOS, macOS, and tvOS.
 
 
-## plezy:// links
+## plentv:// links
 
-Links start Plezy from outside the app. Any link may add `profile=<profile>`: a profile id, a Plex Home user UUID, or a display name (ignoring case; it must match one profile). Plezy switches to that profile first, and a protected profile still asks for its PIN. A link replaces whatever is playing.
+Links start PlenTV from outside the app. Any link may add `profile=<profile>`: a profile id, a Plex Home user UUID, or a display name (ignoring case; it must match one profile). PlenTV switches to that profile first, and a protected profile still asks for its PIN. A link replaces whatever is playing.
+
+Old `plezy://` links still open the app too — only links the app generates use the new scheme.
 
 | Link | Does |
 |---|---|
-| `plezy://open` | Opens Plezy |
-| `plezy://play?server=<server>&id=<item>` | Plays one item on one server, any backend |
-| `plezy://play?type=movie\|show&tmdb=<n>` | Plays a title from whichever server has it. Use `tmdb`, `tvdb`, `imdb=tt<n>`, or `plex=<hash>` (the Plex GUID without `plex://movie/`) |
-| `plezy://live?channel=<channel>` | Tunes a Live TV channel by key, number, or call sign. Optional `server=<server>` and `start=beginning\|live` |
+| `plentv://open` | Opens PlenTV |
+| `plentv://play?server=<server>&id=<item>` | Plays one item on one server, any backend |
+| `plentv://play?type=movie\|show&tmdb=<n>` | Plays a title from whichever server has it. Use `tmdb`, `tvdb`, `imdb=tt<n>`, or `plex=<hash>` (the Plex GUID without `plex://movie/`) |
+| `plentv://live?channel=<channel>` | Tunes a Live TV channel by key, number, or call sign. Optional `server=<server>` and `start=beginning\|live` |
 
 For a show, `mode=next` (the default) plays the next episode to watch, and `mode=shuffle` plays the show shuffled. The menu of any movie, show, or episode has **Show link**, and each profile's menu in **Switch Profile** has **Show profile link**. Both show the link as text and a QR code.
 
 ```sh
-# Android / Android TV, over adb (Home Assistant: remote.turn_on with activity: plezy://...)
-adb shell am start -a android.intent.action.VIEW -d "plezy://play?type=show\&tvdb=81189\&profile=Kids"
+# Android / Android TV, over adb (Home Assistant: remote.turn_on with activity: plentv://...)
+adb shell am start -a android.intent.action.VIEW -d "plentv://play?type=show\&tvdb=81189\&profile=Kids"
 # macOS
-open "plezy://play?type=movie&tmdb=603"
+open "plentv://play?type=movie&tmdb=603"
 ```
 
 On iOS, use the Open URLs action in Shortcuts.
@@ -198,7 +212,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, formatting, tes
 
 ## License
 
-PlezTV is licensed under [GPL-3.0](LICENSE), the same as upstream Plezy. This fork stays GPL-3.0. The license covers the code, not the Plezy name or logo; forks distributed beyond personal use must follow [TRADEMARKS.md](TRADEMARKS.md).
+PlenTV is licensed under [GPL-3.0](LICENSE), the same as upstream Plezy. This fork stays GPL-3.0. The license covers the code, not the Plezy name or logo; forks distributed beyond personal use must follow [TRADEMARKS.md](TRADEMARKS.md).
 
 ## Acknowledgments
 
