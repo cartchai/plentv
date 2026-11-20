@@ -56,7 +56,7 @@ PlenTV is **not on any app store** — no Google Play, App Store, F-Droid, or Am
 - **Meta Quest:** the same APK sideloaded (SideQuest or `adb install`) — it runs as a 2D panel app. 3D movie support is coming.
 - **iOS, macOS, Windows, Linux:** not currently built or distributed — Android only for now.
 
-PlenTV installs alongside the original Plezy (package `com.pleztv.app`), so your Plezy install is untouched. Updates keep your data: the same signing key is used for every release, so a new version installs over the old one.
+PlenTV is a new app (package `com.plentv.app`) — it installs alongside the old app, so your old install is untouched. Moving from the old app: back up there (Settings → Back up everything), install PlenTV, then restore the backup in PlenTV (Settings → Restore a backup) — everything carries over except downloaded media, which you re-download. Updates within PlenTV install over the top, same signing key as always.
 
 ## Report a bug
 

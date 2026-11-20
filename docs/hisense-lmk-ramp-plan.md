@@ -7,7 +7,7 @@ in the round.
 
 Every budget in every report assumes the kill line from Google's table
 (280 MB total at 1 GB, scaled to ~350–400 MB at 1.5 GB). Nobody has
-measured where the Hisense actually kills PlezTV. If the real line is
+measured where the Hisense actually kills PlenTV. If the real line is
 600 MB, the current 499 MB startup is fine and the budgets are too
 strict; if it is 450 MB, the 499 MB startup is already over the line
 and the budgets are too lax. The whole plan hinges on this one number,
@@ -20,12 +20,12 @@ That includes L-8's watchdog thresholds and the §6 gate table
 ## What you need
 
 - The Hisense TV (2.4 GiB RAM, Android 12, 32-bit) with the latest
-  PlezTV build installed.
+  PlenTV build installed.
 - 1–3 resident background apps already on the TV (YouTube, Netflix,
   the TV's own launcher extras — whatever is installed; the point is
   resident RSS, not which app).
 - The debug export after each run (Settings → Logs → Export), or
-  `adb shell dumpsys meminfo com.pleztv.app` if ADB is attached.
+  `adb shell dumpsys meminfo com.plentv.app` if ADB is attached.
 
 No new code, no test build, no panel use. The previous-exit line in
 the dump already records RSS-at-death.
@@ -34,7 +34,7 @@ the dump already records RSS-at-death.
 
 ### 1. Baseline survival run
 
-Force-stop PlezTV, open it, run the script with no other app resident:
+Force-stop PlenTV, open it, run the script with no other app resident:
 
 cold start → zap 10 channels → open the guide → play 5 minutes →
 background + foreground → open a VOD.

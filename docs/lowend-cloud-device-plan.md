@@ -20,7 +20,7 @@ via public search, Nov 2026 — re-verify before spending; all of them change.
 
 ## Per service
 
-| Service | Price (Nov 2026) | Use for PlezTV | Cannot do |
+| Service | Price (Nov 2026) | Use for PlenTV | Cannot do |
 |---|---|---|---|
 | Firebase Test Lab | Blaze: 60 virtual min/day + 30 physical min/day free, then $1/device-hour virtual, $5/device-hour physical. Spark: 10 virtual + 5 physical runs/day. **Deprecated — shuts down 30 Sep 2027.** | Cheapest phone matrix while it lasts. Robo test crawls the app; instrumentation tests run the fixture pack; logcat + screenshots + video per run. Good for "does 1.2.19 crash on a Pixel 7 / Galaxy A-series" smoke. | No Fire TV, no Android TV, no 1–2 GB low-end devices. Virtual devices have fixed per-model specs — RAM cannot be set to 1536 MB. No D-pad/TV navigation in Robo. No memory graph of its own — RSS must come from the in-app dump/logcat. |
 | AWS Device Farm | **$0.17/device-minute** after a one-time 1,000 free minutes; or $250/device-slot/month unmetered; private devices from $200/mo. Remote-access sessions bill the same meter. | **Best pay-per-minute real-phone option.** Real phones/tablets (1,000+ devices incl. older Samsung/LG/Motorola — the closest thing to a real low-end phone pool). Remote access = drive the app by hand on a real low-end phone. Returns logs, screenshots, video, performance data per run. Per-release 10-min scripted run on 2–3 real low-end phones: 3 × 10 min × $0.17 ≈ **$5.10**. | No Fire TV, no Android TV sticks. Test packages need a test spec (YAML) + uploaded APK; setup is heavier than FTL. Per-minute cost punishes long soak runs: a 30-min soak on 3 devices = 90 min = $15.30. |

@@ -5,7 +5,7 @@ minutes. No computer needed — just the app and the remote.
 
 ## Before you start
 
-Check the version first: open PlezTV → Settings → About. Write the
+Check the version first: open PlenTV → Settings → About. Write the
 version number down. It should match the one in the delivery message.
 If it doesn't, install the new APK first — an old version makes the
 rest of this meaningless.
@@ -14,7 +14,7 @@ rest of this meaningless.
 
 ### 1. Cold start — time to home
 
-Force-close PlezTV first (Settings → Apps → PlezTV → Force stop — or
+Force-close PlenTV first (Settings → Apps → PlenTV → Force stop — or
 just restart the stick/TV again), then open it and count seconds on
 your phone until the home screen shows your channels/movies. Write
 the number down.

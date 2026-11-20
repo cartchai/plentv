@@ -58,7 +58,7 @@ import '../../test_helpers/library_tab_scaffold.dart';
 import '../../test_helpers/multi_server_fixtures.dart';
 import '../../test_helpers/prefs.dart';
 
-/// Pre-ship screen tests for the PlezTV IPTV flows (the build #4 lesson:
+/// Pre-ship screen tests for the PlenTV IPTV flows (the build #4 lesson:
 /// unit tests + analyze passed while the real flows were broken on the owner's
 /// phone). Every test pumps the ACTUAL screen with a fake Plex client and a
 /// REAL [IptvClient] backed by a fake Xtream catalog — no network — and
@@ -1001,8 +1001,8 @@ void main() {
     });
   });
 
-  group('PlezTV rename + About changelog', () {
-    test('English strings call the app PlezTV and carry the changelog', () async {
+  group('PlenTV rename + About changelog', () {
+    test('English strings call the app PlenTV and carry the changelog', () async {
       final strings = await AppLocale.en.build();
       expect(strings.app.title, 'PlenTV');
       expect(strings.about.changelogTitle, "What's new");
@@ -1010,10 +1010,10 @@ void main() {
       expect(strings.about.changelog2251, contains('Blue app icon'));
       expect(strings.about.changelog2251, contains('Movies and Series Recommended now loads'));
       expect(strings.about.changelog2250, hasLength(4));
-      expect(strings.about.changelog2250.first, contains('First PlezTV release'));
+      expect(strings.about.changelog2250.first, contains('First release'));
     });
 
-    testWidgets('About screen shows PlezTV and the changelog, newest first', (tester) async {
+    testWidgets('About screen shows PlenTV and the changelog, newest first', (tester) async {
       await tester.pumpWidget(
         TranslationProvider(
           child: MaterialApp(theme: monoTheme(MonoPalette.dark), home: const AboutScreen()),

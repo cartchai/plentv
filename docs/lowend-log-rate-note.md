@@ -42,7 +42,7 @@ Run the meter on a real Hisense feed-parse + sync log:
 
 ```sh
 # On the device: Settings → Logs → Export (after a Reload + a sync)
-dart run tool/log-rate-meter/log_rate_meter.dart pleztv-debug-*.txt
+dart run tool/log-rate-meter/log_rate_meter.dart plentv-debug-*.txt
 ```
 
 ## Verdict rule

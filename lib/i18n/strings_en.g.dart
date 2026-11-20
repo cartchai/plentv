@@ -3837,9 +3837,9 @@ class Translations$about$en {
 		'The Reload report now also says how many of the first 200 guide rows actually show programmes, next to the big-guide count',
 	];
 	List<String> get changelog2299 => [
-		'If PlezTV fails to start three times in a row, it now opens an emergency debug log saver instead of crashing again — save the log and send it to us, or continue starting up as usual',
+		'If the app fails to start three times in a row, it now opens an emergency debug log saver instead of crashing again — save the log and send it to us, or continue starting up as usual',
 		'The saver asks where to save the file — the system save picker, or the app folder — and no special permission is needed for either one',
-		'After saving you can share the file, restart PlezTV, or close the app; skipping the saver resets the counter and starts up normally',
+		'After saving you can share the file, restart the app, or close the app; skipping the saver resets the counter and starts up normally',
 		'The debug log itself is unchanged — a short summary first, then the full log, settings, memory and last crash',
 	];
 	List<String> get changelog2304 => [
@@ -3904,14 +3904,14 @@ class Translations$about$en {
 	];
 	List<String> get changelog2328 => [
 		'New: PlenTV is the new name — same app, new name and icon',
-		'New: your old PlezTV backups still restore, and old links still open',
+		'New: this is a fresh install as a new app — back up from the old app, install PlenTV, restore the backup. Your old backups still restore, and old links still open',
 		'New: Quest headsets are now detected, so the controller thumbstick scrolls the right way',
 		'New: bug reports and debug logs now go to our own GitHub issues',
-		'Removed: the app no longer points at the old PlezTV services or funding page',
+		'Removed: the app no longer points at the old services or funding page',
 		'Cleanup: the unused crash-reporting code is gone',
 	];
 	List<String> get changelog2326 => [
-		'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
+		'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — the app no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 		'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
 		'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
 		'Fixed: opening Downloads no longer starts the same details refresh twice at once',
@@ -4028,7 +4028,7 @@ class Translations$about$en {
 	List<String> get changelog2309 => [
 		'This build installs as a new app next to the old one — back up everything on the old app first, then restore it here',
 		'Signing in to MyAnimeList and AniList now goes straight to each service, instead of through the app maker\'s server',
-		'The TV app and the Linux app now show the name PlezTV everywhere',
+		'The TV app and the Linux app now show the app\'s name everywhere',
 	];
 	List<String> get changelog2308 => [
 		'Fixed: the TV guide could lose its saved copy when the app cleared its guide data at the same moment it was saving it — the guide now saves reliably and doesn\'t need to download again',
@@ -4069,7 +4069,7 @@ class Translations$about$en {
 		'On a TV, the Export, Upload, Copy and Clear rows on the Logs screen can now be reached with the remote — press Down from the top of the screen to move through them, and the arrows still scroll the log text when you are reading it',
 		'Movies and series now download straight to a file instead of being held in memory all at once, so the home screen no longer runs out of memory and crashes on a low-memory TV',
 		'If the movie or series download is slow, the home screen now shows the last saved movies and series instead of an empty screen — and a finished download is saved on the device, so the next start reads it from there',
-		'If PlezTV crashes three times, for any reason and not just while starting, it now opens the emergency debug log saver so you can save the log — the saver now says the app crashed instead of saying it failed to start',
+		'If the app crashes three times, for any reason and not just while starting, it now opens the emergency debug log saver so you can save the log — the saver now says the app crashed instead of saying it failed to start',
 	];
 	List<String> get changelog2297 => [
 		'Browsing movies, series and the TV guide now reads pages from the saved catalog on your device, instead of holding the whole catalog in memory',
@@ -4141,7 +4141,7 @@ class Translations$about$en {
 	List<String> get changelog2264 => [
 		'Series search is fixed for real this time: the app was searching a saved list that was missing whole categories — including the one Game of Thrones sits in — and it trusted that list without a second look. When a search comes up empty it now checks the categories the saved list does not cover',
 		'The first search after this update may take a few seconds — that is the repair running, not a freeze',
-		'Version numbers change with this build: PlezTV is now 1.0.0, built on Plezy 2.25.0. The next updates will be 1.0.1, 1.0.2 and so on, and the in-app updater understands the new numbers',
+		'Version numbers change with this build: the app is now 1.0.0, built on Plezy 2.25.0. The next updates will be 1.0.1, 1.0.2 and so on, and the in-app updater understands the new numbers',
 		'Settings → IPTV → Last search now shows how many matches your turned-off categories hid, and where each section\'s list came from (saved on the phone, fresh from the provider, or pieced together per category)',
 	];
 	List<String> get changelog2263 => [
@@ -4243,7 +4243,7 @@ class Translations$about$en {
 		'Subtle loading line under the guide while the EPG loads',
 	];
 	List<String> get changelog2251 => [
-		'PlezTV name throughout the app',
+		'New name throughout the app',
 		'Blue app icon',
 		'Add IPTV on first start — no Plex needed',
 		'Movies and Series Recommended now loads',
@@ -4254,7 +4254,7 @@ class Translations$about$en {
 		'M3U category filter now works in Live TV and search',
 	];
 	List<String> get changelog2250 => [
-		'First PlezTV release, based on Plezy 2.25.0',
+		'First release, based on Plezy 2.25.0',
 		'M3U and Xtream Codes import: Add connection → M3U / Xtream Codes',
 		'Live TV from IPTV in the Live TV section; movies and series in the Library',
 		'Country/region filter on each connection\'s edit screen',
@@ -11432,9 +11432,9 @@ extension on Translations {
 			'about.changelog2301.2' => 'Reloading the TV details now records how the big guide was downloaded — its size, what changed, and which name it was asked under — so the report can say what the provider actually sent',
 			'about.changelog2301.3' => 'If you open the guide while something is playing and the rows stay empty, they now fill in by themselves when playback stops, instead of waiting until you reopen the guide',
 			'about.changelog2301.4' => 'The Reload report now also says how many of the first 200 guide rows actually show programmes, next to the big-guide count',
-			'about.changelog2299.0' => 'If PlezTV fails to start three times in a row, it now opens an emergency debug log saver instead of crashing again — save the log and send it to us, or continue starting up as usual',
+			'about.changelog2299.0' => 'If the app fails to start three times in a row, it now opens an emergency debug log saver instead of crashing again — save the log and send it to us, or continue starting up as usual',
 			'about.changelog2299.1' => 'The saver asks where to save the file — the system save picker, or the app folder — and no special permission is needed for either one',
-			'about.changelog2299.2' => 'After saving you can share the file, restart PlezTV, or close the app; skipping the saver resets the counter and starts up normally',
+			'about.changelog2299.2' => 'After saving you can share the file, restart the app, or close the app; skipping the saver resets the counter and starts up normally',
 			'about.changelog2299.3' => 'The debug log itself is unchanged — a short summary first, then the full log, settings, memory and last crash',
 			'about.changelog2304.0' => 'Live TV now loads the TV guide in the background, so scrolling the guide no longer stutters while the guide is still loading',
 			'about.changelog2304.1' => 'Refreshing the catalog no longer holds the whole channel and movie list in memory twice, so the app uses less memory at its peak',
@@ -11491,12 +11491,12 @@ extension on Translations {
 			'about.changelog2327.9' => 'Fixed: on low-memory devices the player now caps how far ahead it caches a stream by time as well as size',
 			'about.changelog2327.10' => 'Cleanup: removed leftover unused code from the 2.26.0 update',
 			'about.changelog2328.0' => 'New: PlenTV is the new name — same app, new name and icon',
-			'about.changelog2328.1' => 'New: your old PlezTV backups still restore, and old links still open',
+			'about.changelog2328.1' => 'New: this is a fresh install as a new app — back up from the old app, install PlenTV, restore the backup. Your old backups still restore, and old links still open',
 			'about.changelog2328.2' => 'New: Quest headsets are now detected, so the controller thumbstick scrolls the right way',
 			'about.changelog2328.3' => 'New: bug reports and debug logs now go to our own GitHub issues',
-			'about.changelog2328.4' => 'Removed: the app no longer points at the old PlezTV services or funding page',
+			'about.changelog2328.4' => 'Removed: the app no longer points at the old services or funding page',
 			'about.changelog2328.5' => 'Cleanup: the unused crash-reporting code is gone',
-			'about.changelog2326.0' => 'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
+			'about.changelog2326.0' => 'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — the app no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 			'about.changelog2326.1' => 'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
 			'about.changelog2326.2' => 'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
 			'about.changelog2326.3' => 'Fixed: opening Downloads no longer starts the same details refresh twice at once',
@@ -11579,7 +11579,7 @@ extension on Translations {
 			'about.changelog2310.4' => 'The Reload count still won\'t jump: the guide file only covers about 5,700 channels, so most rows fill in as you scroll to them',
 			'about.changelog2309.0' => 'This build installs as a new app next to the old one — back up everything on the old app first, then restore it here',
 			'about.changelog2309.1' => 'Signing in to MyAnimeList and AniList now goes straight to each service, instead of through the app maker\'s server',
-			'about.changelog2309.2' => 'The TV app and the Linux app now show the name PlezTV everywhere',
+			'about.changelog2309.2' => 'The TV app and the Linux app now show the app\'s name everywhere',
 			'about.changelog2308.0' => 'Fixed: the TV guide could lose its saved copy when the app cleared its guide data at the same moment it was saving it — the guide now saves reliably and doesn\'t need to download again',
 			'about.changelog2308.1' => 'Fixed: the guide stopped asking the TV service for the same channel\'s listings over and over when you scroll — one request per channel, with a short pause after an interrupted one',
 			'about.changelog2308.2' => 'Fixed: some videos showed a black or frozen picture on the first play because the phone\'s video hardware rejected the picture format — the app now remembers and starts those videos the way that works',
@@ -11610,7 +11610,7 @@ extension on Translations {
 			'about.changelog2302.0' => 'On a TV, the Export, Upload, Copy and Clear rows on the Logs screen can now be reached with the remote — press Down from the top of the screen to move through them, and the arrows still scroll the log text when you are reading it',
 			'about.changelog2302.1' => 'Movies and series now download straight to a file instead of being held in memory all at once, so the home screen no longer runs out of memory and crashes on a low-memory TV',
 			'about.changelog2302.2' => 'If the movie or series download is slow, the home screen now shows the last saved movies and series instead of an empty screen — and a finished download is saved on the device, so the next start reads it from there',
-			'about.changelog2302.3' => 'If PlezTV crashes three times, for any reason and not just while starting, it now opens the emergency debug log saver so you can save the log — the saver now says the app crashed instead of saying it failed to start',
+			'about.changelog2302.3' => 'If the app crashes three times, for any reason and not just while starting, it now opens the emergency debug log saver so you can save the log — the saver now says the app crashed instead of saying it failed to start',
 			'about.changelog2297.0' => 'Browsing movies, series and the TV guide now reads pages from the saved catalog on your device, instead of holding the whole catalog in memory',
 			'about.changelog2297.1' => 'The guide, the movie and series lists, and the category counts all show the same channels and movies as before',
 			'about.changelog2297.2' => 'Reloading the TV details still shows the fresh channels right away, and the saved catalog catches up behind it',
@@ -11651,7 +11651,7 @@ extension on Translations {
 			'about.changelog2266.2' => 'This update only changes how the app is driven on Quest — nothing else in the app changed',
 			'about.changelog2264.0' => 'Series search is fixed for real this time: the app was searching a saved list that was missing whole categories — including the one Game of Thrones sits in — and it trusted that list without a second look. When a search comes up empty it now checks the categories the saved list does not cover',
 			'about.changelog2264.1' => 'The first search after this update may take a few seconds — that is the repair running, not a freeze',
-			'about.changelog2264.2' => 'Version numbers change with this build: PlezTV is now 1.0.0, built on Plezy 2.25.0. The next updates will be 1.0.1, 1.0.2 and so on, and the in-app updater understands the new numbers',
+			'about.changelog2264.2' => 'Version numbers change with this build: the app is now 1.0.0, built on Plezy 2.25.0. The next updates will be 1.0.1, 1.0.2 and so on, and the in-app updater understands the new numbers',
 			'about.changelog2264.3' => 'Settings → IPTV → Last search now shows how many matches your turned-off categories hid, and where each section\'s list came from (saved on the phone, fresh from the provider, or pieced together per category)',
 			'about.changelog2263.0' => 'Live TV, Movies and Series sections on the Trex categories screen now collapse, so you can jump to a section faster',
 			'about.changelog2263.1' => 'Category initials now turn off every category with those initials, and turning categories off no longer reloads everything',
@@ -11727,7 +11727,7 @@ extension on Translations {
 			'about.changelog2252.4' => 'Channels with no guide data show tappable one-hour blocks saying No information available, with catch-up where the channel supports it',
 			'about.changelog2252.5' => 'Check for updates above About — downloads new releases from GitHub and installs over the top',
 			'about.changelog2252.6' => 'Subtle loading line under the guide while the EPG loads',
-			'about.changelog2251.0' => 'PlezTV name throughout the app',
+			'about.changelog2251.0' => 'New name throughout the app',
 			'about.changelog2251.1' => 'Blue app icon',
 			'about.changelog2251.2' => 'Add IPTV on first start — no Plex needed',
 			'about.changelog2251.3' => 'Movies and Series Recommended now loads',
@@ -11736,7 +11736,7 @@ extension on Translations {
 			'about.changelog2251.6' => 'New IPTV settings at Settings → Connections → IPTV: connections, turn categories on/off, Show all / Hide all, Refresh playlists, Show catch-up badge',
 			'about.changelog2251.7' => 'Catch-up badge on guide channels for channels that support it',
 			'about.changelog2251.8' => 'M3U category filter now works in Live TV and search',
-			'about.changelog2250.0' => 'First PlezTV release, based on Plezy 2.25.0',
+			'about.changelog2250.0' => 'First release, based on Plezy 2.25.0',
 			'about.changelog2250.1' => 'M3U and Xtream Codes import: Add connection → M3U / Xtream Codes',
 			'about.changelog2250.2' => 'Live TV from IPTV in the Live TV section; movies and series in the Library',
 			'about.changelog2250.3' => 'Country/region filter on each connection\'s edit screen',
