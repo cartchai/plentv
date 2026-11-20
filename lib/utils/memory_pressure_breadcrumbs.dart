@@ -1,11 +1,9 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../services/playback_coordinator.dart';
 import 'app_logger.dart';
@@ -13,10 +11,12 @@ import 'app_logger.dart';
 /// Records what the process held when the OS asked it to release memory.
 ///
 /// The native SDKs log each warning as a bare `device.event` "Low memory"
-/// breadcrumb, so the iOS watchdog terminations and Android low-memory exits
+/// line, so the iOS watchdog terminations and Android low-memory exits
 /// that follow (#445) say nothing about what was resident. This adds one
-/// `memory.pressure` breadcrumb with process RSS, the image cache and the video
-/// session as they stood when the warning arrived.
+/// `Memory pressure: ...` log line with process RSS, the image cache and the
+/// video session as they stood when the warning arrived. (1.6: the Sentry
+/// breadcrumb this used to send is cut — the data lives only in the local
+/// log, where the user can submit it from Settings › Logs.)
 ///
 /// It wraps the whole dispatch because the framework's own handler runs first:
 /// [PaintingBinding.handleMemoryPressure] empties the keep-alive image cache
@@ -25,34 +25,34 @@ import 'app_logger.dart';
 /// once every observer — the app's own eviction included — has run.
 ///
 /// iOS delivers warnings in bursts (15 within 1.2 seconds in one #445 report),
-/// so at most one breadcrumb is recorded per [breadcrumbInterval]; the next one
+/// so at most one line is recorded per [logInterval]; the next one
 /// counts the warnings folded into it as `suppressed`. Every value read here is
 /// an in-process counter or cached player state, never a platform-channel
 /// round trip.
-mixin MemoryPressureBreadcrumbs on PaintingBinding {
-  static const breadcrumbInterval = Duration(seconds: 30);
+mixin MemoryPressureLog on PaintingBinding {
+  static const logInterval = Duration(seconds: 30);
 
-  /// IPTV memory stats for the pressure breadcrumb (1.2.18 S-4c):
+  /// IPTV memory stats for the pressure log line (1.2.18 S-4c):
   /// registered by the app (it owns the server manager); null when
   /// no IPTV connection exists. Sampled before AND after the
   /// eviction, so the dump proves what the valve shed.
   static Map<String, Object> Function()? iptvMemoryStatsProvider;
 
-  DateTime? _lastMemoryPressureBreadcrumb;
+  DateTime? _lastMemoryPressureLog;
   int _suppressedMemoryPressureSignals = 0;
 
   @override
   void handleMemoryPressure() {
     final now = clock.now();
-    final last = _lastMemoryPressureBreadcrumb;
-    // A wall clock set backwards must not silence the breadcrumb until it
+    final last = _lastMemoryPressureLog;
+    // A wall clock set backwards must not silence the log line until it
     // catches up again.
-    if (last != null && !now.isBefore(last) && now.difference(last) < breadcrumbInterval) {
+    if (last != null && !now.isBefore(last) && now.difference(last) < logInterval) {
       _suppressedMemoryPressureSignals++;
       super.handleMemoryPressure();
       return;
     }
-    _lastMemoryPressureBreadcrumb = now;
+    _lastMemoryPressureLog = now;
 
     final cache = imageCache;
     final iptvStats = iptvMemoryStatsProvider?.call();
@@ -83,17 +83,12 @@ mixin MemoryPressureBreadcrumbs on PaintingBinding {
     if (_suppressedMemoryPressureSignals > 0) data['suppressed'] = _suppressedMemoryPressureSignals;
     _suppressedMemoryPressureSignals = 0;
 
-    unawaited(
-      Sentry.addBreadcrumb(
-        Breadcrumb(message: 'Memory pressure', category: 'memory.pressure', level: SentryLevel.warning, data: data),
-      ),
-    );
     appLogger.i('Memory pressure: ${data.entries.map((e) => '${e.key}=${e.value}').join(' ')}');
   }
 
   @visibleForTesting
-  void debugResetMemoryPressureBreadcrumbs() {
-    _lastMemoryPressureBreadcrumb = null;
+  void debugResetMemoryPressureLog() {
+    _lastMemoryPressureLog = null;
     _suppressedMemoryPressureSignals = 0;
   }
 

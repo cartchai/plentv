@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'app_logger.dart';
 import 'device_channel.dart';
@@ -86,23 +85,8 @@ abstract final class AndroidExitDiagnostics {
   static final _descriptionPattern = RegExp(r'^[A-Za-z0-9 _.:,()\[\]#<>/=-]{1,120}$');
   static const _maxMemoryKb = 64 * 1024 * 1024;
   static final _startupWatch = Stopwatch()..start();
-  static final List<({String phase, int elapsedMs})> _pendingBreadcrumbs = [];
-  static var _telemetryReady = false;
   static var _nativeOnCreateRecorded = false;
   static var _lastElapsedMs = 0;
-
-  /// Flushes phase breadcrumbs recorded before the telemetry gate opened.
-  /// (1.2.22 §66 U4: the hub never starts any more, so these are no-ops —
-  /// kept as local context, same as the other breadcrumb calls.)
-  static void markTelemetryReady() {
-    if (_telemetryReady) return;
-    _telemetryReady = true;
-    final pending = List.of(_pendingBreadcrumbs);
-    _pendingBreadcrumbs.clear();
-    for (final mark in pending) {
-      _sendBreadcrumb(mark.phase, mark.elapsedMs);
-    }
-  }
 
   /// Persists and records one fixed, privacy-safe startup phase.
   static void markStartupPhase(AndroidStartupPhase phase) {
@@ -137,27 +121,6 @@ abstract final class AndroidExitDiagnostics {
       appLogger.i('Startup phase: phase=$phase elapsedMs=$elapsedMs');
     } catch (_) {
       // Local logging is best-effort.
-    }
-    if (_telemetryReady) {
-      _sendBreadcrumb(phase, elapsedMs);
-    } else {
-      _pendingBreadcrumbs.add((phase: phase, elapsedMs: elapsedMs));
-    }
-  }
-
-  static void _sendBreadcrumb(String phase, int elapsedMs) {
-    try {
-      unawaited(
-        Sentry.addBreadcrumb(
-          Breadcrumb(
-            message: 'Startup phase $phase',
-            category: 'startup.phase',
-            data: {'phase': phase, 'elapsedMs': elapsedMs},
-          ),
-        ).catchError((_) {}),
-      );
-    } catch (_) {
-      // Breadcrumb emission is best-effort.
     }
   }
 

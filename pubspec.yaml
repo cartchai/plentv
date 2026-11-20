@@ -91,7 +91,6 @@ dependencies:
   # received event (#2967).
   background_downloader:
     path: packages/background_downloader
-  sentry_flutter: ^9.30.0
   auto_updater:
     git:
       url: https://github.com/edde746/auto_updater

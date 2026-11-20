@@ -13,7 +13,6 @@ import in_app_purchase_storekit
 import os_media_controls
 import package_info_plus
 import screen_retriever_macos
-import sentry_flutter
 import share_plus
 import shared_preferences_foundation
 import universal_gamepad
@@ -31,7 +30,6 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   OsMediaControlsPlugin.register(with: registry.registrar(forPlugin: "OsMediaControlsPlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
   ScreenRetrieverMacosPlugin.register(with: registry.registrar(forPlugin: "ScreenRetrieverMacosPlugin"))
-  SentryFlutterPlugin.register(with: registry.registrar(forPlugin: "SentryFlutterPlugin"))
   SharePlusMacosPlugin.register(with: registry.registrar(forPlugin: "SharePlusMacosPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
   GamepadPlugin.register(with: registry.registrar(forPlugin: "GamepadPlugin"))

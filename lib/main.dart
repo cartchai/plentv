@@ -12,7 +12,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:provider/provider.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'connection/connection.dart';
 import 'connection/connection_bootstrap.dart';
 import 'connection/connection_registry.dart';
@@ -480,7 +479,6 @@ Future<_StartupDependencies> _initializeApplication() async {
   // the record off disk, or the file would linger forever.
   StartupDiagnosticsStore.holdForFlush(acknowledgePersistedStartupFailure());
 
-  AndroidExitDiagnostics.markTelemetryReady();
   return _initializeStartup(settings);
 }
 
@@ -1447,7 +1445,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     _serverManager = MultiServerManager();
     // 1.2.18 S-4c: the pressure breadcrumb samples the IPTV memory
     // stats (before + after the eviction) through the manager.
-    MemoryPressureBreadcrumbs.iptvMemoryStatsProvider =
+    MemoryPressureLog.iptvMemoryStatsProvider =
         () => _serverManager.iptvMemoryStats();
     WidgetsBinding.instance.addObserver(this);
     // 1.2.19 L-6: the native trim forward (MpvPlayerPlugin) lands on the
@@ -2684,12 +2682,7 @@ class _SetupScreenState extends State<SetupScreen> with MountedSetStateMixin {
     // below. It never skips connecting: `none` means "no internet-capable
     // adapter", and a loopback or LAN-without-WAN server is still reachable
     // (#2505).
-    unawaited(Sentry.addBreadcrumb(Breadcrumb(message: 'Checking network connectivity', category: 'setup')));
     final hasNetwork = !(await ConnectivityProbe.check()).contains(ConnectivityResult.none);
-
-    unawaited(
-      Sentry.addBreadcrumb(Breadcrumb(message: 'Network check done: hasNetwork=$hasNetwork', category: 'setup')),
-    );
 
     _setStatus(t.common.loadingServers);
 
@@ -2739,16 +2732,6 @@ class _SetupScreenState extends State<SetupScreen> with MountedSetStateMixin {
       });
     }
 
-    final plexCount = allConnections.whereType<PlexAccountConnection>().fold<int>(0, (n, c) => n + c.servers.length);
-    final mediaBrowserCount = allConnections.whereType<JellyfinConnection>().length;
-    unawaited(
-      Sentry.addBreadcrumb(
-        Breadcrumb(
-          message: 'Handing off to MainScreen with $plexCount Plex + $mediaBrowserCount MediaBrowser server(s)',
-          category: 'setup',
-        ),
-      ),
-    );
     _setStatus(t.common.connectingToServers);
 
     // Snapshot Provider refs before further awaits.

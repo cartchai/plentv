@@ -24,7 +24,6 @@ import '../utils/active_client_scope.dart';
 import '../utils/future_extensions.dart';
 import 'device_performance.dart';
 
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'plex_auth_service.dart';
 import 'settings_service.dart';
@@ -1924,12 +1923,6 @@ class MultiServerManager {
     if (offline.isEmpty) return;
 
     appLogger.d('Attempting reconnection for ${offline.length} offline servers');
-    unawaited(
-      Sentry.addBreadcrumb(
-        Breadcrumb(message: 'Reconnecting ${offline.length} offline server(s)', category: 'servers'),
-      ),
-    );
-
     if (forceRediscovery) {
       final storage = await StorageService.getInstance();
       await Future.wait(offline.map((id) => storage.clearServerEndpoint(ServerId(id))));

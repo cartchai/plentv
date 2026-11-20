@@ -34,7 +34,7 @@ enum StartupRepairResult {
 /// which step failed, and `Future.wait` discarded every error but the first,
 /// so even that was ambiguous between four concurrent steps (#1732). Every
 /// step now carries a stable identifier that reaches the failure screen, the
-/// log, the persisted record and Sentry.
+/// log and the persisted record.
 enum StartupPhase {
   preferences('preferences'),
   crashReporting('crash-reporting'),
@@ -49,8 +49,8 @@ enum StartupPhase {
 
   const StartupPhase(this.id);
 
-  /// Stable wire/log identifier. Do not rename: persisted records and Sentry
-  /// tags are matched on it.
+  /// Stable wire/log identifier. Do not rename: persisted records are
+  /// matched on it.
   final String id;
 
   static StartupPhase? fromId(String? id) =>
