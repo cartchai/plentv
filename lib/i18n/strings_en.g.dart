@@ -3898,6 +3898,19 @@ class Translations$about$en {
 		'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
+	List<String> get changelog2327 => [
+		'Fixed: downloaded TV episodes now sit under the right season in Downloads — episodes from different seasons used to pile into a single season',
+		'Fixed: opening Downloads with a lot of saved episodes is faster — the app now reads their details in one go instead of one at a time',
+		'Fixed: the TV guide\'s \'last updated\' time now only moves when new programmes actually arrive — an empty guide check no longer stamps a fresh time',
+		'Fixed: importing a very large channel list now reads it line by line instead of holding the whole file in memory, and a damaged line no longer blocks the import',
+		'Fixed: opening a TV service\'s movie or series hub now loads page by page instead of building the whole catalogue at once',
+		'Fixed: lists now load in pages sized to your device, so low-memory TVs and phones stay smoother while browsing',
+		'Fixed: flipping through the episodes of a season is faster — the list is built once and reused instead of rebuilt on every page',
+		'Fixed: on low-memory devices the subtitle picture cache is now capped, so styled subtitles use less memory while playing',
+		'New: the preview pictures you see while dragging the seek bar now only download when you actually drag — opening a video no longer downloads them for viewers who never scrub',
+		'Fixed: on low-memory devices the player now caps how far ahead it caches a stream by time as well as size',
+		'Cleanup: removed leftover unused code from the 2.26.0 update',
+	];
 	List<String> get changelog2326 => [
 		'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 		'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
@@ -11509,6 +11522,17 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
+			'about.changelog2327.0' => 'Fixed: downloaded TV episodes now sit under the right season in Downloads — episodes from different seasons used to pile into a single season',
+			'about.changelog2327.1' => 'Fixed: opening Downloads with a lot of saved episodes is faster — the app now reads their details in one go instead of one at a time',
+			'about.changelog2327.2' => 'Fixed: the TV guide\'s \'last updated\' time now only moves when new programmes actually arrive — an empty guide check no longer stamps a fresh time',
+			'about.changelog2327.3' => 'Fixed: importing a very large channel list now reads it line by line instead of holding the whole file in memory, and a damaged line no longer blocks the import',
+			'about.changelog2327.4' => 'Fixed: opening a TV service\'s movie or series hub now loads page by page instead of building the whole catalogue at once',
+			'about.changelog2327.5' => 'Fixed: lists now load in pages sized to your device, so low-memory TVs and phones stay smoother while browsing',
+			'about.changelog2327.6' => 'Fixed: flipping through the episodes of a season is faster — the list is built once and reused instead of rebuilt on every page',
+			'about.changelog2327.7' => 'Fixed: on low-memory devices the subtitle picture cache is now capped, so styled subtitles use less memory while playing',
+			'about.changelog2327.8' => 'New: the preview pictures you see while dragging the seek bar now only download when you actually drag — opening a video no longer downloads them for viewers who never scrub',
+			'about.changelog2327.9' => 'Fixed: on low-memory devices the player now caps how far ahead it caches a stream by time as well as size',
+			'about.changelog2327.10' => 'Cleanup: removed leftover unused code from the 2.26.0 update',
 			'about.changelog2326.0' => 'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 			'about.changelog2326.1' => 'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
 			'about.changelog2326.2' => 'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
@@ -11637,6 +11661,8 @@ extension on Translations {
 			'about.versionLabel' => ({required Object version}) => 'Version ${version}',
 			'about.appDescription' => 'A beautiful Plex, Jellyfin, and Emby client for Flutter',
 			'about.viewLicensesDescription' => 'View licenses of third-party libraries',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelogTitle' => 'What\'s new',
 			'about.changelog2271.0' => 'A dead channel no longer holds the spinner for 30 seconds — live TV gives up after 10 seconds and tells you, while movies and shows keep the 30 second wait',
 			'about.changelog2271.1' => 'Changing channels is faster: the next and previous channels are tuned in the background while the current one plays, so a zap skips the wait — and a channel whose guide already said no fails straight away instead of opening a dead stream',
@@ -11648,8 +11674,6 @@ extension on Translations {
 			'about.changelog2269.1' => 'Posters and channel logos use that same name too, so Trex sees one app everywhere, not three',
 			'about.changelog2269.2' => 'If Trex still refuses a stream after this update, try a different name in Settings → IPTV → Xtream User-Agent — VLC, IPTVSmartersPro, a browser name, or your own',
 			'about.changelog2268.0' => 'Searching no longer disconnects Trex: a slow or busy provider used to flip the app into offline mode mid-search — a bad connection now just waits instead of disconnecting, and it takes three failures in a row before the app calls a server offline',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2268.1' => 'Search makes far fewer requests to the provider: at most 8 at a time instead of up to 96, and a search that times out — or one you leave — now stops its requests instead of leaving them running in the background',
 			'about.changelog2268.2' => 'If Trex does go offline it now reconnects on its own, and if Trex refuses access while no server is online you will see the refusal message instead of the offline screen',
 			'about.changelog2267.0' => 'Trex was refusing the app while TiviMate worked — the app sent no name with its requests, so the provider saw an unknown player. It now sends VLC, the name most providers accept',
@@ -12151,6 +12175,8 @@ extension on Translations {
 			'liveTv.recordSettings.skipInLibrary' => 'Skip episodes already in the library',
 			'liveTv.recordSettings.keepUpTo' => 'Episodes to keep',
 			'liveTv.recordSettings.keepUpToHint' => '0 keeps every episode',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => 'Starting in ${minutes} min',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day} at ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => '${product} returned invalid Live TV playback data',
@@ -12162,8 +12188,6 @@ extension on Translations {
 			'liveTv.allSources' => 'All sources',
 			'liveTv.noChannelsFromSource' => ({required Object name}) => 'No channels loaded from ${name}',
 			'liveTv.noChannelsFromSourceHint' => 'The playlist may still be loading, or the provider did not return any channels. Try reloading the guide.',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Collections',
 			'collections.collection' => 'Collection',
 			'collections.empty' => 'Collection is empty',
@@ -12665,6 +12689,8 @@ extension on Translations {
 			'performanceOverlay.uiFps' => 'UI FPS',
 			'performanceOverlay.fps' => 'FPS',
 			'performanceOverlay.decoderAndroidHw' => 'Android HW',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.decoderNvidiaHw' => 'NVIDIA HW',
 			'performanceOverlay.decoderQualcommHw' => 'Qualcomm HW',
 			'performanceOverlay.decoderMediatekHw' => 'MediaTek HW',
@@ -12676,8 +12702,6 @@ extension on Translations {
 			'externalPlayer.title' => 'External Player',
 			'externalPlayer.useExternalPlayer' => 'Use External Player',
 			'externalPlayer.useExternalPlayerDescription' => 'Open videos in another app',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.selectPlayer' => 'Select Player',
 			'externalPlayer.customPlayers' => 'Custom Players',
 			'externalPlayer.systemDefault' => 'System Default',
@@ -13179,6 +13203,8 @@ extension on Translations {
 			'iptv.epgDetailsLastFetch' => 'Last fetched',
 			'iptv.epgDetailsNextFetch' => 'Next refresh',
 			'iptv.epgDetailsWhyNoMatch' => 'Why no guide',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgDetailsRefresh' => 'Refresh this channel',
 			'iptv.epgMatchMethodTvgId' => 'Channel ID',
 			'iptv.epgMatchMethodName' => 'Channel name',
@@ -13190,8 +13216,6 @@ extension on Translations {
 			'iptv.epgUpdateTimeDescription' => 'Time of day the guide refreshes',
 			'iptv.epgUpdateTimeOff' => 'Off',
 			'iptv.epgUpdateOnPlaylistChange' => 'Update when the channel list changes',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgUpdateOnPlaylistChangeDescription' => 'Refresh the guide when the provider adds or removes channels',
 			'iptv.epgSourceAdded' => 'EPG source added',
 			'iptv.epgPresetSectionTitle' => 'Suggested guides',

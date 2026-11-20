@@ -1540,6 +1540,19 @@
       "The debug export now says which memory tier your device is on and why, and records memory at each startup step",
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
+    "changelog2327": [
+      "Fixed: downloaded TV episodes now sit under the right season in Downloads — episodes from different seasons used to pile into a single season",
+      "Fixed: opening Downloads with a lot of saved episodes is faster — the app now reads their details in one go instead of one at a time",
+      "Fixed: the TV guide's 'last updated' time now only moves when new programmes actually arrive — an empty guide check no longer stamps a fresh time",
+      "Fixed: importing a very large channel list now reads it line by line instead of holding the whole file in memory, and a damaged line no longer blocks the import",
+      "Fixed: opening a TV service's movie or series hub now loads page by page instead of building the whole catalogue at once",
+      "Fixed: lists now load in pages sized to your device, so low-memory TVs and phones stay smoother while browsing",
+      "Fixed: flipping through the episodes of a season is faster — the list is built once and reused instead of rebuilt on every page",
+      "Fixed: on low-memory devices the subtitle picture cache is now capped, so styled subtitles use less memory while playing",
+      "New: the preview pictures you see while dragging the seek bar now only download when you actually drag — opening a video no longer downloads them for viewers who never scrub",
+      "Fixed: on low-memory devices the player now caps how far ahead it caches a stream by time as well as size",
+      "Cleanup: removed leftover unused code from the 2.26.0 update"
+    ],
     "changelog2326": [
       "Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show",
       "Removed: the anime title mappings are gone — the app no longer downloads anything from the creator's servers, and AniList and MyAnimeList entries no longer get extra IDs from that file",
