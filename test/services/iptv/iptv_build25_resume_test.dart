@@ -9,6 +9,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plezy/connection/connection.dart';
 import 'package:plezy/media/iptv_client.dart';
+import 'package:plezy/media/media_item.dart';
+import 'package:plezy/media/media_kind.dart';
+import 'package:plezy/services/settings_service.dart' show EpisodePosterMode;
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/playback_initialization_types.dart';
 
@@ -217,6 +220,40 @@ void main() {
     expect(item, isNotNull);
     expect(item!.viewOffsetMs, 10 * 60 * 1000);
     expect(item.durationMs, 45 * 60 * 1000);
+  });
+
+  test('1.6.11 X9: an episode snapshot carries the show poster for the still fallback', () async {
+    final client = _client();
+    // An episode that left the catalog: built by hand, so the re-resolve
+    // fails and Continue Watching must render from the snapshot.
+    const showPoster = 'https://panel.example.com:8080/show.jpg';
+    final item = MediaItem.xtream(
+      id: 'episode:99:999',
+      kind: MediaKind.episode,
+      title: 'Gone Episode',
+      thumbPath: 'https://panel.example.com:8080/still.jpg',
+      grandparentThumbPath: showPoster,
+      grandparentId: '99',
+      grandparentTitle: 'Gone Show',
+      parentId: 'season:99:1',
+      parentTitle: 'Season 1',
+      streamUrl: 'https://panel.example.com:8080/movie/999/999.mp4',
+    );
+    await client.getPlaybackInitialization(
+      PlaybackInitializationOptions(metadata: item, selectedMediaIndex: 0),
+    );
+    await client.reportPlaybackStopped(
+      itemId: 'episode:99:999',
+      position: const Duration(minutes: 10),
+      duration: const Duration(minutes: 45),
+    );
+    final rows = await client.fetchContinueWatching();
+    expect(rows, hasLength(1));
+    expect(rows.single.grandparentThumbPath, showPoster);
+    expect(
+      rows.single.posterThumbFallback(mode: EpisodePosterMode.episodeThumbnail),
+      showPoster,
+    );
   });
 
   test('opening playback stashes the title so the snapshot carries it', () async {

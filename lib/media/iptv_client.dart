@@ -46,6 +46,7 @@ import '../services/iptv/iptv_epg_sources.dart';
 import '../services/lowend/epg_cadence_log.dart';
 import '../services/lowend/phase_rss_sampler.dart';
 import '../services/iptv/panel_reachability_store.dart';
+import '../services/iptv/catalog_sync_foreground_service.dart';
 import '../services/iptv/iptv_playback_activity.dart';
 import '../services/iptv/iptv_heavy_work_gate.dart';
 import '../services/iptv/iptv_search_index.dart';
@@ -60,7 +61,6 @@ import '../utils/external_ids.dart';
 import '../utils/iptv_initials.dart';
 import '../utils/library_content_notifier.dart';
 import '../utils/media_server_http_client.dart' show AbortController;
-import '../utils/media_server_timeouts.dart';
 import 'iptv_live_tv.dart';
 import 'watch_progress.dart';
 import '../services/iptv/iptv_item_favorites_repository.dart';
@@ -338,6 +338,10 @@ class IptvClient implements MediaServerClient {
     // so changing Settings → IPTV → Xtream User-Agent applies to the next
     // request without rebuilding the client (or restarting the app).
     userAgentProvider: _userAgentProviderOverride ?? _xtreamUserAgent,
+    // 1.6.11 (Super Spoof): the headers piece, re-read per request like
+    // the UA — flipping the toggle applies to the next request without
+    // rebuilding the client (or restarting the app).
+    mimicHeadersProvider: _mimicHeadersProviderOverride ?? _superSpoofHeaders,
     // Build #27: every refused response and transport failure is handed
     // to the refusal log (Settings → IPTV → Connection refusals) with
     // its headers and body — the 403 the app used to discard is the
@@ -362,17 +366,81 @@ class IptvClient implements MediaServerClient {
   /// See [_userAgentProviderOverride].
   set userAgentProvider(String Function() provider) => _userAgentProviderOverride = provider;
 
+  /// Override for the Super Spoof headers provider (1.6.11): the
+  /// background isolate has no SettingsService, so the callback resolves
+  /// the headers piece from SharedPreferences directly and hands it in
+  /// here before the first request. Must be set before the lazy
+  /// [_xtreamApi] builds; the override wins over [_superSpoofHeaders].
+  bool Function()? _mimicHeadersProviderOverride;
+
+  /// See [_mimicHeadersProviderOverride].
+  set mimicHeadersProvider(bool Function() provider) => _mimicHeadersProviderOverride = provider;
+
   /// The configured Xtream User-Agent for this client's requests (build
-  /// #20). Falls back to VLC when Settings is not initialized yet (tests)
-  /// or the stored choice is unknown — a request must never go out with
-  /// no User-Agent.
+  /// #20), with Super Spoof applied (1.6.11): when the master toggle is
+  /// on and the UA piece picks a name, the mimic value wins over the
+  /// normal choice — one toggle, whole disguise. Falls back to VLC when
+  /// Settings is not initialized yet (tests) or the stored choice is
+  /// unknown — a request must never go out with no User-Agent.
   static String _xtreamUserAgent() {
+    final fallback = _normalXtreamUserAgent();
+    final settings = SettingsService.instanceOrNull;
+    if (settings == null) return fallback;
+    return XtreamSuperSpoof.resolveUserAgent(
+      masterOn: settings.read(SettingsService.iptvSuperSpoof),
+      userAgentChoice: settings.read(SettingsService.iptvSuperSpoofUserAgent),
+      fallbackUserAgent: fallback,
+    );
+  }
+
+  /// The normal Xtream User-Agent choice, without Super Spoof.
+  static String _normalXtreamUserAgent() {
     final settings = SettingsService.instanceOrNull;
     if (settings == null) return XtreamUserAgent.vlc;
     return XtreamUserAgent.resolve(
       settings.read(SettingsService.iptvXtreamUserAgent),
       settings.read(SettingsService.iptvXtreamUserAgentCustom),
     );
+  }
+
+  /// Super Spoof (1.6.11): the headers piece is active — master toggle
+  /// on and the headers sub-setting on. False when Settings is not
+  /// initialized (tests) — the mimic never leaks into a test that never
+  /// asked for it.
+  static bool _superSpoofHeaders() {
+    final settings = SettingsService.instanceOrNull;
+    if (settings == null) return false;
+    return settings.read(SettingsService.iptvSuperSpoof) &&
+        settings.read(SettingsService.iptvSuperSpoofHeaders);
+  }
+
+  /// Super Spoof (1.6.11): the streams piece is active — master toggle
+  /// on and the streams sub-setting on.
+  static bool _superSpoofStreams() {
+    final settings = SettingsService.instanceOrNull;
+    if (settings == null) return false;
+    return settings.read(SettingsService.iptvSuperSpoof) &&
+        settings.read(SettingsService.iptvSuperSpoofStreams);
+  }
+
+  /// The User-Agent for stream/artwork opens: the spoof-aware value when
+  /// the streams piece is on, the normal choice when it is off — the
+  /// piece decides whether the disguise applies here at all.
+  static String _streamUserAgent() {
+    if (!_superSpoofStreams()) return _normalXtreamUserAgent();
+    return _xtreamUserAgent();
+  }
+
+  /// Headers for a direct (non-API) fetch from this panel — stream opens
+  /// and artwork — under the Super Spoof pieces (1.6.11): the mimic UA
+  /// when the UA piece picks one (and the streams piece is on), plus the
+  /// generic Accept when the headers piece is on too.
+  static Map<String, String> _directFetchHeaders() {
+    final headers = <String, String>{'User-Agent': _streamUserAgent()};
+    if (_superSpoofStreams() && _superSpoofHeaders()) {
+      headers['Accept'] = XtreamSuperSpoof.acceptHeader;
+    }
+    return headers;
   }
 
   /// Public view of the Xtream API for the live-TV support (EPG fetches).
@@ -425,6 +493,13 @@ class IptvClient implements MediaServerClient {
   /// cleared wherever the memo is cleared — never served across a
   /// catalog clear or reload.
   Map<int, XtreamSeries>? _seriesById;
+
+  /// By-id index for the memoized VOD list (1.6.11 P10): same shape as
+  /// [_seriesById] — the movie branch of [fetchItem] used to linearly
+  /// scan the whole memo (199k rows on this provider) on every
+  /// cold-index detail open. Built once from the loaded list (see
+  /// [_vodByIdMap]), cleared wherever the memo is cleared.
+  Map<int, XtreamVodStream>? _vodById;
 
   /// The in-flight toggle re-derive (1.2.4, see
   /// [_rederiveMemosFromDisk]): [unhiddenCategoriesNeedRefresh] awaits
@@ -849,10 +924,11 @@ class IptvClient implements MediaServerClient {
   }
 
   /// All rows of one type from the index, in provider order, read in
-  /// bounded pages (1.2.11): the guide and the full-list hub detail
-  /// genuinely need every row at once, so they page through the index
-  /// instead of holding a memo — the list is transient to the call,
-  /// not a heap the client keeps. Null when the index is cold.
+  /// bounded pages (1.2.11): the live guide genuinely needs every
+  /// row at once, so it pages through the index instead of holding a
+  /// memo — the list is transient to the call, not a heap the client
+  /// keeps. Null when the index is cold. (1.6.11 P4 deleted the
+  /// whole-list hub builders that used to share this.)
   Future<List<IptvSearchIndexRow>?> _indexAllRows(String type) async {
     final index = await _warmIndexForType(type);
     if (index == null) return null;
@@ -1108,12 +1184,16 @@ class IptvClient implements MediaServerClient {
     // R2.4: a forced sync is a manual refresh (or the Enter path) — the
     // user asked explicitly, so a transport-closed fetch is retried once.
     // A background/interval sync (force: false) never retries.
+    // 1.6.11 (background sync): a user-initiated sync is NOT cancelled
+    // when the app backgrounds — locking the phone mid-load used to
+    // abort the fetch and report the load "failed".
     return _runIndexWrite(
       () => _syncSearchIndex(
         force: force,
         onProgress: onProgress,
         abort: abort,
         retryTransportErrors: force,
+        cancelOnBackground: false,
       ),
     );
   }
@@ -1187,6 +1267,13 @@ class IptvClient implements MediaServerClient {
     int? intervalHoursOverride,
     bool skipColdTypes = false,
     Future<bool> Function()? backgroundPlaybackCheck,
+    // 1.6.11 (background sync): when false, this run is NOT registered
+    // for background cancellation — the user started it, so locking the
+    // phone or switching apps must not abort it. The caller's own
+    // Cancel still aborts via the controller directly. Defaults true:
+    // the WorkManager path is governed by the platform's onTaskStopped
+    // instead, and any future opportunistic caller keeps the old shape.
+    bool cancelOnBackground = true,
   }) async {
     // L-20: refuse the sync outright below 200 MB free, before any
     // fetch, temp dir, or index touch — a sync that fails mid-write
@@ -1272,12 +1359,41 @@ class IptvClient implements MediaServerClient {
     final schemaRepair =
         storedSchemaVersion >= 0 &&
         storedSchemaVersion < _currentCatalogSchemaVersion;
-    // Build #28: every sync owns an AbortController, registered so
-    // [cancelBackgroundWork] can stop it when the app backgrounds. A
-    // caller-passed controller (the manual refresh popup's Cancel) is
-    // registered too — backgrounding cancels it as well.
+    // Build #28: every sync owns an AbortController. 1.6.11: only
+    // a background-cancellable run registers it in
+    // [_activeBackgroundAborts] — a user-initiated sync must survive
+    // the app backgrounding (screen off / app switch), so its
+    // controller stays out of [cancelBackgroundWork]'s reach. The
+    // caller's own Cancel still aborts via the controller directly.
     abort ??= AbortController();
-    _activeBackgroundAborts.add(abort);
+    if (cancelOnBackground) _activeBackgroundAborts.add(abort);
+    // 1.6.11 (background sync): a surviving run holds a foreground
+    // service (dataSync) + partial wake lock for its duration, so
+    // Android keeps the process alive and its network up while the
+    // phone is locked. Best-effort: no channel on iOS/desktop/tests
+    // means no service, and the Dart-side survival above still holds
+    // while the process lives.
+    final useForegroundService = !cancelOnBackground;
+    if (useForegroundService) {
+      await CatalogSyncForegroundService.instance.start(title: 'Catalog sync: $_name');
+    }
+    // Progress reaches the dialog AND the foreground-service
+    // notification through this one wrapper.
+    final baseOnProgress = onProgress;
+    if (useForegroundService) {
+      onProgress = (p) {
+        unawaited(
+          CatalogSyncForegroundService.instance.update(
+            type: p.type,
+            phase: p.phase,
+            rows: p.rows,
+            receivedBytes: p.receivedBytes,
+            totalBytes: p.totalBytes,
+          ),
+        );
+        baseOnProgress?.call(p);
+      };
+    }
     _refreshSearchIndexState(syncing: true);
     // R4 (D5): mark this sync as running so a concurrent run in another
     // isolate yields instead of duplicating the 6 requests. Cleared in
@@ -1364,6 +1480,28 @@ class IptvClient implements MediaServerClient {
             abort: abort,
           );
           final tempPath = _syncResumePath(type);
+          // 1.6.11 (background sync): download byte progress, throttled
+          // to ~1 s / 5% so the dialog and the foreground-service
+          // notification move without a setState per chunk.
+          var lastByteReportMs = 0;
+          var lastByteReported = 0;
+          void reportDownloadProgress(int received, int? total) {
+            final nowMs = DateTime.now().millisecondsSinceEpoch;
+            final totalKnown = total != null && total > 0;
+            final crossedPercent = totalKnown && (received * 20 ~/ total) != (lastByteReported * 20 ~/ total);
+            if (nowMs - lastByteReportMs < 1000 && !crossedPercent) return;
+            lastByteReportMs = nowMs;
+            lastByteReported = received;
+            onProgress?.call(
+              IptvSearchSyncProgress(
+                type: type,
+                phase: 'fetching',
+                receivedBytes: received,
+                totalBytes: total,
+              ),
+            );
+          }
+
           switch (type) {
             case IptvSearchIndex.typeLive:
               attempts++;
@@ -1372,6 +1510,7 @@ class IptvClient implements MediaServerClient {
                   filePath: tempPath,
                   abortTrigger: abort?.trigger,
                   resume: true,
+                  onProgress: reportDownloadProgress,
                 ),
                 retry: retryTransportErrors,
                 abort: abort,
@@ -1383,6 +1522,7 @@ class IptvClient implements MediaServerClient {
                   filePath: tempPath,
                   abortTrigger: abort?.trigger,
                   resume: true,
+                  onProgress: reportDownloadProgress,
                 ),
                 retry: retryTransportErrors,
                 abort: abort,
@@ -1628,6 +1768,9 @@ class IptvClient implements MediaServerClient {
       _activeBackgroundAborts.remove(abort);
       await _clearSyncRunningStamp();
       _refreshSearchIndexState();
+      if (useForegroundService) {
+        await CatalogSyncForegroundService.instance.stop();
+      }
     }
   }
 
@@ -1725,6 +1868,7 @@ class IptvClient implements MediaServerClient {
           _liveCategoryNamesFuture = null;
         case IptvSearchIndex.typeMovie:
           _vodStreamsFuture = null;
+          _vodById = null;
           _vodStreamsLoaded = false;
           _vodCategoriesFuture = null;
           _vodCategoryNamesFuture = null;
@@ -1787,6 +1931,7 @@ class IptvClient implements MediaServerClient {
         _liveCategoryNamesFuture = null;
       case IptvSearchIndex.typeMovie:
         _vodStreamsFuture = null;
+        _vodById = null;
         _vodStreamsLoaded = false;
         _vodLoadSource = '';
         _vodCategoriesFuture = Future.value(categories);
@@ -1849,11 +1994,15 @@ class IptvClient implements MediaServerClient {
       final stampElsewhereFuture = isSyncRunningElsewhere();
       await _seedSearchIndexFromDisk();
       if (await stampElsewhereFuture) return;
+      // 1.6.11 (background sync): same survival as the manual path —
+      // this is the post-restore first sync, and it must not die when
+      // the phone locks mid-load.
       await _syncSearchIndex(
         force: false,
         onProgress: null,
         abort: null,
         retryTransportErrors: retryTransportErrors,
+        cancelOnBackground: false,
       );
     });
     _ensureSyncedInFlight = future;
@@ -1950,6 +2099,9 @@ class IptvClient implements MediaServerClient {
       // 1.4.6 G1: the show link for episodes (see IptvResumeItem).
       String? grandparentId,
       String? grandparentTitle,
+      // 1.6.11 X9: the show poster, so the snapshot keeps the still
+      // fallback when the episode leaves the catalog.
+      String? grandparentThumbPath,
       // 1.2.4: the playing item's category id, so the resume row records
       // it (see IptvResumeItem) — the report methods only receive an id.
       String? categoryId,
@@ -2349,6 +2501,7 @@ class IptvClient implements MediaServerClient {
     _catalogGeneration++;
     _liveStreamsFuture = null;
     _vodStreamsFuture = null;
+    _vodById = null;
     _seriesFuture = null;
     _seriesById = null;
     _vodStreamsLoaded = false;
@@ -2397,6 +2550,7 @@ class IptvClient implements MediaServerClient {
   void dropCatalogFromMemory() {
     _liveStreamsFuture = null;
     _vodStreamsFuture = null;
+    _vodById = null;
     _seriesFuture = null;
     _seriesById = null;
     _vodStreamsLoaded = false;
@@ -2418,6 +2572,11 @@ class IptvClient implements MediaServerClient {
     _xtreamChannelByKey.clear();
     _invalidateGuideChannelCache();
     _m3uChannelByKey.clear();
+    // 1.6.11 P6: the M3U live-entries list survived the drop, so part
+    // of the browsing heap stayed resident through trim / watchdog /
+    // background drops. Re-reads from the disk cache file on next use
+    // (no network), same as the other memos.
+    _m3uEntriesFuture = null;
   }
 
   /// Drop the in-memory EPG guide under memory pressure (1.2.4, item
@@ -2536,14 +2695,16 @@ class IptvClient implements MediaServerClient {
   /// stream carries one identity with the catalog calls instead of
   /// mpv/ffmpeg's default. Re-read per access (like [_xtreamUserAgent]),
   /// so a Settings change applies to the next open. Applies to Xtream and
-  /// M3U alike — both serve streams from the provider.
+  /// M3U alike — both serve streams from the provider. Super Spoof
+  /// (1.6.11) applies here too when the streams piece is on.
   @override
-  Map<String, String> get streamHeaders => {'User-Agent': _xtreamUserAgent()};
+  Map<String, String> get streamHeaders => _directFetchHeaders();
 
   /// Headers for artwork fetches from this panel (build #22): posters and
   /// channel logos carry the same configured Xtream User-Agent instead of
-  /// 'PlenTV'. Read by [MediaImageHelper.artworkHeadersFor].
-  Map<String, String> get artworkHeaders => {'User-Agent': _xtreamUserAgent()};
+  /// 'PlenTV'. Read by [MediaImageHelper.artworkHeadersFor]. Super Spoof
+  /// (1.6.11) applies here too when the streams piece is on.
+  Map<String, String> get artworkHeaders => _directFetchHeaders();
 
   @override
   double get watchedThreshold => 0.9;
@@ -2845,9 +3006,22 @@ class IptvClient implements MediaServerClient {
   /// Generation-guarded: a write scheduled before a [clearCatalogCache]
   /// deletes its own file afterwards, so a late write can never resurrect
   /// a catalog the user just cleared.
+  /// 1.6.11 P9: the disk write streams row-by-row through
+  /// [IptvCatalogDiskCache.writeJsonArray] instead of building the
+  /// whole catalog as one JSON String first — same bytes on disk, no
+  /// tens-of-MB transient. Fire-and-forget + generation-guarded like
+  /// [_writeDiskText]: a stale-generation write is deleted, never
+  /// served.
   void _writeDiskCatalog<T>(String dataset, List<T> rows, Map<String, dynamic> Function(T row) toJson) {
     if (rows.isEmpty) return;
-    _writeDiskText(dataset, jsonEncode(rows.map(toJson).toList()));
+    final generation = _catalogGeneration;
+    unawaited(
+      _catalogCache.writeJsonArray(connection.id, dataset, rows, toJson).then((_) async {
+        if (generation != _catalogGeneration) {
+          await _catalogCache.delete(connection.id, dataset);
+        }
+      }),
+    );
   }
 
   /// Same generation-guarded fire-and-forget write, for a raw text
@@ -3031,6 +3205,7 @@ class IptvClient implements MediaServerClient {
     if (cached != null) return cached;
     final future = _loadVodStreamsCached().catchError((Object e) {
       _vodStreamsFuture = null;
+      _vodById = null;
       throw e;
     });
     _vodStreamsFuture = future;
@@ -3044,6 +3219,7 @@ class IptvClient implements MediaServerClient {
     // poison every later view until restart.
     if (result.isEmpty) {
       _vodStreamsFuture = null;
+      _vodById = null;
     } else {
       _vodStreamsLoaded = true;
     }
@@ -3295,6 +3471,17 @@ class IptvClient implements MediaServerClient {
     return _seriesById ??= {for (final series in list) series.seriesId: series};
   }
 
+  /// O(1) VOD lookup by id (1.6.11 P10): same pattern as
+  /// [_seriesByIdMap].
+  Future<Map<int, XtreamVodStream>> _vodByIdMap() async {
+    final rows = await _vodStreams();
+    return _vodById ??= {for (final row in rows) row.streamId: row};
+  }
+
+  /// Test seam: the VOD by-id map, null until the memo has loaded.
+  @visibleForTesting
+  Map<int, XtreamVodStream>? get debugVodStreamsById => _vodById;
+
   /// Disk first (build #11), same shape as [_loadVodStreamsCached]: the
   /// startup warm-up ([warmUpSeriesCatalog]) now reads the disk copy, so
   /// the second search after app start finds a warm catalog without ever
@@ -3484,14 +3671,35 @@ class IptvClient implements MediaServerClient {
     }
     final destination = await _catalogCache.writeFilePath(connection.id, IptvCatalogDiskCache.m3uDataset);
     if (destination == null) {
-      // No disk destination (cache disabled / storage low): fall back to
-      // the whole-text fetch + isolate parse, as before — the playlist is
-      // still parsed off the main isolate, just held as a String first.
-      final text = await _fetchM3uPlaylistText();
-      return IptvHeavyWorkGate.instance.run(
-        () => compute(parseM3u, text),
-        onStart: () => _trimCachesIfHot('M3U parse'),
-      );
+      // No disk destination (cache disabled / storage low): stream to a
+      // system-temp file and parse from there — the old whole-body
+      // fallback held the playlist as a String (~600 MB of UTF-16 for
+      // a ~300 MB playlist) exactly when the device was already
+      // stressed. The temp file is deleted after the parse.
+      final tempDir = await Directory.systemTemp.createTemp('plezy_m3u_low_space_');
+      final tempPath = '${tempDir.path}/playlist.m3u';
+      try {
+        final receivedBytes = await downloadHttpResponseToFile(
+          _http,
+          Uri.parse(_m3u.playlistUrl),
+          tempPath,
+        );
+        if (receivedBytes == 0) return const <M3uEntry>[];
+        // Awaited (not returned) on purpose: a bare `return` of the
+        // future would run the `finally` below — deleting the temp
+        // file — before the isolate finished parsing it.
+        final entries = await IptvHeavyWorkGate.instance.run(
+          () => compute(parseM3uFile, tempPath),
+          onStart: () => _trimCachesIfHot('M3U parse'),
+        );
+        return entries;
+      } finally {
+        try {
+          if (await tempDir.exists()) await tempDir.delete(recursive: true);
+        } catch (_) {
+          // Best-effort: a leftover temp dir is swept by the OS.
+        }
+      }
     }
     final freshPath = await _downloadM3uPlaylistToFile(destination, _catalogGeneration);
     if (freshPath == null) return const <M3uEntry>[];
@@ -3518,18 +3726,6 @@ class IptvClient implements MediaServerClient {
     }
     await File(tempPath).rename(destination);
     return destination;
-  }
-
-  Future<String> _fetchM3uPlaylistText() async {
-    final response = await _http.get(Uri.parse(_m3u.playlistUrl)).timeout(MediaServerTimeouts.response);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw MediaServerHttpException(
-        type: MediaServerHttpErrorType.unknown,
-        message: 'M3U playlist fetch failed with HTTP ${response.statusCode}',
-        statusCode: response.statusCode,
-      );
-    }
-    return response.body;
   }
 
   void _refreshM3uEntriesInBackground() {
@@ -3958,6 +4154,9 @@ class IptvClient implements MediaServerClient {
     final url = _xtreamApi.movieStreamUrl('${stream.streamId}', stream.containerExtension);
     final durationSecs = vodInfo?.durationSecs;
     final trailer = vodInfo?.youtubeTrailer;
+    // 1.6.11 X6: the player-measured duration wins — the provider's
+    // runtime is only the fallback when the player never reported one.
+    final measuredMs = resume?.durationMs;
     return MediaItem.xtream(
       id: 'movie:${stream.streamId}',
       kind: MediaKind.movie,
@@ -3969,7 +4168,10 @@ class IptvClient implements MediaServerClient {
       genres: _splitCommaList(vodInfo?.genre),
       directors: _splitCommaList(vodInfo?.director),
       roles: _castRoles(vodInfo?.cast),
-      rating: stream.rating,
+      // 1.6.11 X5: the `get_vod_info` rating and country win over the
+      // catalog row's bare star; the row stays the fallback.
+      rating: vodInfo?.rating ?? stream.rating,
+      countries: _splitCommaList(vodInfo?.country),
       streamUrl: url,
       categoryId: stream.categoryId,
       libraryId: _moviesLibraryId,
@@ -3983,15 +4185,20 @@ class IptvClient implements MediaServerClient {
       // Build #25: the catalog carries no movie duration, so the stored
       // position AND duration both come from the player's report.
       // 1.6.10 M1: `get_vod_info` supplies the runtime when the player
-      // has not reported one yet.
-      durationMs: durationSecs == null ? resume?.durationMs : durationSecs * 1000,
+      // has not reported one yet. 1.6.11 X6: a measured duration (above
+      // zero) always beats the provider value.
+      durationMs: (measuredMs != null && measuredMs > 0)
+          ? measuredMs
+          : (durationSecs == null ? null : durationSecs * 1000),
       viewOffsetMs: resume?.positionMs,
       lastViewedAt: resume?.updatedAtMs,
     );
   }
 
   MediaItem _seriesItem(XtreamSeries series, {bool isFavorite = false, String? categoryName}) {
-    final backdrop = series.backdropPath;
+    // 1.6.11 X8: the full backdrop array, not just the first URL.
+    final backdropPath = series.backdropPath;
+    final backdrops = series.backdropPaths ?? (backdropPath == null ? null : [backdropPath]);
     final trailer = series.youtubeTrailer;
     final episodeRunTime = series.episodeRunTime;
     return MediaItem.xtream(
@@ -4004,7 +4211,7 @@ class IptvClient implements MediaServerClient {
       // backdrop, genres, cast, director, year, episode runtime, and
       // the trailer id (in `raw`; the trailer button itself is M4).
       // `episode_run_time` is MINUTES (Xtream docs), not seconds.
-      backdropPaths: backdrop == null ? null : [backdrop],
+      backdropPaths: backdrops,
       year: _parseYear(series.releaseDate),
       genres: _splitCommaList(series.genre),
       directors: _splitCommaList(series.director),
@@ -4044,7 +4251,9 @@ class IptvClient implements MediaServerClient {
     IptvResumeItem? resume,
   }) {
     final url = _xtreamApi.seriesStreamUrl('${episode.id}', episode.containerExtension);
-    final backdrop = series.backdropPath;
+    // 1.6.11 X8: the full series backdrop array.
+    final backdropPath = series.backdropPath;
+    final backdrops = series.backdropPaths ?? (backdropPath == null ? null : [backdropPath]);
     return MediaItem.xtream(
       id: 'episode:${series.seriesId}:${episode.id}',
       kind: MediaKind.episode,
@@ -4055,7 +4264,7 @@ class IptvClient implements MediaServerClient {
       // as the inherited art the hero and card fallbacks read.
       thumbPath: episode.movieImage,
       grandparentThumbPath: series.cover,
-      grandparentBackdropPaths: backdrop == null ? null : [backdrop],
+      grandparentBackdropPaths: backdrops,
       // 1.5.3 K1: the episode points at its per-season parent, not the
       // show — the Downloads tree and _downloadedSeasons group by
       // parentId, so a show-level parentId merged every season into one
@@ -4185,81 +4394,6 @@ class IptvClient implements MediaServerClient {
     final end = (offset + limit).clamp(0, rows.length);
     return rows
         .sublist(start, end)
-        .map(
-          (s) => _seriesItem(
-            s,
-            isFavorite: favorites.containsKey('series:${s.seriesId}'),
-            categoryName: categoryNames[s.categoryId],
-          ),
-        )
-        .toList();
-  }
-
-  /// Full Movies catalog as items, with hidden categories removed.
-  /// Only [fetchMoreHubItems] still needs the whole list (the hub
-  /// detail's section filter runs over it); the paged browse and the
-  /// hubs map only the slice they show (see [_filteredVodRows]).
-  /// 1.2.11: the rows come from the index in pages (no memo load —
-  /// the list is transient to the call, not a heap the client keeps);
-  /// the memo path is the cold fallback only.
-  Future<List<MediaItem>> _moviesItems() async {
-    final indexRows = await _indexAllRows(IptvSearchIndex.typeMovie);
-    if (indexRows != null) {
-      final favorites = await _favoriteItems();
-      final resume = await _resumeItems();
-      final categoryNames = await _vodCategoryNames();
-      return indexRows
-          .map((r) => r.toVodStream())
-          .map(
-            (s) => _movieItem(
-              s,
-              isFavorite: favorites.containsKey('movie:${s.streamId}'),
-              categoryName: categoryNames[s.categoryId],
-              resume: resume['movie:${s.streamId}'],
-            ),
-          )
-          .toList();
-    }
-    final streams = await _vodStreams();
-    final favorites = await _favoriteItems();
-    final resume = await _resumeItems();
-    final categoryNames = await _vodCategoryNames();
-    return streams
-        .where((s) => !_isHiddenCategory(s.categoryId, categoryNames[s.categoryId]))
-        .map(
-          (s) => _movieItem(
-            s,
-            isFavorite: favorites.containsKey('movie:${s.streamId}'),
-            categoryName: categoryNames[s.categoryId],
-            resume: resume['movie:${s.streamId}'],
-          ),
-        )
-        .toList();
-  }
-
-  /// Full Series catalog as items, with hidden categories removed.
-  /// 1.2.11: index-first — see [_moviesItems].
-  Future<List<MediaItem>> _seriesItems() async {
-    final indexRows = await _indexAllRows(IptvSearchIndex.typeSeries);
-    if (indexRows != null) {
-      final favorites = await _favoriteItems();
-      final categoryNames = await _seriesCategoryNames();
-      return indexRows
-          .map((r) => r.toSeries())
-          .map(
-            (s) => _seriesItem(
-              s,
-              isFavorite: favorites.containsKey('series:${s.seriesId}'),
-              categoryName: categoryNames[s.categoryId],
-            ),
-          )
-          .toList();
-    }
-    final series = await _seriesList();
-    final favorites = await _favoriteItems();
-    final categoryNames = await _seriesCategoryNames();
-    return series
-        .where((s) => !_isHiddenCategory(s.categoryId, categoryNames[s.categoryId]))
         .map(
           (s) => _seriesItem(
             s,
@@ -4871,7 +5005,13 @@ class IptvClient implements MediaServerClient {
   }
 
   @override
-  Future<MediaItem?> fetchItem(String id) async {
+  // 1.6.11 X2/X3: [skipVodInfo] returns the base item without awaiting
+  // `get_vod_info` — the catalog row already has title/poster/rating,
+  // which is all a card (or a detail page's first paint) needs. A
+  // black-holed provider must not hold the home screen (one call per
+  // CW row, sequentially) or a detail open for the 30 s response
+  // budget. The enriching call still goes through `_vodInfo`.
+  Future<MediaItem?> fetchItem(String id, {bool skipVodInfo = false}) async {
     if (!_isXtream) {
       // M3U: channel items are keyed `m3u:<tvg-id or name>`.
       if (id.startsWith('m3u:')) {
@@ -4908,7 +5048,7 @@ class IptvClient implements MediaServerClient {
         // a sync prunes it). After a pruning sync the index misses too
         // and this returns null, as before.
         var stream = (await _resolveIndexRow(IptvSearchIndex.typeMovie, streamId))?.toVodStream();
-        stream ??= (await _vodStreams()).where((s) => s.streamId == streamId).firstOrNull;
+        stream ??= (await _vodByIdMap())[streamId];
         if (stream == null) return null;
         final movieFavorites = await _favoriteItems();
         final movieResume = await _resumeItems();
@@ -4917,10 +5057,12 @@ class IptvClient implements MediaServerClient {
         // (zero on revisit). A failure leaves the base item — the page
         // still opens with title/poster/rating.
         XtreamVodInfo? vodInfo;
-        try {
-          vodInfo = await _vodInfo(stream.streamId);
-        } catch (_) {
-          vodInfo = null;
+        if (!skipVodInfo) {
+          try {
+            vodInfo = await _vodInfo(stream.streamId);
+          } catch (_) {
+            vodInfo = null;
+          }
         }
         return _movieItem(
           stream,
@@ -4938,10 +5080,15 @@ class IptvClient implements MediaServerClient {
         if (found == null) return null;
         final seriesFavorites = await _favoriteItems();
         final seriesCategoryNames = await _seriesCategoryNames();
+        // 1.6.11 X1: the show header was blank exactly where 1.6.10 was
+        // meant to fill it — fetch the memoized info (one call on first
+        // open, zero on revisit) and fill the row's blanks from it.
+        final seriesInfo = await _seriesInfo(seriesId);
+        final filled = found.withInfoGapsFilled(seriesInfo.info);
         return _seriesItem(
-          found,
-          isFavorite: seriesFavorites.containsKey('series:${found.seriesId}'),
-          categoryName: seriesCategoryNames[found.categoryId],
+          filled,
+          isFavorite: seriesFavorites.containsKey('series:${filled.seriesId}'),
+          categoryName: seriesCategoryNames[filled.categoryId],
         );
       case 'live':
         // Build #13: live search results are keyed `live:<streamId>`.
@@ -4969,18 +5116,23 @@ class IptvClient implements MediaServerClient {
         final seasonEpisodes = seasonInfo.episodesBySeason[seasonNum];
         if (seasonEpisodes == null) return null;
         final seasonCategoryNames = await _seriesCategoryNames();
+        // 1.6.11 X1: same one-line fill as the series case — the info
+        // is already in hand, so zero new calls.
+        final filledSeasonSeries = seasonSeries.withInfoGapsFilled(seasonInfo.info);
         return _seasonItem(
-          seasonSeries,
+          filledSeasonSeries,
           seasonNum,
           seasonEpisodes.length,
-          seriesCategoryName: seasonCategoryNames[seasonSeries.categoryId],
+          seriesCategoryName: seasonCategoryNames[filledSeasonSeries.categoryId],
         );
       case 'episode':
         if (parts.length < 3) return null;
         final seriesId = int.tryParse(parts[1]);
         final episodeId = int.tryParse(parts[2]);
         if (seriesId == null || episodeId == null) return null;
-        final info = await _xtreamApi.getSeriesInfo(seriesId);
+        // 1.6.11 P2: the memoized info — the raw call paid a second full
+        // `get_series_info` + parse per detail open with a resumed episode.
+        final info = await _seriesInfo(seriesId);
         for (final seasonEntry in info.episodesBySeason.entries) {
           final episode = seasonEntry.value.where((e) => e.id == episodeId).firstOrNull;
           if (episode == null) continue;
@@ -5013,8 +5165,9 @@ class IptvClient implements MediaServerClient {
   Future<({MediaItem? item, MediaItem? onDeckEpisode})> fetchItemWithOnDeck(
     String id, {
     void Function(MediaItem item)? onItemReady,
+    bool skipVodInfo = false,
   }) async {
-    final item = await fetchItem(id);
+    final item = await fetchItem(id, skipVodInfo: skipVodInfo);
     if (item != null) onItemReady?.call(item);
     MediaItem? onDeckEpisode;
     // Build #25 (25.5): a series opens on the episode you would
@@ -5062,9 +5215,6 @@ class IptvClient implements MediaServerClient {
       final row = (await _seriesByIdMap())[seriesId];
       if (row == null) return const [];
       final info = await _seriesInfo(seriesId);
-      // 1.6.10 M0: fill the list row's blanks from the info block —
-      // already fetched for the season list, so zero new calls.
-      final series = row.withInfoGapsFilled(info.info);
       final seasonEpisodes = info.episodesBySeason[seasonNum];
       if (seasonEpisodes == null) return const [];
       final favorites = await _favoriteItems();
@@ -5072,10 +5222,14 @@ class IptvClient implements MediaServerClient {
       final categoryNames = await _seriesCategoryNames();
       // 1.5.3 N3: reuse the mapped list while every memo it was built
       // from is still the same instance (see _seasonEpisodeItemsCache).
+      // 1.6.11 P1: the check keys on the STABLE inputs — the catalog
+      // row + info — never on the gap-filled copy, which
+      // `withInfoGapsFilled` rebuilds fresh on every call whenever the
+      // info block is non-null, so the check could never hit.
       final cacheKey = 'season:$seriesId:$seasonNum';
       final cached = _seasonEpisodeItemsCache[cacheKey];
       if (cached != null &&
-          identical(cached.series, series) &&
+          identical(cached.row, row) &&
           identical(cached.info, info) &&
           identical(cached.favorites, favorites) &&
           identical(cached.resume, resume) &&
@@ -5085,6 +5239,10 @@ class IptvClient implements MediaServerClient {
         // intact, and the episode objects are shared.
         return List<MediaItem>.of(cached.items, growable: false);
       }
+      // 1.6.10 M0: fill the list row's blanks from the info block —
+      // already fetched for the season list, so zero new calls. Applied
+      // at map time, only on a cache miss.
+      final series = row.withInfoGapsFilled(info.info);
       final seriesCategoryName = categoryNames[series.categoryId];
       // Sort a copy: the info object's lists are shared state (and may
       // be unmodifiable), so sorting them in place mutates the cache.
@@ -5102,7 +5260,7 @@ class IptvClient implements MediaServerClient {
           )
           .toList(growable: false);
       _seasonEpisodeItemsCache[cacheKey] = _SeasonEpisodeItems(
-        series: series,
+        row: row,
         info: info,
         favorites: favorites,
         resume: resume,
@@ -5151,7 +5309,9 @@ class IptvClient implements MediaServerClient {
     int episodeCount, {
     String? seriesCategoryName,
   }) {
-    final backdrop = series.backdropPath;
+    // 1.6.11 X8: the full backdrop array, not just the first URL.
+    final backdropPath = series.backdropPath;
+    final backdrops = series.backdropPaths ?? (backdropPath == null ? null : [backdropPath]);
     return MediaItem.xtream(
       id: 'season:${series.seriesId}:$season',
       kind: MediaKind.season,
@@ -5163,7 +5323,7 @@ class IptvClient implements MediaServerClient {
       thumbPath: series.cover,
       // 1.6.10 M0: the series backdrop, so the season detail hero has
       // art instead of a black panel.
-      backdropPaths: backdrop == null ? null : [backdrop],
+      backdropPaths: backdrops,
       categoryId: series.categoryId,
       libraryId: _seriesLibraryId,
       libraryTitle: '$_name — Series',
@@ -5193,14 +5353,29 @@ class IptvClient implements MediaServerClient {
   /// catalog is dropped, so a long session cannot accumulate seasons.
   final Map<String, _SeasonEpisodeItems> _seasonEpisodeItemsCache = {};
 
+  /// LRU caps (1.6.11 P5): the info memos are cleared only on catalog
+  /// clear / memory-pressure drop, so a long browsing session
+  /// accumulates one entry per distinct title opened. Evicting the
+  /// oldest entry only costs a re-fetch on revisit.
+  static const int _seriesInfoMemoCap = 64;
+  static const int _vodInfoMemoCap = 128;
+
   Future<XtreamSeriesInfo> _seriesInfo(int seriesId) {
     final cached = _seriesInfoFutures[seriesId];
-    if (cached != null) return cached;
+    if (cached != null) {
+      // Refresh recency: most-recently-used stays.
+      _seriesInfoFutures.remove(seriesId);
+      _seriesInfoFutures[seriesId] = cached;
+      return cached;
+    }
     final future = _xtreamApi.getSeriesInfo(seriesId).catchError((Object e) {
       _seriesInfoFutures.remove(seriesId);
       throw e;
     });
     _seriesInfoFutures[seriesId] = future;
+    while (_seriesInfoFutures.length > _seriesInfoMemoCap) {
+      _seriesInfoFutures.remove(_seriesInfoFutures.keys.first);
+    }
     return future;
   }
 
@@ -5213,12 +5388,19 @@ class IptvClient implements MediaServerClient {
 
   Future<XtreamVodInfo> _vodInfo(int vodId) {
     final cached = _vodInfoFutures[vodId];
-    if (cached != null) return cached;
+    if (cached != null) {
+      _vodInfoFutures.remove(vodId);
+      _vodInfoFutures[vodId] = cached;
+      return cached;
+    }
     final future = _xtreamApi.getVodInfo(vodId).catchError((Object e) {
       _vodInfoFutures.remove(vodId);
       throw e;
     });
     _vodInfoFutures[vodId] = future;
+    while (_vodInfoFutures.length > _vodInfoMemoCap) {
+      _vodInfoFutures.remove(_vodInfoFutures.keys.first);
+    }
     return future;
   }
 
@@ -5966,7 +6148,10 @@ class IptvClient implements MediaServerClient {
       if (entry.libraryId != null && excludedLibraryIds.contains(entry.libraryId)) continue;
       MediaItem? item;
       try {
-        item = await fetchItem(entry.id);
+        // 1.6.11 X2: a card needs the base item only — one `get_vod_info`
+        // per row, sequentially, used to hold the home screen for up to
+        // 20 × the response budget on a flaky provider.
+        item = await fetchItem(entry.id, skipVodInfo: true);
       } catch (e) {
         // A catalog failure for one resume row must not kill the list —
         // the snapshot below is the fallback.
@@ -6000,6 +6185,9 @@ class IptvClient implements MediaServerClient {
       parentTitle: entry.parentTitle,
       grandparentId: entry.grandparentId,
       grandparentTitle: entry.grandparentTitle,
+      // 1.6.11 X9: the show poster survives in the snapshot, so the
+      // episode-still fallback still has something to fall back to.
+      grandparentThumbPath: entry.grandparentThumbPath,
       durationMs: entry.durationMs,
       viewOffsetMs: entry.positionMs,
       lastViewedAt: entry.updatedAtMs,
@@ -6217,12 +6405,14 @@ class IptvClient implements MediaServerClient {
 
   @override
   Future<List<MediaItem>> fetchMoreHubItems(String hubId, {int? limit}) async {
-    // Hubs built by [_recommendedHub] carry their library id, so expanding
-    // one just re-runs that library's catalog (already cached in memory).
+    // 1.6.11 P4: delegates to the paged path — the old shape built the
+    // whole catalog (up to ~199k items) and sliced it. A null limit is
+    // one page. The hub screen already uses the paged path for IPTV, so
+    // this only ever served the replace-continuation branch, which is
+    // never taken for IPTV backends.
     if (!_isXtream) return const [];
-    final all = await _itemsForHubId(hubId);
-    if (all == null) return const [];
-    return limit == null ? all : all.take(limit).toList();
+    final page = await fetchMoreHubItemsPage(hubId, size: limit ?? defaultListPageSize);
+    return page.items;
   }
 
   @override
@@ -6232,90 +6422,50 @@ class IptvClient implements MediaServerClient {
     int? size,
     AbortController? abort,
   }) async {
-    // Row-level paging (build #13): the old code built the full 199k
-    // item list through [_itemsForHubId] on every page turn. 1.2.11:
-    // the page comes from the index (no memo load); the memo path is
-    // the cold fallback only. A null [size] still means "everything
-    // from offset" (the old default), read through the index in pages.
+    // Row-level paging (build #13): the page comes from the index (no
+    // memo load); the memo path is the cold fallback only. 1.6.11 P4:
+    // a null [size] is one page now, not "everything from offset" —
+    // the old default materialized the whole catalog behind the gate.
     if (!_isXtream) return const LibraryPage(items: [], totalCount: 0);
+    size ??= defaultListPageSize;
     final offset = start ?? 0;
     if (hubId.contains(_moviesLibraryId)) {
-      if (size == null) {
-        final allRows = await _indexAllRows(IptvSearchIndex.typeMovie);
-        if (allRows != null) {
-          final items = await _vodPageItems(
-            allRows.map((r) => r.toVodStream()).toList(growable: false),
-            offset,
-            allRows.length,
-          );
-          return LibraryPage(
-            items: items,
-            totalCount: allRows.length,
-            offset: offset.clamp(0, allRows.length),
-          );
-        }
-      } else {
-        final page = await _indexBrowsePage(
-          IptvSearchIndex.typeMovie,
-          offset: offset,
-          limit: size,
+      final page = await _indexBrowsePage(
+        IptvSearchIndex.typeMovie,
+        offset: offset,
+        limit: size,
+      );
+      if (page != null) {
+        final items = await _vodPageItems(
+          page.rows.map((r) => r.toVodStream()).toList(growable: false),
+          0,
+          page.rows.length,
         );
-        if (page != null) {
-          final items = await _vodPageItems(
-            page.rows.map((r) => r.toVodStream()).toList(growable: false),
-            0,
-            page.rows.length,
-          );
-          return LibraryPage(items: items, totalCount: page.total, offset: offset.clamp(0, page.total));
-        }
+        return LibraryPage(items: items, totalCount: page.total, offset: offset.clamp(0, page.total));
       }
       final rows = await _filteredVodRows();
-      final items = await _vodPageItems(rows, offset, size ?? rows.length);
+      final items = await _vodPageItems(rows, offset, size);
       return LibraryPage(items: items, totalCount: rows.length, offset: offset.clamp(0, rows.length));
     }
     if (hubId.contains(_seriesLibraryId)) {
-      if (size == null) {
-        final allRows = await _indexAllRows(IptvSearchIndex.typeSeries);
-        if (allRows != null) {
-          final items = await _seriesPageItems(
-            allRows.map((r) => r.toSeries()).toList(growable: false),
-            offset,
-            allRows.length,
-          );
-          return LibraryPage(
-            items: items,
-            totalCount: allRows.length,
-            offset: offset.clamp(0, allRows.length),
-          );
-        }
-      } else {
-        final page = await _indexBrowsePage(
-          IptvSearchIndex.typeSeries,
-          offset: offset,
-          limit: size,
+      final page = await _indexBrowsePage(
+        IptvSearchIndex.typeSeries,
+        offset: offset,
+        limit: size,
+      );
+      if (page != null) {
+        final items = await _seriesPageItems(
+          page.rows.map((r) => r.toSeries()).toList(growable: false),
+          0,
+          page.rows.length,
         );
-        if (page != null) {
-          final items = await _seriesPageItems(
-            page.rows.map((r) => r.toSeries()).toList(growable: false),
-            0,
-            page.rows.length,
-          );
-          return LibraryPage(items: items, totalCount: page.total, offset: offset.clamp(0, page.total));
-        }
+        return LibraryPage(items: items, totalCount: page.total, offset: offset.clamp(0, page.total));
       }
       final rows = await _filteredSeriesRows();
-      final items = await _seriesPageItems(rows, offset, size ?? rows.length);
+      final items = await _seriesPageItems(rows, offset, size);
       return LibraryPage(items: items, totalCount: rows.length, offset: offset.clamp(0, rows.length));
     }
     return const LibraryPage(items: [], totalCount: 0);
-  }
-
-  /// Full item list for a hub built by [_recommendedHub], or null when the
-  /// hub id is not one of ours.
-  Future<List<MediaItem>?> _itemsForHubId(String hubId) async {
-    if (hubId.contains(_moviesLibraryId)) return _moviesItems();
-    if (hubId.contains(_seriesLibraryId)) return _seriesItems();
-    return null;
   }
 
   // Watch state is local-only for IPTV (no server API). markWatched
@@ -6414,7 +6564,9 @@ class IptvClient implements MediaServerClient {
   Future<MediaItem?> _resolveFavoriteItem(IptvFavoriteItem snapshot) async {
     MediaItem? item;
     try {
-      item = await fetchItem(snapshot.id);
+      // 1.6.11 X2: same as Continue Watching — a favourite card needs
+      // the base item only, not a `get_vod_info` per row.
+      item = await fetchItem(snapshot.id, skipVodInfo: true);
     } catch (e) {
       // A catalog failure for one favourite must not kill the list —
       // the snapshot below is the fallback.
@@ -6732,6 +6884,8 @@ class IptvClient implements MediaServerClient {
         // carries the correct season parentId.
         grandparentId: stash?.grandparentId ?? (kind == 'episode' && parts.length >= 2 ? parts[1] : null),
         grandparentTitle: stash?.grandparentTitle,
+        // 1.6.11 X9: the show poster, for the still fallback.
+        grandparentThumbPath: stash?.grandparentThumbPath,
         // 1.2.4: the category id is the precise signal for whether a
         // pruned resume entry needs a refresh (see IptvResumeItem).
         categoryId: stash?.categoryId,
@@ -6778,6 +6932,8 @@ class IptvClient implements MediaServerClient {
         // 1.4.6 G1: the show link for episodes (see IptvResumeItem).
         grandparentId: item.grandparentId,
         grandparentTitle: item.grandparentTitle,
+        // 1.6.11 X9: the show poster rides with the snapshot.
+        grandparentThumbPath: item.grandparentThumbPath,
         // 1.2.4: the series category for an episode, the movie category
         // for a movie (see _episodeItem / _movieItem).
         categoryId: item.categoryId,
@@ -7471,7 +7627,7 @@ class IptvSearchDiagnostics {
 /// current or must be rebuilt.
 class _SeasonEpisodeItems {
   const _SeasonEpisodeItems({
-    required this.series,
+    required this.row,
     required this.info,
     required this.favorites,
     required this.resume,
@@ -7479,7 +7635,9 @@ class _SeasonEpisodeItems {
     required this.items,
   });
 
-  final XtreamSeries series;
+  // 1.6.11 P1: the STABLE catalog row the items were mapped from — the
+  // N3 identity check keys on this, never on the gap-filled copy.
+  final XtreamSeries row;
   final XtreamSeriesInfo info;
   final Map<String, IptvFavoriteItem> favorites;
   final Map<String, IptvResumeItem> resume;

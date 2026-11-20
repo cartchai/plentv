@@ -286,10 +286,23 @@ class IptvBackgroundSync {
     final prefs = await BaseSharedPreferencesService.sharedCache();
     final intervalHours = prefs.getInt(SettingsService.iptvCatalogSyncIntervalHours.key) ??
         SettingsService.iptvCatalogSyncIntervalHours.defaultValue;
-    final userAgent = XtreamUserAgent.resolve(
-      prefs.getString(SettingsService.iptvXtreamUserAgent.key) ?? XtreamUserAgent.defaultChoice,
-      prefs.getString(SettingsService.iptvXtreamUserAgentCustom.key) ?? '',
+    // 1.6.11 (Super Spoof): the weekly background sync wears the same
+    // disguise as the foreground requests — the mimic UA wins over the
+    // normal choice while the master toggle is on, resolved here from
+    // the same raw prefs (pure resolver, no SettingsService).
+    final superSpoofOn = prefs.getBool(SettingsService.iptvSuperSpoof.key) ?? false;
+    final userAgent = XtreamSuperSpoof.resolveUserAgent(
+      masterOn: superSpoofOn,
+      userAgentChoice:
+          prefs.getString(SettingsService.iptvSuperSpoofUserAgent.key) ??
+          XtreamSuperSpoof.defaultUserAgentChoice,
+      fallbackUserAgent: XtreamUserAgent.resolve(
+        prefs.getString(SettingsService.iptvXtreamUserAgent.key) ?? XtreamUserAgent.defaultChoice,
+        prefs.getString(SettingsService.iptvXtreamUserAgentCustom.key) ?? '',
+      ),
     );
+    final superSpoofHeaders =
+        superSpoofOn && (prefs.getBool(SettingsService.iptvSuperSpoofHeaders.key) ?? true);
 
     // D3: connections are encrypted in Drift behind the OS keystore.
     // A vault-unavailable load is a retry, never a crash, never a
@@ -324,6 +337,7 @@ class IptvBackgroundSync {
         ((XtreamConnection connection, {required String userAgent}) {
           final client = IptvClient.forConnection(connection);
           client.userAgentProvider = () => userAgent;
+          client.mimicHeadersProvider = () => superSpoofHeaders;
           return client;
         });
     final outcomes = <String, Map<String, String>>{};

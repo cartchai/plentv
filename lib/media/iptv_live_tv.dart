@@ -4048,10 +4048,12 @@ class IptvLiveTvSupport implements LiveTvSupport {
     return null;
   }
 
-  IptvEpgSourceConfig _providerConfig() => const IptvEpgSourceConfig(
+  // 1.6.11 L4: the provider name comes from translations, not a
+  // hardcoded string (it is the `iptv.epgProviderSource` key).
+  IptvEpgSourceConfig _providerConfig() => IptvEpgSourceConfig(
     id: IptvEpgSourceConfig.providerId,
     kind: IptvEpgSourceConfig.kindProvider,
-    name: 'Provider guide',
+    name: t.iptv.epgProviderSource,
   );
 
   /// Load one source's guide, saying whether it loaded fresh (a download
@@ -4119,7 +4121,17 @@ class IptvLiveTvSupport implements LiveTvSupport {
   ) async {
     if (attempt == null) return;
     try {
-      await _recordSourceSuccess(attempt, guide, started);
+      // 1.6.11 P7: a background refresh that stored zero programmes
+      // must not certify "Last updated" — same lie D9 fixed for the
+      // per-channel path, one path over. The bulk paths keep stamping
+      // (1.3.24 §67 F1 invariant — Reload must not re-download on
+      // first open).
+      await _recordSourceSuccess(
+        attempt,
+        guide,
+        started,
+        stampLastUpdated: guide.totalProgramCount > 0,
+      );
     } catch (_) {
       // Best-effort: the guide is already in memory; the next load
       // re-records.
@@ -6441,13 +6453,13 @@ class IptvLiveTvSupport implements LiveTvSupport {
     return IptvEpgNoGuideReason.noMatch;
   }
 
-  /// The display name for a source id ('Provider guide' for the
-  /// provider feed, the stored name for an added one, the id itself
-  /// when the source is gone — a deleted source's stale references
-  /// still read).
+  /// The display name for a source id (the translated provider name
+  /// for the provider feed, the stored name for an added one, the id
+  /// itself when the source is gone — a deleted source's stale
+  /// references still read).
   Future<String?> _sourceName(String? sourceId) async {
     if (sourceId == null) return null;
-    if (sourceId == IptvEpgSourceConfig.providerId) return 'Provider guide';
+    if (sourceId == IptvEpgSourceConfig.providerId) return t.iptv.epgProviderSource;
     final sources = await _epgStore.loadUserSources();
     for (final source in sources) {
       if (source.id == sourceId) return source.name;

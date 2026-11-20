@@ -7,6 +7,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plezy/database/app_database.dart';
+import 'package:plezy/database/download_collection_operations.dart';
 import 'package:plezy/database/download_operations.dart';
 import 'package:plezy/media/download_resolution.dart';
 import 'package:plezy/media/media_backend.dart';
@@ -2325,6 +2326,28 @@ void main() {
 
       await addEpisode(1);
       final oneEpisodeSelects = await selectsToHydrate(1);
+
+      // 1.6.11 P8: ten stored collections, each pinned like the shows
+      // above (Series-shaped rows decode reliably; the loader does not
+      // check the item kind). On base, each collection re-resolves per
+      // item and the select count grows with the collection count.
+      for (var i = 1; i <= 10; i++) {
+        await putPinnedItem('jf-machine/user-b', 'user-b', 'coll-$i', {
+          'Id': 'coll-$i',
+          'Type': 'Series',
+          'Name': 'Collection $i',
+          'UserData': {'UnplayedItemCount': 1},
+        });
+      }
+      await db.replaceDownloadCollections(
+        profileId: 'test-profile',
+        serverId: 'jf-machine',
+        membersByCollection: {
+          for (var i = 1; i <= 10; i++) 'coll-$i': ['ep-$i'],
+        },
+        checkedIds: {'coll-1'},
+        syncedAt: 0,
+      );
 
       for (var i = 2; i <= 40; i++) {
         await addEpisode(i);

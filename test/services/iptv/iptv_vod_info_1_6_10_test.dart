@@ -73,6 +73,40 @@ void main() {
       }
     });
 
+    test('get_vod_info rating and country win on the movie item (1.6.11 X5)', () async {
+      // The provider's 8.1 replaces the catalog row's 6.0 star, and its
+      // country lands on the item. Failing-first: on 1.6.10 _movieItem
+      // always uses stream.rating and never maps country.
+      final client = clientWith(_VodInfoFakeApi());
+      try {
+        final item = await client.fetchItem('movie:2');
+        expect(item, isNotNull);
+        expect(item!.rating, 8.1);
+        expect(item.countries, ['GB']);
+      } finally {
+        client.close();
+      }
+    });
+
+    test('player-measured duration wins over the provider runtime (1.6.11 X6)', () async {
+      // The player measured a 6000 s runtime; the provider says 5400 s.
+      // Failing-first: on 1.6.10 _movieItem prefers the provider value
+      // whenever it exists.
+      final fake = _VodInfoFakeApi();
+      final client = clientWith(fake);
+      try {
+        await client.reportPlaybackProgress(
+          itemId: 'movie:1',
+          position: const Duration(seconds: 60),
+          duration: const Duration(seconds: 6000),
+        );
+        final item = await client.fetchItem('movie:1');
+        expect(item?.durationMs, 6000 * 1000);
+      } finally {
+        client.close();
+      }
+    });
+
     test('get_vod_info is memoized: two detail opens + ids = one call', () async {
       final fake = _VodInfoFakeApi();
       final client = clientWith(fake);
@@ -194,6 +228,27 @@ void main() {
       expect(info.imdbId, isNull);
       expect(info.backdropPaths, isNull);
     });
+
+    test('zero ids are absent; only tt… is an imdb id (1.6.11 X4)', () {
+      // Failing-first: on 1.6.10 `tmdb: 0` / `imdb_id: "0"` classify as
+      // real ids and a numeric imdb_id falls through to TMDB — false
+      // identity merging downstream.
+      final zeroed = XtreamVodInfo.fromJson({'tmdb': 0, 'tmdb_id': '0', 'imdb_id': '0'});
+      expect(zeroed.tmdbId, isNull);
+      expect(zeroed.imdbId, isNull);
+      final numericImdb = XtreamVodInfo.fromJson({'imdb_id': 12345});
+      expect(numericImdb.tmdbId, isNull);
+      expect(numericImdb.imdbId, isNull);
+      final ok = XtreamVodInfo.fromJson({'tmdb': '27205', 'imdb_id': 'tt1234567'});
+      expect(ok.tmdbId, 27205);
+      expect(ok.imdbId, 'tt1234567');
+    });
+
+    test('a zero rating is no rating (1.6.11 X7)', () {
+      expect(XtreamVodInfo.fromJson({'rating': '0.0'}).rating, isNull);
+      expect(XtreamVodInfo.fromJson({'rating': 0}).rating, isNull);
+      expect(XtreamVodInfo.fromJson({'rating': '7.3'}).rating, 7.3);
+    });
   });
 }
 
@@ -246,7 +301,7 @@ class _VodInfoFakeApi extends XtreamApi {
         'rating': '7.3',
         'tmdb': 123,
       }),
-      2 => XtreamVodInfo.fromJson({'tmdb': 'tt7654321'}),
+      2 => XtreamVodInfo.fromJson({'tmdb': 'tt7654321', 'rating': '8.1', 'country': 'GB'}),
       _ => XtreamVodInfo.fromJson(const {}),
     };
   }

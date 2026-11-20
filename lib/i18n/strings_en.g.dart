@@ -577,6 +577,30 @@ class Translations$settings$en {
 	/// en: 'Display featured content carousel on home screen'
 	String get showHeroSectionDescription => 'Display featured content carousel on home screen';
 
+	/// en: 'Super Spoof'
+	String get superSpoof => 'Super Spoof';
+
+	/// en: 'Make provider requests look like a generic player, to work around Wi-Fi networks that block the app. Off by default — turn it on only if your provider keeps refusing the app.'
+	String get superSpoofDescription => 'Make provider requests look like a generic player, to work around Wi-Fi networks that block the app. Off by default — turn it on only if your provider keeps refusing the app.';
+
+	/// en: 'Super Spoof User-Agent'
+	String get superSpoofUserAgent => 'Super Spoof User-Agent';
+
+	/// en: 'Off — use the normal User-Agent'
+	String get superSpoofUserAgentOff => 'Off — use the normal User-Agent';
+
+	/// en: 'Spoof request headers'
+	String get superSpoofHeaders => 'Spoof request headers';
+
+	/// en: 'Send generic-player request headers along with the disguised User-Agent.'
+	String get superSpoofHeadersDescription => 'Send generic-player request headers along with the disguised User-Agent.';
+
+	/// en: 'Spoof streams and artwork too'
+	String get superSpoofStreams => 'Spoof streams and artwork too';
+
+	/// en: 'Use the same disguise for video streams and poster art, not just catalog and guide requests.'
+	String get superSpoofStreamsDescription => 'Use the same disguise for video streams and poster art, not just catalog and guide requests.';
+
 	/// en: 'Seconds'
 	String get secondsLabel => 'Seconds';
 
@@ -3917,6 +3941,20 @@ class Translations$about$en {
 		'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+	];
+	List<String> get changelog2330 => [
+		'New: the catalog refresh keeps going when you lock the phone or switch to another app, and no longer says “failed” just because the screen went off — come back to a loaded catalog',
+		'Fixed: the catalog refresh now shows how much has downloaded while it runs, and each section (live, then movies, then series) appears as soon as it lands',
+		'Fixed: a movie page opens right away and fills in its details as they arrive, instead of making you wait for them first',
+		'Fixed: Continue Watching and Favourites now load promptly instead of waiting on each row in turn',
+		'Fixed: episode cards now fall back to the show’s poster when the episode still can’t be shown, including shows you were already watching',
+		'Fixed: star scores of 0 no longer show as “★ 0” — a missing score simply shows nothing',
+		'Fixed: movie details (score, country, runtime) now come from the full movie information, and the runtime shown is the one the player actually measured',
+		'Fixed: TV show pages now use the full set of backdrop art your service sends',
+		'Fixed: finished downloads no longer leave invisible files behind in Downloads, and a download that ends up empty no longer stays hidden',
+		'Fixed: starting a video now frees the browsing catalogues from memory first, so playback has more room — the TV guide stays loaded',
+		'Fixed: “Last updated” for the TV guide only changes when a real guide actually arrives, not when an empty refresh runs',
+		'New: Super Spoof in Settings → Advanced — makes the app look like a generic player to your provider, for Wi-Fi networks that block the app\'s own requests. Off by default; turn it on if a load keeps getting refused',
 	];
 	List<String> get changelog2326 => [
 		'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — the app no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
@@ -10272,6 +10310,14 @@ extension on Translations {
 			'settings.seasonPoster' => 'Season Poster',
 			'settings.episodeThumbnail' => 'Thumbnail',
 			'settings.showHeroSectionDescription' => 'Display featured content carousel on home screen',
+			'settings.superSpoof' => 'Super Spoof',
+			'settings.superSpoofDescription' => 'Make provider requests look like a generic player, to work around Wi-Fi networks that block the app. Off by default — turn it on only if your provider keeps refusing the app.',
+			'settings.superSpoofUserAgent' => 'Super Spoof User-Agent',
+			'settings.superSpoofUserAgentOff' => 'Off — use the normal User-Agent',
+			'settings.superSpoofHeaders' => 'Spoof request headers',
+			'settings.superSpoofHeadersDescription' => 'Send generic-player request headers along with the disguised User-Agent.',
+			'settings.superSpoofStreams' => 'Spoof streams and artwork too',
+			'settings.superSpoofStreamsDescription' => 'Use the same disguise for video streams and poster art, not just catalog and guide requests.',
 			'settings.secondsLabel' => 'Seconds',
 			'settings.minutesLabel' => 'Minutes',
 			'settings.secondsShort' => 's',
@@ -10593,6 +10639,8 @@ extension on Translations {
 			'settings.libraryAndCards' => 'Library & Cards',
 			'settings.homeScreen' => 'Home Screen',
 			'settings.navigation' => 'Navigation',
+			_ => null,
+		} ?? switch (path) {
 			'settings.window' => 'Window',
 			'settings.liveTv' => 'Live TV',
 			'settings.player' => 'Player',
@@ -10601,8 +10649,6 @@ extension on Translations {
 			'settings.quality' => 'Quality',
 			'settings.subtitles' => 'Subtitles',
 			'settings.seekAndTiming' => 'Seek & Timing',
-			_ => null,
-		} ?? switch (path) {
 			'settings.behavior' => 'Behavior',
 			'settings.gestures' => 'Gestures',
 			'settings.gestureBrightnessSwipe' => 'Brightness Swipe',
@@ -11107,6 +11153,8 @@ extension on Translations {
 			'dialog.confirmAction' => 'Confirm Action',
 			'profiles.addPlezTVProfile' => 'Add PlenTV profile',
 			'profiles.switchingProfile' => 'Switching profile…',
+			_ => null,
+		} ?? switch (path) {
 			'profiles.deleteThisProfileTitle' => 'Delete this profile?',
 			'profiles.deleteThisProfileMessage' => ({required Object displayName}) => 'Remove ${displayName}. Connections aren\'t affected.',
 			'profiles.active' => 'Active',
@@ -11115,8 +11163,6 @@ extension on Translations {
 			'profiles.signOut' => 'Sign out',
 			'profiles.signOutPlexTitle' => 'Sign out of Plex?',
 			'profiles.signOutPlexMessage' => ({required Object displayName}) => 'Remove ${displayName} and all Plex Home users? Sign back in anytime.',
-			_ => null,
-		} ?? switch (path) {
 			'profiles.signOutPlexDeleteDownloads' => 'Also delete downloads',
 			'profiles.signOutPlexDeleteDownloadsDescription' => 'Otherwise they stay on this device and come back when you sign back in to this account.',
 			'profiles.signOutPlexAccount' => ({required Object displayName}) => 'Sign out of ${displayName}',
@@ -11510,6 +11556,18 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2330.0' => 'New: the catalog refresh keeps going when you lock the phone or switch to another app, and no longer says “failed” just because the screen went off — come back to a loaded catalog',
+			'about.changelog2330.1' => 'Fixed: the catalog refresh now shows how much has downloaded while it runs, and each section (live, then movies, then series) appears as soon as it lands',
+			'about.changelog2330.2' => 'Fixed: a movie page opens right away and fills in its details as they arrive, instead of making you wait for them first',
+			'about.changelog2330.3' => 'Fixed: Continue Watching and Favourites now load promptly instead of waiting on each row in turn',
+			'about.changelog2330.4' => 'Fixed: episode cards now fall back to the show’s poster when the episode still can’t be shown, including shows you were already watching',
+			'about.changelog2330.5' => 'Fixed: star scores of 0 no longer show as “★ 0” — a missing score simply shows nothing',
+			'about.changelog2330.6' => 'Fixed: movie details (score, country, runtime) now come from the full movie information, and the runtime shown is the one the player actually measured',
+			'about.changelog2330.7' => 'Fixed: TV show pages now use the full set of backdrop art your service sends',
+			'about.changelog2330.8' => 'Fixed: finished downloads no longer leave invisible files behind in Downloads, and a download that ends up empty no longer stays hidden',
+			'about.changelog2330.9' => 'Fixed: starting a video now frees the browsing catalogues from memory first, so playback has more room — the TV guide stays loaded',
+			'about.changelog2330.10' => 'Fixed: “Last updated” for the TV guide only changes when a real guide actually arrives, not when an empty refresh runs',
+			'about.changelog2330.11' => 'New: Super Spoof in Settings → Advanced — makes the app look like a generic player to your provider, for Wi-Fi networks that block the app\'s own requests. Off by default; turn it on if a load keeps getting refused',
 			'about.changelog2326.0' => 'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — the app no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 			'about.changelog2326.1' => 'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
 			'about.changelog2326.2' => 'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
@@ -11609,6 +11667,8 @@ extension on Translations {
 			'about.changelog2307.0' => 'The update screen now shows the version, the device type and the download size under the Download button, so you can see what you are about to download',
 			'about.changelog2307.1' => 'If an update has no build for your device, the app now says so plainly instead of offering a download that cannot install',
 			'about.changelog2307.2' => 'On a TV, saving the debug log now puts it in Downloads where you can find it, instead of a hidden app folder',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2306.0' => 'The guide now opens with programmes already on its rows: after a reload the app puts the rows you were looking at into the guide before you scroll',
 			'about.changelog2306.1' => 'Scrolling the guide no longer re-reads the whole guide file for every row — the guide is now stored as a quick lookup, so rows fill in fast',
 			'about.changelog2306.2' => 'When the quick guide has a programme with no name, the row now fills it in from the provider guide instead of leaving it blank',
@@ -11629,8 +11689,6 @@ extension on Translations {
 			'about.changelog2297.1' => 'The guide, the movie and series lists, and the category counts all show the same channels and movies as before',
 			'about.changelog2297.2' => 'Reloading the TV details still shows the fresh channels right away, and the saved catalog catches up behind it',
 			'about.changelog2297.3' => 'If the saved catalog is not ready yet, everything still works the old way from the downloaded lists',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2296.0' => 'Refreshing the catalog now uses less memory: each list is downloaded straight to a file and read once, instead of being held in memory and read three times',
 			'about.changelog2296.1' => 'The refresh still keeps the same safety checks — a partial or empty list keeps your old channels and movies instead of wiping them',
 			'about.changelog2296.2' => 'Hidden categories still stay out of search and the saved catalog, and showing one again still needs a refresh',
@@ -12123,6 +12181,8 @@ extension on Translations {
 			'liveTv.cancelRecordingTitle' => 'Cancel this recording?',
 			'liveTv.cancelRecordingMessage' => ({required Object title}) => '${title} will no longer be recorded.',
 			'liveTv.deleteRule' => 'Delete rule',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.deleteRuleTitle' => 'Delete recording rule?',
 			'liveTv.deleteRuleMessage' => ({required Object title}) => 'Future episodes of ${title} will not be recorded.',
 			'liveTv.recordingScheduled' => 'Recording scheduled',
@@ -12143,8 +12203,6 @@ extension on Translations {
 			'liveTv.guideReloadFailed' => 'Couldn\'t refresh the guide',
 			'liveTv.rulesProcessRequested' => 'Rule re-evaluation requested',
 			'liveTv.rulesProcessFailed' => 'Couldn\'t re-evaluate recording rules',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.recordShow' => 'Record show',
 			'liveTv.recordSettings.startEarly' => 'Start early (seconds)',
 			'liveTv.recordSettings.endLate' => 'End late (seconds)',
@@ -12637,6 +12695,8 @@ extension on Translations {
 			'performanceOverlay.dvRouteBaseLayer' => 'Base layer',
 			'performanceOverlay.dvRouteBaseLayerHdr10' => 'HDR10 base layer',
 			'performanceOverlay.dvRouteBaseLayerHlg' => 'HLG base layer',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.dvRouteBaseLayerSdr' => 'SDR base layer',
 			'performanceOverlay.dvRouteReshaped' => 'RPU reshaped (gpu-next)',
 			'performanceOverlay.p7Conversion' => 'P7 Conv',
@@ -12657,8 +12717,6 @@ extension on Translations {
 			'performanceOverlay.minLuma' => 'Min Luma',
 			'performanceOverlay.maxCll' => 'MaxCLL',
 			'performanceOverlay.maxFall' => 'MaxFALL',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.cacheUsed' => 'Cache Used',
 			'performanceOverlay.cacheLimit' => 'Cache Limit',
 			'performanceOverlay.speed' => 'Speed',
@@ -13151,6 +13209,8 @@ extension on Translations {
 			'iptv.epgNoGuideReasonMatchedButNoPrograms' => 'Matched a guide channel, but it has no programmes in this window',
 			'iptv.epgNoGuideReasonMatchedButNoProgramsDeclared' => 'Matched a guide channel, but the feed schedules nothing for it',
 			'iptv.epgNoGuideReasonMatchedButNoProgramsOutsideWindow' => 'Matched a guide channel, but its programmes fall outside this window',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgSourceShort' => 'Short EPG',
 			'iptv.epgSourceFeed' => 'Feed',
 			'iptv.epgSourceMixed' => 'Mixed',
@@ -13171,8 +13231,6 @@ extension on Translations {
 			'iptv.epgDetailsMatchMethod' => 'Matched by',
 			'iptv.epgDetailsPrograms' => 'Programmes',
 			'iptv.epgDetailsProgramsCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} programme', other: '${n} programmes', ), 
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgDetailsLastFetch' => 'Last fetched',
 			'iptv.epgDetailsNextFetch' => 'Next refresh',
 			'iptv.epgDetailsWhyNoMatch' => 'Why no guide',

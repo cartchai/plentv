@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -61,11 +62,23 @@ class DownloadsMediaStore {
   static Future<bool> Function({required String finalPath, required String partPath})?
   debugFinalizeEntryOverride;
 
+  /// 1.6.11 X11: the finalize channel timeout (10 minutes in production
+  /// — the native copy can be multi-GB). Tests shorten it so a lost
+  /// native reply is observable without waiting.
+  @visibleForTesting
+  static Duration debugFinalizeTimeout = const Duration(minutes: 10);
+
   @visibleForTesting
   static Future<bool> Function({required String path})? debugMarkCompleteOverride;
 
   @visibleForTesting
   static Future<bool> Function({required String path})? debugDeleteEntryOverride;
+
+  /// Test seam for [sweepOrphanedPendingEntries]. Same contract: when
+  /// set, the channel is never touched.
+  @visibleForTesting
+  static Future<({int shown, int deleted, int failed})> Function({required List<String> knownPaths})?
+  debugSweepOrphanedPendingEntriesOverride;
 
   /// Absolute path of the app's public downloads folder
   /// (`Download/PlenTV`), or null when the public location is
@@ -141,17 +154,58 @@ class DownloadsMediaStore {
       }
     }
     try {
-      return await _channel.invokeMethod<bool>('finalizeDownloadEntry', {
-        'finalPath': finalPath,
-        'partPath': partPath,
-      }) ??
+      // 1.6.11 X11: the native copy can be multi-GB, so the timeout is
+      // generous — but a lost native reply must not hang the finalize
+      // path forever. On timeout the file work already ran (or the
+      // reply was lost); the caller treats it as unsettled, not failed.
+      return await _channel
+              .invokeMethod<bool>('finalizeDownloadEntry', {
+                'finalPath': finalPath,
+                'partPath': partPath,
+              })
+              .timeout(debugFinalizeTimeout) ??
           false;
     } on MissingPluginException {
       return false;
     } on PlatformException {
       return false;
+    } on TimeoutException {
+      return false;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Sweep this app's own stale IS_PENDING entries under Download/PlenTV/
+  /// (1.6.11 X10): entries whose file is in [knownPaths] belong to a live
+  /// DB row and are left alone; every other entry is made visible AND a
+  /// delete is attempted. Returns counts {shown, deleted, failed}; zeros
+  /// when the channel is unavailable.
+  static Future<({int shown, int deleted, int failed})> sweepOrphanedPendingEntries({
+    required List<String> knownPaths,
+  }) async {
+    final override = debugSweepOrphanedPendingEntriesOverride;
+    if (override != null) {
+      try {
+        return await override(knownPaths: knownPaths);
+      } catch (_) {
+        return (shown: 0, deleted: 0, failed: 0);
+      }
+    }
+    try {
+      final raw = await _channel.invokeMethod<Map<Object?, Object?>>(
+        'sweepOrphanedPendingEntries',
+        {'knownPaths': knownPaths},
+      );
+      if (raw == null) return (shown: 0, deleted: 0, failed: 0);
+      int asInt(Object? value) => value is num ? value.toInt() : 0;
+      return (shown: asInt(raw['shown']), deleted: asInt(raw['deleted']), failed: asInt(raw['failed']));
+    } on MissingPluginException {
+      return (shown: 0, deleted: 0, failed: 0);
+    } on PlatformException {
+      return (shown: 0, deleted: 0, failed: 0);
+    } catch (_) {
+      return (shown: 0, deleted: 0, failed: 0);
     }
   }
 

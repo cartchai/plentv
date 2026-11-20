@@ -1,30 +1,25 @@
 #!/usr/bin/env python3
-"""Validate duplicate Apple SwiftPM locks against resolved Flutter plugins."""
+"""Guard that Sentry stays out of the Apple SwiftPM locks.
+
+1.6.11 L1 finished the Sentry strip: `sentry_flutter` is gone from the
+Flutter graph (no pubspec entry, no `Sentry.` calls left in `lib/`), so
+neither Apple lockfile may carry a `sentry-cocoa` pin. This check fails
+if a pin creeps back into either `Package.resolved`, or if
+`sentry_flutter` reappears in the resolved Flutter packages.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 from pathlib import Path
-from urllib.parse import unquote, urlparse
-from urllib.request import url2pathname
 
-LOCK_PAIRS = {
-    "iOS": (
-        Path("ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"),
-        Path("ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved"),
-    ),
-    "macOS": (
-        Path("macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"),
-        Path("macos/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved"),
-    ),
-}
-SENTRY_IDENTITY = "sentry-cocoa"
-EXACT_REQUIREMENT = re.compile(
-    r"\.package\s*\(\s*url\s*:\s*[\"'][^\"']*sentry-cocoa(?:\.git)?[\"']\s*,\s*exact\s*:\s*[\"']([^\"']+)[\"']",
-    re.DOTALL,
+LOCK_PATHS = (
+    Path("ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"),
+    Path("macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"),
 )
+SENTRY_IDENTITY = "sentry-cocoa"
+SENTRY_PACKAGE = "sentry_flutter"
 
 
 def _load_pin_map(path: Path, errors: list[str]) -> dict[str, dict]:
@@ -43,105 +38,36 @@ def _load_pin_map(path: Path, errors: list[str]) -> dict[str, dict]:
         if not isinstance(identity, str):
             errors.append(f"{path}: pin without a string identity")
             continue
-        canonical = {
-            "kind": pin.get("kind"),
-            "location": pin.get("location"),
-            "state": pin.get("state"),
-        }
         if identity in pins:
             errors.append(f"{path}: duplicate pin identity {identity}")
-        pins[identity] = canonical
+        pins[identity] = pin if isinstance(pin, dict) else {}
     return pins
 
 
-def _resolved_sentry_root(root: Path, errors: list[str]) -> Path | None:
+def _check_resolved_packages(root: Path, errors: list[str]) -> None:
     config_path = root / ".dart_tool/package_config.json"
     try:
         config = json.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         errors.append(f"{config_path}: unavailable ({error}); run flutter pub get first")
-        return None
+        return
     packages = config.get("packages") if isinstance(config, dict) else None
     if not isinstance(packages, list):
         errors.append(f"{config_path}: missing packages list; run flutter pub get first")
-        return None
-    package = next(
-        (item for item in packages if isinstance(item, dict) and item.get("name") == "sentry_flutter"),
-        None,
-    )
-    if package is None or not isinstance(package.get("rootUri"), str):
-        errors.append(f"{config_path}: sentry_flutter is not resolved; run flutter pub get first")
-        return None
-
-    uri = package["rootUri"]
-    parsed = urlparse(uri)
-    if parsed.scheme == "file":
-        return Path(url2pathname(parsed.path))
-    if parsed.scheme:
-        errors.append(f"{config_path}: unsupported sentry_flutter root URI {uri!r}")
-        return None
-    return (config_path.parent / unquote(uri)).resolve()
-
-
-def _manifest_requirement(path: Path, errors: list[str]) -> str | None:
-    try:
-        source = path.read_text(encoding="utf-8")
-    except OSError as error:
-        errors.append(f"{path}: unavailable ({error}); run flutter pub get first")
-        return None
-    versions = EXACT_REQUIREMENT.findall(source)
-    if len(versions) != 1:
-        errors.append(f"{path}: expected exactly one exact sentry-cocoa requirement, found {len(versions)}")
-        return None
-    return versions[0]
+        return
+    if any(isinstance(item, dict) and item.get("name") == SENTRY_PACKAGE for item in packages):
+        errors.append(f"{config_path}: {SENTRY_PACKAGE} is resolved; Sentry was stripped in 1.6.11")
 
 
 def validate(root: Path) -> list[str]:
     root = root.resolve()
     errors: list[str] = []
-    lock_maps: dict[Path, dict[str, dict]] = {}
-    for platform, relative_paths in LOCK_PAIRS.items():
-        first_path, second_path = (root / path for path in relative_paths)
-        first = _load_pin_map(first_path, errors)
-        second = _load_pin_map(second_path, errors)
-        lock_maps[first_path] = first
-        lock_maps[second_path] = second
-        if first != second:
-            identities = sorted(set(first) | set(second))
-            differing = [identity for identity in identities if first.get(identity) != second.get(identity)]
-            errors.append(
-                f"{platform} SwiftPM locks differ between {first_path} and {second_path}: "
-                + ", ".join(differing)
-            )
-
-    sentry_root = _resolved_sentry_root(root, errors)
-    required_versions: list[str] = []
-    if sentry_root is not None:
-        for platform in ("ios", "macos"):
-            version = _manifest_requirement(sentry_root / platform / "sentry_flutter/Package.swift", errors)
-            if version is not None:
-                required_versions.append(version)
-    if len(set(required_versions)) > 1:
-        errors.append("iOS and macOS sentry_flutter manifests require different sentry-cocoa versions")
-
-    required_version = required_versions[0] if required_versions and len(set(required_versions)) == 1 else None
-    sentry_pins: list[tuple[Path, dict]] = []
-    for path, pins in lock_maps.items():
-        pin = pins.get(SENTRY_IDENTITY)
-        if pin is None:
-            errors.append(f"{path}: missing {SENTRY_IDENTITY} pin")
-            continue
-        sentry_pins.append((path, pin))
-        state = pin.get("state")
-        version = state.get("version") if isinstance(state, dict) else None
-        if required_version is not None and version != required_version:
-            errors.append(f"{path}: {SENTRY_IDENTITY} is {version!r}, manifest requires exactly {required_version}")
-
-    if sentry_pins:
-        canonical_path, canonical_pin = sentry_pins[0]
-        for path, pin in sentry_pins[1:]:
-            if pin != canonical_pin:
-                errors.append(f"{path}: {SENTRY_IDENTITY} state differs from {canonical_path}")
+    for relative_path in LOCK_PATHS:
+        path = root / relative_path
+        pins = _load_pin_map(path, errors)
+        if SENTRY_IDENTITY in pins:
+            errors.append(f"{path}: {SENTRY_IDENTITY} pin is present; Sentry was stripped in 1.6.11")
+    _check_resolved_packages(root, errors)
     return errors
 
 
@@ -154,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
         for error in errors:
             print(f"error: {error}")
         return 1
-    print("Apple SwiftPM locks match each other and the resolved Sentry manifests.")
+    print("Apple SwiftPM locks contain no Sentry pins.")
     return 0
 
 

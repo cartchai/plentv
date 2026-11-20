@@ -25,6 +25,11 @@ class IptvResumeItem {
   final String? grandparentId;
   final String? grandparentTitle;
 
+  /// 1.6.11 X9: the show poster for episodes, so a resume snapshot can
+  /// still fall back to it when the episode still is gone. Null for rows
+  /// saved before 1.6.11.
+  final String? grandparentThumbPath;
+
   /// The item's category id (1.2.4, catalog memory): the precise signal
   /// for whether a pruned resume entry needs a refresh — see
   /// [IptvFavoriteItem.categoryId]. For an episode this is the SERIES
@@ -53,6 +58,7 @@ class IptvResumeItem {
     this.parentTitle,
     this.grandparentId,
     this.grandparentTitle,
+    this.grandparentThumbPath,
     this.categoryId,
     required this.positionMs,
     required this.durationMs,
@@ -69,6 +75,7 @@ class IptvResumeItem {
     if (parentTitle != null) 'parentTitle': parentTitle,
     if (grandparentId != null) 'grandparentId': grandparentId,
     if (grandparentTitle != null) 'grandparentTitle': grandparentTitle,
+    if (grandparentThumbPath != null) 'grandparentThumbPath': grandparentThumbPath,
     if (categoryId != null) 'categoryId': categoryId,
     'positionMs': positionMs,
     'durationMs': durationMs,
@@ -106,6 +113,7 @@ class IptvResumeItem {
       parentTitle: json['parentTitle'] as String?,
       grandparentId: json['grandparentId'] as String?,
       grandparentTitle: json['grandparentTitle'] as String?,
+      grandparentThumbPath: json['grandparentThumbPath'] as String?,
       categoryId: json['categoryId'] as String?,
       positionMs: positionMs,
       durationMs: durationMs,

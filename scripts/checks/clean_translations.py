@@ -26,10 +26,10 @@ LIB_DIR = ROOT / "lib"
 SOURCE_LOCALE = "en"
 
 USAGE_RES = (
-    re.compile(r"\bt\s*\.\s*([A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)+)"),
+    re.compile(r"\bt\s*\.\s*([A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)*)"),
     re.compile(
         r"\bTranslations\s*\.\s*of\s*\([^)]*\)\s*\.\s*"
-        r"([A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)+)"
+        r"([A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)*)"
     ),
 )
 DOT_WS_RE = re.compile(r"\s*\.\s*")

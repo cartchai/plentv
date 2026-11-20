@@ -138,6 +138,13 @@ class MediaServerTimeouts {
 
   static const plexTvReceive = Duration(seconds: 10);
 
+  /// Give-up budget for the IPTV movie-detail enrichment (1.6.11 X3):
+  /// the page opens on the base item immediately and `get_vod_info`
+  /// enriches it in place once it lands. Past this the page simply
+  /// stays on the base item — no spinner, no block. A late answer is
+  /// still memoized for the next open.
+  static const iptvDetailVodInfoEnrichment = Duration(seconds: 8);
+
   /// Authenticated health probe timeout. Health sweeps await every server, so
   /// a stale Plex endpoint must not hold the whole sweep for [response].
   static const plexProbe = Duration(seconds: 8);

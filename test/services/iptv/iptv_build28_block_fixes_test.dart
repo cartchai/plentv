@@ -28,6 +28,7 @@ import 'package:plezy/services/iptv/iptv_refusal_log.dart';
 import 'package:plezy/services/iptv/iptv_search_index.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/connection/connection.dart';
+import 'package:plezy/utils/media_server_http_client.dart' show AbortController;
 
 import '../../test_helpers/prefs.dart';
 
@@ -376,13 +377,31 @@ void main() {
       expect(panel.liveRequests, 1);
     });
 
-    test('cancelBackgroundWork aborts an in-flight sync', () async {
+    // 1.6.11 (background sync): the app-background hook (lock /
+    // app-switch) must NOT kill a sync the user started — the old
+    // expectation below asserted the opposite, and the owner-approved
+    // sync requirement supersedes it. The sync keeps running and
+    // lands; only the caller's own Cancel stops it.
+    test('cancelBackgroundWork does not abort a user-initiated sync (1.6.11)', () async {
       final panel = _CountingPanel()..categoryLatency = const Duration(seconds: 2);
       final client = _clientWith(panel);
       final sync = client.syncSearchIndex();
       await _waitFor(() => panel.totalRequests > 0);
-      final requestsAtCancel = panel.totalRequests;
+      final requestsBeforeHook = panel.totalRequests;
       client.cancelBackgroundWork();
+      await sync;
+      expect(panel.totalRequests, greaterThan(requestsBeforeHook),
+          reason: 'the sync kept making panel calls after the background hook');
+    });
+
+    test('the caller abort still stops an in-flight sync (1.6.11)', () async {
+      final panel = _CountingPanel()..categoryLatency = const Duration(seconds: 2);
+      final client = _clientWith(panel);
+      final abort = AbortController();
+      final sync = client.syncSearchIndex(abort: abort);
+      await _waitFor(() => panel.totalRequests > 0);
+      final requestsAtCancel = panel.totalRequests;
+      abort.abort();
       try {
         await sync;
       } on Object {
@@ -390,7 +409,7 @@ void main() {
         // point, not how it reports it.
       }
       await Future<void>.delayed(const Duration(seconds: 1));
-      expect(panel.totalRequests, requestsAtCancel, reason: 'no further panel calls after the background cancel');
+      expect(panel.totalRequests, requestsAtCancel, reason: 'no further panel calls after the caller cancel');
     });
   });
 }

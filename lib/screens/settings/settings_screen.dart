@@ -33,6 +33,7 @@ import '../../services/account_preferences_accounts.dart';
 import '../../services/keyboard_shortcuts_service.dart';
 import '../../services/background_work_diagnostics_service.dart';
 import '../../services/settings_service.dart' as settings;
+import '../../services/iptv/xtream_api.dart';
 import '../../services/settings_mutation_service.dart';
 import '../../services/supporter/supporter_mode.dart';
 import '../../widgets/background_download_warning_banner.dart';
@@ -139,6 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kViewReleasesOnGitHub = 'view_releases_on_github';
   static const _kAbout = 'about';
   static const _kWatchTogetherRelay = 'watch_together_relay';
+  static const _kSuperSpoof = 'super_spoof';
   static const _kExportSettings = 'export_settings';
   static const _kImportSettings = 'import_settings';
   static const _kExportForkBackup = 'export_fork_backup';
@@ -565,6 +567,14 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
     return SettingsGroup(title: t.settings.controls, children: children);
   }
 
+  /// Subtitle for the Super Spoof User-Agent row: the name the mimic
+  /// sends, or the Off line when the piece leaves the normal choice
+  /// alone.
+  String _superSpoofUserAgentSubtitle(String choice) {
+    if (choice == XtreamSuperSpoof.userAgentOff) return t.settings.superSpoofUserAgentOff;
+    return XtreamSuperSpoof.userAgentForChoice(choice) ?? t.settings.superSpoofUserAgentOff;
+  }
+
   Widget _buildAdvancedSection() {
     return SettingsGroup(
       title: t.settings.advanced,
@@ -582,6 +592,66 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           icon: Symbols.speed_rounded,
           title: t.settings.autoHidePerformanceOverlay,
           subtitle: t.settings.autoHidePerformanceOverlayDescription,
+        ),
+        // 1.6.11 (Super Spoof): one master toggle that turns on ALL the
+        // request-spoofing pieces at once, with the per-piece
+        // sub-settings underneath it while it is on. The subs tune which
+        // pieces are active and how they behave; the master still turns
+        // the whole thing on/off at once.
+        SettingSwitchTile(
+          focusNode: _focusTracker.get(_kSuperSpoof),
+          pref: settings.SettingsService.iptvSuperSpoof,
+          icon: Symbols.theater_comedy_rounded,
+          title: t.settings.superSpoof,
+          subtitle: t.settings.superSpoofDescription,
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: settings.SettingsService.instance.listenable(
+            settings.SettingsService.iptvSuperSpoof,
+          ),
+          builder: (_, spoofOn, _) {
+            if (!spoofOn) return const SizedBox.shrink();
+            return Column(
+              children: [
+                SettingSelectionTile<String>(
+                  pref: settings.SettingsService.iptvSuperSpoofUserAgent,
+                  icon: Symbols.badge_rounded,
+                  title: t.settings.superSpoofUserAgent,
+                  subtitleBuilder: _superSpoofUserAgentSubtitle,
+                  options: [
+                    DialogOption(
+                      value: XtreamSuperSpoof.userAgentOff,
+                      title: t.settings.superSpoofUserAgentOff,
+                    ),
+                    DialogOption(
+                      value: XtreamUserAgent.choiceVlc,
+                      title: t.iptv.xtreamUserAgentVlc,
+                    ),
+                    DialogOption(
+                      value: XtreamUserAgent.choiceSmarters,
+                      title: t.iptv.xtreamUserAgentSmarters,
+                    ),
+                    DialogOption(
+                      value: XtreamUserAgent.choiceBrowser,
+                      title: t.iptv.xtreamUserAgentBrowser,
+                    ),
+                  ],
+                ),
+                SettingSwitchTile(
+                  pref: settings.SettingsService.iptvSuperSpoofHeaders,
+                  icon: Symbols.article_rounded,
+                  title: t.settings.superSpoofHeaders,
+                  subtitle: t.settings.superSpoofHeadersDescription,
+                ),
+                SettingSwitchTile(
+                  pref: settings.SettingsService.iptvSuperSpoofStreams,
+                  icon: Symbols.play_circle_rounded,
+                  title: t.settings.superSpoofStreams,
+                  subtitle: t.settings.superSpoofStreamsDescription,
+                ),
+              ],
+            );
+          },
         ),
         SettingNavigationTile(
           focusNode: _focusTracker.get(_kViewLogs),

@@ -1392,6 +1392,21 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   @visibleForTesting
   Future<void> debugSuspendForTvBackgroundForTesting() => _suspendPlayerForTvBackground();
 
+  /// 1.6.11 P12: the first frame proves the stream is playing — drop
+  /// the browsing catalogs (EPG kept, so the guide does not
+  /// re-download) on every tier, not just the reduced tiers the
+  /// navigation-time P1 drop covers. The catalogs re-read from disk on
+  /// return. Best-effort: playback must never fail because the drop
+  /// did. Called from the real first-frame latch and from the test
+  /// seam below, which seeds a completed startup.
+  void _dropBrowsingCatalogsOnFirstFrame() {
+    try {
+      context.read<MultiServerProvider>().serverManager.dropIptvCachesFromMemoryKeepEpg();
+    } catch (e) {
+      appLogger.w('IPTV: playback-start catalog drop failed', error: e);
+    }
+  }
+
   /// What a completed startup leaves behind, for tests that seed [player]
   /// directly instead of running the full open.
   @visibleForTesting
@@ -1405,6 +1420,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
     );
     setState(() => _isPlayerInitialized = true);
     _firstFrame.markReady();
+    _dropBrowsingCatalogsOnFirstFrame();
   }
 
   @visibleForTesting

@@ -600,8 +600,23 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       return (cacheHits: 0, networkFills: 0, misses: 0, synthesizedCount: 0);
     }
 
+    // 1.6.11 P8: the collections loader below re-resolves its rows from
+    // the same bulk snapshot — its ids join the bulk request set here,
+    // so a refresh with N collections issues no extra per-collection
+    // selects (the cold-hydration select count stays constant).
+    final collectionKeys = <String>[];
+    final collectionProfileId = _activeProfileId;
+    if (collectionProfileId != null) {
+      for (final stored in await _database.getDownloadCollections(collectionProfileId)) {
+        collectionKeys.add(buildGlobalKey(ServerId(stored.serverId), stored.collectionId));
+      }
+    }
+    if (isStale?.call() ?? false) {
+      return (cacheHits: 0, networkFills: 0, misses: 0, synthesizedCount: 0);
+    }
+
     final bulkByKey = await _downloadManager.loadBulkCachedMetadata(
-      await _bulkCacheRequests(keys, scopesByServer),
+      await _bulkCacheRequests([...keys, ...collectionKeys], scopesByServer),
     );
     if (isStale?.call() ?? false) {
       return (cacheHits: 0, networkFills: 0, misses: 0, synthesizedCount: 0);
@@ -656,7 +671,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     if (synthesizedCount > 0) {
       misses = keys.where((key) => !_metadata.containsKey(key)).length;
     }
-    await _loadDownloadCollections();
+    await _loadDownloadCollections(scopesByServer: scopesByServer, bulkByKey: bulkByKey);
 
     // Re-apply offline overlay so locally-queued watch actions aren't
     // clobbered by stale per-backend caches that haven't yet seen the
@@ -724,7 +739,10 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// (the 1.2.18 S-14 replacement for the deleted bulk pinned map). The
   /// loaded entry's metadata stands in for a snapshot miss. A collection
   /// with neither stays out until the next refresh pins it.
-  Future<void> _loadDownloadCollections() async {
+  Future<void> _loadDownloadCollections({
+    Map<String, ({MediaBackend backend, String? scopeId})>? scopesByServer,
+    Map<String, MediaItem>? bulkByKey,
+  }) async {
     final profileId = _activeProfileId;
     final generation = _profileGeneration;
     final stored = profileId == null
@@ -735,15 +753,19 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     _collections.clear();
     for (final (:serverId, :collectionId, :memberIds) in stored) {
       final globalKey = buildGlobalKey(ServerId(serverId), collectionId);
-      // 1.2.18 S-14: with no bulk pinned map, a collection row resolves
-      // per item from its backend cache; the previously-loaded entry is
+      // 1.6.11 P8: a collection row resolves from the refresh's bulk
+      // snapshot first (the same snapshot the leaves use), with its
+      // resolved scope threaded through so the fallback lookup does not
+      // re-resolve it per collection; the previously-loaded entry is
       // the last resort, as before.
       final cached =
+          bulkByKey?[globalKey] ??
           await _downloadManager.lookupMetadata(
             ServerId(serverId),
             collectionId,
             preferActiveScope: true,
             activeProfileId: profileId,
+            resolvedScope: scopesByServer?[ServerId(serverId)],
           ) ??
           loaded[globalKey]?.collection;
       if (cached != null) _putDownloadedCollection(serverId, cached, memberIds);

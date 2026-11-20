@@ -53,6 +53,66 @@ class XtreamUserAgent {
   };
 }
 
+/// Super Spoof (1.6.11): one Advanced toggle that turns on ALL the
+/// request-spoofing pieces at once, so provider requests look like a
+/// generic player instead of the app's own signature. The home WiFi 403s
+/// the app's requests while TiviMate works on the same network — the
+/// panel tells the app apart by how its requests look — so the mimic set
+/// is the generic-player shape: a VLC User-Agent plus a generic Accept
+/// header. No TiviMate traffic was captured; this is a generic mimic,
+/// not a copy of any one player.
+///
+/// Pure functions over stored values (no SettingsService here — the
+/// class must stay usable from the background isolate, which reads raw
+/// prefs, and from tests). The Settings-backed accessors live in
+/// IptvClient; the master toggle and the per-piece sub-settings live in
+/// SettingsService (iptvSuperSpoof*). Default OFF everywhere: with the
+/// master off, every resolver returns the caller's fallback and no
+/// header is added — the request is byte-for-byte today's request.
+class XtreamSuperSpoof {
+  /// Sub-setting values for the User-Agent piece: which name to mimic,
+  /// or 'off' to leave the normal UA choice alone.
+  static const String userAgentOff = 'off';
+  static const String userAgentVlc = 'vlc';
+  static const String userAgentSmarters = 'smarters';
+  static const String userAgentBrowser = 'browser';
+
+  static const String defaultUserAgentChoice = userAgentVlc;
+
+  /// The generic Accept header the headers piece adds.
+  static const String acceptHeader = '*/*';
+
+  /// The mimic User-Agent for a stored piece choice, or null when the
+  /// piece is off ('off') or the choice is unknown — the caller then
+  /// keeps its normal UA.
+  static String? userAgentForChoice(String choice) => switch (choice) {
+    userAgentSmarters => XtreamUserAgent.smarters,
+    userAgentBrowser => XtreamUserAgent.browser,
+    userAgentVlc => XtreamUserAgent.vlc,
+    _ => null,
+  };
+
+  /// The User-Agent a request should carry: the mimic value wins when
+  /// the master toggle is on and the UA piece picks a name; otherwise
+  /// [fallbackUserAgent] (the normal Settings choice) stands.
+  static String resolveUserAgent({
+    required bool masterOn,
+    required String userAgentChoice,
+    required String fallbackUserAgent,
+  }) {
+    if (!masterOn) return fallbackUserAgent;
+    return userAgentForChoice(userAgentChoice) ?? fallbackUserAgent;
+  }
+
+  /// Extra headers the mimic set adds to a request: a generic Accept
+  /// when the master toggle and the headers piece are both on, nothing
+  /// otherwise.
+  static Map<String, String> extraHeaders({
+    required bool masterOn,
+    required bool headersPiece,
+  }) => (masterOn && headersPiece) ? const {'Accept': acceptHeader} : const {};
+}
+
 /// Thrown when an unfiltered catalog response exceeds the 300 MB cap
 /// (build #23, [XtreamApi.maxCatalogResponseChars]). The sync reports
 /// it as 'oversize' and keeps the old index rows — a bad sync never
@@ -213,6 +273,15 @@ class XtreamApi {
   /// the next request without rebuilding the client. Wins over [_userAgent].
   final String Function()? _userAgentProvider;
 
+  /// Provider for the Super Spoof headers piece (1.6.11), re-read on
+  /// every request when given — the Settings-backed one in IptvClient
+  /// reads the master toggle + headers sub-setting per request, so
+  /// flipping Super Spoof applies to the next request without rebuilding
+  /// the client. True means the request also carries the mimic Accept
+  /// header (see [_applyMimicHeaders]). Null means the piece is off
+  /// (tests, sign-in probe) — the request is exactly today's request.
+  final bool Function()? _mimicHeadersProvider;
+
   /// The refusal recorder (build #27): called with a sanitized entry for
   /// every refused response and transport failure, before the throw.
   /// Null in tests and for callers that do not record.
@@ -305,12 +374,23 @@ class XtreamApi {
     http.Client? httpClient,
     this._userAgent,
     this._userAgentProvider,
+    this._mimicHeadersProvider,
     this._onRefusal,
     this._recent403Provider,
     this._connectionId = '',
     this._connectionName = '',
   }) : serverUrl = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl,
        _http = httpClient ?? http.Client();
+
+  /// Apply the Super Spoof headers piece to a request one of the
+  /// fetchers below just built (1.6.11): the User-Agent is already set by
+  /// the caller; the headers piece adds the generic Accept. A null
+  /// provider means the piece is off.
+  void _applyMimicHeaders(http.BaseRequest request) {
+    if (_mimicHeadersProvider?.call() == true) {
+      request.headers['Accept'] = XtreamSuperSpoof.acceptHeader;
+    }
+  }
 
   /// The User-Agent for the next request: provider, then fixed value,
   /// then the VLC default. Never null, never empty.
@@ -401,6 +481,7 @@ class XtreamApi {
       // exactly like the old get() — every non-search caller passes none.
       final request = http.AbortableRequest('GET', uri, abortTrigger: abortTrigger);
       request.headers['User-Agent'] = _effectiveUserAgent;
+      _applyMimicHeaders(request);
       final streamed = await _http.send(request).timeout(timeout);
       // 1.2.19 (L-24): the body receipt gets its own budget
       // ([receiveTimeout], MediaServerTimeouts.receive = 120 s) — a slow
@@ -514,6 +595,7 @@ class XtreamApi {
     Future<http.StreamedResponse> send({required int fromBytes}) async {
       final request = http.AbortableRequest('GET', uri, abortTrigger: abortTrigger);
       request.headers['User-Agent'] = _effectiveUserAgent;
+      _applyMimicHeaders(request);
       if (fromBytes > 0) request.headers['Range'] = 'bytes=$fromBytes-';
       return _http.send(request);
     }
@@ -1134,6 +1216,7 @@ class XtreamApi {
       // off for merely being slow.
       final request = http.AbortableRequest('GET', uri, abortTrigger: abortTrigger);
       request.headers['User-Agent'] = _effectiveUserAgent;
+      _applyMimicHeaders(request);
       if (etag != null) request.headers['If-None-Match'] = etag;
       if (lastModified != null) request.headers['If-Modified-Since'] = lastModified;
       streamed = await _http.send(request).timeout(timeout);
@@ -1263,6 +1346,7 @@ class XtreamApi {
       Future<http.StreamedResponse> send({required int fromBytes}) async {
         final request = http.AbortableRequest('GET', uri, abortTrigger: abortTrigger);
         request.headers['User-Agent'] = _effectiveUserAgent;
+      _applyMimicHeaders(request);
         if (fromBytes > 0) request.headers['Range'] = 'bytes=$fromBytes-';
         return _http.send(request);
       }
@@ -1994,6 +2078,19 @@ class XtreamVodStream {
   };
 }
 
+/// Parse a `backdrop_path` value that may be one URL string or an array
+/// of them (1.6.11 X8). The old code ran it through [flexibleString],
+/// which returns only the FIRST element of a list — a multi-URL array
+/// collapsed to one backdrop (or to nothing on the gap-fill path).
+List<String>? _backdropPathsFrom(Object? value) {
+  final list = switch (value) {
+    List() => value.map((v) => flexibleString(v)).whereType<String>().where((v) => v.isNotEmpty).toList(),
+    String() => value.isEmpty ? <String>[] : [value],
+    _ => <String>[],
+  };
+  return list.isEmpty ? null : list;
+}
+
 class XtreamSeries {
   final int seriesId;
   final String name;
@@ -2006,6 +2103,9 @@ class XtreamSeries {
   final double? rating;
   final String? categoryId;
   final String? backdropPath;
+  // 1.6.11 X8: the full backdrop array — `backdropPath` stays the first
+  // URL for the single-backdrop readers.
+  final List<String>? backdropPaths;
   final String? youtubeTrailer;
   final int? episodeRunTime;
 
@@ -2021,11 +2121,17 @@ class XtreamSeries {
     this.rating,
     this.categoryId,
     this.backdropPath,
+    this.backdropPaths,
     this.youtubeTrailer,
     this.episodeRunTime,
   });
 
   factory XtreamSeries.fromJson(Map<String, dynamic> json) {
+    final backdrops = _backdropPathsFrom(json['backdrop_path']);
+    // 1.6.11 X7: a provider `0` / `0.0` means "not rated yet" / "no
+    // runtime", never a score of zero — treat it as absent.
+    final rating = flexibleDouble(json['rating']);
+    final episodeRunTime = flexibleInt(json['episode_run_time']);
     return XtreamSeries(
       seriesId: flexibleInt(json['series_id']) ?? 0,
       name: flexibleString(json['name']) ?? '',
@@ -2035,11 +2141,12 @@ class XtreamSeries {
       director: flexibleString(json['director']),
       genre: flexibleString(json['genre']),
       releaseDate: flexibleString(json['releaseDate']),
-      rating: flexibleDouble(json['rating']),
+      rating: (rating == null || rating == 0) ? null : rating,
       categoryId: json['category_id']?.toString(),
-      backdropPath: flexibleString(json['backdrop_path']),
+      backdropPath: (backdrops == null || backdrops.isEmpty) ? null : backdrops.first,
+      backdropPaths: backdrops,
       youtubeTrailer: flexibleString(json['youtube_trailer']),
-      episodeRunTime: flexibleInt(json['episode_run_time']),
+      episodeRunTime: (episodeRunTime == null || episodeRunTime == 0) ? null : episodeRunTime,
     );
   }
 
@@ -2057,6 +2164,24 @@ class XtreamSeries {
       return (value == null || value.isEmpty) ? null : value;
     }
 
+    // 1.6.11 X7: a `0` on either side means "absent" — a zero row value
+    // must not block the fill, and a zero info value must not fill.
+    double? fillDouble(double? row, Object? infoValue) {
+      if (row != null && row != 0) return row;
+      final value = flexibleDouble(infoValue);
+      return (value == null || value == 0) ? null : value;
+    }
+
+    int? fillInt(int? row, Object? infoValue) {
+      if (row != null && row != 0) return row;
+      final value = flexibleInt(infoValue);
+      return (value == null || value == 0) ? null : value;
+    }
+
+    // 1.6.11 X8: the info block's backdrop array arrives whole.
+    final filledBackdrops = (backdropPaths != null && backdropPaths!.isNotEmpty)
+        ? backdropPaths
+        : _backdropPathsFrom(info['backdrop_path']);
     return XtreamSeries(
       seriesId: seriesId,
       name: name,
@@ -2066,11 +2191,12 @@ class XtreamSeries {
       director: fill(director, info['director']),
       genre: fill(genre, info['genre']),
       releaseDate: fill(releaseDate, info['releaseDate']),
-      rating: rating ?? flexibleDouble(info['rating']),
+      rating: fillDouble(rating, info['rating']),
       categoryId: categoryId,
-      backdropPath: fill(backdropPath, info['backdrop_path']),
+      backdropPath: (filledBackdrops == null || filledBackdrops.isEmpty) ? backdropPath : filledBackdrops.first,
+      backdropPaths: filledBackdrops,
       youtubeTrailer: fill(youtubeTrailer, info['youtube_trailer']),
-      episodeRunTime: episodeRunTime ?? flexibleInt(info['episode_run_time']),
+      episodeRunTime: fillInt(episodeRunTime, info['episode_run_time']),
     );
   }
 
@@ -2166,23 +2292,18 @@ class XtreamVodInfo {
   });
 
   factory XtreamVodInfo.fromJson(Map<String, dynamic> json) {
-    final backdrops = switch (json['backdrop_path']) {
-      List() => (json['backdrop_path'] as List)
-          .map((v) => flexibleString(v))
-          .whereType<String>()
-          .where((v) => v.isNotEmpty)
-          .toList(),
-      String() => [json['backdrop_path'] as String],
-      _ => null,
-    };
+    final backdrops = _backdropPathsFrom(json['backdrop_path']);
     // The provider's `tmdb` field is often an IMDb `tt…` id, not a
     // numeric TMDB id; a numeric string is a TMDB id.
+    // 1.6.11 X4: a zero id is no id (`tmdb: 0`, `imdb_id: "0"`), and
+    // only a `tt…` value is an IMDb id — a numeric `imdb_id` is not a
+    // TMDB id either. Zero ids used to merge unrelated titles.
     int? tmdbId;
     String? imdbId;
-    void classify(Object? value) {
+    void classifyTmdb(Object? value) {
       if (value == null) return;
       if (value is int) {
-        tmdbId ??= value;
+        if (value > 0) tmdbId ??= value;
         return;
       }
       final text = value.toString().trim();
@@ -2191,23 +2312,32 @@ class XtreamVodInfo {
         imdbId ??= text;
         return;
       }
-      tmdbId ??= int.tryParse(text);
+      final parsed = int.tryParse(text);
+      if (parsed != null && parsed > 0) tmdbId ??= parsed;
     }
 
-    classify(json['tmdb']);
-    classify(json['tmdb_id']);
-    classify(json['imdb_id']);
+    void classifyImdb(Object? value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.startsWith('tt')) imdbId ??= text;
+    }
+
+    classifyTmdb(json['tmdb']);
+    classifyTmdb(json['tmdb_id']);
+    classifyImdb(json['imdb_id']);
+    // 1.6.11 X7: a provider `0` / `0.0` rating means "not rated yet".
+    final rating = flexibleDouble(json['rating']);
     return XtreamVodInfo(
       plot: flexibleString(json['plot']) ?? flexibleString(json['description']),
       cast: flexibleString(json['cast']),
       director: flexibleString(json['director']),
       genre: flexibleString(json['genre']),
-      backdropPaths: (backdrops == null || backdrops.isEmpty) ? null : backdrops,
+      backdropPaths: backdrops,
       durationSecs: flexibleInt(json['duration_secs']),
       releaseDate: flexibleString(json['releasedate']),
       youtubeTrailer: flexibleString(json['youtube_trailer']),
       country: flexibleString(json['country']),
-      rating: flexibleDouble(json['rating']),
+      rating: (rating == null || rating == 0) ? null : rating,
       tmdbId: tmdbId,
       imdbId: imdbId,
     );

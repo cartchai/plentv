@@ -55,7 +55,6 @@ import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/iptv_live_tv.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
-import 'package:plezy/services/iptv/iptv_epg_sources.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/settings_service.dart';

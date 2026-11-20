@@ -12,7 +12,10 @@ _VERSION = re.compile(
     r"(?P<version>"
     r"(?:0|[1-9][0-9]*)\."
     r"(?:0|[1-9][0-9]*)\."
-    r"(?:0|[1-9][0-9]*)\+"
+    r"(?:0|[1-9][0-9]*)"
+    # The app versions as major.minor.patch-upstream+build (e.g.
+    # 1.6.11-2.26.0+237); the prerelease segment is part of the scheme.
+    r"(?:-(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?\+"
     r"(?P<build>[0-9]+)"
     r")"
 )

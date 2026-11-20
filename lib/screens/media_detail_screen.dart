@@ -31,6 +31,7 @@ import '../widgets/focus_builders.dart';
 import '../media/library_query.dart';
 import '../media/library_change_event.dart';
 import '../media/media_hub.dart';
+import '../utils/media_server_timeouts.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/plex_season_display.dart';
 import '../media/media_item.dart';
@@ -1689,6 +1690,32 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     }
   }
 
+  /// 1.6.11 X3: the second phase of an IPTV movie detail open. The
+  /// base item has already painted; this fetches the enriched item
+  /// (`get_vod_info`: plot, cast, genres, backdrop) and paints it in
+  /// place when it lands. Gives up after
+  /// [MediaServerTimeouts.iptvDetailVodInfoEnrichment] — the page then
+  /// simply stays on the base item. A late provider answer is still
+  /// memoized by `_vodInfo`, so the next open gets it at once.
+  Future<void> _enrichMovieDetail(
+    IptvClient client,
+    MediaItem Function(MediaItem, {MediaItem? onDeckEpisode, bool onDeckSettled}) publish,
+  ) async {
+    try {
+      final enriched = await client
+          .fetchItemWithOnDeck(_metadata.id)
+          .timeout(MediaServerTimeouts.iptvDetailVodInfoEnrichment);
+      if (!_canUseDetail) return;
+      final item = enriched.item;
+      if (item != null) {
+        publish(item, onDeckEpisode: enriched.onDeckEpisode, onDeckSettled: true);
+      }
+    } catch (_) {
+      // Give-up (or a failed fetch): the base item stays. Nothing to
+      // show, nothing to log — the page is already usable.
+    }
+  }
+
   Future<void> _loadFullMetadata() async {
     if (!_canUseDetail) return;
     _invalidatePlaybackProbes(refreshItems: true);
@@ -1787,12 +1814,32 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
       // Seasons/extras deliberately still start after the whole lookup
       // settles: starting them at the early paint measured *worse*, because
       // they contend with the on-deck request rather than overlapping it.
-      final result = await client.fetchItemWithOnDeck(
-        _metadata.id,
-        onItemReady: (item) {
-          if (_canUseDetail) publish(item);
-        },
-      );
+      // 1.6.11 X3: an IPTV movie opens on its base item immediately —
+      // the row already has title/poster/rating — and enriches in place
+      // once `get_vod_info` lands. The enrichment gives up after 8 s;
+      // past that the page simply stays on the base item (no spinner,
+      // no block). Other backends and kinds keep the single lookup.
+      ({MediaItem? item, MediaItem? onDeckEpisode}) result;
+      if (client is IptvClient && _metadata.isMovie) {
+        result = await client.fetchItemWithOnDeck(
+          _metadata.id,
+          skipVodInfo: true,
+          onItemReady: (item) {
+            if (_canUseDetail) publish(item);
+          },
+        );
+        // Runs after the first paint, so the page is already usable
+        // while it waits. Unawaited deliberately: the enrichment
+        // publishes only while the page is still alive.
+        unawaited(_enrichMovieDetail(client, publish));
+      } else {
+        result = await client.fetchItemWithOnDeck(
+          _metadata.id,
+          onItemReady: (item) {
+            if (_canUseDetail) publish(item);
+          },
+        );
+      }
       final metadata = result.item;
 
       if (!_canUseDetail) return;

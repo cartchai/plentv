@@ -839,7 +839,16 @@ class _CatalogSyncDialogState extends State<_CatalogSyncDialog> {
       if (p.reason == 'storage-full') return t.iptv.syncSkippedStorageFull;
       return p.reason ?? '';
     }
-    if (p.phase == 'fetching') return '…';
+    // 1.6.11 (background sync): download percent while fetching, so
+    // the load shows movement instead of "…" for minutes.
+    if (p.phase == 'fetching') {
+      final total = p.totalBytes;
+      final received = p.receivedBytes;
+      if (total != null && total > 0 && received != null) {
+        return '${(received * 100 ~/ total).clamp(0, 100)}%';
+      }
+      return '…';
+    }
     if (p.phase == 'writing') return '${p.rows}…';
     return '';
   }

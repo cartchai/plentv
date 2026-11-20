@@ -21,7 +21,6 @@
 // live in iptv_build_r4_background_sync_new_api_test.dart and only
 // compile after the fix.
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 

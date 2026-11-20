@@ -1847,6 +1847,20 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
       final tmpFile = File('$diskFilePath.tmp');
       try {
         await tmpFile.parent.create(recursive: true);
+        // 1.6.11 (sync speed): when nothing was hidden and nothing was
+        // dropped, the downloaded bytes already ARE the visible rows —
+        // copy the catalog file instead of re-encoding every row
+        // (`toJson` + `jsonEncode` per row, seconds at Trex scale).
+        // The bytes parse to exactly the visible typed rows (same
+        // parser, same order), so the disk reader sees an identical
+        // file. Any hidden/dropped row falls through to the re-encode
+        // below, which writes the visible rows only.
+        final canCopyRaw = hiddenSkipped == 0 &&
+            parsed.dropped == 0 &&
+            params.catalogFilePath != null;
+        if (canCopyRaw) {
+          await File(params.catalogFilePath!).copy(tmpFile.path);
+        } else {
         final sink = tmpFile.openWrite();
         try {
           sink.write('[');
@@ -1879,6 +1893,7 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
           sink.write(']');
         } finally {
           await sink.close();
+        }
         }
         final target = File(diskFilePath);
         if (await target.exists()) await target.delete();
@@ -2014,7 +2029,15 @@ Map<String, dynamic> _typedCatalogRowToJson(String type, Object row) => switch (
 /// finished type landed (0 when it was skipped — see
 /// [IptvSearchSyncResult.skipped]).
 class IptvSearchSyncProgress {
-  const IptvSearchSyncProgress({required this.type, required this.phase, this.rows = 0, this.reason, this.partial = false});
+  const IptvSearchSyncProgress({
+    required this.type,
+    required this.phase,
+    this.rows = 0,
+    this.reason,
+    this.partial = false,
+    this.receivedBytes,
+    this.totalBytes,
+  });
 
   /// 'live' | 'movie' | 'series'.
   final String type;
@@ -2022,6 +2045,14 @@ class IptvSearchSyncProgress {
   /// 'fetching' | 'writing' | 'done' | 'skipped'.
   final String phase;
   final int rows;
+
+  /// Download progress while [phase] == 'fetching' (1.6.11): bytes
+  /// received so far and the expected total when the panel sent a
+  /// Content-Length. Null when the phase carries no download (or the
+  /// total is unknown) — the dialog and the foreground-service
+  /// notification render "…" instead of a percentage.
+  final int? receivedBytes;
+  final int? totalBytes;
 
   /// Skip reason when [phase] == 'skipped': 'up-to-date' | 'empty-response'
   /// | 'partial-kept' | 'oversize' | 'failed' | 'cold' | 'storage-full'.

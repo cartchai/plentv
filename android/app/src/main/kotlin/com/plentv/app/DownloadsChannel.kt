@@ -5,6 +5,8 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.os.Build
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
 import io.flutter.plugin.common.BinaryMessenger
@@ -52,6 +54,7 @@ internal class DownloadsChannel(private val activity: Activity) {
         "publicDownloadsRoot" -> publicDownloadsRoot(result)
         "createDownloadEntry" -> createDownloadEntry(call, result)
         "finalizeDownloadEntry" -> finalizeDownloadEntry(call, result)
+        "sweepOrphanedPendingEntries" -> sweepOrphanedPendingEntries(call, result)
         "markDownloadComplete" -> markDownloadComplete(call, result)
         "deleteDownloadEntry" -> deleteDownloadEntry(call, result)
         else -> result.notImplemented()
@@ -205,8 +208,10 @@ internal class DownloadsChannel(private val activity: Activity) {
    * instead — the file is not lost because a rename failed.
    *
    * The stream copy can be multi-GB, so the work runs on a background thread
-   * and the result is delivered from there (never throws across the channel).
-   * Best-effort: returns false when neither file holds the bytes.
+   * and the result is posted back to the platform thread (1.6.11 X11:
+   * replying from the worker thread dropped the reply). Never throws
+   * across the channel. Best-effort: returns false when neither file
+   * holds the bytes.
    */
   private fun finalizeDownloadEntry(call: MethodCall, result: MethodChannel.Result) {
     val finalPath = call.argument<String>("finalPath")
@@ -216,12 +221,16 @@ internal class DownloadsChannel(private val activity: Activity) {
       return
     }
     Thread {
-      try {
-        result.success(finalizeDownloadEntrySync(finalPath, partPath))
+      val ok = try {
+        finalizeDownloadEntrySync(finalPath, partPath)
       } catch (e: Exception) {
         Log.w(TAG, "finalizeDownloadEntry failed", e)
-        result.success(false)
+        false
       }
+      // 1.6.11 X11: a channel result must be delivered on the platform
+      // thread — replying from this worker thread drops the reply, so
+      // the Dart side waited forever for a finalize that already ran.
+      Handler(Looper.getMainLooper()).post { result.success(ok) }
     }.start()
   }
 
@@ -292,7 +301,81 @@ internal class DownloadsChannel(private val activity: Activity) {
       partFile.delete()
       return true
     }
+    // 1.6.11 X10: a legitimately 0-byte final file must not stay
+    // hidden-pending forever — clear the flag (and drop the stale part
+    // row/file). Reached only when neither file holds bytes, so a
+    // non-empty part file above still wins over an empty final file.
+    if (finalFile.exists()) {
+      partEntry?.let { resolver.delete(it.second, null, null) }
+      if (partFile.exists()) partFile.delete()
+      finalEntry?.let {
+        val done = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
+        resolver.update(it.second, done, null, null)
+      }
+      return true
+    }
     return false
+  }
+
+  /**
+   * Sweep this app's own stale IS_PENDING entries under Download/PlenTV/
+   * (1.6.11 X10): a crashed download leaves a hidden-pending entry with
+   * no DB row behind it, so the file never appears in Files and the next
+   * download of the same name collides with it. Entries whose file is in
+   * [knownPaths] belong to a live row and are left alone; every other
+   * entry is made visible (IS_PENDING=0) AND a delete is attempted. If
+   * the delete fails the entry stays visible — never hidden-pending.
+   * Returns {shown, deleted, failed}. Never throws across the channel.
+   */
+  private fun sweepOrphanedPendingEntries(call: MethodCall, result: MethodChannel.Result) {
+    val knownPaths = call.argument<List<String>>("knownPaths")?.toSet() ?: emptySet()
+    val resolver = activity.contentResolver
+    val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+    var shown = 0
+    var deleted = 0
+    var failed = 0
+    try {
+      resolver.query(
+        collection,
+        arrayOf(
+          MediaStore.Downloads._ID,
+          MediaStore.Downloads.RELATIVE_PATH,
+          MediaStore.Downloads.DISPLAY_NAME,
+          MediaStore.MediaColumns.DATA,
+        ),
+        "${MediaStore.Downloads.OWNER_PACKAGE_NAME} = ? AND ${MediaStore.Downloads.IS_PENDING} = 1 AND ${MediaStore.Downloads.RELATIVE_PATH} LIKE ?",
+        arrayOf(activity.packageName, "Download/PlenTV/%"),
+        null,
+      )?.use { cursor ->
+        val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+        val relativeIndex = cursor.getColumnIndexOrThrow(MediaStore.Downloads.RELATIVE_PATH)
+        val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
+        val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+        while (cursor.moveToNext()) {
+          val id = cursor.getLong(idIndex)
+          val relativePath = cursor.getString(relativeIndex)
+          val displayName = cursor.getString(nameIndex)
+          val data = if (dataIndex >= 0) cursor.getString(dataIndex) else null
+          val absolutePath = data ?: publicPathFor(relativePath, displayName)
+          if (knownPaths.contains(absolutePath)) continue
+          val uri = ContentUris.withAppendedId(collection, id)
+          // Visible first: even if the delete below fails, the file
+          // must never stay hidden-pending.
+          val done = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
+          resolver.update(uri, done, null, null)
+          shown++
+          try {
+            if (resolver.delete(uri, null, null) > 0) deleted++
+          } catch (e: Exception) {
+            Log.w(TAG, "sweepOrphanedPendingEntries delete failed for $absolutePath", e)
+            failed++
+          }
+        }
+      }
+    } catch (e: Exception) {
+      Log.w(TAG, "sweepOrphanedPendingEntries failed", e)
+    }
+    result.success(mapOf("shown" to shown, "deleted" to deleted, "failed" to failed))
   }
 
   /**
@@ -386,12 +469,22 @@ internal class DownloadsChannel(private val activity: Activity) {
     val resolver = activity.contentResolver
     val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
     // Replace any previous same-name file owned by this app, so a
-    // repeated save does not stack up suffixed copies.
+    // repeated save does not stack up suffixed copies. 1.6.11 X12: the
+    // match is scoped to this folder (RELATIVE_PATH) — without it, a
+    // same-name file in another subfolder (e.g. Download/PlenTV/) was
+    // deleted too. Both stored forms are matched: the insert below
+    // passes the bare constant and the store normalizes it with a
+    // trailing slash.
     resolver.query(
       collection,
       arrayOf(MediaStore.Downloads._ID),
-      "${MediaStore.Downloads.DISPLAY_NAME} = ? AND ${MediaStore.Downloads.OWNER_PACKAGE_NAME} = ?",
-      arrayOf(fileName, activity.packageName),
+      "${MediaStore.Downloads.RELATIVE_PATH} IN (?, ?) AND ${MediaStore.Downloads.DISPLAY_NAME} = ? AND ${MediaStore.Downloads.OWNER_PACKAGE_NAME} = ?",
+      arrayOf(
+        Environment.DIRECTORY_DOWNLOADS,
+        "${Environment.DIRECTORY_DOWNLOADS}/",
+        fileName,
+        activity.packageName,
+      ),
       null,
     )?.use { cursor ->
       while (cursor.moveToNext()) {

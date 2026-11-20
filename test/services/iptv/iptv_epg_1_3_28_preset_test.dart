@@ -15,7 +15,6 @@
 // a loopback preset; the real URL is asserted as data, never fetched
 // in a test.
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -27,7 +26,6 @@ import 'package:plezy/media/iptv_live_tv.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/iptv_epg_sources.dart';
 import 'package:plezy/services/iptv/iptv_playback_activity.dart';
-import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/settings_service.dart';
 
 import '../../test_helpers/prefs.dart';

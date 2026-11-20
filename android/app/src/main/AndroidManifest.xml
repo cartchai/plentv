@@ -21,6 +21,10 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <!-- 1.6.11: the catalog-sync foreground service holds a partial
+         wake lock so Doze cannot suspend a sync while the phone is
+         locked. Normal permission — granted at install, no prompt. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <!-- Explicitly remove media permissions that media_kit may add -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
@@ -603,6 +607,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- 1.6.11: keeps a user-initiated catalog sync running
+             (with a progress notification) when the phone locks or the
+             user switches apps. Not exported — only the app starts it. -->
+        <service
+            android:name=".CatalogSyncForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

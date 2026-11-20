@@ -1034,6 +1034,30 @@ class SettingsService extends BaseSharedPreferencesService {
   /// the choice above.
   static const iptvXtreamUserAgentCustom = StringPref('iptv_xtream_user_agent_custom', defaultValue: '');
 
+  /// Super Spoof master toggle (1.6.11): one Advanced switch that turns
+  /// on ALL the request-spoofing pieces at once — the mimic User-Agent,
+  /// the generic request headers, and the stream/artwork disguise — so
+  /// provider requests look like a generic player (VLC) instead of the
+  /// app's own signature. Default OFF: with it off, every request is
+  /// byte-for-byte today's request. In `_portableOnlyPrefs`, so it rides
+  /// settings export/import like the other IPTV settings.
+  static const iptvSuperSpoof = BoolPref('iptv_super_spoof', defaultValue: false);
+
+  /// Super Spoof sub-setting — the User-Agent piece (1.6.11): which name
+  /// the mimic sends while the master is on. 'vlc' (default), 'smarters',
+  /// 'browser', or 'off' (leave the normal Xtream User-Agent choice
+  /// alone). Resolved by XtreamSuperSpoof.userAgentForChoice.
+  static const iptvSuperSpoofUserAgent = StringPref('iptv_super_spoof_user_agent', defaultValue: 'vlc');
+
+  /// Super Spoof sub-setting — the headers piece (1.6.11): send the
+  /// generic Accept header with the mimic User-Agent. Default true.
+  static const iptvSuperSpoofHeaders = BoolPref('iptv_super_spoof_headers', defaultValue: true);
+
+  /// Super Spoof sub-setting — the streams piece (1.6.11): apply the
+  /// same disguise to video-stream and artwork requests, not just the
+  /// catalog/guide API calls. Default true.
+  static const iptvSuperSpoofStreams = BoolPref('iptv_super_spoof_streams', defaultValue: true);
+
   /// Hours between IPTV catalog syncs (build #23): how often the whole
   /// catalog (live channels, movies, series) is re-downloaded into the
   /// local search index. 6 / 12 / 24 / 168 (once a week), or 0 for
@@ -1826,6 +1850,10 @@ class SettingsService extends BaseSharedPreferencesService {
     iptvShowCatchUpBadge,
     iptvXtreamUserAgent,
     iptvXtreamUserAgentCustom,
+    iptvSuperSpoof,
+    iptvSuperSpoofUserAgent,
+    iptvSuperSpoofHeaders,
+    iptvSuperSpoofStreams,
     iptvCatalogSyncIntervalHours,
     iptvLargeDownloadsWifiOnly,
     iptvCatalogMode,

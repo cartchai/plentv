@@ -903,7 +903,14 @@ class _MainScreenState extends State<MainScreen>
         PhaseRssSampler.instance.sample('discover-primed');
         if (!mounted) return;
         context.read<OfflineWatchSyncService>().onServersConnected();
-        unawaited(context.read<DownloadProvider>().refreshMetadataFromCache());
+        // 1.6.11 P11 (N4): the MainScreen-side refresh was unattributed
+        // in the Phase RSS trace — sample once it lands, like the
+        // post-launch refresh in main.dart.
+        unawaited(
+          context.read<DownloadProvider>().refreshMetadataFromCache().then((_) {
+            PhaseRssSampler.instance.sample('prime-refresh');
+          }),
+        );
         _resumeQueuedDownloadsForServers(
           mp.onlineServerIds.toSet(),
           mp.onlineServerIds.map((id) => mp.getClientForServer(ServerId(id))).nonNulls.firstOrNull,
@@ -1948,6 +1955,12 @@ class _MainScreenState extends State<MainScreen>
         _autoSwitchedToDownloads = false;
       }
     });
+    // 1.6.11 P11 (N4): the first Library open had no trace sample —
+    // sample at mount so the library load's RSS cost is attributable
+    // in the Phase RSS table.
+    if (tab == NavigationTabId.libraries && !wasMounted) {
+      PhaseRssSampler.instance.sample('first-library-open');
+    }
     _updateTvosMenuPassthrough();
 
     if (previousTab != tab) {

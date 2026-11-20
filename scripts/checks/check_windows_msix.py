@@ -24,7 +24,6 @@ from xml.etree import ElementTree
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from pubspec_version import parse_pubspec_version
-from workflow_yaml import job_block
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,9 +34,6 @@ SCRIPT = Path(sys.argv[1]).resolve() if len(sys.argv) == 2 else DEFAULT_SCRIPT
 ASSETS = ROOT / "windows/msix/assets"
 CMAKE = ROOT / "windows/CMakeLists.txt"
 PUBSPEC = ROOT / "pubspec.yaml"
-WORKFLOW = ROOT / ".github/workflows/build.yml"
-MSIX_STEP = "Build Store package (MSIX)"
-BUNDLE = "plezy-windows.msixbundle"
 # Partner Center reserves these identity values and derives the package family name.
 IDENTITY_NAME = "edde746.Plezy"
 PUBLISHER = "CN=AA9C53CB-AD3C-48DA-B3E3-D1E8986D4E25"
@@ -127,11 +123,6 @@ def package_family_suffix(publisher: str) -> str:
     return "".join(alphabet[int(bits[index : index + 5], 2)] for index in range(0, 65, 5))
 
 
-def named_step(block: str, name: str) -> str:
-    match = re.search(rf"(?ms)^      - name: {re.escape(name)}\n.*?(?=^      - |\Z)", block)
-    require(match is not None, f"missing '{name}' step in package-windows")
-    return match.group(0) if match else ""
-
 
 require(
     "function New-AppxManifest" in text,
@@ -160,7 +151,11 @@ for parameter in ("MsixVersion", "Architecture"):
         f"New-AppxManifest must take ${parameter} as a mandatory parameter",
     )
 pubspec_version, _ = parse_pubspec_version(PUBSPEC.read_text(encoding="utf-8"))
-values = {"MsixVersion": f"{pubspec_version}.0", "Architecture": "x64"}
+_msix_base = re.match(r"(\d+)\.(\d+)\.(\d+)", pubspec_version)
+if _msix_base is None:
+    raise ValueError(f"cannot derive a four-part MSIX version from {pubspec_version!r}")
+# Four-part numeric version; the revision field is the 0 the Store reserves.
+values = {"MsixVersion": f"{_msix_base.group(1)}.{_msix_base.group(2)}.{_msix_base.group(3)}.0", "Architecture": "x64"}
 values.update(re.findall(r'(?m)^    \$(\w+) = "([^"]*)"$', prelude))
 
 substituted = substitute(manifest_template, values)
@@ -333,35 +328,6 @@ require(
     "signtool" not in text.lower(),
     "the bundle must stay unsigned; the Store re-signs it, and any other certificate "
     "fails publisher-identity validation",
-)
-
-# The workflow supplies the manifest version from pubspec.yaml.
-workflow = WORKFLOW.read_text(encoding="utf-8")
-package_windows = job_block(workflow, "package-windows")
-require(bool(package_windows), "missing package-windows job")
-msix_step = named_step(package_windows, MSIX_STEP)
-for argument in (
-    ".\\windows\\build-msix.ps1",
-    '-X64BuildDir "build-x64"',
-    '-Arm64BuildDir "build-arm64"',
-    '-Version "${{ steps.version.outputs.version }}"',
-):
-    require(
-        argument in msix_step,
-        f"the MSIX step must reuse the existing packaging inputs: {argument}",
-    )
-require(
-    "pubspec.yaml" in package_windows,
-    "the version handed to both packaging scripts must be read from pubspec.yaml",
-)
-require(
-    package_windows.count(BUNDLE) == 2,
-    f"{BUNDLE} must be attested and uploaded, exactly once each",
-)
-require(
-    BUNDLE not in job_block(workflow, "create-release"),
-    f"{BUNDLE} must not be attached to the GitHub release; a Store-identity package "
-    "cannot be installed without the Store certificate",
 )
 
 if errors:

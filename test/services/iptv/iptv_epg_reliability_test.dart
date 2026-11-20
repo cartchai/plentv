@@ -662,6 +662,86 @@ void main() {
       await _waitFor(() => settings.read(SettingsService.iptvEpgLastUpdated).isNotEmpty);
       expect(settings.read(SettingsService.iptvEpgLastAttempt), isNotEmpty);
     });
+
+    test('P7 (1.6.11) a background refresh over an empty feed does not stamp Last updated', () async {
+      // Same stale-while-revalidate trigger as D7, but the refreshed
+      // feed carries zero programmes: the background refresh must not
+      // certify "Last updated" for data that never landed. On the base
+      // the background path stamps unconditionally.
+      final now = DateTime.now();
+      final window = windowAround(now);
+      api.xmltvBody = _feedWith(
+        channelId: 'ch100',
+        title: 'Show A',
+        start: now,
+        end: now.add(const Duration(hours: 1)),
+      );
+      final first = await support.fetchEpgForChannel('100', from: window.from, to: window.to);
+      expect(first.map((p) => p.title), ['Show A']);
+      expect(api.xmltvCalls, 1);
+
+      // Age the persisted feed past the 24h interval and drop the
+      // per-channel files, so a fresh support instance re-reads the
+      // feed as stale (stale-while-revalidate) instead of serving the
+      // fresh per-channel entry (D7 pattern).
+      for (var i = 0; i < 100; i++) {
+        final jsons = tempDir
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.json'))
+            .toList();
+        if (jsons.isNotEmpty) break;
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      for (final entity in tempDir.listSync(recursive: true)) {
+        if (entity is! File) continue;
+        if (entity.path.endsWith('.json')) entity.deleteSync();
+        if (entity.path.contains('feed_') && entity.path.endsWith('.xml')) {
+          entity.setLastModifiedSync(DateTime.now().subtract(const Duration(hours: 25)));
+        }
+      }
+      // The refreshed feed is EMPTY — zero programmes in total.
+      api.xmltvBody = '<?xml version="1.0" encoding="UTF-8"?><tv></tv>';
+
+      final clientB = IptvClient.xtream(xtreamConnection: _trexConnection());
+      clientB.testXtreamApi = api;
+      await clientB.iptvChannels();
+      final supportB = clientB.liveTv as IptvLiveTvSupport;
+      final staleServed = await supportB.fetchEpgForChannel('100', from: window.from, to: window.to);
+      expect(
+        staleServed.map((p) => p.title),
+        ['Show A'],
+        reason: 'stale-while-revalidate serves the old feed while the refresh runs',
+      );
+      await _waitFor(() => api.xmltvCalls >= 2);
+      // The stamp the stale serve left: serving Show A genuinely stored
+      // programmes, so it stamps (the stamp is written inline in the
+      // serve path). Read it here as the fallback — the empty refresh
+      // can land before the loop's first fetch, leaving the loop with
+      // nothing to record.
+      DateTime? lastStaleStamp = supportB.lastEpgUpdatedAt;
+      expect(lastStaleStamp, isNotNull, reason: 'the stale serve stamped (Show A was stored)');
+      // Poll until the refreshed (empty) feed lands behind the served
+      // guide: the stale 'Show A' disappears. Each stale fetch in the
+      // loop re-serves Show A and re-stamps (D9-correct: real
+      // programmes stored), so keep the freshest stale stamp — the
+      // comparison is against the last serve before the empty feed
+      // landed, not an older one.
+      var afterRefresh = await supportB.fetchEpgForChannel('100', from: window.from, to: window.to);
+      for (var i = 0; i < 200 && afterRefresh.isNotEmpty; i++) {
+        lastStaleStamp = supportB.lastEpgUpdatedAt;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        afterRefresh = await supportB.fetchEpgForChannel('100', from: window.from, to: window.to);
+      }
+      expect(afterRefresh, isEmpty, reason: 'the empty refreshed feed landed');
+      // Let any pending background recording settle before reading.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(
+        supportB.lastEpgUpdatedAt,
+        lastStaleStamp,
+        reason: 'the empty background refresh must not re-stamp Last updated',
+      );
+    });
   });
 
   group('Controls — behaviour the fix must not break (PASS on base)', () {

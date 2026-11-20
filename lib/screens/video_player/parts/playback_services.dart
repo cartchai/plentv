@@ -124,6 +124,9 @@ extension _VideoPlayerPlaybackServiceMethods on VideoPlayerScreenState {
     // as playing (the panel holds the slot until it expires); only a
     // real stop/dispose or a fatal error marks idle.
     IptvPlaybackActivity.instance.markPlaying();
+    // 1.6.11 P12: the stream is proven playing — drop the browsing
+    // catalogs (EPG kept, so the guide does not re-download).
+    _dropBrowsingCatalogsOnFirstFrame();
     // This request is proven: a later in-place switch that fails restores it.
     _workingOpenRequest = _currentOpenRequest;
     _http503Watchdog.disarm();

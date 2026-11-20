@@ -25,6 +25,7 @@ import 'package:plezy/models/download_models.dart';
 import 'package:plezy/services/download_artwork_helpers.dart';
 import 'package:plezy/services/download_artwork_service.dart';
 import 'package:plezy/services/download_manager_service.dart';
+import 'package:plezy/services/downloads_media_store.dart';
 import 'package:plezy/services/download_storage_service.dart';
 import 'package:plezy/services/downloaded_video_source.dart';
 import 'package:plezy/services/jellyfin_api_cache.dart';
@@ -363,6 +364,30 @@ void main() {
       expect(incomplete?.status, DownloadStatus.queued.index, reason: 'not completed while a file is missing');
       expect(incomplete?.nextMissingPartIndex, 1, reason: 'the stored first file is kept for the resume');
       expect((await db.getNextQueueItem())?.mediaGlobalKey, 'srv:item-2');
+    });
+
+    test('1.6.11 X10: startup recovery sweeps stale pending entries, sparing live rows', () async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      // An absolute public path: toAbsolutePath returns it unchanged, so
+      // no path_provider call is needed to build the known set.
+      const livePath = '/storage/emulated/0/Download/PlenTV/Movies/M.mkv';
+      await seedRow(db, DownloadStatus.completed, videoFilePath: livePath);
+      final manager = await managerFor(db);
+      List<String>? sweptKnown;
+      DownloadsMediaStore.debugSweepOrphanedPendingEntriesOverride =
+          ({required List<String> knownPaths}) async {
+            sweptKnown = knownPaths;
+            return (shown: 1, deleted: 1, failed: 0);
+          };
+      addTearDown(() {
+        DownloadsMediaStore.debugSweepOrphanedPendingEntriesOverride = null;
+      });
+
+      await manager.recoverInterruptedDownloads();
+
+      expect(sweptKnown, isNotNull, reason: 'recovery must run the pending-entry sweep');
+      expect(sweptKnown, contains(livePath));
     });
   });
 

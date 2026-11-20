@@ -783,6 +783,11 @@ sealed class MediaItem with _$MediaItem {
       fallback = parentThumbPath;
     } else if (kind == MediaKind.episode && mode == EpisodePosterMode.seasonPoster) {
       fallback = grandparentThumbPath ?? thumbPath;
+    } else if (kind == MediaKind.episode && mode == EpisodePosterMode.episodeThumbnail) {
+      // 1.6.11 X9: in episode-thumbnail mode the card shows the episode
+      // still; when the still cannot be served, fall back to the show
+      // poster instead of a black tile.
+      fallback = grandparentThumbPath;
     } else {
       return null;
     }

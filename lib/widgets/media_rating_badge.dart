@@ -25,11 +25,16 @@ String mediaRatingLabel(MediaRatingSource rating) =>
 
 List<MediaRatingSource> _ratingsFor(MediaItem item) {
   final ratings = item.ratings;
-  if (ratings != null && ratings.isNotEmpty) return ratings;
+  if (ratings != null && ratings.isNotEmpty) {
+    // 1.6.11 X7: a provider `0` means "not rated yet", never a score —
+    // drop zero entries instead of rendering a "★ 0" badge.
+    final nonZero = ratings.where((r) => r.value != 0).toList(growable: false);
+    if (nonZero.isNotEmpty) return nonZero;
+  }
   // Backends that report a bare score with no provenance (and cached rows
   // written before the attributed list existed) still get one badge.
   final rating = item.rating;
-  return rating == null ? const [] : [MediaRatingSource(source: '', value: rating)];
+  return (rating == null || rating == 0) ? const [] : [MediaRatingSource(source: '', value: rating)];
 }
 
 /// Every score read out as `<source> <value>`, for merged metadata-line

@@ -720,6 +720,22 @@ https://example.com/cnn.m3u8
       expect(third[1].isFavorite, isFalse);
       client.close();
     });
+
+    test('1.6.11 P1: repeated fetchChildren(season) reuses the mapped episodes with a non-null info block', () async {
+      // Failing-first: on 1.6.10 `withInfoGapsFilled` builds a fresh
+      // XtreamSeries whenever the info block is non-null, so the N3
+      // identity check against the filled copy can never hit and every
+      // page turn re-sorts and re-maps. The check must key on the stable
+      // catalog row + info instead. The 1.5.3 N3 test above is blind to
+      // this: its fake returns `info: null`, so the fill returns `this`.
+      final client = xtreamClient(api: _PrefixedFakeXtreamApiWithInfo());
+      final first = await client.fetchChildren('season:10:1');
+      final second = await client.fetchChildren('season:10:1');
+      expect(first.map((i) => i.title), ['Pilot', 'Second']);
+      expect(identical(first[0], second[0]), isTrue);
+      expect(identical(first[1], second[1]), isTrue);
+      client.close();
+    });
   });
 
   group('IptvClient downloads (no network)', () {
@@ -1276,6 +1292,26 @@ class _PrefixedFakeXtreamApi extends _FakeXtreamApi {
         XtreamEpisode(id: 101, episodeNum: 2, title: 'Second'),
       ],
       2: [XtreamEpisode(id: 200, episodeNum: 1, title: 'Return')],
+    },
+  );
+}
+
+/// Same prefixed panel, but `get_series_info` returns a non-null info
+/// block — the 1.5.3 N3 test's fake returns `info: null`, so the gap-fill
+/// returns `this` and the cache check passes by accident.
+class _PrefixedFakeXtreamApiWithInfo extends _PrefixedFakeXtreamApi {
+  @override
+  Future<XtreamSeriesInfo> getSeriesInfo(int seriesId) async => const XtreamSeriesInfo(
+    episodesBySeason: {
+      1: [
+        XtreamEpisode(id: 100, episodeNum: 1, title: 'Pilot'),
+        XtreamEpisode(id: 101, episodeNum: 2, title: 'Second'),
+      ],
+      2: [XtreamEpisode(id: 200, episodeNum: 1, title: 'Return')],
+    },
+    info: {
+      'plot': 'Alice falls down the rabbit hole.',
+      'backdrop_path': ['http://example.com/alice-bd1.jpg', 'http://example.com/alice-bd2.jpg'],
     },
   );
 }

@@ -35,6 +35,7 @@ import 'package:saf_util/saf_util_platform_interface.dart' show SafDocumentFile;
 import '../models/download_models.dart';
 import '../services/offline_mode_source.dart';
 import '../services/download_storage_service.dart';
+import 'downloads_media_store.dart';
 import '../i18n/strings.g.dart';
 import '../utils/app_logger.dart';
 import '../utils/serial_future_queue.dart';
@@ -1309,6 +1310,38 @@ class DownloadManagerService {
 
   /// Recover downloads that were interrupted when the app was killed.
   /// Uses background_downloader's rescheduleKilledTasks for native recovery,
+  /// Sweep stale pending MediaStore entries (1.6.11 X10). Best-effort
+  /// and never throws — recovery must not fail because the sweep did.
+  Future<void> _sweepOrphanedPendingEntries() async {
+    try {
+      final known = <String>{};
+      final rows = await _database.select(_database.downloadedMedia).get();
+      for (final row in rows) {
+        final storedPaths = <String?>[row.videoFilePath, ...?row.additionalPartPathList];
+        for (final stored in storedPaths) {
+          if (stored == null || stored.isEmpty) continue;
+          final absolute = await _storageService.toAbsolutePath(stored);
+          known.add(absolute);
+          // The downloader's temp file for this row (X13's orphaned
+          // `.part` entries share the same sweep).
+          if (row.bgTaskId != null) {
+            known.add(partialDownloadFilePath(absolute, row.bgTaskId!));
+          }
+        }
+      }
+      final swept = await DownloadsMediaStore.sweepOrphanedPendingEntries(
+        knownPaths: known.toList(growable: false),
+      );
+      if (swept.shown > 0 || swept.deleted > 0 || swept.failed > 0) {
+        appLogger.i(
+          'Swept ${swept.shown} stale pending download entr(ies): ${swept.deleted} deleted, ${swept.failed} delete failure(s) left visible',
+        );
+      }
+    } catch (e, st) {
+      appLogger.w('Orphaned pending-entry sweep failed', error: e, stackTrace: st);
+    }
+  }
+
   /// then scans drift for orphaned items.
   Future<void> recoverInterruptedDownloads() async {
     if (_skipDownloadsUnsupported('download recovery')) return;
@@ -1339,6 +1372,12 @@ class DownloadManagerService {
       if (deletedTempFiles > 0) {
         appLogger.i('Deleted $deletedTempFiles orphaned downloader temp file(s)');
       }
+
+      // 1.6.11 X10: sweep the app's own stale IS_PENDING MediaStore
+      // entries under Download/PlenTV/ (crashed downloads leave hidden
+      // rows with no DB row behind them). Known paths come from the
+      // Drift rows, so a live row's entry is never swept.
+      await _sweepOrphanedPendingEntries();
 
       // Let background_downloader re-enqueue tasks killed by the OS
       final (rescheduled, _) = await _nativeOps.rescheduleKilledTasks();

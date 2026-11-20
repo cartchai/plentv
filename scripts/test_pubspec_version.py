@@ -42,6 +42,12 @@ dependency:
         with self.assertRaisesRegex(ValueError, "found 0"):
             parse_pubspec_version(contents)
 
+    def test_accepts_prerelease_segment(self) -> None:
+        self.assertEqual(
+            parse_pubspec_version("version: 1.6.11-2.26.0+237\n"),
+            ("1.6.11-2.26.0+237", "237"),
+        )
+
     def test_accepts_numeric_build_metadata(self) -> None:
         self.assertEqual(
             parse_pubspec_version("version: 10.20.30+0007 # release build\n"),

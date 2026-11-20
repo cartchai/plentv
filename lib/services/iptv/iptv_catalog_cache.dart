@@ -171,6 +171,59 @@ class IptvCatalogDiskCache {
     }
   }
 
+  /// Stream a JSON array to [dataset] without building the whole body
+  /// as one String (1.6.11 P9): each row is encoded separately and
+  /// written to a temp file in chunks, then renamed into place. The
+  /// bytes are identical to `jsonEncode(rows.map(toJson).toList())` —
+  /// a JSON list is exactly `[` + comma-joined row encodings + `]`,
+  /// no whitespace — so the format is unchanged while the tens-of-MB
+  /// transient (whole list + whole String) is gone. Never throws; a
+  /// failed write is logged and the old file stays.
+  Future<void> writeJsonArray<T>(
+    String connectionId,
+    String dataset,
+    List<T> rows,
+    Map<String, dynamic> Function(T row) toJson,
+  ) async {
+    if (debugDisableDisk) return;
+    if (StorageHealth.isLowFreeSpace) {
+      appLogger.w('IPTV catalog cache write skipped for $dataset: storage almost full');
+      return;
+    }
+    try {
+      final file = await _file(connectionId, dataset);
+      try {
+        await file.parent.create(recursive: true);
+      } on FileSystemException catch (_) {
+        if (!await file.parent.exists()) rethrow;
+      }
+      final tmpFile = File('${file.path}.tmp');
+      final sink = tmpFile.openWrite();
+      try {
+        sink.write('[');
+        var first = true;
+        var sinceFlush = 0;
+        for (final row in rows) {
+          if (!first) sink.write(',');
+          first = false;
+          sink.write(jsonEncode(toJson(row)));
+          // Bound the sink's internal buffer on a 199k-row catalog.
+          if (++sinceFlush >= 500) {
+            await sink.flush();
+            sinceFlush = 0;
+          }
+        }
+        sink.write(']');
+      } finally {
+        await sink.close();
+      }
+      if (await file.exists()) await file.delete();
+      await tmpFile.rename(file.path);
+    } catch (e) {
+      appLogger.w('IPTV catalog cache write failed for $dataset', error: e);
+    }
+  }
+
   /// Delete one dataset file. Never throws.
   Future<void> delete(String connectionId, String dataset) async {
     if (debugDisableDisk) return;
