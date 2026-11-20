@@ -1,4 +1,4 @@
-// Lock-in tests for the 1.4.3 A4 audit ('PlezTV' fallback UA).
+// Lock-in tests for the 1.4.3 A4 audit ('PlenTV' fallback UA).
 //
 // The audit traced every `serverArtworkProvider` call site (6 total)
 // and every `artworkHeadersFor` call: a provider image only ever
@@ -47,7 +47,7 @@ void main() {
   test('a null client gets the PlezTV fallback', () {
     expect(
       MediaImageHelper.artworkHeadersFor(null),
-      const {'User-Agent': 'PlezTV'},
+      const {'User-Agent': 'PlenTV'},
     );
   });
 

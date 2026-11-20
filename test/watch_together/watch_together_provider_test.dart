@@ -420,7 +420,7 @@ void main() {
 
       expect(await world.refusal(g.provider.joinRoom('K7M-Q2Y')), owp.ErrorCode.roomNotFound);
       expect(g.provider.isInSession, isFalse);
-      expect(h.provider.participants.single.name, 'PlezTV');
+      expect(h.provider.participants.single.name, 'PlenTV');
     });
 
     _roomTest('host transfer, control mode and lock; a guest is refused host commands', (world) async {
