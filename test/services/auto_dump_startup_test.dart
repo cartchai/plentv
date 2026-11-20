@@ -278,7 +278,7 @@ void main() {
       expect(find.text('Emergency Debug Log Saver'), findsOneWidget);
       expect(
         find.text(
-          'PlezTV has crashed several times. You can save an emergency debug log and send it to us, or continue starting up as usual.',
+          'PlenTV has crashed several times. You can save an emergency debug log and send it to us, or continue starting up as usual.',
         ),
         findsOneWidget,
       );
@@ -314,7 +314,7 @@ void main() {
       expect(find.text('Saved to:'), findsOneWidget);
       expect(find.text(pickedPath), findsOneWidget);
       expect(find.text(t.logs.shareAutoDump), findsOneWidget);
-      expect(find.text('Restart PlezTV'), findsOneWidget);
+      expect(find.text('Restart PlenTV'), findsOneWidget);
       expect(find.text(t.common.close), findsOneWidget);
       expect(await readCounter(tester), 0);
       final text = utf8.decode(picker.lastSaveBytes!);

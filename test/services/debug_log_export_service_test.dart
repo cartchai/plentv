@@ -152,7 +152,7 @@ void main() {
       }
       final text = await DebugLogExportService.buildDebugText(baseLogsText: base.toString());
       expect(text, startsWith('== Summary =='));
-      expect(text, contains('App: PlezTV'));
+      expect(text, contains('App: PlenTV'));
       expect(text, contains('RSS max:'));
       expect(
         text,
