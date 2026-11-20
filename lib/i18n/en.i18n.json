@@ -1555,6 +1555,7 @@
       "New: this is a fresh install as a new app — back up from the old app, install PlenTV, restore the backup. Your old backups still restore, and old links still open",
       "New: Quest headsets are now detected, so the controller thumbstick scrolls the right way",
       "New: bug reports and debug logs now go to our own GitHub issues",
+      "New: downloads now save to your Downloads folder, so you can find them in the Files app",
       "Removed: the app no longer points at the old services or funding page",
       "Cleanup: the unused crash-reporting code is gone"
     ],
