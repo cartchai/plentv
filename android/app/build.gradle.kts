@@ -415,6 +415,33 @@ android {
         debugSymbolLevel = "NONE"
       }
     }
+
+    // Baseline-profile generation target (1.5.3 S1): the Macrobenchmark
+    // plugin (`:benchmark`) needs a build type literally named
+    // `benchmark` in the app module. Same shape as `minified` — R8 runs
+    // (initWith release), so the profile is collected from the shipped
+    // DEX layout, but it stays debuggable and debug-signed, so it is an
+    // ordinary test artifact and never a publishable one. Debuggable
+    // also makes the Flutter plugin treat it as debug mode, so it uses
+    // debug Dart artifacts — the profile only accelerates the
+    // Java/Kotlin side (FlutterLoader, PlezyActivity, plugin
+    // registration, ExoPlayer/mpv init), so that is the accepted
+    // trade-off; Dart is already AOT in the shipped build.
+    create("benchmark") {
+      initWith(getByName("release"))
+      isDebuggable = true
+      // Resource shrinking is orthogonal to the profile and would only
+      // slow the benchmark build down.
+      isShrinkResources = false
+      // Release has no signing config unless key.properties exists, which would leave
+      // this variant unsigned and uninstallable in CI.
+      signingConfig = signingConfigs.getByName("debug")
+      // Plugin subprojects only publish debug and release variants.
+      matchingFallbacks += listOf("debug", "release")
+      ndk {
+        debugSymbolLevel = "NONE"
+      }
+    }
   }
 
   // Instrumentation normally runs against `debug`; the R8 reachability gate opts into the

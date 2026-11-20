@@ -20,20 +20,34 @@ DEX layout optimization requires R8, which the shipped debug build does
 not run. Generate the profile from a **release** build only; a profile
 generated from a debug build is meaningless.
 
-## CI wiring (to be added by the integrator — NOT in this worktree)
+## CI wiring (1.5.3 S1 — `.github/workflows/baseline-profile.yml`)
 
-1. GitHub Actions job (emulator, API 31, arm64-v8a or the T1 matrix
-   AVD from `tool/emulator-matrix/`):
-   ```sh
-   ./gradlew :benchmark:connectedBenchmarkAndroidTest \
-     -Pandroid.testInstrumentationRunnerArguments.class=com.pleztv.app.benchmark.StartupBenchmark#generateBaselineProfile
-   ```
-2. Copy the generated profile into the app:
-   `android/benchmark/build/outputs/managed_device_android_test_additional_output/.../baseline-prof.txt`
-   → `android/app/src/main/baseline-prof.txt` (AGP picks it up
-   automatically and ships it in the APK).
-3. Run the two startup tests on the same job and record
-   `timeToInitialDisplay` None vs Partial(Require).
+Manual dispatch only (`workflow_dispatch`): it boots an x86_64 API 31
+emulator, runs `:benchmark:connectedBenchmarkAndroidTest` for
+`StartupBenchmark#generateBaselineProfile`, copies the generated
+profile to `android/app/src/main/baseline-prof.txt`, then runs the two
+startup tests on the same job (`startupNoCompilation`,
+`startupWithBaselineProfile`) and uploads the profile + benchmark
+results as the `baseline-profile` workflow artifact. The job commits
+nothing: a human downloads the artifact, reviews the profile, and
+commits it to main — a later release tag then picks it up automatically
+(AGP ships it in the APK) and ProfileInstaller applies it on sideloaded
+installs. The `benchmark` build type in `android/app/build.gradle.kts`
+(R8, debuggable, debug-signed — same shape as `minified`) is what the
+Macrobenchmark plugin builds against.
+
+Local equivalent (slow path): the T1 matrix AVD from
+`tool/emulator-matrix/`:
+```sh
+./gradlew :benchmark:connectedBenchmarkAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.pleztv.app.benchmark.StartupBenchmark#generateBaselineProfile
+```
+Copy the generated profile from under
+`android/benchmark/build/` (the exact output directory varies by AGP;
+`find android/benchmark/build -name 'baseline-prof.txt'`) to
+`android/app/src/main/baseline-prof.txt` (AGP picks it up automatically
+and ships it in the APK). Then run the two startup tests on the same
+job and record `timeToInitialDisplay` None vs Partial(Require).
 4. Verify ProfileInstaller applied the profile on a **sideloaded**
    install (a profile *in* the APK that was never applied does
    nothing): install the release APK over ADB, cold-start, and check
@@ -43,9 +57,11 @@ generated from a debug build is meaningless.
 
 ## Proof owed (UNPROVEN)
 
-- Generation has never run: no `baseline-prof.txt` exists yet, and the
-  local Gradle build is blocked, so the module + the ProfileInstaller
-  call are **UNPROVEN — CI compile is the proof**.
+- Generation has never run: no `baseline-prof.txt` exists yet. The CI
+  job (`.github/workflows/baseline-profile.yml`, 1.5.3 S1) and the
+  `benchmark` build type now exist, but neither has ever executed —
+  **the first manual dispatch is the proof** (CI compile of the new
+  build type + a generated profile in the artifact).
 - The "Live TV" UI selector in `StartupBenchmark.runStartupJourney`
   must be verified against the real UI on the first CI run; if the
   tab's label/content description differs, the wait times out and the
