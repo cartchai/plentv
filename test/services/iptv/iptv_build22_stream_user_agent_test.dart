@@ -72,7 +72,7 @@ M3uConnection _m3uConnection() => M3uConnection(
 );
 
 /// A non-IPTV client: artwork fetches for any other backend keep the app's
-/// name ('PlezTV'), exactly as before.
+/// name ('PlenTV'), exactly as before.
 class _OtherBackendClient implements MediaServerClient {
   @override
   ServerId get serverId => ServerId('plex');
@@ -504,8 +504,8 @@ void main() {
     test('artworkHeadersFor gives VLC for an IPTV client, PlezTV otherwise', () {
       final iptv = IptvClient.xtream(xtreamConnection: _trexConnection());
       expect(MediaImageHelper.artworkHeadersFor(iptv), {'User-Agent': 'VLC'});
-      expect(MediaImageHelper.artworkHeadersFor(_OtherBackendClient()), {'User-Agent': 'PlezTV'});
-      expect(MediaImageHelper.artworkHeadersFor(null), {'User-Agent': 'PlezTV'});
+      expect(MediaImageHelper.artworkHeadersFor(_OtherBackendClient()), {'User-Agent': 'PlenTV'});
+      expect(MediaImageHelper.artworkHeadersFor(null), {'User-Agent': 'PlenTV'});
     });
 
     test('serverArtworkProvider defaults to PlezTV and honours passed headers', () {
@@ -520,7 +520,7 @@ void main() {
       expect(defaultProvider, isA<CachedNetworkImageProvider>());
       expect(
         (defaultProvider as CachedNetworkImageProvider).headers,
-        {'User-Agent': 'PlezTV'},
+        {'User-Agent': 'PlenTV'},
       );
 
       final iptvProvider = MediaImageHelper.serverArtworkProvider(
