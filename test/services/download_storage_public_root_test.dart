@@ -22,6 +22,7 @@ import '../test_helpers/prefs.dart';
 void main() {
   late Directory tmpRoot;
   late Directory fakePublicRoot;
+  late Directory fakeDownloadsCollection;
   late PathProviderPlatform previousPathProvider;
   late List<({String relativePath, String fileName, String mimeType})> createdEntries;
   late List<({String finalPath, String partPath})> finalizedEntries;
@@ -33,7 +34,11 @@ void main() {
     required String mimeType,
   }) async {
     createdEntries.add((relativePath: relativePath, fileName: fileName, mimeType: mimeType));
-    final dir = Directory(p.join(fakePublicRoot.path, relativePath));
+    // relativePath is relative to the Downloads collection (Download/),
+    // e.g. `PlenTV/TV Shows/...` — the same contract the Kotlin
+    // DownloadsChannel expects — so it joins onto the collection root,
+    // NOT onto the public root (which would double the PlenTV segment).
+    final dir = Directory(p.join(fakeDownloadsCollection.path, relativePath));
     await dir.create(recursive: true);
     final file = File(p.join(dir.path, fileName));
     if (!await file.exists()) await file.create();
@@ -90,6 +95,7 @@ void main() {
     DownloadStorageService.resetForTesting();
     tmpRoot = await Directory.systemTemp.createTemp('dss_public_test_');
     fakePublicRoot = Directory(p.join(tmpRoot.path, 'Download', 'PlenTV'));
+    fakeDownloadsCollection = Directory(p.join(tmpRoot.path, 'Download'));
     previousPathProvider = PathProviderPlatform.instance;
     PathProviderPlatform.instance = FakePathProvider(tmpRoot);
     createdEntries = [];
@@ -213,7 +219,14 @@ void main() {
       );
       final videoPath = await service.getEpisodeVideoPath(episode, 'mp4');
       final resolved = await service.prepareDownloadTarget(videoPath, 'task-abc-123');
-      expect(resolved, startsWith(p.join(tmpRoot.path, 'documents', 'downloads')));
+      // The fallback is the app-private folder: documents on mobile,
+      // support on desktop/host — the same split `_getBaseAppDir` uses.
+      // Host tests run on the desktop branch, so expect `support` here;
+      // on a real Android device this is `documents/downloads`.
+      expect(
+        resolved,
+        startsWith(p.join(tmpRoot.path, Platform.isAndroid || Platform.isIOS ? 'documents' : 'support', 'downloads')),
+      );
       expect(resolved, isNot(startsWith(fakePublicRoot.path)));
       expect(await Directory(p.dirname(resolved)).exists(), isTrue);
       expect(resolved, endsWith('.mp4'));
