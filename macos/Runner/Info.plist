@@ -27,6 +27,7 @@
 			<string>com.pleztv.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>plentv</string>
 				<string>plezy</string>
 			</array>
 		</dict>

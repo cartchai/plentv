@@ -54,6 +54,24 @@ class DeepLinkPluginTest {
   }
 
   @Test
+  fun everyPlenTvLinkIsForwardedVerbatim() {
+    val links = listOf(
+      "plentv://open",
+      "plentv://open?profile=Kids",
+      "plentv://play?server=srv-1&id=42&mode=shuffle&profile=Kids",
+      "plentv://play?type=show&tvdb=81189&mode=next",
+      "plentv://play?content_id=plentv_srv-1_42",
+      "plentv://live?channel=News%20HD&server=srv-1&start=beginning",
+      "plentv://external-player/success/session-7?position=1234&duration=5678",
+      "plentv://future-host/some/path?param=value#fragment"
+    )
+
+    for (link in links) {
+      assertEquals(link, DeepLinkPlugin.linkFrom(viewIntent(link)))
+    }
+  }
+
+  @Test
   fun schemeMatchIgnoresCaseAndKeepsTheUrlUnchanged() {
     for (link in listOf("PLEZY://open", "Plezy://play?server=srv-1&id=42")) {
       assertEquals(link, DeepLinkPlugin.linkFrom(viewIntent(link)))

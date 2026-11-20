@@ -1023,7 +1023,7 @@ class _MainScreenState extends State<MainScreen>
 
   DeepLinkSession? _deepLinkSession;
 
-  /// Acts on `plezy://` links for this profile session ([DeepLinkService]).
+  /// Acts on `plentv://` links for this profile session ([DeepLinkService]).
   void _attachDeepLinks() {
     if (!mounted || _isShowingProfileSelection) return;
     final session = _deepLinkSession ??= DeepLinkSession(

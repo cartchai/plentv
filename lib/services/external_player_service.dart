@@ -84,7 +84,7 @@ class _CallbackSession {
 }
 
 /// How playback in an x-callback-url player ended: the `<result>` of its
-/// return link, `plezy://external-player/<result>/<session>`.
+/// return link, `plentv://external-player/<result>/<session>`.
 abstract final class _ReturnResult {
   static const success = 'success';
   static const cancel = 'cancel';
@@ -344,15 +344,18 @@ class ExternalPlayerService {
     ).id;
   }
 
-  /// Handles `plezy://external-player/<result>/<session>?position=&duration=`,
+  /// Handles `plentv://external-player/<result>/<session>?position=&duration=`,
   /// the return link an x-callback-url player opens when playback ends, and
   /// syncs the position it reports. `DeepLinkService` hands every
   /// [ExternalPlayerReturnLink] here. Returns whether the link belonged to
-  /// the pending launch.
+  /// the pending launch. 1.6 (D4): a legacy `plezy://` return link from a
+  /// player configured before the rename is accepted too.
   static Future<bool> handleCallbackUrl(Uri uri) async {
     _callbackLog('received: ${_redactTokens(uri.toString())}');
     final segments = uri.pathSegments;
-    if (uri.scheme != DeepLink.scheme || uri.host != ExternalPlayerReturnLink.host || segments.length < 2) {
+    if ((uri.scheme != DeepLink.scheme && uri.scheme != DeepLink.legacyScheme) ||
+        uri.host != ExternalPlayerReturnLink.host ||
+        segments.length < 2) {
       _callbackLog('not an external-player return link; ignoring');
       return false;
     }

@@ -32,7 +32,7 @@ class DeepLinkSession {
   final Future<void> Function(DeepLink link) launch;
 }
 
-/// Receives `plezy://` links from the platform and hands each to its owner.
+/// Receives `plentv://` links (and legacy `plezy://` links) from the platform and hands each to its owner.
 ///
 /// The native side (Android `DeepLinkPlugin`, the shared Apple
 /// `DeepLinkPlugin`) keeps a link until this service accepts it, so a link

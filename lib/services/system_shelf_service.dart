@@ -318,15 +318,25 @@ class SystemShelfService {
     };
   }
 
-  /// Build a content ID. Format: plezy_{serverId}_{ratingKey}
+  /// Build a content ID. Format: plentv_{serverId}_{ratingKey}
+  /// (1.6 D4: new rows write `plentv_`; [parseContentId] still reads the
+  /// old `plezy_` rows on the home-screen shelf).
   static String _buildContentId(ServerId? serverId, String ratingKey) {
-    return 'plezy_${serverId ?? 'unknown'}_$ratingKey';
+    return 'plentv_${serverId ?? 'unknown'}_$ratingKey';
   }
 
   /// Parse a content ID back to (serverId, ratingKey), or null if invalid.
+  /// Accepts both `plentv_` (1.6+) and `plezy_` (pre-1.6 shelf rows).
   static (ServerId serverId, String ratingKey)? parseContentId(String contentId) {
-    if (!contentId.startsWith('plezy_')) return null;
-    final parts = contentId.substring(6).split('_');
+    final String rest;
+    if (contentId.startsWith('plentv_')) {
+      rest = contentId.substring(7);
+    } else if (contentId.startsWith('plezy_')) {
+      rest = contentId.substring(6);
+    } else {
+      return null;
+    }
+    final parts = rest.split('_');
     if (parts.length < 2) return null;
     return (ServerId(parts.first), parts.sublist(1).join('_'));
   }
