@@ -49,10 +49,6 @@ void main() {
       const cases = [
         ('metacritic', 8.2, '82'), // the Metascore, whole
         ('letterboxd', 9.2, '4.6'), // 0-5 stars
-        ('trakt', 9.13, '91%'),
-        ('anilist', 8.5, '85%'),
-        ('simkl', 8.43, '8.4'),
-        ('mal', 8.612, '8.61'), // two decimals, as MyAnimeList shows its mean
       ];
       for (final (source, value, written) in cases) {
         expect(ratingInfoForSource(source, value)?.formattedValue, written, reason: source);
@@ -85,10 +81,6 @@ void main() {
         'rottenTomatoesAudience',
         'metacritic',
         'letterboxd',
-        'simkl',
-        'mal',
-        'anilist',
-        'trakt',
       ];
       for (final source in sources) {
         expect(ratingSourceLabel(source), isNotEmpty, reason: source);

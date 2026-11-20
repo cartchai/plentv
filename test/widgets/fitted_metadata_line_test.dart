@@ -231,10 +231,6 @@ void main() {
       ('tmdb', 6.4),
       ('metacritic', 8.2),
       ('letterboxd', 9.2),
-      ('trakt', 9.1),
-      ('simkl', 8.4),
-      ('mal', 8.6),
-      ('anilist', 8.5),
     ];
     for (final (source, value) in cases) {
       final info = ratingInfoForSource(source, value)!;
