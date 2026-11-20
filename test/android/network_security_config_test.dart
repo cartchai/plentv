@@ -7,11 +7,6 @@ import 'package:xml/xml.dart';
 const _configPath = 'android/app/src/main/res/xml/network_security_config.xml';
 const _expectedDomains = <String>{
   'plex.tv',
-  'trakt.tv',
-  'myanimelist.net',
-  'anilist.co',
-  'simkl.com',
-  'simkl.in',
   'api.github.com',
   'github.com',
   'githubusercontent.com',
@@ -25,10 +20,6 @@ const _fixedEndpointSourcePaths = <String>[
   'lib/services/plex_auth_service.dart',
   'lib/services/plex_discover_client.dart',
   'lib/services/plex_client/parts/live_tv.dart',
-  'lib/services/trackers/trakt/trakt_constants.dart',
-  'lib/services/trackers/mal/mal_constants.dart',
-  'lib/services/trackers/anilist/anilist_constants.dart',
-  'lib/services/trackers/simkl/simkl_constants.dart',
   'lib/services/catalog/seerr_catalog_source.dart',
   'lib/services/discord_rpc_service.dart',
   'lib/services/update_service.dart',

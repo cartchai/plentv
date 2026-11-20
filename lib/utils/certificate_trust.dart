@@ -34,11 +34,6 @@ abstract final class CertificateTrust {
   /// `test/android/network_security_config_test.dart` pins both to the sources.
   static const Set<String> fixedEndpointDomains = {
     'plex.tv',
-    'trakt.tv',
-    'myanimelist.net',
-    'anilist.co',
-    'simkl.com',
-    'simkl.in',
     'api.github.com',
     'github.com',
     // Redirect target of github.com release asset downloads, never written in source.
