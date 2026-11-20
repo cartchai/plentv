@@ -124,7 +124,7 @@ Future<void> _seedExportState(AppDatabase db) async {
 
 void _setMockPackage(String packageName, String version, String buildNumber) {
   PackageInfo.setMockInitialValues(
-    appName: 'PlezTV',
+    appName: 'PlenTV',
     packageName: packageName,
     version: version,
     buildNumber: buildNumber,
@@ -162,7 +162,7 @@ void main() {
     await _seedExportState(exportDb);
     final map = await ForkBackupService(exportDb).buildBackupMap();
 
-    expect(map['format'], 'pleztv-backup');
+    expect(map['format'], 'plentv-backup');
     expect(map['formatVersion'], 1);
     // Package-agnostic by construction: no package name, no absolute
     // paths anywhere in the file.
@@ -277,7 +277,7 @@ void main() {
         return 'downloads/$fileName';
       },
     ).exportToFile();
-    expect(path, startsWith('downloads/pleztv-backup-'));
+    expect(path, startsWith('downloads/plentv-backup-'));
     expect(path, endsWith('.json'));
     expect(captured, isNotNull);
 
@@ -311,7 +311,7 @@ void main() {
       throwsA(isA<ForkBackupException>()),
     );
     expect(
-      () => service.importFromBytes(Uint8List.fromList(utf8.encode(jsonEncode({'format': 'pleztv-backup'})))),
+      () => service.importFromBytes(Uint8List.fromList(utf8.encode(jsonEncode({'format': 'plentv-backup'})))),
       throwsA(isA<ForkBackupException>()),
     );
   });

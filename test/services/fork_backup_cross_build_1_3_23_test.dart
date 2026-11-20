@@ -125,7 +125,7 @@ Future<void> _seedExportState(AppDatabase db) async {
 
 void _setMockPackage(String packageName, String version, String buildNumber) {
   PackageInfo.setMockInitialValues(
-    appName: 'PlezTV',
+    appName: 'PlenTV',
     packageName: packageName,
     version: version,
     buildNumber: buildNumber,
@@ -166,7 +166,11 @@ void main() {
     final map = await ForkBackupService(exportDb).buildBackupMap();
 
     // The file is a literal 1.2.22 v1 backup: frozen format, stamped
-    // with the 1.2.22 version.
+    // with the 1.2.22 version. 1.6 writes `plentv-backup`, so the old
+    // format string is stamped onto the exported map to stand in for
+    // the file a user actually has on disk from 1.2.22 — and 1.6
+    // still accepts it (D2 dual-accept).
+    map['format'] = 'pleztv-backup';
     expect(map['format'], 'pleztv-backup');
     expect(map['formatVersion'], 1);
     expect(map['appVersion'], '1.2.22-2.25.0');

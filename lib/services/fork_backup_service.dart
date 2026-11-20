@@ -1,4 +1,4 @@
-// Full backup / restore for the PlezTV fork (1.2.22, FORK §65).
+// Full backup / restore for the PlenTV fork (1.2.22, FORK §65).
 //
 // The upstream Plezy backup ([SettingsExportService]) exports only the
 // portable settings registry — no connections, no logins, no EPG
@@ -8,7 +8,7 @@
 //
 // FORMAT (FROZEN v1 — do not change between 1.2.22 and 1.3.23):
 //   {
-//     "format": "pleztv-backup", "formatVersion": 1,
+//     "format": "plentv-backup", "formatVersion": 1,
 //     "appVersion": "1.2.22-2.25.0", "exportedAt": "<UTC ISO-8601>",
 //     "platform": "android",
 //     "activeProfileId": "<profile id>" | null,
@@ -139,7 +139,11 @@ class ForkBackupException implements Exception {
 class ForkBackupService {
   ForkBackupService(this._db, {this.debugDownloadsWriter, this.debugFilePicker});
 
-  static const String formatName = 'pleztv-backup';
+  /// 1.6 (D2): the format string is `plentv-backup` now, but restore
+  /// accepts the old `pleztv-backup` files too — renaming the format
+  /// WITHOUT the dual-accept would brick every existing backup.
+  static const String formatName = 'plentv-backup';
+  static const String legacyFormatName = 'pleztv-backup';
   static const int formatVersion = 1;
   static const String fileExtension = 'json';
 
@@ -342,7 +346,7 @@ class ForkBackupService {
     final bytes = Uint8List.fromList(utf8.encode(jsonString));
     final now = DateTime.now();
     final fileName =
-        'pleztv-backup-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.$fileExtension';
+        'plentv-backup-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.$fileExtension';
     final writer =
         debugDownloadsWriter ??
         (({required String fileName, required Uint8List bytes, String mimeType = 'text/plain'}) =>
@@ -407,8 +411,13 @@ class ForkBackupService {
   /// by re-reading it: each section report counts the entries that
   /// actually landed (restored) and the ones that did not (skipped —
   /// malformed, unknown kind, or failed verification). Throws
-  /// [ForkBackupException] when the file is not a PlezTV backup or its
+  /// [ForkBackupException] when the file is not a PlenTV backup or its
   /// formatVersion is newer than this build understands.
+  ///
+  /// 1.6 (D2): both `plentv-backup` and the old `pleztv-backup` format
+  /// strings restore — the old files are the user's only copy of their
+  /// logins, and a rename that rejected them would strand every backup
+  /// taken before 1.6.
   ///
   /// Order matters: connections first (everything else is keyed by
   /// connection id), then profiles and their tokens, then the active
@@ -417,8 +426,8 @@ class ForkBackupService {
   /// stores, favourites, resume. A section that fails never aborts the
   /// rest; the report says what landed.
   Future<ForkBackupRestoreReport> applyBackupMap(Map<String, dynamic> data) async {
-    if (data['format'] != formatName) {
-      throw const ForkBackupException('Not a PlezTV backup file');
+    if (data['format'] != formatName && data['format'] != legacyFormatName) {
+      throw const ForkBackupException('Not a PlenTV backup file');
     }
     final version = data['formatVersion'];
     if (version is! int) {
