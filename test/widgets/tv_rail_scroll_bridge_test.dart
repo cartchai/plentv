@@ -189,5 +189,49 @@ void main() {
       dynamicBridge.handlePointerSignal(scrollEvent(const Offset(0, 400)));
       expect(moves, ['hub 1']);
     });
+
+    group('Quest horizontal flip (1.6)', () {
+      TvRailScrollBridge questBridge(bool Function() invert) => TvRailScrollBridge(
+            stepThresholds: () => (horizontal: 300.0, vertical: 300.0),
+            onMoveHub: (delta) => moves.add('hub $delta'),
+            onMoveItem: (delta) => moves.add('item $delta'),
+            invertHorizontal: invert,
+            now: now,
+          );
+
+      test('without the flip a positive dx steps right, like a mouse wheel', () {
+        final bridge = questBridge(() => false);
+        bridge.handlePointerSignal(scrollEvent(const Offset(400, 0)));
+        expect(moves, ['item 1']);
+      });
+
+      test('with the flip a positive dx steps left (Horizon thumbstick sign)', () {
+        // Horizon reports a leftward thumbstick push as a positive
+        // horizontal delta, so on a Quest that push must step left.
+        final bridge = questBridge(() => true);
+        bridge.handlePointerSignal(scrollEvent(const Offset(400, 0)));
+        expect(moves, ['item -1']);
+        fakeNow = fakeNow.add(const Duration(milliseconds: 100));
+        bridge.handlePointerSignal(scrollEvent(const Offset(-400, 0)));
+        expect(moves, ['item -1', 'item 1']);
+      });
+
+      test('the flip leaves the vertical axis alone', () {
+        final bridge = questBridge(() => true);
+        bridge.handlePointerSignal(scrollEvent(const Offset(0, 400)));
+        expect(moves, ['hub 1']);
+      });
+
+      test('the flip is read per event, so detection landing later applies', () {
+        var quest = false;
+        final bridge = questBridge(() => quest);
+        bridge.handlePointerSignal(scrollEvent(const Offset(400, 0)));
+        expect(moves, ['item 1']);
+        quest = true;
+        fakeNow = fakeNow.add(const Duration(milliseconds: 100));
+        bridge.handlePointerSignal(scrollEvent(const Offset(400, 0)));
+        expect(moves, ['item 1', 'item -1']);
+      });
+    });
   });
 }

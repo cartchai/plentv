@@ -26,6 +26,7 @@ import '../theme/mono_tokens.dart';
 import '../utils/layout_constants.dart';
 import '../utils/media_image_helper.dart';
 import '../utils/media_navigation_helper.dart';
+import '../utils/platform_detector.dart';
 import '../utils/provider_extensions.dart';
 import 'animated_dim_scrim.dart';
 import 'app_icon.dart';
@@ -531,6 +532,10 @@ class TvBrowseRailState extends State<TvBrowseRail> with TickerProviderStateMixi
       onMoveHub: _moveHub,
       onMoveItem: _moveItem,
       stepThresholds: _railStepThresholds,
+      // Quest-gated: Horizon reports a leftward thumbstick push as a
+      // positive horizontal delta, so the rail flips it on a Quest only.
+      // The tear-off reads detection per event (false until it lands).
+      invertHorizontal: TvDetectionService.isHorizonOsSync,
     );
     _focusNode.addListener(_handleFocusChange);
     final startHub = _activeHub;

@@ -323,6 +323,12 @@ android {
     if (System.getenv("AMAZON") != null) {
       versionCode = (flutter.versionCode ?: 0) + 3000
       ndk {
+        // The Flutter Gradle plugin's configureAbis() runs first and unions
+        // all ABIs back in, so without clear() this filter is a no-op (the
+        // Quest fork measured 256.7 -> 169.4 MB by adding it). We ship
+        // split-per-ABI APKs so no dead slice ships today, but the trap
+        // must not be there for any fat/universal Amazon build.
+        abiFilters.clear()
         abiFilters += listOf("armeabi-v7a", "arm64-v8a")
       }
     }

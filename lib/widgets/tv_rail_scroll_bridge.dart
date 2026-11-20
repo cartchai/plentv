@@ -24,11 +24,20 @@ import 'package:flutter/gestures.dart';
 /// (re-anchored), like the touch service. Direction follows the scroll
 /// delta: positive dy scrolls down the hubs, positive dx steps right
 /// along the row.
+///
+/// 1.6: on a Quest the horizontal sign is flipped. Horizon synthesises
+/// the thumbstick as a mouse wheel and reports a leftward push as a
+/// positive horizontal delta (HellboundGlory fork, verified on a Quest 3),
+/// so without the flip a left push would step right. The flip is gated on
+/// [invertHorizontal] — Quest detection, never on by default — so a real
+/// mouse wheel keeps the natural direction. The callback is read per event,
+/// so the flip applies as soon as detection lands, not only at construction.
 class TvRailScrollBridge {
   TvRailScrollBridge({
     required this.onMoveHub,
     required this.onMoveItem,
     required this.stepThresholds,
+    this.invertHorizontal,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -42,6 +51,11 @@ class TvRailScrollBridge {
   /// item's geometry. The caller supplies the geometry; non-finite or
   /// non-positive values disable stepping on that axis.
   final ({double horizontal, double vertical}) Function() stepThresholds;
+
+  /// When true, a positive horizontal delta steps left instead of right
+  /// (Quest: Horizon reports a leftward thumbstick push as positive dx).
+  /// Read per event so detection landing after construction still applies.
+  final bool Function()? invertHorizontal;
 
   final DateTime Function() _now;
 
@@ -73,7 +87,7 @@ class TvRailScrollBridge {
       _progressY = 0;
       return;
     }
-    _progressX += event.scrollDelta.dx;
+    _progressX += (invertHorizontal?.call() ?? false) ? -event.scrollDelta.dx : event.scrollDelta.dx;
     _progressY += event.scrollDelta.dy;
     final axis = _resolveAxis(stepThresholds());
     if (axis == null) return;
