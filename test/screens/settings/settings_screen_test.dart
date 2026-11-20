@@ -903,13 +903,11 @@ class _SettingsHarness {
     accountPreferences.dispose();
     await plexHome.dispose();
     await database.close();
-    // 1.3.25 §68 (test repair, pre-existing): the constructor builds
-    // exactly 5 eager tracker clients (MAL, AniList, Simkl, Trakt,
-    // Mdblist); a 6th only appears when a short-lived Simkl lookup runs,
-    // which these tests never trigger — so the old hasLength(6) failed
-    // every test in this file on base. The leak check below (every
-    // created client closed exactly once) is the part that matters.
-    expect(trackerHttpClients.length, greaterThanOrEqualTo(5));
+    // 1.5.2: the constructor builds exactly 1 eager tracker client
+    // (MDBList — Trakt, Simkl, MAL and AniList are gone). The leak
+    // check below (every created client closed exactly once) is the
+    // part that matters.
+    expect(trackerHttpClients, hasLength(1));
     expect(trackerHttpClients.toSet().length, trackerHttpClients.length);
     for (final client in trackerHttpClients) {
       expect(client.closeCount, 1);
