@@ -87,6 +87,7 @@ internal class DownloadsChannel(private val activity: Activity) {
    * re-enqueued download reuses its entry (and its partial file) instead
    * of stacking a suffixed duplicate.
    */
+  @Suppress("DEPRECATION")
   private fun findOwnEntry(
     relativePath: String,
     displayName: String,
@@ -95,14 +96,14 @@ internal class DownloadsChannel(private val activity: Activity) {
     val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
     resolver.query(
       collection,
-      arrayOf(MediaStore.Downloads._ID, MediaStore.Downloads._DATA),
+      arrayOf(MediaStore.Downloads._ID, MediaStore.MediaColumns.DATA),
       "${MediaStore.Downloads.RELATIVE_PATH} = ? AND ${MediaStore.Downloads.DISPLAY_NAME} = ? AND ${MediaStore.Downloads.OWNER_PACKAGE_NAME} = ?",
       arrayOf(relativePath, displayName, activity.packageName),
       null,
     )?.use { cursor ->
       if (cursor.moveToFirst()) {
         val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID))
-        val dataIndex = cursor.getColumnIndex(MediaStore.Downloads._DATA)
+        val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
         val data = if (dataIndex >= 0) cursor.getString(dataIndex) else null
         return id to data
       }
@@ -166,13 +167,13 @@ internal class DownloadsChannel(private val activity: Activity) {
     // on collision, and the downloader must write the file it reserved.
     val displayName = resolver.query(
       uri,
-      arrayOf(MediaStore.Downloads.DISPLAY_NAME, MediaStore.Downloads._DATA),
+      arrayOf(MediaStore.Downloads.DISPLAY_NAME, MediaStore.MediaColumns.DATA),
       null,
       null,
       null,
     )?.use { cursor ->
       if (cursor.moveToFirst()) {
-        val dataIndex = cursor.getColumnIndex(MediaStore.Downloads._DATA)
+        val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
         val data = if (dataIndex >= 0) cursor.getString(dataIndex) else null
         if (!data.isNullOrBlank()) return@use data
         cursor.getString(0)
