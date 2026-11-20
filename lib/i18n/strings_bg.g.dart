@@ -273,8 +273,6 @@ class _Translations$settings$bg extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Настройки';
-	@override String get supportDeveloper => 'Подкрепи PlenTV';
-	@override String get supportDeveloperDescription => 'Дарение чрез Liberapay за финансиране на разработката';
 	@override String get language => 'Език';
 	@override String get theme => 'Тема';
 	@override String get appearance => 'Изглед';
@@ -983,7 +981,6 @@ class _Translations$videoControls$bg extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Заключване на завъртането';
 	@override String get lockScreen => 'Заключи екрана';
 	@override String get screenLockButton => 'Заключване на екрана';
-	@override String get longPressToUnlock => 'Задръж продължително за отключване';
 	@override String get timelineSlider => 'Видео времева линия';
 	@override String get volumeSlider => 'Ниво на звука';
 	@override String endsAt({required Object time}) => 'Свършва в ${time}';
@@ -3498,8 +3495,6 @@ extension on TranslationsBg {
 			'supporter.errors.restoreFailed' => 'Няма връзка с магазина и покупката ви не можа да бъде възстановена. Опитайте отново.',
 			'supporter.errors.nothingToRestore' => 'Не е намерена покупка на Supporter за този акаунт в магазина.',
 			'settings.title' => 'Настройки',
-			'settings.supportDeveloper' => 'Подкрепи PlenTV',
-			'settings.supportDeveloperDescription' => 'Дарение чрез Liberapay за финансиране на разработката',
 			'settings.language' => 'Език',
 			'settings.theme' => 'Тема',
 			'settings.appearance' => 'Изглед',
@@ -3855,10 +3850,10 @@ extension on TranslationsBg {
 			'themeEditor.swatchLabel' => ({required Object color, required Object theme}) => '${color} (${theme})',
 			'themeEditor.contrast.textOnBg' => 'Текст върху фона',
 			'themeEditor.contrast.textOnSurface' => 'Текст върху повърхността',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Вторичен текст върху фона',
 			'themeEditor.contrast.textMutedOnSurface' => 'Вторичен текст върху повърхността',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Акцент върху фона',
 			'themeEditor.contrast.accentOnSurface' => 'Акцент върху повърхността',
 			'themeEditor.contrast.labelOnAccent' => 'Надпис на бутон върху акцента',
@@ -4146,7 +4141,6 @@ extension on TranslationsBg {
 			'videoControls.rotationLockButton' => 'Заключване на завъртането',
 			'videoControls.lockScreen' => 'Заключи екрана',
 			'videoControls.screenLockButton' => 'Заключване на екрана',
-			'videoControls.longPressToUnlock' => 'Задръж продължително за отключване',
 			'videoControls.timelineSlider' => 'Видео времева линия',
 			'videoControls.volumeSlider' => 'Ниво на звука',
 			'videoControls.endsAt' => ({required Object time}) => 'Свършва в ${time}',
@@ -4369,11 +4363,11 @@ extension on TranslationsBg {
 			'connections.sessionExpiredOne' => ({required Object name}) => 'Сесията за ${name} е изтекла',
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Сесиите за ${count} сървъра са изтекли',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} отказа достъп за този профил',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} сървъра отказаха достъп за този профил',
 			'connections.signInAgain' => 'Влез отново',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Редактирай връзката с ${product}',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Добавете или премахнете URL адреси за ${serverName}. PlenTV ще използва достъпния URL адрес с най-ниска латентност.',
 			'accountPreferences.sectionTitle' => 'Предпочитания на акаунта',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Опции за аудио, субтитри и библиотека, запазени на ${account}',
@@ -4883,11 +4877,11 @@ extension on TranslationsBg {
 			'liveTv.failedToBuildStreamUrl' => 'URL за потока не можа да бъде създаден',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Каналът не можа да бъде стартиран: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Каналът не можа да бъде сменен: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Колекции',
 			'collections.collection' => 'Колекция',
 			'collections.empty' => 'Колекцията е празна',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Изтрий колекция',
 			'collections.deleteConfirm' => ({required Object title}) => 'Да се изтрие ли "${title}"? Това не може да бъде отменено.',
 			'collections.deleted' => 'Колекцията е изтрита',
@@ -5397,11 +5391,11 @@ extension on TranslationsBg {
 			'externalPlayer.useExternalPlayerDescription' => 'Отваряй видеата в друго приложение',
 			'externalPlayer.selectPlayer' => 'Избери плейър',
 			'externalPlayer.customPlayers' => 'Потребителски плейъри',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Системен по подразбиране',
 			'externalPlayer.addCustomPlayer' => 'Добави потребителски плейър',
 			'externalPlayer.playerName' => 'Име на плейъра',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Моят плеър',
 			'externalPlayer.playerCommand' => 'Команда',
 			'externalPlayer.playerPackage' => 'Име на пакет',

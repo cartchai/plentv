@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "설정",
-    "supportDeveloper": "PlenTV 후원하기",
-    "supportDeveloperDescription": "Liberapay로 후원하여 개발 지원",
     "language": "언어",
     "theme": "테마",
     "appearance": "디자인",
@@ -855,7 +853,6 @@
     "rotationLockButton": "회전 잠금",
     "lockScreen": "화면 잠금",
     "screenLockButton": "화면 잠금",
-    "longPressToUnlock": "길게 눌러 잠금 해제",
     "timelineSlider": "타임라인",
     "volumeSlider": "볼륨 조절",
     "endsAt": "${time}에 종료",

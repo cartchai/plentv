@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Indstillinger",
-    "supportDeveloper": "Støt PlenTV",
-    "supportDeveloperDescription": "Doner via Liberapay for at finansiere udviklingen",
     "language": "Sprog",
     "theme": "Tema",
     "appearance": "Udseende",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Rotationslås",
     "lockScreen": "Lås skærm",
     "screenLockButton": "Skærmlås",
-    "longPressToUnlock": "Hold nede for at låse op",
     "timelineSlider": "Videotidslinje",
     "volumeSlider": "Lydstyrkeniveau",
     "endsAt": "Slutter kl. ${time}",

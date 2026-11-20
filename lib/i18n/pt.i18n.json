@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Configurações",
-    "supportDeveloper": "Apoie o PlenTV",
-    "supportDeveloperDescription": "Doe via Liberapay para financiar o desenvolvimento",
     "language": "Idioma",
     "theme": "Tema",
     "appearance": "Aparência",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Travar rotação",
     "lockScreen": "Travar tela",
     "screenLockButton": "Travar tela",
-    "longPressToUnlock": "Pressione e segure para destravar",
     "timelineSlider": "Linha do tempo do vídeo",
     "volumeSlider": "Nível de volume",
     "endsAt": "Termina às ${time}",

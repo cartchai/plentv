@@ -273,8 +273,6 @@ class _Translations$settings$pl extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Ustawienia';
-	@override String get supportDeveloper => 'Wesprzyj PlenTV';
-	@override String get supportDeveloperDescription => 'Wspomóż rozwój darowizną na Liberapay';
 	@override String get language => 'Język';
 	@override String get theme => 'Motyw';
 	@override String get appearance => 'Wygląd';
@@ -989,7 +987,6 @@ class _Translations$videoControls$pl extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Blokada obrotu';
 	@override String get lockScreen => 'Zablokuj ekran';
 	@override String get screenLockButton => 'Blokada ekranu';
-	@override String get longPressToUnlock => 'Przytrzymaj, aby odblokować';
 	@override String get timelineSlider => 'Oś czasu wideo';
 	@override String get volumeSlider => 'Poziom głośności';
 	@override String endsAt({required Object time}) => 'Kończy się o ${time}';
@@ -3522,8 +3519,6 @@ extension on TranslationsPl {
 			'supporter.errors.restoreFailed' => 'Nie udało się połączyć ze sklepem, aby przywrócić zakup. Spróbuj ponownie.',
 			'supporter.errors.nothingToRestore' => 'Nie znaleziono zakupu pakietu Supporter dla tego konta sklepu.',
 			'settings.title' => 'Ustawienia',
-			'settings.supportDeveloper' => 'Wesprzyj PlenTV',
-			'settings.supportDeveloperDescription' => 'Wspomóż rozwój darowizną na Liberapay',
 			'settings.language' => 'Język',
 			'settings.theme' => 'Motyw',
 			'settings.appearance' => 'Wygląd',
@@ -3879,10 +3874,10 @@ extension on TranslationsPl {
 			'themeEditor.swatchLabel' => ({required Object color, required Object theme}) => '${color} motywu ${theme}',
 			'themeEditor.contrast.textOnBg' => 'Tekst na tle',
 			'themeEditor.contrast.textOnSurface' => 'Tekst na powierzchni',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Tekst drugorzędny na tle',
 			'themeEditor.contrast.textMutedOnSurface' => 'Tekst drugorzędny na powierzchni',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Akcent na tle',
 			'themeEditor.contrast.accentOnSurface' => 'Akcent na powierzchni',
 			'themeEditor.contrast.labelOnAccent' => 'Etykieta przycisku na akcencie',
@@ -4170,7 +4165,6 @@ extension on TranslationsPl {
 			'videoControls.rotationLockButton' => 'Blokada obrotu',
 			'videoControls.lockScreen' => 'Zablokuj ekran',
 			'videoControls.screenLockButton' => 'Blokada ekranu',
-			'videoControls.longPressToUnlock' => 'Przytrzymaj, aby odblokować',
 			'videoControls.timelineSlider' => 'Oś czasu wideo',
 			'videoControls.volumeSlider' => 'Poziom głośności',
 			'videoControls.endsAt' => ({required Object time}) => 'Kończy się o ${time}',
@@ -4393,11 +4387,11 @@ extension on TranslationsPl {
 			'connections.sessionExpiredOne' => ({required Object name}) => 'Sesja wygasła dla ${name}',
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Sesja wygasła dla ${count} serwerów',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} odmówił dostępu temu kontu',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => 'Odmowa dostępu dla tego konta na ${count} serwerach',
 			'connections.signInAgain' => 'Zaloguj się ponownie',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Edytuj połączenie z ${product}',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Dodaj lub usuń adresy URL dla ${serverName}. PlenTV będzie używać osiągalnego adresu URL o najniższym opóźnieniu.',
 			'accountPreferences.sectionTitle' => 'Preferencje konta',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Opcje audio, napisów i biblioteki zapisane na koncie ${account}',
@@ -4907,11 +4901,11 @@ extension on TranslationsPl {
 			'liveTv.failedToBuildStreamUrl' => 'Nie udało się utworzyć adresu URL strumienia',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Nie udało się uruchomić kanału: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Nie udało się przełączyć kanału: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Kolekcje',
 			'collections.collection' => 'Kolekcja',
 			'collections.empty' => 'Kolekcja jest pusta',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Usuń kolekcję',
 			'collections.deleteConfirm' => ({required Object title}) => 'Usunąć "${title}"? Tego nie można cofnąć.',
 			'collections.deleted' => 'Kolekcja usunięta',
@@ -5421,11 +5415,11 @@ extension on TranslationsPl {
 			'externalPlayer.useExternalPlayerDescription' => 'Otwieraj wideo w innej aplikacji',
 			'externalPlayer.selectPlayer' => 'Wybierz odtwarzacz',
 			'externalPlayer.customPlayers' => 'Niestandardowe odtwarzacze',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Domyślny systemowy',
 			'externalPlayer.addCustomPlayer' => 'Dodaj niestandardowy odtwarzacz',
 			'externalPlayer.playerName' => 'Nazwa odtwarzacza',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mój odtwarzacz',
 			'externalPlayer.playerCommand' => 'Polecenie',
 			'externalPlayer.playerPackage' => 'Nazwa pakietu',

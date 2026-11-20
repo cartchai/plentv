@@ -273,8 +273,6 @@ class _Translations$settings$uz extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Sozlamalar';
-	@override String get supportDeveloper => 'PlenTV-ni qoʻllab-quvvatlash';
-	@override String get supportDeveloperDescription => 'Dasturchini Liberapay orqali qoʻllab-quvvatlang';
 	@override String get language => 'Til';
 	@override String get theme => 'Mavzu';
 	@override String get appearance => 'Tashqi koʻrinish';
@@ -983,7 +981,6 @@ class _Translations$videoControls$uz extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Aylanish qulfi';
 	@override String get lockScreen => 'Ekranni qulflash';
 	@override String get screenLockButton => 'Ekran qulfi';
-	@override String get longPressToUnlock => 'Qulfdan chiqarish uchun bosib turing';
 	@override String get timelineSlider => 'Video vaqt shkalasi';
 	@override String get volumeSlider => 'Ovoz balandligi';
 	@override String endsAt({required Object time}) => 'Tugash vaqti: ${time}';
@@ -3498,8 +3495,6 @@ extension on TranslationsUz {
 			'supporter.errors.restoreFailed' => 'Xaridni tiklash uchun doʻkonga ulanib boʻlmadi. Qaytadan urinib koʻring.',
 			'supporter.errors.nothingToRestore' => 'Ushbu doʻkon hisobi uchun Supporter xaridi topilmadi.',
 			'settings.title' => 'Sozlamalar',
-			'settings.supportDeveloper' => 'PlenTV-ni qoʻllab-quvvatlash',
-			'settings.supportDeveloperDescription' => 'Dasturchini Liberapay orqali qoʻllab-quvvatlang',
 			'settings.language' => 'Til',
 			'settings.theme' => 'Mavzu',
 			'settings.appearance' => 'Tashqi koʻrinish',
@@ -3855,10 +3850,10 @@ extension on TranslationsUz {
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme} — ${color}',
 			'themeEditor.contrast.textOnBg' => 'Fondagi matn',
 			'themeEditor.contrast.textOnSurface' => 'Sirtdagi matn',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Fondagi ikkilamchi matn',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sirtdagi ikkilamchi matn',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Fondagi urgʻu rangi',
 			'themeEditor.contrast.accentOnSurface' => 'Sirtdagi urgʻu rangi',
 			'themeEditor.contrast.labelOnAccent' => 'Urgʻu rangidagi tugma matni',
@@ -4146,7 +4141,6 @@ extension on TranslationsUz {
 			'videoControls.rotationLockButton' => 'Aylanish qulfi',
 			'videoControls.lockScreen' => 'Ekranni qulflash',
 			'videoControls.screenLockButton' => 'Ekran qulfi',
-			'videoControls.longPressToUnlock' => 'Qulfdan chiqarish uchun bosib turing',
 			'videoControls.timelineSlider' => 'Video vaqt shkalasi',
 			'videoControls.volumeSlider' => 'Ovoz balandligi',
 			'videoControls.endsAt' => ({required Object time}) => 'Tugash vaqti: ${time}',
@@ -4369,11 +4363,11 @@ extension on TranslationsUz {
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name} uchun seans vaqti tugadi',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} server uchun seans vaqti tugadi',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} ushbu hisobga kirishni rad etdi',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} ta server ushbu hisobga kirishni rad etdi',
 			'connections.signInAgain' => 'Qaytadan kirish',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} ulanishini tahrirlash',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} uchun URL-larni qoʻshing yoki olib tashlang. PlenTV eng kam kechikishga ega boʻlgan mavjud URL-dan foydalanadi.',
 			'accountPreferences.sectionTitle' => 'Hisob sozlamalari',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} hisobida saqlangan audio, subtitr va kutubxona parametrlari',
@@ -4883,11 +4877,11 @@ extension on TranslationsUz {
 			'liveTv.failedToBuildStreamUrl' => 'Oqim URL-ini tuzib boʻlmadi',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Kanalni ishga tushirib boʻlmadi: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Kanalni almashtirib boʻlmadi: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Toʻplamlar',
 			'collections.collection' => 'Toʻplam',
 			'collections.empty' => 'Toʻplam boʻsh',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Toʻplamni oʻchirish',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" oʻchirilsinmi?',
 			'collections.deleted' => 'Toʻplam oʻchirildi',
@@ -5397,11 +5391,11 @@ extension on TranslationsUz {
 			'externalPlayer.useExternalPlayerDescription' => 'Videolarni boshqa ilovada ochish',
 			'externalPlayer.selectPlayer' => 'Pleyerni tanlash',
 			'externalPlayer.customPlayers' => 'Maxsus pleyerlar',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Tizim standarti',
 			'externalPlayer.addCustomPlayer' => 'Maxsus pleyer qoʻshish',
 			'externalPlayer.playerName' => 'Pleyer nomi',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mening pleyerim',
 			'externalPlayer.playerCommand' => 'Buyruq',
 			'externalPlayer.playerPackage' => 'Paket nomi',

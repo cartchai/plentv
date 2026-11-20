@@ -273,8 +273,6 @@ class _Translations$settings$hu extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Beállítások';
-	@override String get supportDeveloper => 'PlenTV támogatása';
-	@override String get supportDeveloperDescription => 'A fejlesztés támogatása Liberapay-en keresztül';
 	@override String get language => 'Nyelv';
 	@override String get theme => 'Téma';
 	@override String get appearance => 'Megjelenés';
@@ -983,7 +981,6 @@ class _Translations$videoControls$hu extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Elforgatás zárolása';
 	@override String get lockScreen => 'Képernyő zárolása';
 	@override String get screenLockButton => 'Képernyőzár';
-	@override String get longPressToUnlock => 'Nyomd hosszan a feloldáshoz';
 	@override String get timelineSlider => 'Videó idősáv';
 	@override String get volumeSlider => 'Hangerő';
 	@override String endsAt({required Object time}) => 'Vége: ${time}';
@@ -3498,8 +3495,6 @@ extension on TranslationsHu {
 			'supporter.errors.restoreFailed' => 'Nem sikerült elérni az áruházat a vásárlás visszaállításához. Próbáld újra.',
 			'supporter.errors.nothingToRestore' => 'Ehhez az áruházfiókhoz nem található Supporter-vásárlás.',
 			'settings.title' => 'Beállítások',
-			'settings.supportDeveloper' => 'PlenTV támogatása',
-			'settings.supportDeveloperDescription' => 'A fejlesztés támogatása Liberapay-en keresztül',
 			'settings.language' => 'Nyelv',
 			'settings.theme' => 'Téma',
 			'settings.appearance' => 'Megjelenés',
@@ -3855,10 +3850,10 @@ extension on TranslationsHu {
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme} – ${color}',
 			'themeEditor.contrast.textOnBg' => 'Szöveg a háttéren',
 			'themeEditor.contrast.textOnSurface' => 'Szöveg a felületen',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Másodlagos szöveg a háttéren',
 			'themeEditor.contrast.textMutedOnSurface' => 'Másodlagos szöveg a felületen',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Kiemelőszín a háttéren',
 			'themeEditor.contrast.accentOnSurface' => 'Kiemelőszín a felületen',
 			'themeEditor.contrast.labelOnAccent' => 'Gombfelirat a kiemelőszínen',
@@ -4146,7 +4141,6 @@ extension on TranslationsHu {
 			'videoControls.rotationLockButton' => 'Elforgatás zárolása',
 			'videoControls.lockScreen' => 'Képernyő zárolása',
 			'videoControls.screenLockButton' => 'Képernyőzár',
-			'videoControls.longPressToUnlock' => 'Nyomd hosszan a feloldáshoz',
 			'videoControls.timelineSlider' => 'Videó idősáv',
 			'videoControls.volumeSlider' => 'Hangerő',
 			'videoControls.endsAt' => ({required Object time}) => 'Vége: ${time}',
@@ -4369,11 +4363,11 @@ extension on TranslationsHu {
 			'connections.sessionExpiredOne' => ({required Object name}) => 'A(z) ${name} munkamenete lejárt',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} szerver munkamenete lejárt',
 			'connections.accessDeniedOne' => ({required Object name}) => 'A(z) ${name} megtagadta a hozzáférést ettől a fióktól',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} szerver megtagadta a hozzáférést ettől a fióktól',
 			'connections.signInAgain' => 'Bejelentkezés újra',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'A(z) ${product} kapcsolat szerkesztése',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Adjon hozzá vagy távolítson el URL-eket a(z) ${serverName} esetén. A PlenTV a legkisebb késleltetésű, elérhető URL-t fogja használni.',
 			'accountPreferences.sectionTitle' => 'Fiókbeállítások',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Hang-, felirat- és könyvtárbeállítások mentve a(z) ${account} fiókra',
@@ -4883,11 +4877,11 @@ extension on TranslationsHu {
 			'liveTv.failedToBuildStreamUrl' => 'Nem sikerült összeállítani a stream URL-címét',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Nem sikerült elindítani a csatornát: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Nem sikerült csatornát váltani: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Gyűjtemények',
 			'collections.collection' => 'Gyűjtemény',
 			'collections.empty' => 'A gyűjtemény üres',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Gyűjtemény törlése',
 			'collections.deleteConfirm' => ({required Object title}) => 'Törlöd a következőt: "${title}"? Ez nem vonható vissza.',
 			'collections.deleted' => 'Gyűjtemény törölve',
@@ -5397,11 +5391,11 @@ extension on TranslationsHu {
 			'externalPlayer.useExternalPlayerDescription' => 'Videók megnyitása egy másik alkalmazásban',
 			'externalPlayer.selectPlayer' => 'Lejátszó kiválasztása',
 			'externalPlayer.customPlayers' => 'Egyéni lejátszók',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Rendszer alapértelmezése',
 			'externalPlayer.addCustomPlayer' => 'Egyéni lejátszó hozzáadása',
 			'externalPlayer.playerName' => 'Lejátszó neve',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Saját lejátszó',
 			'externalPlayer.playerCommand' => 'Parancs',
 			'externalPlayer.playerPackage' => 'Csomagnév',

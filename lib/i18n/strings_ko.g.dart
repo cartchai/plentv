@@ -273,8 +273,6 @@ class _Translations$settings$ko extends Translations$settings$en {
 
 	// Translations
 	@override String get title => '설정';
-	@override String get supportDeveloper => 'PlenTV 후원하기';
-	@override String get supportDeveloperDescription => 'Liberapay로 후원하여 개발 지원';
 	@override String get language => '언어';
 	@override String get theme => '테마';
 	@override String get appearance => '디자인';
@@ -980,7 +978,6 @@ class _Translations$videoControls$ko extends Translations$videoControls$en {
 	@override String get rotationLockButton => '회전 잠금';
 	@override String get lockScreen => '화면 잠금';
 	@override String get screenLockButton => '화면 잠금';
-	@override String get longPressToUnlock => '길게 눌러 잠금 해제';
 	@override String get timelineSlider => '타임라인';
 	@override String get volumeSlider => '볼륨 조절';
 	@override String endsAt({required Object time}) => '${time}에 종료';
@@ -3486,8 +3483,6 @@ extension on TranslationsKo {
 			'supporter.errors.restoreFailed' => '구매를 복원하기 위해 스토어에 연결하지 못했습니다. 다시 시도하세요.',
 			'supporter.errors.nothingToRestore' => '이 스토어 계정에서 Supporter 구매 내역을 찾을 수 없습니다.',
 			'settings.title' => '설정',
-			'settings.supportDeveloper' => 'PlenTV 후원하기',
-			'settings.supportDeveloperDescription' => 'Liberapay로 후원하여 개발 지원',
 			'settings.language' => '언어',
 			'settings.theme' => '테마',
 			'settings.appearance' => '디자인',
@@ -3843,10 +3838,10 @@ extension on TranslationsKo {
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme} ${color}',
 			'themeEditor.contrast.textOnBg' => '배경 위 텍스트',
 			'themeEditor.contrast.textOnSurface' => '표면 위 텍스트',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => '배경 위 보조 텍스트',
 			'themeEditor.contrast.textMutedOnSurface' => '표면 위 보조 텍스트',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => '배경 위 강조색',
 			'themeEditor.contrast.accentOnSurface' => '표면 위 강조색',
 			'themeEditor.contrast.labelOnAccent' => '강조색 위 버튼 라벨',
@@ -4134,7 +4129,6 @@ extension on TranslationsKo {
 			'videoControls.rotationLockButton' => '회전 잠금',
 			'videoControls.lockScreen' => '화면 잠금',
 			'videoControls.screenLockButton' => '화면 잠금',
-			'videoControls.longPressToUnlock' => '길게 눌러 잠금 해제',
 			'videoControls.timelineSlider' => '타임라인',
 			'videoControls.volumeSlider' => '볼륨 조절',
 			'videoControls.endsAt' => ({required Object time}) => '${time}에 종료',
@@ -4357,11 +4351,11 @@ extension on TranslationsKo {
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name}의 세션이 만료되었습니다',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count}개 서버의 세션이 만료되었습니다',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name}에서 이 계정의 접근을 거부했습니다',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count}개 서버에서 이 계정의 접근을 거부했습니다',
 			'connections.signInAgain' => '다시 로그인',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} 연결 편집',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName}의 URL을 추가하거나 제거하세요. PlenTV는 연결 가능한 URL 중 지연 시간이 가장 낮은 URL을 사용합니다.',
 			'accountPreferences.sectionTitle' => '계정 기본 설정',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account}에 저장된 오디오, 자막 및 라이브러리 옵션',
@@ -4871,11 +4865,11 @@ extension on TranslationsKo {
 			'liveTv.failedToBuildStreamUrl' => '스트림 URL을 생성할 수 없습니다',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => '채널을 시작하지 못했습니다: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => '채널을 전환하지 못했습니다: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => '컬렉션',
 			'collections.collection' => '컬렉션',
 			'collections.empty' => '컬렉션이 비어 있습니다',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => '컬렉션 삭제',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}"을(를) 삭제할까요? 되돌릴 수 없습니다.',
 			'collections.deleted' => '컬렉션 삭제됨',
@@ -5385,11 +5379,11 @@ extension on TranslationsKo {
 			'externalPlayer.useExternalPlayerDescription' => '동영상을 다른 앱에서 열기',
 			'externalPlayer.selectPlayer' => '플레이어 선택',
 			'externalPlayer.customPlayers' => '사용자 정의 플레이어',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => '시스템 기본값',
 			'externalPlayer.addCustomPlayer' => '사용자 정의 플레이어 추가',
 			'externalPlayer.playerName' => '플레이어 이름',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => '내 플레이어',
 			'externalPlayer.playerCommand' => '명령어',
 			'externalPlayer.playerPackage' => '패키지 이름',

@@ -273,8 +273,6 @@ class Translations$settings$zh extends Translations$settings$en {
 
 	// Translations
 	@override String get title => '设置';
-	@override String get supportDeveloper => '支持 PlenTV';
-	@override String get supportDeveloperDescription => '通过 Liberapay 捐赠支持开发';
 	@override String get language => '语言';
 	@override String get theme => '主题';
 	@override String get appearance => '外观';
@@ -980,7 +978,6 @@ class Translations$videoControls$zh extends Translations$videoControls$en {
 	@override String get rotationLockButton => '旋转锁定';
 	@override String get lockScreen => '锁定屏幕';
 	@override String get screenLockButton => '屏幕锁定';
-	@override String get longPressToUnlock => '长按解锁';
 	@override String get timelineSlider => '视频时间轴';
 	@override String get volumeSlider => '音量滑块';
 	@override String endsAt({required Object time}) => '结束时间：${time}';
@@ -3486,8 +3483,6 @@ extension on TranslationsZh {
 			'supporter.errors.restoreFailed' => '无法连接到商店以恢复你的购买。请重试。',
 			'supporter.errors.nothingToRestore' => '未在此商店账户中找到 Supporter 购买记录。',
 			'settings.title' => '设置',
-			'settings.supportDeveloper' => '支持 PlenTV',
-			'settings.supportDeveloperDescription' => '通过 Liberapay 捐赠支持开发',
 			'settings.language' => '语言',
 			'settings.theme' => '主题',
 			'settings.appearance' => '外观',
@@ -3843,10 +3838,10 @@ extension on TranslationsZh {
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme} · ${color}',
 			'themeEditor.contrast.textOnBg' => '背景上的文字',
 			'themeEditor.contrast.textOnSurface' => '表面上的文字',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => '背景上的次要文字',
 			'themeEditor.contrast.textMutedOnSurface' => '表面上的次要文字',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => '背景上的强调色',
 			'themeEditor.contrast.accentOnSurface' => '表面上的强调色',
 			'themeEditor.contrast.labelOnAccent' => '强调色上的按钮文字',
@@ -4134,7 +4129,6 @@ extension on TranslationsZh {
 			'videoControls.rotationLockButton' => '旋转锁定',
 			'videoControls.lockScreen' => '锁定屏幕',
 			'videoControls.screenLockButton' => '屏幕锁定',
-			'videoControls.longPressToUnlock' => '长按解锁',
 			'videoControls.timelineSlider' => '视频时间轴',
 			'videoControls.volumeSlider' => '音量滑块',
 			'videoControls.endsAt' => ({required Object time}) => '结束时间：${time}',
@@ -4357,11 +4351,11 @@ extension on TranslationsZh {
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name} 的会话已过期',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} 个服务器的会话已过期',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} 拒绝此账户访问',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} 台服务器拒绝此账户访问',
 			'connections.signInAgain' => '重新登录',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '编辑 ${product} 连接',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '为 ${serverName} 添加或移除 URL。PlenTV 会使用延迟最低且可访问的 URL。',
 			'accountPreferences.sectionTitle' => '账户偏好',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '音频、字幕和媒体库选项已保存在 ${account} 上',
@@ -4871,11 +4865,11 @@ extension on TranslationsZh {
 			'liveTv.failedToBuildStreamUrl' => '无法生成视频流 URL',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => '无法启动该频道：${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => '无法切换频道：${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => '合集',
 			'collections.collection' => '合集',
 			'collections.empty' => '合集为空',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => '删除合集',
 			'collections.deleteConfirm' => ({required Object title}) => '要删除“${title}”吗？此操作无法撤销。',
 			'collections.deleted' => '已删除合集',
@@ -5385,11 +5379,11 @@ extension on TranslationsZh {
 			'externalPlayer.useExternalPlayerDescription' => '在其他应用中打开视频',
 			'externalPlayer.selectPlayer' => '选择播放器',
 			'externalPlayer.customPlayers' => '自定义播放器',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => '系统默认',
 			'externalPlayer.addCustomPlayer' => '添加自定义播放器',
 			'externalPlayer.playerName' => '播放器名称',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => '我的播放器',
 			'externalPlayer.playerCommand' => '命令',
 			'externalPlayer.playerPackage' => '包名',

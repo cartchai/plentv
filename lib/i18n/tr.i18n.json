@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Ayarlar",
-    "supportDeveloper": "PlenTV'yi Destekleyin",
-    "supportDeveloperDescription": "Geliştirmeyi fonlamak için Liberapay üzerinden bağış yapın",
     "language": "Dil",
     "theme": "Tema",
     "appearance": "Görünüm",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Döndürme kilidi",
     "lockScreen": "Ekranı kilitle",
     "screenLockButton": "Ekran kilidi",
-    "longPressToUnlock": "Kilidi açmak için uzun basın",
     "timelineSlider": "Video zaman çubuğu",
     "volumeSlider": "Ses seviyesi",
     "endsAt": "Bitiş saati: ${time}",

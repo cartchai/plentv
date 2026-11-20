@@ -273,8 +273,6 @@ class _Translations$settings$sv extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Inställningar';
-	@override String get supportDeveloper => 'Stöd PlenTV';
-	@override String get supportDeveloperDescription => 'Donera via Liberapay för att finansiera utvecklingen';
 	@override String get language => 'Språk';
 	@override String get theme => 'Tema';
 	@override String get appearance => 'Utseende';
@@ -983,7 +981,6 @@ class _Translations$videoControls$sv extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Rotationslås';
 	@override String get lockScreen => 'Lås skärm';
 	@override String get screenLockButton => 'Skärmlås';
-	@override String get longPressToUnlock => 'Tryck länge för att låsa upp';
 	@override String get timelineSlider => 'Videotidslinje';
 	@override String get volumeSlider => 'Volymnivå';
 	@override String endsAt({required Object time}) => 'Slutar kl. ${time}';
@@ -3498,8 +3495,6 @@ extension on TranslationsSv {
 			'supporter.errors.restoreFailed' => 'Kunde inte nå butiken för att återställa ditt köp. Försök igen.',
 			'supporter.errors.nothingToRestore' => 'Inget Supporter-köp hittades för det här butikskontot.',
 			'settings.title' => 'Inställningar',
-			'settings.supportDeveloper' => 'Stöd PlenTV',
-			'settings.supportDeveloperDescription' => 'Donera via Liberapay för att finansiera utvecklingen',
 			'settings.language' => 'Språk',
 			'settings.theme' => 'Tema',
 			'settings.appearance' => 'Utseende',
@@ -3855,10 +3850,10 @@ extension on TranslationsSv {
 			'themeEditor.swatchLabel' => ({required Object color, required Object theme}) => '${color} (${theme})',
 			'themeEditor.contrast.textOnBg' => 'Text på bakgrund',
 			'themeEditor.contrast.textOnSurface' => 'Text på yta',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Sekundär text på bakgrund',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundär text på yta',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Accentfärg på bakgrund',
 			'themeEditor.contrast.accentOnSurface' => 'Accentfärg på yta',
 			'themeEditor.contrast.labelOnAccent' => 'Knapptext på accentfärg',
@@ -4146,7 +4141,6 @@ extension on TranslationsSv {
 			'videoControls.rotationLockButton' => 'Rotationslås',
 			'videoControls.lockScreen' => 'Lås skärm',
 			'videoControls.screenLockButton' => 'Skärmlås',
-			'videoControls.longPressToUnlock' => 'Tryck länge för att låsa upp',
 			'videoControls.timelineSlider' => 'Videotidslinje',
 			'videoControls.volumeSlider' => 'Volymnivå',
 			'videoControls.endsAt' => ({required Object time}) => 'Slutar kl. ${time}',
@@ -4369,11 +4363,11 @@ extension on TranslationsSv {
 			'connections.sessionExpiredOne' => ({required Object name}) => 'Sessionen har gått ut för ${name}',
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Sessionen har gått ut för ${count} servrar',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} nekade åtkomst för det här kontot',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servrar nekade åtkomst för det här kontot',
 			'connections.signInAgain' => 'Logga in igen',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Redigera ${product}-anslutning',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Lägg till eller ta bort URL:er för ${serverName}. PlenTV använder den nåbara URL:en med lägst latens.',
 			'accountPreferences.sectionTitle' => 'Kontoinställningar',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Ljud-, undertext- och biblioteksalternativ sparade på ${account}',
@@ -4883,11 +4877,11 @@ extension on TranslationsSv {
 			'liveTv.failedToBuildStreamUrl' => 'Kunde inte skapa strömmens URL',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Det gick inte att starta kanalen: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Det gick inte att byta kanal: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Samlingar',
 			'collections.collection' => 'Samling',
 			'collections.empty' => 'Samlingen är tom',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Ta bort samling',
 			'collections.deleteConfirm' => ({required Object title}) => 'Ta bort "${title}"? Detta kan inte ångras.',
 			'collections.deleted' => 'Samling borttagen',
@@ -5397,11 +5391,11 @@ extension on TranslationsSv {
 			'externalPlayer.useExternalPlayerDescription' => 'Öppna videor i en annan app',
 			'externalPlayer.selectPlayer' => 'Välj spelare',
 			'externalPlayer.customPlayers' => 'Anpassade spelare',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Systemstandard',
 			'externalPlayer.addCustomPlayer' => 'Lägg till anpassad spelare',
 			'externalPlayer.playerName' => 'Spelarnamn',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Min spelare',
 			'externalPlayer.playerCommand' => 'Kommando',
 			'externalPlayer.playerPackage' => 'Paketnamn',

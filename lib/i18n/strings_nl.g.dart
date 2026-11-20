@@ -273,8 +273,6 @@ class _Translations$settings$nl extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Instellingen';
-	@override String get supportDeveloper => 'Steun PlenTV';
-	@override String get supportDeveloperDescription => 'Doneer via Liberapay om de ontwikkeling te steunen';
 	@override String get language => 'Taal';
 	@override String get theme => 'Thema';
 	@override String get appearance => 'Uiterlijk';
@@ -983,7 +981,6 @@ class _Translations$videoControls$nl extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Rotatievergrendeling';
 	@override String get lockScreen => 'Scherm vergrendelen';
 	@override String get screenLockButton => 'Schermvergrendeling';
-	@override String get longPressToUnlock => 'Lang indrukken om te ontgrendelen';
 	@override String get timelineSlider => 'Videotijdlijn';
 	@override String get volumeSlider => 'Volumeniveau';
 	@override String endsAt({required Object time}) => 'Eindigt om ${time}';
@@ -3498,8 +3495,6 @@ extension on TranslationsNl {
 			'supporter.errors.restoreFailed' => 'De store kon niet worden bereikt om je aankoop te herstellen. Probeer het opnieuw.',
 			'supporter.errors.nothingToRestore' => 'Er is geen Supporter-aankoop gevonden voor dit store-account.',
 			'settings.title' => 'Instellingen',
-			'settings.supportDeveloper' => 'Steun PlenTV',
-			'settings.supportDeveloperDescription' => 'Doneer via Liberapay om de ontwikkeling te steunen',
 			'settings.language' => 'Taal',
 			'settings.theme' => 'Thema',
 			'settings.appearance' => 'Uiterlijk',
@@ -3855,10 +3850,10 @@ extension on TranslationsNl {
 			'themeEditor.swatchLabel' => ({required Object color, required Object theme}) => '${color} van ${theme}',
 			'themeEditor.contrast.textOnBg' => 'Tekst op achtergrond',
 			'themeEditor.contrast.textOnSurface' => 'Tekst op oppervlak',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Secundaire tekst op achtergrond',
 			'themeEditor.contrast.textMutedOnSurface' => 'Secundaire tekst op oppervlak',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Accent op achtergrond',
 			'themeEditor.contrast.accentOnSurface' => 'Accent op oppervlak',
 			'themeEditor.contrast.labelOnAccent' => 'Knoptekst op accent',
@@ -4146,7 +4141,6 @@ extension on TranslationsNl {
 			'videoControls.rotationLockButton' => 'Rotatievergrendeling',
 			'videoControls.lockScreen' => 'Scherm vergrendelen',
 			'videoControls.screenLockButton' => 'Schermvergrendeling',
-			'videoControls.longPressToUnlock' => 'Lang indrukken om te ontgrendelen',
 			'videoControls.timelineSlider' => 'Videotijdlijn',
 			'videoControls.volumeSlider' => 'Volumeniveau',
 			'videoControls.endsAt' => ({required Object time}) => 'Eindigt om ${time}',
@@ -4369,11 +4363,11 @@ extension on TranslationsNl {
 			'connections.sessionExpiredOne' => ({required Object name}) => 'Sessie verlopen voor ${name}',
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Sessie verlopen voor ${count} servers',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} weigerde toegang voor dit account',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servers weigerden toegang voor dit account',
 			'connections.signInAgain' => 'Opnieuw aanmelden',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product}-verbinding bewerken',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Voeg URL\'s toe aan ${serverName} of verwijder ze. PlenTV gebruikt de bereikbare URL met de laagste latentie.',
 			'accountPreferences.sectionTitle' => 'Accountvoorkeuren',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Audio-, ondertitel- en bibliotheekopties opgeslagen op ${account}',
@@ -4883,11 +4877,11 @@ extension on TranslationsNl {
 			'liveTv.failedToBuildStreamUrl' => 'Kon de stream-URL niet samenstellen',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Kon het kanaal niet starten: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Kon niet van kanaal wisselen: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Collecties',
 			'collections.collection' => 'Collectie',
 			'collections.empty' => 'Collectie is leeg',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Collectie verwijderen',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" verwijderen? Dit kan niet ongedaan worden gemaakt.',
 			'collections.deleted' => 'Collectie verwijderd',
@@ -5397,11 +5391,11 @@ extension on TranslationsNl {
 			'externalPlayer.useExternalPlayerDescription' => 'Open video\'s in een andere app',
 			'externalPlayer.selectPlayer' => 'Speler selecteren',
 			'externalPlayer.customPlayers' => 'Aangepaste spelers',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Systeemstandaard',
 			'externalPlayer.addCustomPlayer' => 'Aangepaste speler toevoegen',
 			'externalPlayer.playerName' => 'Spelernaam',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mijn speler',
 			'externalPlayer.playerCommand' => 'Commando',
 			'externalPlayer.playerPackage' => 'Pakketnaam',

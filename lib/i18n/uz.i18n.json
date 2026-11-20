@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Sozlamalar",
-    "supportDeveloper": "PlenTV-ni qoʻllab-quvvatlash",
-    "supportDeveloperDescription": "Dasturchini Liberapay orqali qoʻllab-quvvatlang",
     "language": "Til",
     "theme": "Mavzu",
     "appearance": "Tashqi koʻrinish",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Aylanish qulfi",
     "lockScreen": "Ekranni qulflash",
     "screenLockButton": "Ekran qulfi",
-    "longPressToUnlock": "Qulfdan chiqarish uchun bosib turing",
     "timelineSlider": "Video vaqt shkalasi",
     "volumeSlider": "Ovoz balandligi",
     "endsAt": "Tugash vaqti: ${time}",

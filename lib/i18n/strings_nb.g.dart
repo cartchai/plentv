@@ -273,8 +273,6 @@ class _Translations$settings$nb extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Innstillinger';
-	@override String get supportDeveloper => 'Støtt PlenTV';
-	@override String get supportDeveloperDescription => 'Doner via Liberapay for å finansiere utviklingen';
 	@override String get language => 'Språk';
 	@override String get theme => 'Tema';
 	@override String get appearance => 'Utseende';
@@ -983,7 +981,6 @@ class _Translations$videoControls$nb extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Rotasjonslås';
 	@override String get lockScreen => 'Lås skjerm';
 	@override String get screenLockButton => 'Skjermlås';
-	@override String get longPressToUnlock => 'Trykk og hold for å låse opp';
 	@override String get timelineSlider => 'Videotidslinje';
 	@override String get volumeSlider => 'Volumnivå';
 	@override String endsAt({required Object time}) => 'Slutter kl. ${time}';
@@ -3498,8 +3495,6 @@ extension on TranslationsNb {
 			'supporter.errors.restoreFailed' => 'Kunne ikke nå butikken for å gjenopprette kjøpet. Prøv igjen.',
 			'supporter.errors.nothingToRestore' => 'Fant ikke noe Supporter-kjøp for denne butikkontoen.',
 			'settings.title' => 'Innstillinger',
-			'settings.supportDeveloper' => 'Støtt PlenTV',
-			'settings.supportDeveloperDescription' => 'Doner via Liberapay for å finansiere utviklingen',
 			'settings.language' => 'Språk',
 			'settings.theme' => 'Tema',
 			'settings.appearance' => 'Utseende',
@@ -3855,10 +3850,10 @@ extension on TranslationsNb {
 			'themeEditor.swatchLabel' => ({required Object color, required Object theme}) => '${color} (${theme})',
 			'themeEditor.contrast.textOnBg' => 'Tekst på bakgrunn',
 			'themeEditor.contrast.textOnSurface' => 'Tekst på overflate',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Sekundærtekst på bakgrunn',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundærtekst på overflate',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Aksent på bakgrunn',
 			'themeEditor.contrast.accentOnSurface' => 'Aksent på overflate',
 			'themeEditor.contrast.labelOnAccent' => 'Knappetekst på aksent',
@@ -4146,7 +4141,6 @@ extension on TranslationsNb {
 			'videoControls.rotationLockButton' => 'Rotasjonslås',
 			'videoControls.lockScreen' => 'Lås skjerm',
 			'videoControls.screenLockButton' => 'Skjermlås',
-			'videoControls.longPressToUnlock' => 'Trykk og hold for å låse opp',
 			'videoControls.timelineSlider' => 'Videotidslinje',
 			'videoControls.volumeSlider' => 'Volumnivå',
 			'videoControls.endsAt' => ({required Object time}) => 'Slutter kl. ${time}',
@@ -4369,11 +4363,11 @@ extension on TranslationsNb {
 			'connections.sessionExpiredOne' => ({required Object name}) => 'Økten er utløpt for ${name}',
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Økten er utløpt for ${count} servere',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} nektet tilgang for denne kontoen',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servere nektet tilgang for denne kontoen',
 			'connections.signInAgain' => 'Logg inn igjen',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Rediger ${product}-tilkobling',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Legg til eller fjern URL-er for ${serverName}. PlenTV vil bruke den nåbare URL-en med lavest ventetid.',
 			'accountPreferences.sectionTitle' => 'Kontoinnstillinger',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Lyd-, undertekst- og bibliotekalternativer lagret på ${account}',
@@ -4883,11 +4877,11 @@ extension on TranslationsNb {
 			'liveTv.failedToBuildStreamUrl' => 'Kunne ikke opprette strømme-URL-en',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Kunne ikke starte kanalen: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Kunne ikke bytte kanal: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Samlinger',
 			'collections.collection' => 'Samling',
 			'collections.empty' => 'Samlingen er tom',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Slett samling',
 			'collections.deleteConfirm' => ({required Object title}) => 'Slette "${title}"? Dette kan ikke angres.',
 			'collections.deleted' => 'Samling slettet',
@@ -5397,11 +5391,11 @@ extension on TranslationsNb {
 			'externalPlayer.useExternalPlayerDescription' => 'Åpne videoer i en annen app',
 			'externalPlayer.selectPlayer' => 'Velg spiller',
 			'externalPlayer.customPlayers' => 'Egendefinerte spillere',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Systemstandard',
 			'externalPlayer.addCustomPlayer' => 'Legg til egendefinert spiller',
 			'externalPlayer.playerName' => 'Spillernavn',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Min spiller',
 			'externalPlayer.playerCommand' => 'Kommando',
 			'externalPlayer.playerPackage' => 'Pakkenavn',

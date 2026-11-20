@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Einstellungen",
-    "supportDeveloper": "PlenTV unterstützen",
-    "supportDeveloperDescription": "Per Liberapay spenden, um die Entwicklung zu fördern",
     "language": "Sprache",
     "theme": "Design",
     "appearance": "Darstellung",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Drehsperre",
     "lockScreen": "Bildschirm sperren",
     "screenLockButton": "Bildschirmsperre",
-    "longPressToUnlock": "Lange drücken zum Entsperren",
     "timelineSlider": "Videozeitleiste",
     "volumeSlider": "Lautstärkepegel",
     "endsAt": "Endet um ${time}",

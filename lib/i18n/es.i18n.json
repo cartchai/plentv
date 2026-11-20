@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Configuración",
-    "supportDeveloper": "Apoya PlenTV",
-    "supportDeveloperDescription": "Dona vía Liberapay para financiar el desarrollo",
     "language": "Idioma",
     "theme": "Tema",
     "appearance": "Apariencia",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Bloqueo de rotación",
     "lockScreen": "Bloquear pantalla",
     "screenLockButton": "Bloqueo de pantalla",
-    "longPressToUnlock": "Mantén pulsado para desbloquear",
     "timelineSlider": "Línea de tiempo del video",
     "volumeSlider": "Nivel de volumen",
     "endsAt": "Termina a las ${time}",

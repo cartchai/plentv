@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "設定",
-    "supportDeveloper": "PlenTVを支援",
-    "supportDeveloperDescription": "Liberapayで寄付して開発を支援",
     "language": "言語",
     "theme": "テーマ",
     "appearance": "外観",
@@ -855,7 +853,6 @@
     "rotationLockButton": "回転ロック",
     "lockScreen": "画面をロック",
     "screenLockButton": "画面ロック",
-    "longPressToUnlock": "長押しでロック解除",
     "timelineSlider": "動画タイムライン",
     "volumeSlider": "音量レベル",
     "endsAt": "${time}に終了",

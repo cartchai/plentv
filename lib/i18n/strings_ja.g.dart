@@ -273,8 +273,6 @@ class _Translations$settings$ja extends Translations$settings$en {
 
 	// Translations
 	@override String get title => '設定';
-	@override String get supportDeveloper => 'PlenTVを支援';
-	@override String get supportDeveloperDescription => 'Liberapayで寄付して開発を支援';
 	@override String get language => '言語';
 	@override String get theme => 'テーマ';
 	@override String get appearance => '外観';
@@ -980,7 +978,6 @@ class _Translations$videoControls$ja extends Translations$videoControls$en {
 	@override String get rotationLockButton => '回転ロック';
 	@override String get lockScreen => '画面をロック';
 	@override String get screenLockButton => '画面ロック';
-	@override String get longPressToUnlock => '長押しでロック解除';
 	@override String get timelineSlider => '動画タイムライン';
 	@override String get volumeSlider => '音量レベル';
 	@override String endsAt({required Object time}) => '${time}に終了';
@@ -3486,8 +3483,6 @@ extension on TranslationsJa {
 			'supporter.errors.restoreFailed' => '購入を復元するためにストアに接続できませんでした。もう一度お試しください。',
 			'supporter.errors.nothingToRestore' => 'このストアアカウントではSupporterの購入が見つかりませんでした。',
 			'settings.title' => '設定',
-			'settings.supportDeveloper' => 'PlenTVを支援',
-			'settings.supportDeveloperDescription' => 'Liberapayで寄付して開発を支援',
 			'settings.language' => '言語',
 			'settings.theme' => 'テーマ',
 			'settings.appearance' => '外観',
@@ -3843,10 +3838,10 @@ extension on TranslationsJa {
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme}の${color}',
 			'themeEditor.contrast.textOnBg' => '背景上のテキスト',
 			'themeEditor.contrast.textOnSurface' => 'サーフェス上のテキスト',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => '背景上の補助テキスト',
 			'themeEditor.contrast.textMutedOnSurface' => 'サーフェス上の補助テキスト',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => '背景上のアクセント',
 			'themeEditor.contrast.accentOnSurface' => 'サーフェス上のアクセント',
 			'themeEditor.contrast.labelOnAccent' => 'アクセント上のボタンラベル',
@@ -4134,7 +4129,6 @@ extension on TranslationsJa {
 			'videoControls.rotationLockButton' => '回転ロック',
 			'videoControls.lockScreen' => '画面をロック',
 			'videoControls.screenLockButton' => '画面ロック',
-			'videoControls.longPressToUnlock' => '長押しでロック解除',
 			'videoControls.timelineSlider' => '動画タイムライン',
 			'videoControls.volumeSlider' => '音量レベル',
 			'videoControls.endsAt' => ({required Object time}) => '${time}に終了',
@@ -4357,11 +4351,11 @@ extension on TranslationsJa {
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name} のセッションの有効期限が切れました',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} 台のサーバーのセッションの有効期限が切れました',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} がこのアカウントへのアクセスを拒否しました',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} 台のサーバーがこのアカウントへのアクセスを拒否しました',
 			'connections.signInAgain' => '再度サインイン',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product}接続を編集',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName}のURLを追加または削除します。PlenTVは到達可能なURLのうち、レイテンシーが最も低いものを使用します。',
 			'accountPreferences.sectionTitle' => 'アカウント設定',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '音声・字幕・ライブラリのオプションは${account}に保存されています',
@@ -4871,11 +4865,11 @@ extension on TranslationsJa {
 			'liveTv.failedToBuildStreamUrl' => 'ストリームURLを生成できませんでした',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'チャンネルを再生できませんでした: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'チャンネルを切り替えられませんでした: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'コレクション',
 			'collections.collection' => 'コレクション',
 			'collections.empty' => 'コレクションは空です',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'コレクションを削除',
 			'collections.deleteConfirm' => ({required Object title}) => '「${title}」を削除しますか？この操作は元に戻せません。',
 			'collections.deleted' => 'コレクションを削除しました',
@@ -5385,11 +5379,11 @@ extension on TranslationsJa {
 			'externalPlayer.useExternalPlayerDescription' => '動画を別のアプリで開きます',
 			'externalPlayer.selectPlayer' => 'プレーヤーを選択',
 			'externalPlayer.customPlayers' => 'カスタムプレーヤー',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'システム既定',
 			'externalPlayer.addCustomPlayer' => 'カスタムプレーヤーを追加',
 			'externalPlayer.playerName' => 'プレーヤー名',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'マイプレーヤー',
 			'externalPlayer.playerCommand' => 'コマンド',
 			'externalPlayer.playerPackage' => 'パッケージ名',

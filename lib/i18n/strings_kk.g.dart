@@ -273,8 +273,6 @@ class _Translations$settings$kk extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Баптаулар';
-	@override String get supportDeveloper => 'PlenTV жобасын қолдау';
-	@override String get supportDeveloperDescription => 'Дамытуды қаржыландыру үшін Liberapay арқылы демеушілік жасаңыз';
 	@override String get language => 'Тіл';
 	@override String get theme => 'Тақырып';
 	@override String get appearance => 'Сыртқы келбеті';
@@ -983,7 +981,6 @@ class _Translations$videoControls$kk extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Бұрылыс бұғаттауы';
 	@override String get lockScreen => 'Экранды бұғаттау';
 	@override String get screenLockButton => 'Экран бұғаттауы';
-	@override String get longPressToUnlock => 'Бұғаттаудан шығару үшін ұзақ басыңыз';
 	@override String get timelineSlider => 'Видео уақыт шкаласы';
 	@override String get volumeSlider => 'Дыбыс деңгейі';
 	@override String endsAt({required Object time}) => 'Аяқталу уақыты: ${time}';
@@ -3498,8 +3495,6 @@ extension on TranslationsKk {
 			'supporter.errors.restoreFailed' => 'Сатып алуды қалпына келтіру үшін дүкенге қосылу мүмкін болмады. Қайтадан байқап көріңіз.',
 			'supporter.errors.nothingToRestore' => 'Осы дүкен тіркелгісінде Supporter сатып алуы табылмады.',
 			'settings.title' => 'Баптаулар',
-			'settings.supportDeveloper' => 'PlenTV жобасын қолдау',
-			'settings.supportDeveloperDescription' => 'Дамытуды қаржыландыру үшін Liberapay арқылы демеушілік жасаңыз',
 			'settings.language' => 'Тіл',
 			'settings.theme' => 'Тақырып',
 			'settings.appearance' => 'Сыртқы келбеті',
@@ -3855,10 +3850,10 @@ extension on TranslationsKk {
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme}: ${color}',
 			'themeEditor.contrast.textOnBg' => 'Фондағы мәтін',
 			'themeEditor.contrast.textOnSurface' => 'Беткі қабаттағы мәтін',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Фондағы қосалқы мәтін',
 			'themeEditor.contrast.textMutedOnSurface' => 'Беткі қабаттағы қосалқы мәтін',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Фондағы акцент',
 			'themeEditor.contrast.accentOnSurface' => 'Беткі қабаттағы акцент',
 			'themeEditor.contrast.labelOnAccent' => 'Акценттегі түйме мәтіні',
@@ -4146,7 +4141,6 @@ extension on TranslationsKk {
 			'videoControls.rotationLockButton' => 'Бұрылыс бұғаттауы',
 			'videoControls.lockScreen' => 'Экранды бұғаттау',
 			'videoControls.screenLockButton' => 'Экран бұғаттауы',
-			'videoControls.longPressToUnlock' => 'Бұғаттаудан шығару үшін ұзақ басыңыз',
 			'videoControls.timelineSlider' => 'Видео уақыт шкаласы',
 			'videoControls.volumeSlider' => 'Дыбыс деңгейі',
 			'videoControls.endsAt' => ({required Object time}) => 'Аяқталу уақыты: ${time}',
@@ -4369,11 +4363,11 @@ extension on TranslationsKk {
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name} үшін сеанс мерзімі өтті',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} сервер үшін сеанс мерзімі өтті',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} бұл тіркелгіге кіруден бас тартты',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} сервер бұл тіркелгіге кіруден бас тартты',
 			'connections.signInAgain' => 'Қайтадан кіру',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} қосылымын өңдеу',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} үшін URL мекенжайларды қосыңыз немесе өшіріңіз. PlenTV ең төмен кідірісі бар қолжетімді URL мекенжайды пайдаланады.',
 			'accountPreferences.sectionTitle' => 'Тіркелгі баптаулары',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} тіркелгісінде сақталған аудио, субтитр және кітапхана баптаулары',
@@ -4883,11 +4877,11 @@ extension on TranslationsKk {
 			'liveTv.failedToBuildStreamUrl' => 'Ағын URL-ін құру мүмкін болмады',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Арнаны іске қосу мүмкін болмады: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Арнаны ауыстыру мүмкін болмады: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Топтамалар',
 			'collections.collection' => 'Топтама',
 			'collections.empty' => 'Топтама бос',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Топтаманы өшіру',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" өшірілсін бе?',
 			'collections.deleted' => 'Топтама өшірілді',
@@ -5397,11 +5391,11 @@ extension on TranslationsKk {
 			'externalPlayer.useExternalPlayerDescription' => 'Видеоларды басқа қолданбада ашу',
 			'externalPlayer.selectPlayer' => 'Ойнатқышты таңдау',
 			'externalPlayer.customPlayers' => 'Арнайы ойнатқыштар',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Жүйелік әдепкі',
 			'externalPlayer.addCustomPlayer' => 'Арнайы ойнатқыш қосу',
 			'externalPlayer.playerName' => 'Ойнатқыш атауы',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Менің ойнатқышым',
 			'externalPlayer.playerCommand' => 'Пәрмен',
 			'externalPlayer.playerPackage' => 'Пакет атауы',

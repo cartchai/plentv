@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Настройки",
-    "supportDeveloper": "Подкрепи PlenTV",
-    "supportDeveloperDescription": "Дарение чрез Liberapay за финансиране на разработката",
     "language": "Език",
     "theme": "Тема",
     "appearance": "Изглед",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Заключване на завъртането",
     "lockScreen": "Заключи екрана",
     "screenLockButton": "Заключване на екрана",
-    "longPressToUnlock": "Задръж продължително за отключване",
     "timelineSlider": "Видео времева линия",
     "volumeSlider": "Ниво на звука",
     "endsAt": "Свършва в ${time}",

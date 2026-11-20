@@ -273,8 +273,6 @@ class _Translations$settings$az extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Tənzimləmələr';
-	@override String get supportDeveloper => 'PlenTV-yə dəstək ol';
-	@override String get supportDeveloperDescription => 'İnkişafı maliyyələşdirmək üçün Liberapay vasitəsilə iyanə edin';
 	@override String get language => 'Dil';
 	@override String get theme => 'Mövzu';
 	@override String get appearance => 'Görünüş';
@@ -983,7 +981,6 @@ class _Translations$videoControls$az extends Translations$videoControls$en {
 	@override String get rotationLockButton => 'Dönmə kilidi';
 	@override String get lockScreen => 'Ekranı kilidlə';
 	@override String get screenLockButton => 'Ekran kilidi';
-	@override String get longPressToUnlock => 'Kilidi açmaq üçün uzun basın';
 	@override String get timelineSlider => 'Video zaman çubuğu';
 	@override String get volumeSlider => 'Səs səviyyəsi';
 	@override String endsAt({required Object time}) => 'Bitiş vaxtı: ${time}';
@@ -3498,8 +3495,6 @@ extension on TranslationsAz {
 			'supporter.errors.restoreFailed' => 'Alışınızı bərpa etmək üçün mağazaya qoşulmaq mümkün olmadı. Yenidən cəhd edin.',
 			'supporter.errors.nothingToRestore' => 'Bu mağaza hesabı üçün Supporter alışı tapılmadı.',
 			'settings.title' => 'Tənzimləmələr',
-			'settings.supportDeveloper' => 'PlenTV-yə dəstək ol',
-			'settings.supportDeveloperDescription' => 'İnkişafı maliyyələşdirmək üçün Liberapay vasitəsilə iyanə edin',
 			'settings.language' => 'Dil',
 			'settings.theme' => 'Mövzu',
 			'settings.appearance' => 'Görünüş',
@@ -3855,10 +3850,10 @@ extension on TranslationsAz {
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme}: ${color}',
 			'themeEditor.contrast.textOnBg' => 'Arxa fonda mətn',
 			'themeEditor.contrast.textOnSurface' => 'Səthdə mətn',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Arxa fonda köməkçi mətn',
 			'themeEditor.contrast.textMutedOnSurface' => 'Səthdə köməkçi mətn',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Arxa fonda vurğu',
 			'themeEditor.contrast.accentOnSurface' => 'Səthdə vurğu',
 			'themeEditor.contrast.labelOnAccent' => 'Vurğu üzərində düymə mətni',
@@ -4146,7 +4141,6 @@ extension on TranslationsAz {
 			'videoControls.rotationLockButton' => 'Dönmə kilidi',
 			'videoControls.lockScreen' => 'Ekranı kilidlə',
 			'videoControls.screenLockButton' => 'Ekran kilidi',
-			'videoControls.longPressToUnlock' => 'Kilidi açmaq üçün uzun basın',
 			'videoControls.timelineSlider' => 'Video zaman çubuğu',
 			'videoControls.volumeSlider' => 'Səs səviyyəsi',
 			'videoControls.endsAt' => ({required Object time}) => 'Bitiş vaxtı: ${time}',
@@ -4369,11 +4363,11 @@ extension on TranslationsAz {
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name} üçün seansın vaxtı bitdi',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} server üçün seansın vaxtı bitdi',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} bu hesaba girişi rədd etdi',
-			_ => null,
-		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} server bu hesaba girişi rədd etdi',
 			'connections.signInAgain' => 'Yenidən daxil ol',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} qoşulmasını düzəliş et',
+			_ => null,
+		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} üçün URL-lər əlavə edin və ya silin. PlenTV əlçatan olan ən aşağı gecikməli URL-i istifadə edəcək.',
 			'accountPreferences.sectionTitle' => 'Hesab tərcihləri',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} hesabında saxlanılan səs, altyazı və kitabxana seçimləri',
@@ -4883,11 +4877,11 @@ extension on TranslationsAz {
 			'liveTv.failedToBuildStreamUrl' => 'Yayım URL-i yaratmaq olmadı',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Kanal başladıla bilmədi: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Kanal dəyişdirilə bilmədi: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'collections.title' => 'Kolleksiyalar',
 			'collections.collection' => 'Kolleksiya',
 			'collections.empty' => 'Kolleksiya boşdur',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteCollection' => 'Kolleksiyanı sil',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" silinsin? Bu əməliyyat geri qaytarıla bilməz.',
 			'collections.deleted' => 'Kolleksiya silindi',
@@ -5397,11 +5391,11 @@ extension on TranslationsAz {
 			'externalPlayer.useExternalPlayerDescription' => 'Videoları başqa tətbiqdə açın',
 			'externalPlayer.selectPlayer' => 'Oynadıcı seç',
 			'externalPlayer.customPlayers' => 'Xüsusi oynadıcılar',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Sistem defoltu',
 			'externalPlayer.addCustomPlayer' => 'Xüsusi oynadıcı əlavə et',
 			'externalPlayer.playerName' => 'Oynadıcı adı',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mənim oynadıcım',
 			'externalPlayer.playerCommand' => 'Əmr',
 			'externalPlayer.playerPackage' => 'Paket adı',

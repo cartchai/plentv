@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Баптаулар",
-    "supportDeveloper": "PlenTV жобасын қолдау",
-    "supportDeveloperDescription": "Дамытуды қаржыландыру үшін Liberapay арқылы демеушілік жасаңыз",
     "language": "Тіл",
     "theme": "Тақырып",
     "appearance": "Сыртқы келбеті",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Бұрылыс бұғаттауы",
     "lockScreen": "Экранды бұғаттау",
     "screenLockButton": "Экран бұғаттауы",
-    "longPressToUnlock": "Бұғаттаудан шығару үшін ұзақ басыңыз",
     "timelineSlider": "Видео уақыт шкаласы",
     "volumeSlider": "Дыбыс деңгейі",
     "endsAt": "Аяқталу уақыты: ${time}",

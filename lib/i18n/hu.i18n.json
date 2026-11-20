@@ -177,8 +177,6 @@
   },
   "settings": {
     "title": "Beállítások",
-    "supportDeveloper": "PlenTV támogatása",
-    "supportDeveloperDescription": "A fejlesztés támogatása Liberapay-en keresztül",
     "language": "Nyelv",
     "theme": "Téma",
     "appearance": "Megjelenés",
@@ -858,7 +856,6 @@
     "rotationLockButton": "Elforgatás zárolása",
     "lockScreen": "Képernyő zárolása",
     "screenLockButton": "Képernyőzár",
-    "longPressToUnlock": "Nyomd hosszan a feloldáshoz",
     "timelineSlider": "Videó idősáv",
     "volumeSlider": "Hangerő",
     "endsAt": "Vége: ${time}",

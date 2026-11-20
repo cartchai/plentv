@@ -544,12 +544,6 @@ class Translations$settings$en {
 	/// en: 'Settings'
 	String get title => 'Settings';
 
-	/// en: 'Support PlenTV'
-	String get supportDeveloper => 'Support PlenTV';
-
-	/// en: 'Donate via Liberapay to fund development'
-	String get supportDeveloperDescription => 'Donate via Liberapay to fund development';
-
 	/// en: 'Language'
 	String get language => 'Language';
 
@@ -2604,9 +2598,6 @@ class Translations$videoControls$en {
 
 	/// en: 'Screen lock'
 	String get screenLockButton => 'Screen lock';
-
-	/// en: 'Long press to unlock'
-	String get longPressToUnlock => 'Long press to unlock';
 
 	/// en: 'Video timeline'
 	String get timelineSlider => 'Video timeline';
@@ -7186,9 +7177,6 @@ class Translations$iptv$en {
 	/// en: 'Catalog sync interval'
 	String get catalogSyncInterval => 'Catalog sync interval';
 
-	/// en: 'How often the catalog (channels, movies and series) re-downloads for search'
-	String get catalogSyncIntervalDescription => 'How often the catalog (channels, movies and series) re-downloads for search';
-
 	/// en: 'Once a week'
 	String get catalogSyncWeekly => 'Once a week';
 
@@ -7345,9 +7333,6 @@ class Translations$iptv$en {
 	/// en: 'No catalog downloaded yet'
 	String get catalogCacheEmpty => 'No catalog downloaded yet';
 
-	/// en: 'Catalog not synced yet — syncing in background'
-	String get catalogNotSynced => 'Catalog not synced yet — syncing in background';
-
 	/// en: 'Catalog syncing…'
 	String get catalogSyncing => 'Catalog syncing…';
 
@@ -7381,9 +7366,6 @@ class Translations$iptv$en {
 	/// en: 'Days to load'
 	String get epgDaysToLoad => 'Days to load';
 
-	/// en: 'How many days of guide to load ahead'
-	String get epgDaysToLoadDescription => 'How many days of guide to load ahead';
-
 	/// en: '(one) {${n} day} (other) {${n} days}'
 	String epgDaysCount({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
 		one: '${n} day',
@@ -7392,9 +7374,6 @@ class Translations$iptv$en {
 
 	/// en: 'Update interval'
 	String get epgUpdateInterval => 'Update interval';
-
-	/// en: 'How often the guide refreshes'
-	String get epgUpdateIntervalDescription => 'How often the guide refreshes';
 
 	/// en: '(one) {Every ${n} hour} (other) {Every ${n} hours}'
 	String epgHoursCount({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
@@ -7408,9 +7387,6 @@ class Translations$iptv$en {
 	/// en: 'Past days to keep'
 	String get epgPastDays => 'Past days to keep';
 
-	/// en: 'Past guide days kept for catch-up scrolling'
-	String get epgPastDaysDescription => 'Past guide days kept for catch-up scrolling';
-
 	/// en: 'None'
 	String get epgPastDaysNone => 'None';
 
@@ -7422,9 +7398,6 @@ class Translations$iptv$en {
 
 	/// en: 'Time offset'
 	String get epgTimeOffset => 'Time offset';
-
-	/// en: 'Shift guide times when listings are out by whole hours'
-	String get epgTimeOffsetDescription => 'Shift guide times when listings are out by whole hours';
 
 	/// en: 'No offset'
 	String get epgNoOffset => 'No offset';
@@ -7861,9 +7834,6 @@ class Translations$iptv$en {
 	/// en: 'Update time'
 	String get epgUpdateTime => 'Update time';
 
-	/// en: 'Time of day the guide refreshes'
-	String get epgUpdateTimeDescription => 'Time of day the guide refreshes';
-
 	/// en: 'Off'
 	String get epgUpdateTimeOff => 'Off';
 
@@ -7917,15 +7887,6 @@ class Translations$iptv$en {
 
 	/// en: 'Enter a User-Agent first'
 	String get xtreamUserAgentCustomEmpty => 'Enter a User-Agent first';
-
-	/// en: 'Loading initials…'
-	String get initialsLoading => 'Loading initials…';
-
-	/// en: 'Could not load the category initials. Check the connection and try again.'
-	String get initialsLoadFailed => 'Could not load the category initials. Check the connection and try again.';
-
-	/// en: 'No repeating initials found in this connection’s categories.'
-	String get initialsNoneFound => 'No repeating initials found in this connection’s categories.';
 
 	/// en: 'Series catalog'
 	String get catalogDiagnosticsTitle => 'Series catalog';
@@ -8109,9 +8070,6 @@ class Translations$iptv$en {
 
 	/// en: 'Response body'
 	String get refusalsBody => 'Response body';
-
-	/// en: 'No HTTP status'
-	String get refusalsNoStatus => 'No HTTP status';
 }
 
 // Path: iptvCategories
@@ -8170,17 +8128,11 @@ class Translations$iptvCategories$en {
 	/// en: 'Hide all'
 	String get hideAll => 'Hide all';
 
-	/// en: 'Loading categories…'
-	String get loading => 'Loading categories…';
-
 	/// en: 'Could not load the categories. Check the connection and try again.'
 	String get loadFailed => 'Could not load the categories. Check the connection and try again.';
 
 	/// en: 'Could not load this section.'
 	String get sectionLoadFailed => 'Could not load this section.';
-
-	/// en: 'No categories found for this connection.'
-	String get empty => 'No categories found for this connection.';
 
 	/// en: 'Retry'
 	String get retry => 'Retry';
@@ -10301,8 +10253,6 @@ extension on Translations {
 			'supporter.errors.restoreFailed' => 'Couldn\'t reach the store to restore your purchase. Try again.',
 			'supporter.errors.nothingToRestore' => 'No Supporter purchase was found for this store account.',
 			'settings.title' => 'Settings',
-			'settings.supportDeveloper' => 'Support PlenTV',
-			'settings.supportDeveloperDescription' => 'Donate via Liberapay to fund development',
 			'settings.language' => 'Language',
 			'settings.theme' => 'Theme',
 			'settings.appearance' => 'Appearance',
@@ -10641,10 +10591,10 @@ extension on Translations {
 			'settings.videoAndDisplay' => 'Video & Display',
 			'settings.audio' => 'Audio',
 			'settings.quality' => 'Quality',
-			_ => null,
-		} ?? switch (path) {
 			'settings.subtitles' => 'Subtitles',
 			'settings.seekAndTiming' => 'Seek & Timing',
+			_ => null,
+		} ?? switch (path) {
 			'settings.behavior' => 'Behavior',
 			'settings.gestures' => 'Gestures',
 			'settings.gestureBrightnessSwipe' => 'Brightness Swipe',
@@ -10989,7 +10939,6 @@ extension on Translations {
 			'videoControls.rotationLockButton' => 'Rotation lock',
 			'videoControls.lockScreen' => 'Lock screen',
 			'videoControls.screenLockButton' => 'Screen lock',
-			'videoControls.longPressToUnlock' => 'Long press to unlock',
 			'videoControls.timelineSlider' => 'Video timeline',
 			'videoControls.volumeSlider' => 'Volume level',
 			'videoControls.endsAt' => ({required Object time}) => 'Ends at ${time}',
@@ -11155,11 +11104,11 @@ extension on Translations {
 			'profiles.active' => 'Active',
 			'profiles.manage' => 'Manage',
 			'profiles.delete' => 'Delete',
-			_ => null,
-		} ?? switch (path) {
 			'profiles.signOut' => 'Sign out',
 			'profiles.signOutPlexTitle' => 'Sign out of Plex?',
 			'profiles.signOutPlexMessage' => ({required Object displayName}) => 'Remove ${displayName} and all Plex Home users? Sign back in anytime.',
+			_ => null,
+		} ?? switch (path) {
 			'profiles.signOutPlexDeleteDownloads' => 'Also delete downloads',
 			'profiles.signOutPlexDeleteDownloadsDescription' => 'Otherwise they stay on this device and come back when you sign back in to this account.',
 			'profiles.signOutPlexAccount' => ({required Object displayName}) => 'Sign out of ${displayName}',
@@ -11669,11 +11618,11 @@ extension on Translations {
 			'about.changelog2296.0' => 'Refreshing the catalog now uses less memory: each list is downloaded straight to a file and read once, instead of being held in memory and read three times',
 			'about.changelog2296.1' => 'The refresh still keeps the same safety checks — a partial or empty list keeps your old channels and movies instead of wiping them',
 			'about.changelog2296.2' => 'Hidden categories still stay out of search and the saved catalog, and showing one again still needs a refresh',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2296.3' => 'The scheduled background refresh uses the same lighter path',
 			'about.title' => 'About',
 			'about.openSourceLicenses' => 'Open Source Licenses',
+			_ => null,
+		} ?? switch (path) {
 			'about.versionLabel' => ({required Object version}) => 'Version ${version}',
 			'about.appDescription' => 'A beautiful Plex, Jellyfin, and Emby client for Flutter',
 			'about.viewLicensesDescription' => 'View licenses of third-party libraries',
@@ -12183,11 +12132,11 @@ extension on Translations {
 			'liveTv.recordShow' => 'Record show',
 			'liveTv.recordSettings.startEarly' => 'Start early (seconds)',
 			'liveTv.recordSettings.endLate' => 'End late (seconds)',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.recordSettings.newOnly' => 'Only new episodes',
 			'liveTv.recordSettings.anyChannel' => 'Record on any channel',
 			'liveTv.recordSettings.anyTime' => 'Record at any time',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.recordSettings.skipInLibrary' => 'Skip episodes already in the library',
 			'liveTv.recordSettings.keepUpTo' => 'Episodes to keep',
 			'liveTv.recordSettings.keepUpToHint' => '0 keeps every episode',
@@ -12697,11 +12646,11 @@ extension on Translations {
 			'performanceOverlay.cacheUsed' => 'Cache Used',
 			'performanceOverlay.cacheLimit' => 'Cache Limit',
 			'performanceOverlay.speed' => 'Speed',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.player' => 'Player',
 			'performanceOverlay.playMethod' => 'Play Method',
 			'performanceOverlay.memory' => 'Memory',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.uiFps' => 'UI FPS',
 			'performanceOverlay.fps' => 'FPS',
 			'performanceOverlay.decoderAndroidHw' => 'Android HW',
@@ -13004,7 +12953,6 @@ extension on Translations {
 			'iptv.refreshPlaylistsDescription' => 'Re-fetch channels, movies and series from your providers',
 			'iptv.refreshDone' => 'Playlists refreshed',
 			'iptv.catalogSyncInterval' => 'Catalog sync interval',
-			'iptv.catalogSyncIntervalDescription' => 'How often the catalog (channels, movies and series) re-downloads for search',
 			'iptv.catalogSyncWeekly' => 'Once a week',
 			'iptv.backgroundSync' => 'Background sync',
 			'iptv.backgroundSyncNever' => 'Never run',
@@ -13057,7 +13005,6 @@ extension on Translations {
 			'iptv.catalogModeNoConnections' => 'Mode saved. It will apply the next time a catalog syncs.',
 			'iptv.catalogCacheSize' => 'IPTV cache size',
 			'iptv.catalogCacheEmpty' => 'No catalog downloaded yet',
-			'iptv.catalogNotSynced' => 'Catalog not synced yet — syncing in background',
 			'iptv.catalogSyncing' => 'Catalog syncing…',
 			'iptv.catalogColdHint' => ({required Object types}) => '${types} not synced yet — hit Enter to search online',
 			'iptv.catalogUpdated' => ({required Object channels, required Object movies, required Object series, required Object date}) => 'Catalog: ${channels} channels · ${movies} movies · ${series} series · updated ${date}',
@@ -13069,19 +13016,15 @@ extension on Translations {
 			'iptv.playerSettingsDescription' => 'Decoder, external player and playback options',
 			'iptv.epgSection' => 'EPG / TV guide',
 			'iptv.epgDaysToLoad' => 'Days to load',
-			'iptv.epgDaysToLoadDescription' => 'How many days of guide to load ahead',
 			'iptv.epgDaysCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} day', other: '${n} days', ), 
 			'iptv.epgUpdateInterval' => 'Update interval',
-			'iptv.epgUpdateIntervalDescription' => 'How often the guide refreshes',
 			'iptv.epgHoursCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'Every ${n} hour', other: 'Every ${n} hours', ), 
 			'iptv.epgManualOnly' => 'Manual only',
 			'iptv.epgPastDays' => 'Past days to keep',
-			'iptv.epgPastDaysDescription' => 'Past guide days kept for catch-up scrolling',
 			'iptv.epgPastDaysNone' => 'None',
 			'iptv.epgUpdateOnStart' => 'Update on app start',
 			'iptv.epgUpdateOnStartDescription' => 'Refresh the guide when the app starts',
 			'iptv.epgTimeOffset' => 'Time offset',
-			'iptv.epgTimeOffsetDescription' => 'Shift guide times when listings are out by whole hours',
 			'iptv.epgNoOffset' => 'No offset',
 			'iptv.epgOffsetMinutes' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} minute', other: '${n} minutes', ), 
 			'iptv.epgUpdateNow' => 'Update now',
@@ -13211,8 +13154,6 @@ extension on Translations {
 			'iptv.epgDetailsSource' => 'Guide source',
 			'iptv.epgDetailsGuideSource' => 'Guide data from',
 			'iptv.epgDetailsMatchedId' => 'Matched guide channel',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgDetailsMatchMethod' => 'Matched by',
 			'iptv.epgDetailsPrograms' => 'Programmes',
 			'iptv.epgDetailsProgramsCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} programme', other: '${n} programmes', ), 
@@ -13222,12 +13163,13 @@ extension on Translations {
 			'iptv.epgDetailsRefresh' => 'Refresh this channel',
 			'iptv.epgMatchMethodTvgId' => 'Channel ID',
 			'iptv.epgMatchMethodName' => 'Channel name',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgMatchMethodManual' => 'Assigned by hand',
 			'iptv.epgMatchMethodNameLoose' => 'Loose name match',
 			'iptv.epgMatchMethodNameGuess' => 'Name (best guess)',
 			'iptv.epgMatchMethodNameGuessAffiliate' => 'Name guess (affiliate)',
 			'iptv.epgUpdateTime' => 'Update time',
-			'iptv.epgUpdateTimeDescription' => 'Time of day the guide refreshes',
 			'iptv.epgUpdateTimeOff' => 'Off',
 			'iptv.epgUpdateOnPlaylistChange' => 'Update when the channel list changes',
 			'iptv.epgUpdateOnPlaylistChangeDescription' => 'Refresh the guide when the provider adds or removes channels',
@@ -13246,9 +13188,6 @@ extension on Translations {
 			'iptv.xtreamUserAgentCustomTitle' => 'Custom User-Agent',
 			'iptv.xtreamUserAgentCustomHint' => 'Tap to enter a User-Agent',
 			'iptv.xtreamUserAgentCustomEmpty' => 'Enter a User-Agent first',
-			'iptv.initialsLoading' => 'Loading initials…',
-			'iptv.initialsLoadFailed' => 'Could not load the category initials. Check the connection and try again.',
-			'iptv.initialsNoneFound' => 'No repeating initials found in this connection’s categories.',
 			'iptv.catalogDiagnosticsTitle' => 'Series catalog',
 			'iptv.catalogDiagnosticsHint' => 'What this phone loaded from the series catalog — send a screenshot if TV search still finds nothing.',
 			'iptv.catalogDiagnosticsLoading' => 'Loading catalog…',
@@ -13309,7 +13248,6 @@ extension on Translations {
 			'iptv.refusalsUserAgent' => 'User-Agent',
 			'iptv.refusalsHeaders' => 'Response headers',
 			'iptv.refusalsBody' => 'Response body',
-			'iptv.refusalsNoStatus' => 'No HTTP status',
 			'iptvCategories.title' => ({required Object name}) => '${name} categories',
 			'iptvCategories.intro' => 'Turn off a category to hide its channels and on-demand titles. Changes apply right away.',
 			'iptvCategories.hiddenTotal' => ({required Object count}) => '${count} categories hidden',
@@ -13326,10 +13264,8 @@ extension on Translations {
 			'iptvCategories.initialRowM3u' => ({required Object initial, required Object count}) => '${initial} — ${count} groups',
 			'iptvCategories.showAll' => 'Show all',
 			'iptvCategories.hideAll' => 'Hide all',
-			'iptvCategories.loading' => 'Loading categories…',
 			'iptvCategories.loadFailed' => 'Could not load the categories. Check the connection and try again.',
 			'iptvCategories.sectionLoadFailed' => 'Could not load this section.',
-			'iptvCategories.empty' => 'No categories found for this connection.',
 			'iptvCategories.retry' => 'Retry',
 			'iptvCategories.persistFailed' => 'Could not save that change. Try again.',
 			'iptvCategories.unhiddenNeedsRefresh' => 'Those categories were cleared to save space. Refresh the catalog to bring their shows back.',
