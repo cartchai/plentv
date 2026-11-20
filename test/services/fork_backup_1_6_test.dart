@@ -62,7 +62,7 @@ void main() {
     }
   });
 
-  Future<Map<String, dynamic>> _exportOneConnectionMap() async {
+  Future<Map<String, dynamic>> exportOneConnectionMap() async {
     final exportDb = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(() async {
       try {
@@ -78,7 +78,7 @@ void main() {
   }
 
   test('new backups write the plentv-backup format', () async {
-    final map = await _exportOneConnectionMap();
+    final map = await exportOneConnectionMap();
     expect(map['format'], 'plentv-backup');
     expect(map['formatVersion'], 1);
   });
@@ -107,7 +107,7 @@ void main() {
   });
 
   test('an old pleztv-backup file restores into 1.6', () async {
-    final map = await _exportOneConnectionMap();
+    final map = await exportOneConnectionMap();
     // Rewrite the format string to the pre-1.6 one: the file a user
     // actually has on disk from 1.5.3.
     map['format'] = 'pleztv-backup';
@@ -120,7 +120,7 @@ void main() {
   });
 
   test('a new plentv-backup file restores into 1.6', () async {
-    final map = await _exportOneConnectionMap();
+    final map = await exportOneConnectionMap();
     importDb = AppDatabase.forTesting(NativeDatabase.memory());
     final report = await ForkBackupService(importDb).applyBackupMap(map);
     expect(report.connections.restored, 1);
@@ -129,7 +129,7 @@ void main() {
   });
 
   test('a legacy file with a future formatVersion is still rejected', () async {
-    final map = await _exportOneConnectionMap();
+    final map = await exportOneConnectionMap();
     map['format'] = 'pleztv-backup';
     map['formatVersion'] = 2;
     importDb = AppDatabase.forTesting(NativeDatabase.memory());
@@ -140,7 +140,7 @@ void main() {
   });
 
   test('round-trip: 1.6 export restores and re-exports the same connections', () async {
-    final map1 = await _exportOneConnectionMap();
+    final map1 = await exportOneConnectionMap();
     importDb = AppDatabase.forTesting(NativeDatabase.memory());
     final report = await ForkBackupService(importDb).applyBackupMap(map1);
     expect(report.connections.restored, 1);
