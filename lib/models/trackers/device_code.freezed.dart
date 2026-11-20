@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DeviceCode {
 
- String get deviceCode; String get userCode; String get verificationUrl; int get expiresIn; int get interval;/// URL with the code pre-filled (e.g. `https://simkl.com/pin?user_code=BDWP-HQPK`)
+ String get deviceCode; String get userCode; String get verificationUrl; int get expiresIn; int get interval;/// URL with the code pre-filled (e.g. `https://mdblist.com/oauth/device/?user_code=BDWP-HQPK`)
 /// when the provider supports it. Null when the provider sends none and
 /// none can be built, leaving the user to enter the code by hand.
  String? get verificationUrlComplete;
@@ -216,7 +216,7 @@ class _DeviceCode implements DeviceCode {
 @override final  String verificationUrl;
 @override final  int expiresIn;
 @override final  int interval;
-/// URL with the code pre-filled (e.g. `https://simkl.com/pin?user_code=BDWP-HQPK`)
+/// URL with the code pre-filled (e.g. `https://mdblist.com/oauth/device/?user_code=BDWP-HQPK`)
 /// when the provider supports it. Null when the provider sends none and
 /// none can be built, leaving the user to enter the code by hand.
 @override final  String? verificationUrlComplete;

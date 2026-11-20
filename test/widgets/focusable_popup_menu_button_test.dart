@@ -47,7 +47,7 @@ void main() {
           body: FocusablePopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             semanticLabel: 'Choose source',
-            semanticValue: 'Trakt',
+            semanticValue: 'Movies',
             itemBuilder: (_) => const [AppMenuItem(value: 'one', label: 'One')],
           ),
         ),
@@ -57,12 +57,12 @@ void main() {
     final finder = find.bySemanticsLabel('Choose source');
     expect(finder, findsOneWidget);
     final data = tester.getSemantics(finder).getSemanticsData();
-    expect(data.value, 'Trakt');
+    expect(data.value, 'Movies');
     expect(data.flagsCollection.isButton, isTrue);
     expect(_semanticTapNodeCount(tester), 1);
     expect(data.flagsCollection.isEnabled, Tristate.isTrue);
     expect(data.hasAction(SemanticsAction.tap), isTrue);
-    expect(find.bySemanticsLabel('Trakt'), findsNothing);
+    expect(find.bySemanticsLabel('Movies'), findsNothing);
     semantics.dispose();
   });
 }
