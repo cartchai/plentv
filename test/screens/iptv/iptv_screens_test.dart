@@ -1004,7 +1004,7 @@ void main() {
   group('PlezTV rename + About changelog', () {
     test('English strings call the app PlezTV and carry the changelog', () async {
       final strings = await AppLocale.en.build();
-      expect(strings.app.title, 'PlezTV');
+      expect(strings.app.title, 'PlenTV');
       expect(strings.about.changelogTitle, "What's new");
       expect(strings.about.changelog2251, hasLength(9));
       expect(strings.about.changelog2251, contains('Blue app icon'));
@@ -1021,7 +1021,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('PlezTV'), findsWidgets);
+      expect(find.text('PlenTV'), findsWidgets);
       expect(find.text("What's new"), findsOneWidget);
       expect(find.text('Version 2.25.1'), findsOneWidget);
       expect(find.text('Version 2.25.0'), findsOneWidget);
