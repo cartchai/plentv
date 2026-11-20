@@ -79,7 +79,7 @@ class BenchmarkGates {
 }
 
 /// Machine-readable benchmark report (L-56 / T4-7), written next to the
-/// debug export as `pleztv-benchmark-<tier>-<version>.json`.
+/// debug export as `plentv-benchmark-<tier>-<version>.json`.
 ///
 /// Shape (stable — the harness parses it):
 /// ```json
@@ -198,7 +198,7 @@ class BenchmarkReport {
   /// Write the report as JSON. Sync I/O — the caller runs this off the
   /// UI thread (or after the run, never mid-scroll). Returns the file.
   File writeJsonFile(Directory dir, {String? fileName}) {
-    final name = fileName ?? 'pleztv-benchmark-$tier-$appVersion.json';
+    final name = fileName ?? 'plentv-benchmark-$tier-$appVersion.json';
     final file = File('${dir.path}/$name');
     file.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(toJson()), flush: true);
     return file;

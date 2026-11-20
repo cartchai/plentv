@@ -52,7 +52,7 @@ import 'settings_utils.dart';
 /// past days, update on start, time offset, manual update/clear), and a
 /// link to the player settings IPTV uses. Every row here is wired to real
 /// behaviour — nothing is a dead toggle.
-/// Things TiviMate has that PlezTV cannot do yet (recording, multi-view,
+/// Things TiviMate has that PlenTV cannot do yet (recording, multi-view,
 /// a parental PIN) are deliberately left out; see IPTV_FIXES_NOTES.md.
 /// The EPG update-time label (PlezTV 1.2.0, §3.3): minutes after
 /// midnight as HH:MM, or Off for -1.

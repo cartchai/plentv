@@ -30,10 +30,10 @@ import 'base_shared_preferences_service.dart';
 ///   to release signing later WILL break this path (signature mismatch) and
 ///   must be handled then, not now.
 class UpdateService {
-  static const String _githubRepo = 'cartchai/pleztv';
+  static const String _githubRepo = 'cartchai/plentv';
 
   /// Public releases page, linked from the Settings Updates section.
-  static const String releasesUrl = 'https://github.com/cartchai/pleztv/releases';
+  static const String releasesUrl = 'https://github.com/cartchai/plentv/releases';
 
   static const String _keySkippedVersion = 'update_skipped_version';
   static const String _keyLastCheckTime = 'update_last_check_time';

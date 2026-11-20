@@ -197,7 +197,7 @@ class DebugLogExportService {
     } catch (_) {
       // Best-effort metadata.
     }
-    return 'App: PlezTV $appVersion — $device';
+    return 'App: PlenTV $appVersion — $device';
   }
 
   /// One-line memory numbers for the summary block (the full numbers

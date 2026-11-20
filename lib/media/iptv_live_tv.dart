@@ -601,7 +601,7 @@ List<String> _epgNameWords(String name, {required bool loose}) {
 /// `channel_names.py`): the template's key alone does NOT meet §5 rows
 /// 2, 3, 5 and 7 — its prefix regex has no dash delimiter ("US - "
 /// survives) and it never strips the ".xx" country suffix ("CNN.us"
-/// keeps "us"). The dash delimiter and the suffix strip are PlezTV
+/// keeps "us"). The dash delimiter and the suffix strip are PlenTV
 /// additions, and they are what the §5 table tests.
 ///
 /// Public (not test-only): the Assign picker normalizes its search

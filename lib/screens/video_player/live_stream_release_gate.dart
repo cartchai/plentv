@@ -9,7 +9,7 @@ import 'dart:async';
 /// streams in 3.6 s… locked the account for about two minutes") and fixed
 /// it with a barrier queued behind the player's stop, bounded by a
 /// 1,500 ms cap. No peer opens the next stream while the previous one is
-/// still closing; PlezTV did, by design (the zap kept the old session
+/// still closing; PlenTV did, by design (the zap kept the old session
 /// alive until the replacement was open).
 ///
 /// The barrier is per player instance (the full player and the mini-player

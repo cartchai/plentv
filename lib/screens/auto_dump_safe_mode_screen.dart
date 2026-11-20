@@ -31,7 +31,7 @@ import '../utils/snackbar_helper.dart';
 /// Exactly two paths, both on the screen (the owner's words, official copy):
 /// (a) SAVE the debug file — the full summary-first dump, via the save
 /// picker (primary) or the app-folder fallback; after a save, Share /
-/// Restart PlezTV / Close. (b) MOVE FORWARD with the startup as usual —
+/// Restart PlenTV / Close. (b) MOVE FORWARD with the startup as usual —
 /// "Continue startup" resets the counter and proceeds to normal startup.
 ///
 /// Counter behavior: saving (either location) or skipping resets the
@@ -185,7 +185,7 @@ class _EmergencyDebugLogSaverScreenState extends State<EmergencyDebugLogSaverScr
     if (path == null) return;
     try {
       await SharePlus.instance.share(
-        ShareParams(files: [XFile(path)], subject: 'PlezTV emergency debug log'),
+        ShareParams(files: [XFile(path)], subject: 'PlenTV emergency debug log'),
       );
     } catch (_) {
       if (!mounted) return;

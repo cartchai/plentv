@@ -15,7 +15,7 @@ import 'iptv_streaming_json.dart';
 
 /// The User-Agent values the Xtream panel sees (build #20).
 ///
-/// Trex returns HTTP 403 to PlezTV's requests while TiviMate works with the
+/// Trex returns HTTP 403 to PlenTV's requests while TiviMate works with the
 /// same account on the same phone: the app sent no User-Agent, so the panel
 /// saw Dart's default `Dart/3.13 (dart:io)` — a distinctive, non-player
 /// signature. Xtream panels enforce per-user allowed-UA lists and global

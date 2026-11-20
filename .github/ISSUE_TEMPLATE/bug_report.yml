@@ -48,9 +48,9 @@ body:
       required: true
 
   - type: input
-    id: pleztv-version
+    id: plentv-version
     attributes:
-      label: PlezTV Version
+      label: PlenTV Version
       description: Check the app settings for the version number and paste it here
       placeholder: e.g., 1.5.2-2.26.0
     validations:

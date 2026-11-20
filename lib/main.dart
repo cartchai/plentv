@@ -258,7 +258,7 @@ Future<void> _bootstrapApp() async {
 /// version label, and run the bootstrap (splash → bind → main screen).
 /// Reached when the failed-start counter is below the threshold, or when
 /// the emergency saver hands control back ("Continue startup" /
-/// "Restart PlezTV").
+/// "Restart PlenTV").
 void _runNormalStartup() {
   // 1.2.22 §63.6: the main-thread watchdog beats only on a normal
   // startup — never on a saver launch, so the previous run's ring
@@ -343,7 +343,7 @@ bool shouldEnterAutoDumpSafeMode(int failedStarts) => failedStarts >= AutoDumpSe
 /// counter keeps counting and the saver shows again next launch.
 /// Saving (either location) or "Continue startup" resets the counter
 /// first, so a later clean exit is harmless. "Continue startup" /
-/// "Restart PlezTV" re-enters [_runNormalStartup] in-process — runApp
+/// "Restart PlenTV" re-enters [_runNormalStartup] in-process — runApp
 /// twice in one process is standard Flutter.
 ///
 /// L-21 (1.2.19): the saver also offers "Continue without IPTV" — the
@@ -1198,7 +1198,7 @@ Future<void> _logEnvironmentDiagnostics() async {
     renderer = ' [$rendererName]';
   }
   appLogger.i(
-    'PlezTV v${packageInfo.version}+${packageInfo.buildNumber}$commitSuffix$renderer'
+    'PlenTV v${packageInfo.version}+${packageInfo.buildNumber}$commitSuffix$renderer'
     ' [effects: ${DevicePerformance.describeSync()}]',
   );
   appLogger.i('Display: ${DevicePerformance.describeDisplay()}');

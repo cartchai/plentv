@@ -709,7 +709,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   }
 
   /// Link to the fork's GitHub Releases page, in the same Updates group as
-  /// the check row — the releases are where every PlezTV APK is published
+  /// the check row — the releases are where every PlenTV APK is published
   /// for free, and where the in-app updater downloads from.
   Widget _buildViewReleasesTile() {
     return SettingNavigationTile(

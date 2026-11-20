@@ -12,7 +12,7 @@ import '../utils/media_server_http_client.dart';
 // 1.2.22 §66 (U1): the debug-log submit no longer posts to the upstream
 // Plezy relay. It posts the log — redacted on-device first — to OUR
 // Cloudflare Worker, which files it as a GitHub issue on our repo
-// (cartchai/pleztv) with a fine-grained PAT stored server-side. The app
+// (cartchai/plentv) with a fine-grained PAT stored server-side. The app
 // never talks to GitHub directly and no token ships in the app binary.
 //
 // WORKER CONTRACT (the parent deploys the Worker; the app side is this file):
@@ -26,10 +26,10 @@ import '../utils/media_server_http_client.dart';
 //   so that is the whole blast radius).
 //
 // SETUP (parent): deploy the Worker, create the fine-grained PAT
-// (issues:write on cartchai/pleztv only, stored as a Worker secret —
+// (issues:write on cartchai/plentv only, stored as a Worker secret —
 // never in the app or the repo), and set the GitHub repo VARIABLE
-// PLEZTV_LOG_WORKER_URL to the Worker URL. CI passes it in as
-// --dart-define=PLEZTV_LOG_SUBMIT_URL=... (see
+// PLENTV_LOG_WORKER_URL to the Worker URL. CI passes it in as
+// --dart-define=PLENTV_LOG_SUBMIT_URL=... (see
 // .github/workflows/android-release.yml). Until the variable is set the
 // endpoint is empty and the submit button explains that log submit is
 // not set up in this build — nothing is posted anywhere in that state,
@@ -37,7 +37,7 @@ import '../utils/media_server_http_client.dart';
 
 /// Our log-submit Worker URL, injected at build time. Empty when not
 /// configured (e.g. a local dev build) — see [canSubmitLogs].
-const String logSubmitEndpoint = String.fromEnvironment('PLEZTV_LOG_SUBMIT_URL', defaultValue: '');
+const String logSubmitEndpoint = String.fromEnvironment('PLENTV_LOG_SUBMIT_URL', defaultValue: '');
 
 /// True when a submit endpoint is configured in this build.
 bool get canSubmitLogs => logSubmitEndpoint.isNotEmpty;
@@ -123,7 +123,7 @@ String buildLogSubmitBody(String redactedLog, {int maxBytes = maxLogSubmitBytes}
   final header = splitAt < 0 ? '' : redactedLog.substring(0, splitAt + separator.length);
   final logs = splitAt < 0 ? redactedLog : redactedLog.substring(splitAt + separator.length);
   final payload = constrainDiagnosticPayload(header: header, logs: logs, maxBytes: maxBytes);
-  return '```\n$payload\n```\n\n_Submitted from PlezTV. The log was redacted on this device before sending._';
+  return '```\n$payload\n```\n\n_Submitted from PlenTV. The log was redacted on this device before sending._';
 }
 
 /// Trims [logs] from the front so `header + logs` fits [maxBytes], keeping

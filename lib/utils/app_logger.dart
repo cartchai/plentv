@@ -99,8 +99,8 @@ String formatLogEntry(LogEntry entry) {
 class FileLogOutput {
   static const int maxFileSizeBytes = 2 * 1024 * 1024;
 
-  static const String fileName = 'pleztv-rolling-log.txt';
-  static const String rotatedFileName = 'pleztv-rolling-log.txt.1';
+  static const String fileName = 'plentv-rolling-log.txt';
+  static const String rotatedFileName = 'plentv-rolling-log.txt.1';
 
   @visibleForTesting
   static Directory? debugDirectoryOverride;

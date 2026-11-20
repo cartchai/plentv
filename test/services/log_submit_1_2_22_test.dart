@@ -34,7 +34,7 @@ import '../test_helpers/prefs.dart';
 const _testPassword = 'pa' 'ss';
 const _createdAtMs = 1700000000000;
 const _workerEndpoint = 'https://worker.example.test/submit';
-const _issueUrl = 'https://github.com/cartchai/pleztv/issues/123';
+const _issueUrl = 'https://github.com/cartchai/plentv/issues/123';
 
 MediaServerHttpClient _fakeClient({
   required void Function(http.Request request) onRequest,
@@ -209,7 +209,7 @@ void main() {
           '== Summary ==\n---\nwidget submit seed\n'
           'Feed https://panel.example.com:8080/xmltv.php downloaded';
       final issue = await submitDiagnosticLog(
-        title: 'PlezTV debug log 2026-11-16',
+        title: 'PlenTV debug log 2026-11-16',
         logText: log,
         sensitiveValues: const ['panel.example.com'],
         client: client,
@@ -225,7 +225,7 @@ void main() {
           .value;
       expect(contentType, startsWith('application/json'));
       final posted = jsonDecode(request!.body) as Map<String, dynamic>;
-      expect(posted['title'], 'PlezTV debug log 2026-11-16');
+      expect(posted['title'], 'PlenTV debug log 2026-11-16');
       final postedBody = posted['body'] as String;
       expect(postedBody, contains('widget submit seed'));
       expect(postedBody, isNot(contains('panel.example.com')));

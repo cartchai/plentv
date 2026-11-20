@@ -318,7 +318,7 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
     if (dump == null) return;
     try {
       await SharePlus.instance.share(
-        ShareParams(files: [XFile(dump.path)], subject: 'PlezTV auto-dump'),
+        ShareParams(files: [XFile(dump.path)], subject: 'PlenTV auto-dump'),
       );
     } catch (_) {
       if (!mounted) return;
@@ -353,7 +353,7 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
 
     try {
       final issue = await submitDiagnosticLog(
-        title: 'PlezTV debug log ${DateTime.now().toUtc().toIso8601String().substring(0, 10)}',
+        title: 'PlenTV debug log ${DateTime.now().toUtc().toIso8601String().substring(0, 10)}',
         logText: logText,
         sensitiveValues: sensitiveValues,
         client: _httpClient,

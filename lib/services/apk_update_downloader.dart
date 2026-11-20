@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 
 import 'native_device_info.dart';
 
-/// Downloads a PlezTV release APK inside the app (build #10), so an Android
+/// Downloads a PlenTV release APK inside the app (build #10), so an Android
 /// TV / Google TV — which has no browser download flow — can update without
 /// leaving the app. Streams the file to disk in chunks (a release APK is
 /// ~350 MB; it must never sit whole in memory), reports progress, and

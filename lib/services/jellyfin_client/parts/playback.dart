@@ -598,7 +598,7 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
   /// Restrict sidecar identity to the subtitle rows this open actually fetched
   /// as sidecars.
   ///
-  /// PlezTV's device profile declares every *text* subtitle format with
+  /// PlenTV's device profile declares every *text* subtitle format with
   /// `Method: External`, so Jellyfin returns `DeliveryMethod: External` and a
   /// `DeliveryUrl` even for text streams embedded in a direct-played container
   /// whose container cannot carry subtitles in the delivered form.
@@ -917,7 +917,7 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
         'UserId': connection.userId,
         ...negotiation,
         'DeviceProfile': <String, Object?>{
-          'Name': 'PlezTV',
+          'Name': 'PlenTV',
           'MaxStreamingBitrate': ?maxStreamingBitrate,
           'CodecProfiles': const <Map<String, Object?>>[],
           // fMP4 segments instead of MPEG-TS (#2131): ts cannot carry AV1,

@@ -126,7 +126,7 @@ class _UpdateAvailableDialogState extends State<_UpdateAvailableDialog> {
     });
     try {
       final cacheDir = await getTemporaryDirectory();
-      final file = File('${cacheDir.path}/pleztv-update.apk');
+      final file = File('${cacheDir.path}/plentv-update.apk');
       final downloaded = await ApkUpdateDownloader.download(
         url: Uri.parse(apkAssetUrl),
         expectedSizeBytes: _expectedSize,

@@ -33,12 +33,12 @@ class MediaBrowserPaths {
   /// through `UserController.UpdateUserConfigurationLegacy`.
   String get userConfiguration => '$_user/Configuration';
 
-  /// Per-user, per-client key/value store, identical on both dialects (PlezTV
+  /// Per-user, per-client key/value store, identical on both dialects (PlenTV
   /// inherits it from Emby's original API). `GET` returns the row, `POST`
   /// replaces it; both need `userId` and `client` query parameters.
   ///
   /// The row is keyed `(userId, displayPreferencesId, client)`, so a value
-  /// written under PlezTV's own client name follows the user across devices and
+  /// written under PlenTV's own client name follows the user across devices and
   /// installs without touching the `emby` row that jellyfin-web and
   /// jellyfin-androidtv share.
   static String displayPreferences(String displayPreferencesId) => '/DisplayPreferences/${_id(displayPreferencesId)}';

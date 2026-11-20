@@ -444,7 +444,7 @@ class MediaImageHelper {
   /// the cache.
   static Map<String, String> artworkHeadersFor(MediaServerClient? client) {
     if (client is IptvClient) return client.artworkHeaders;
-    return const {'User-Agent': 'PlezTV'};
+    return const {'User-Agent': 'PlenTV'};
   }
 
   static ImageProvider serverArtworkProvider({
@@ -459,7 +459,7 @@ class MediaImageHelper {
       imageUrl,
       cacheKey: _serverArtworkCacheKey(imageUrl),
       cacheManager: PlexImageCacheManager.instance,
-      headers: headers ?? const {'User-Agent': 'PlezTV'},
+      headers: headers ?? const {'User-Agent': 'PlenTV'},
     );
     final bounded = boundedDecode(provider, memWidth: memWidth, memHeight: memHeight);
     if (logoToneTarget == null) return bounded;

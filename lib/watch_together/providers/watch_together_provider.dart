@@ -66,12 +66,12 @@ class WatchTogetherProvider extends ChangeNotifier {
        _displayName = displayName ?? _defaultName,
        _profileId = profileId ?? _noProfile,
        _customRelayBaseUrl = customRelayBaseUrl ?? _relaySetting,
-       _clientName = clientName ?? _pleztvClientName,
+       _clientName = clientName ?? _plentvClientName,
        _partyFactory = partyFactory ?? _defaultParty,
        _resolver = LibraryResolver(clientFor: clientFor ?? _noClient, findCopies: findCopies ?? _noCopies);
 
   static MediaServerClient? _noClient(String serverId) => null;
-  static String _defaultName() => 'PlezTV';
+  static String _defaultName() => 'PlenTV';
   static String? _noProfile() => null;
   static String? _relaySetting() => SettingsService.instanceOrNull?.read(SettingsService.watchPartyRelayUrl);
   static Future<LibraryLookupResult> _noCopies(TitleQuery query, {AbortController? abort}) async => (
@@ -127,9 +127,9 @@ class WatchTogetherProvider extends ChangeNotifier {
   /// Opens the room's file when no player is open; set by the main screen.
   ChoiceOpener? navigatorOpener;
 
-  static Future<String> _pleztvClientName() async {
+  static Future<String> _plentvClientName() async {
     final info = await PackageInfo.fromPlatform();
-    return 'PlezTV/${info.version}';
+    return 'PlenTV/${info.version}';
   }
 
   static owp.WatchParty<WatchCopy> _defaultParty({
@@ -781,12 +781,12 @@ class WatchTogetherProvider extends ChangeNotifier {
 }
 
 /// [name] as an Open Watch Party display name: 1 to 32 code points of
-/// protocol text; "PlezTV" when nothing is left.
+/// protocol text; "PlenTV" when nothing is left.
 String _sanitizedName(String name) {
   final text = descriptorText(name);
-  if (text == null) return 'PlezTV';
+  if (text == null) return 'PlenTV';
   final kept = String.fromCharCodes(text.runes.take(32)).trim();
-  return kept.isEmpty ? 'PlezTV' : kept;
+  return kept.isEmpty ? 'PlenTV' : kept;
 }
 
 enum _Away { background, vehicle, profileSelection }

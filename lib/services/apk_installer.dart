@@ -38,7 +38,7 @@ class ApkInstaller {
   /// [ApkInstallException] when the platform refuses (missing file, bad
   /// path, …). The install itself is the system's job from here on: on
   /// first use Android asks the user to allow "Install unknown apps" for
-  /// PlezTV, then installs over the current build — the fixed debug
+  /// PlenTV, then installs over the current build — the fixed debug
   /// keystore keeps the signature, so the over-the-top update works.
   static Future<bool> installApk(File file) async {
     final isAndroid = debugPlatformIsAndroid ?? Platform.isAndroid;

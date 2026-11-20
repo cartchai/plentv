@@ -6,7 +6,7 @@ import 'package:plezy/i18n/strings.g.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-/// Third-party EPG sources + per-channel manual EPG assignment (PlezTV
+/// Third-party EPG sources + per-channel manual EPG assignment (PlenTV
 /// 1.2.0, EPG area build 2 — TiviMate-anchored, §3.1/§3.2 of
 /// RESEARCH_EPG_AREA.md).
 ///

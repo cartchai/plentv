@@ -116,7 +116,7 @@ class _StartupFailureViewState extends State<StartupFailureView> {
     setState(() => _submitting = true);
     try {
       final issue = await submitDiagnosticLog(
-        title: 'Startup failure — PlezTV',
+        title: 'Startup failure — PlenTV',
         logText: widget.failure.describe(),
         endpointOverride: endpoint,
       );

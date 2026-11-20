@@ -112,13 +112,13 @@ void main() {
   });
 
   testWidgets('long submit capability displays and copies at narrow width', (tester) async {
-    const issueUrl = 'https://github.com/cartchai/pleztv/issues/123';
+    const issueUrl = 'https://github.com/cartchai/plentv/issues/123';
     String? submittedBody;
     http.Request? submittedRequest;
     String? clipboardText;
 
     PackageInfo.setMockInitialValues(
-      appName: 'PlezTV',
+      appName: 'PlenTV',
       packageName: 'com.plezy.test',
       version: '1.2.3',
       buildNumber: '45',
@@ -232,7 +232,7 @@ void main() {
 
     Future<void> pumpLogs(WidgetTester tester) async {
       PackageInfo.setMockInitialValues(
-        appName: 'PlezTV',
+        appName: 'PlenTV',
         packageName: 'com.plezy.test',
         version: '2.11.0',
         buildNumber: '124',
@@ -318,7 +318,7 @@ void main() {
 
     setUp(() {
       PackageInfo.setMockInitialValues(
-        appName: 'PlezTV',
+        appName: 'PlenTV',
         packageName: 'com.plezy.test',
         version: '1.2.3',
         buildNumber: '45',
@@ -522,7 +522,7 @@ void main() {
       await tester.pump();
 
       expect(clipboardText, isNotNull);
-      expect(clipboardText, startsWith('PlezTV'));
+      expect(clipboardText, startsWith('PlenTV'));
       expect(clipboardText, matches(RegExp(r'---\n\[')));
       expect(clipboardText, matches(RegExp(r'newer-row\n\[')));
       expect(clipboardText, endsWith('older-row'));
@@ -545,7 +545,7 @@ void main() {
 
       await pumpLogs(tester);
       await pumpSelectionRegistration(tester);
-      final header = find.textContaining('PlezTV', findRichText: true);
+      final header = find.textContaining('PlenTV', findRichText: true);
       final newerRow = find.textContaining('newer-row', findRichText: true);
       final gesture = await tester.startGesture(
         tester.getTopLeft(header) + const Offset(1, 6),
@@ -601,7 +601,7 @@ void main() {
       addTearDown(() => SharePlatform.instance = previousPlatform);
 
       PackageInfo.setMockInitialValues(
-        appName: 'PlezTV',
+        appName: 'PlenTV',
         packageName: 'com.plezy.test',
         version: '1.2.3',
         buildNumber: '45',
@@ -677,7 +677,7 @@ void main() {
       await TvDetectionService.getInstance(forceTv: true);
       TvDetectionService.setForceTVSync(true);
       PackageInfo.setMockInitialValues(
-        appName: 'PlezTV',
+        appName: 'PlenTV',
         packageName: 'com.plezy.test',
         version: '1.2.3',
         buildNumber: '45',
@@ -879,7 +879,7 @@ void main() {
     resetSharedPreferencesForTest();
     TvDetectionService.setForceTVSync(false);
     PackageInfo.setMockInitialValues(
-      appName: 'PlezTV',
+      appName: 'PlenTV',
       packageName: 'com.plezy.test',
       version: '1.2.3',
       buildNumber: '45',

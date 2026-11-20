@@ -128,7 +128,7 @@ void main() {
     expect(find.text(t.update.inAppDownloadHint), findsOneWidget);
     // The download writes a real file (dart:io), which only completes in
     // real async — run it in runAsync, then render the result.
-    final downloadedFile = File('${tempDir.path}/temp/pleztv-update.apk');
+    final downloadedFile = File('${tempDir.path}/temp/plentv-update.apk');
     int? downloadedLength;
     await tester.runAsync(() async {
       await tester.tap(find.text(t.update.download));
@@ -144,7 +144,7 @@ void main() {
     // The installer opened and the dialog closed behind it.
     expect(find.text(t.update.downloadComplete), findsNothing);
     expect(installedPath, isNotNull);
-    expect(installedPath, endsWith('pleztv-update.apk'));
+    expect(installedPath, endsWith('plentv-update.apk'));
     expect(downloadedLength, 1000);
     debugDefaultTargetPlatformOverride = null;
   });

@@ -46,7 +46,7 @@ class PlexConfig {
       baseUrl: baseUrl,
       token: token,
       clientIdentifier: clientIdentifier,
-      product: product ?? 'PlezTV',
+      product: product ?? 'PlenTV',
       version: packageInfo.version,
       platform: platform ?? identity.platform,
       device: device ?? sanitizeHeaderValue(identity.deviceModel),
