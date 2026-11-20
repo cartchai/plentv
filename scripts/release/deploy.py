@@ -919,10 +919,6 @@ def phase_play(ctx: Context) -> None:
             "--split-debug-info=debug-info/android-aab",
             "--extra-gen-snapshot-options=--save-obfuscation-map=debug-info/android-aab/obfuscation.map.json",
         ])
-        run(
-            [str(SCRIPTS_DIR / "upload-symbols.sh"), "android-aab"],
-            env={"SENTRY_DIST": "play-store"},
-        )
         if not aab.is_file():
             raise DeployError(f"play: AAB not found at {aab}")
 
@@ -1093,10 +1089,6 @@ def phase_amazon(ctx: Context) -> None:
         ],
         env={"AMAZON": "1"},
     )
-    run(
-        [str(SCRIPTS_DIR / "upload-symbols.sh"), "android-apk"],
-        env={"SENTRY_DIST": "amazon"},
-    )
     if not apk.is_file():
         raise DeployError(f"amazon: APK not found at {apk}")
 
@@ -1240,10 +1232,6 @@ def phase_ios(ctx: Context) -> None:
         "--dart-define=SUPPORTER_MODE=iap",
         "--split-debug-info=debug-info/ios",
     ])
-    run(
-        [str(SCRIPTS_DIR / "upload-symbols.sh"), "ios"],
-        env={"SENTRY_DIST": "app-store", "BUGS_APPLE_ARCHIVE": "build/ios/archive/Plezy.xcarchive"},
-    )
     _upload_ipa(ctx, ROOT / "build/ios/ipa/Plezy.ipa", "ios")
 
 
