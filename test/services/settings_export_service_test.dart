@@ -137,7 +137,7 @@ void main() {
     test('fails closed for unknown, credential, account, path, history, and runtime keys', () async {
       const canaries = ['SEERR-BEARER-CANARY', 'ACCOUNT-ID-CANARY', 'DEVICE-PATH-CANARY', 'RUNTIME-TIME-CANARY'];
       final prefs = await BaseSharedPreferencesService.sharedCache();
-      await prefs.setBool('enable_trakt_scrobble', true);
+      await prefs.setBool('enable_mdblist_scrobble', true);
       await prefs.setString('user_alice_seerr_session', '{"cookie":"${canaries[0]}","account":"${canaries[1]}"}');
       await prefs.setString('current_user_uuid', canaries[1]);
       await prefs.setString('custom_download_path', canaries[2]);
@@ -153,7 +153,7 @@ void main() {
       final encoded = jsonEncode(out);
       final exported = out['prefs'] as Map<String, dynamic>;
 
-      expect(exported.keys, contains('enable_trakt_scrobble'));
+      expect(exported.keys, contains('enable_mdblist_scrobble'));
       expect(exported.keys, isNot(contains('seerr_session')));
       expect(exported.keys, isNot(contains('current_user_uuid')));
       expect(exported.keys, isNot(contains('custom_download_path')));
@@ -199,9 +199,9 @@ void main() {
     test('exports cold-start string lists while rejecting lists with non-string elements', () async {
       resetSharedPreferencesForTest(
         initialAsync: {
-          'tracker_library_filter_mode_trakt': 'blacklist',
-          'tracker_library_filter_ids_trakt': <Object?>['srv-1:lib-a', 'srv-1:lib-b'],
-          'tracker_library_filter_ids_simkl': <Object?>['ok', 7],
+          'tracker_library_filter_mode_mdblist': 'blacklist',
+          'tracker_library_filter_ids_mdblist': <Object?>['srv-1:lib-a', 'srv-1:lib-b'],
+          'refused_video_codecs': <Object?>['ok', 7],
         },
       );
       final prefs = await BaseSharedPreferencesService.sharedCache();
@@ -209,11 +209,11 @@ void main() {
       final exported =
           SettingsExportService.buildExportMap(prefs, currentUserUuid: 'alice')['prefs'] as Map<String, dynamic>;
 
-      expect(exported['tracker_library_filter_ids_trakt'], {
+      expect(exported['tracker_library_filter_ids_mdblist'], {
         'type': 'stringList',
         'value': ['srv-1:lib-a', 'srv-1:lib-b'],
       });
-      expect(exported, isNot(contains('tracker_library_filter_ids_simkl')));
+      expect(exported, isNot(contains('refused_video_codecs')));
     });
   });
 
