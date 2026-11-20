@@ -30,7 +30,7 @@ XtreamConnection _xtream() => XtreamConnection(
   name: 'Trex',
   serverUrl: 'https://panel.example.com:8080',
   username: 'user',
-password: <redacted>
+  password: _testPassword,
   createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
 );
 
