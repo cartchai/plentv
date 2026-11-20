@@ -255,6 +255,36 @@ https://example.com/cnn.ts
       expect(expanded.map((i) => i.title), ['Alpha Movie', 'Beta Movie']);
       client.close();
     });
+
+    test('1.5.3 N2: fetchMoreHubItemsPage pages the same Recommended hub content', () async {
+      // The hub detail screen no longer fetches the whole catalog
+      // through fetchMoreHubItems for IPTV; it pages through
+      // fetchMoreHubItemsPage instead. The paged path must return
+      // exactly the same items, in the same order, as the whole-list
+      // path — otherwise the screen would show different content
+      // after the fix.
+      final connection = XtreamConnection(
+        id: 'conn-xt-1',
+        name: 'Trex',
+        serverUrl: 'https://panel.example.com:8080',
+        username: 'user',
+        password: 'pa' 'ss',
+        createdAt: DateTime.utc(2026, 11, 5),
+      );
+      final client = IptvClient.forConnection(connection);
+      client.testXtreamApi = _FakeXtreamApi();
+      final hubs = await client.fetchLibraryHubs('iptv:conn-xt-1:movies', libraryName: 'Trex — Movies', limit: 1);
+      final hubId = hubs.single.id;
+      final whole = await client.fetchMoreHubItems(hubId);
+      final first = await client.fetchMoreHubItemsPage(hubId, start: 0, size: 1);
+      final second = await client.fetchMoreHubItemsPage(hubId, start: 1, size: 1);
+      expect(first.totalCount, whole.length);
+      expect(
+        [...first.items, ...second.items].map((i) => i.title),
+        whole.map((i) => i.title),
+      );
+      client.close();
+    });
   });
 
   group('M3U category filter (fake HTTP, no network)', () {
@@ -657,6 +687,37 @@ https://example.com/cnn.m3u8
       expect(season2.map((i) => i.index), [1]);
       expect(season2.every((i) => i.grandparentTitle == 'Alice'), isTrue);
       expect(season2.every((i) => i.parentTitle == 'Season 2'), isTrue);
+      client.close();
+    });
+
+    test('1.5.3 N3: repeated fetchChildren(season) reuses the mapped episodes', () async {
+      // Every season-pager page turn used to re-sort and re-map the
+      // whole season into fresh MediaItems. The mapped list is now
+      // cached per season, so a second call returns the same episode
+      // objects — and fetchChildrenPage slices the cache instead of
+      // re-paying the map. Failing-first: on 1.5.2 each call built
+      // fresh items, so identical() is false.
+      final client = xtreamClient(api: _PrefixedFakeXtreamApi());
+      final first = await client.fetchChildren('season:10:1');
+      final second = await client.fetchChildren('season:10:1');
+      expect(first.map((i) => i.title), ['Pilot', 'Second']);
+      expect(second.map((i) => i.title), ['Pilot', 'Second']);
+      expect(identical(first[0], second[0]), isTrue);
+      expect(identical(first[1], second[1]), isTrue);
+      // A different season is a different list.
+      final other = await client.fetchChildren('season:10:2');
+      expect(identical(first[0], other[0]), isFalse);
+      // The page slice reads from the same cached items.
+      final page = await client.fetchChildrenPage('season:10:1', start: 1, size: 1);
+      expect(page.items.single.title, 'Second');
+      expect(identical(page.items.single, first[1]), isTrue);
+      // A favourite toggle must re-map: the cached items carry the old
+      // isFavorite, so a stale cache would keep showing the old heart.
+      await client.setFavorite(first[0], true);
+      final third = await client.fetchChildren('season:10:1');
+      expect(identical(first[0], third[0]), isFalse);
+      expect(third[0].isFavorite, isTrue);
+      expect(third[1].isFavorite, isFalse);
       client.close();
     });
   });

@@ -39,27 +39,41 @@ Map<String, String> _parseAttributes(String extinfLine) {
 }
 
 List<M3uEntry> parseM3u(String text) {
-  final entries = <M3uEntry>[];
-  final lines = text.split('\n');
-  Map<String, String>? pendingAttrs;
-  String? pendingName;
+  final parser = _M3uLineParser();
+  for (final line in text.split('\n')) {
+    parser.addLine(line);
+  }
+  return parser.entries;
+}
 
-  for (var i = 0; i < lines.length; i++) {
-    final line = lines[i].trim();
-    if (line.isEmpty) continue;
+/// One `#EXTINF`-then-URL state machine, shared by [parseM3u] and
+/// [parseM3uFile] so the two parsers can never disagree about what an
+/// entry is: `#EXTINF` lines capture attributes + display name (after
+/// the last comma); a bare URL line pairs with the preceding EXTINF, or
+/// stands alone with its last path segment as the name; `#EXTM3U`,
+/// `#EXTGRP` and other comments are skipped; an entry without a
+/// following URL line is dropped.
+class _M3uLineParser {
+  final entries = <M3uEntry>[];
+  Map<String, String>? _pendingAttrs;
+  String? _pendingName;
+
+  void addLine(String rawLine) {
+    final line = rawLine.trim();
+    if (line.isEmpty) return;
 
     if (line.startsWith('#EXTINF')) {
-      pendingAttrs = _parseAttributes(line);
+      _pendingAttrs = _parseAttributes(line);
       // Display name follows the last comma on the EXTINF line.
       final comma = line.lastIndexOf(',');
-      pendingName = comma >= 0 && comma < line.length - 1 ? line.substring(comma + 1).trim() : '';
-      continue;
+      _pendingName = comma >= 0 && comma < line.length - 1 ? line.substring(comma + 1).trim() : '';
+      return;
     }
 
-    if (line.startsWith('#')) continue; // #EXTM3U, #EXTGRP, other comments
+    if (line.startsWith('#')) return; // #EXTM3U, #EXTGRP, other comments
 
     // A bare URL line: pairs with the preceding EXTINF, or stands alone.
-    final pending = pendingName;
+    final pending = _pendingName;
     final name = (pending != null && pending.isNotEmpty) ? pending : line.split('/').last;
     entries.add(
       M3uEntry(
@@ -67,27 +81,34 @@ List<M3uEntry> parseM3u(String text) {
         url: line,
         // 1.2.8 F1 (same rule as Xtream epg_channel_id): an empty
         // tvg-id="" is absent, not an id.
-        tvgId: switch (pendingAttrs?['tvg-id']) { final s? when s.isNotEmpty => s, _ => null },
-        tvgLogo: pendingAttrs?['tvg-logo'],
-        groupTitle: pendingAttrs?['group-title'],
-        catchupSource: pendingAttrs?['catchup-source'],
+        tvgId: switch (_pendingAttrs?['tvg-id']) { final s? when s.isNotEmpty => s, _ => null },
+        tvgLogo: _pendingAttrs?['tvg-logo'],
+        groupTitle: _pendingAttrs?['group-title'],
+        catchupSource: _pendingAttrs?['catchup-source'],
       ),
     );
-    pendingAttrs = null;
-    pendingName = null;
+    _pendingAttrs = null;
+    _pendingName = null;
   }
-
-  return entries;
 }
 
-/// Parse an M3U playlist from a DISK FILE (1.2.19, A2): the isolate
-/// reads the file itself, so the main isolate never holds the tens-of-MB
-/// playlist text — the file half of [parseM3u], for playlists streamed
-/// to disk by the Xtream client's M3U-to-file getter. A top-level
-/// function so it can run under `compute`.
+/// Parse an M3U playlist from a DISK FILE (1.2.19, A2; 1.5.3 N1): the
+/// file is read line by line inside the isolate, so neither the main
+/// isolate nor the isolate ever holds the whole playlist as one String
+/// — the provider playlist is ~300 MB, and the old whole-file
+/// `readAsString` spiked RSS ~600 MB at that scale. Malformed UTF-8
+/// bytes become the replacement character instead of failing the whole
+/// parse (the old whole-file read threw on them). A top-level function
+/// so it can run under `compute`.
 Future<List<M3uEntry>> parseM3uFile(String path) async {
-  final text = await File(path).readAsString();
-  return parseM3u(text);
+  final parser = _M3uLineParser();
+  await for (final line in File(path)
+      .openRead()
+      .transform(const Utf8Decoder(allowMalformed: true))
+      .transform(const LineSplitter())) {
+    parser.addLine(line);
+  }
+  return parser.entries;
 }
 
 /// The live stream id in an M3U entry URL

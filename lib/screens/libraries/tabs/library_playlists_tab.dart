@@ -29,7 +29,8 @@ class LibraryPlaylistsTab extends BaseLibraryTab<MediaPlaylist> {
 
 class _LibraryPlaylistsTabState extends PaginatedCardGridTabState<MediaPlaylist, LibraryPlaylistsTab> {
   @override
-  int get pageSize => 200;
+  // 1.5.3 F6r: tiered with the shared UI page size, not a flat 200.
+  int get pageSize => defaultListPageSize;
 
   @override
   String get focusNodeDebugLabel => 'playlists_first_item';

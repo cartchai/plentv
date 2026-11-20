@@ -56,6 +56,7 @@ import '../widgets/tv_virtual_keyboard.dart';
 import '../services/api_cache.dart';
 import '../services/device_performance.dart';
 import '../services/last_crash_store.dart';
+import '../services/lowend/phase_rss_sampler.dart';
 import '../services/multi_server_manager.dart';
 import '../services/offline_watch_sync_service.dart';
 import '../services/settings_service.dart';
@@ -896,6 +897,10 @@ class _MainScreenState extends State<MainScreen>
         final lp = context.read<LibrariesProvider>();
         lp.initialize(mp.aggregationService);
         await lp.loadLibraries();
+        // 1.5.3 N4: Discover-primed was unattributed in the Phase RSS
+        // trace — the libraries are loaded here, before the tab refresh
+        // and the metadata refresh below.
+        PhaseRssSampler.instance.sample('discover-primed');
         if (!mounted) return;
         context.read<OfflineWatchSyncService>().onServersConnected();
         unawaited(context.read<DownloadProvider>().refreshMetadataFromCache());

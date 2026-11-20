@@ -3312,7 +3312,11 @@ class IptvLiveTvSupport implements LiveTvSupport {
         guide = loadedGuide;
         anyLoaded = true;
         if (loadedFresh) {
-          await _recordSourceSuccess(attempt, guide, started);
+          // 1.5.3 K3 (D9): a per-channel load does not stamp "Last
+          // updated" — the channel's own stamp below fires only when
+          // it stored programmes, so a fetch that stores nothing
+          // leaves the stamp (and the Settings pref) alone.
+          await _recordSourceSuccess(attempt, guide, started, stampLastUpdated: false);
           // 1.3.27 §P0-4: the feed just moved to a new generation
           // mid-guide-open — rows that completed empty against the
           // old generation must refetch instead of serving their
@@ -4145,18 +4149,30 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// A success clears a previous failure — the chip goes green again.
   /// 1.2.15 R4: the last download's facts (bytes, SHA, 304-vs-200,
   /// validators, User-Agent) land in the status too.
+  ///
+  /// [stampLastUpdated] certifies the "Last updated" stamp. Bulk/guide
+  /// loads stamp (the Reload or background refresh puts the feed's
+  /// programmes in the guide for every channel, so the guide's data is
+  /// fresh — 1.3.24 §67 F1, the quiet-hour check must not re-download a
+  /// feed that just landed). Per-channel loads do NOT stamp: a fetch
+  /// that stores nothing for its channel must leave the stamp alone
+  /// (1.1.2 D9 — the channel's own stamp in [_fetchEpgForChannelNetwork]
+  /// fires only when that channel actually stored programmes).
   Future<void> _recordSourceSuccess(
     _EpgSourceAttempt attempt,
     _CachedXmltvGuide guide,
-    DateTime started,
-  ) async {
+    DateTime started, {
+    bool stampLastUpdated = true,
+  }) async {
     // 1.3.24 §67 F1: a fresh feed load certifies the "last updated"
     // stamp — the Reload previously left it erased (clearEpgCache),
     // so the guide tab's quiet-hour check re-downloaded the feed on
     // first open. Every call site gates on `loadedFresh`, so this
     // stamps data, never a stale serve.
-    _lastEpgUpdatedAt = DateTime.now();
-    _noteEpgUpdated(_lastEpgUpdatedAt!);
+    if (stampLastUpdated) {
+      _lastEpgUpdatedAt = DateTime.now();
+      _noteEpgUpdated(_lastEpgUpdatedAt!);
+    }
     final size = await _xmltvFeedFileSize(attempt.cacheKey);
     final statuses = await _epgStore.loadStatuses();
     final status = statuses[attempt.config.id] ?? IptvEpgSourceStatus.empty;

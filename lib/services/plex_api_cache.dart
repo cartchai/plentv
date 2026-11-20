@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../media/ids.dart';
 
 import 'package:drift/drift.dart';
@@ -97,6 +99,58 @@ class PlexApiCache extends ApiCache {
     if (json == null) return null;
     final publicServerId = publicPlexServerIdFromCacheScope(serverId) ?? serverId;
     return PlexMappers.mediaItemFromCacheJson(_withContainerLibrary(json, container), serverId: publicServerId);
+  }
+
+  /// Bulk variant of [getMetadata] (K2): one `cacheKey IN (...)` select for
+  /// every requested row, however many items are requested. Rows are mapped
+  /// exactly like [getMetadata] — same parser, same library enrichment,
+  /// same public-server resolution — so a bulk hit is indistinguishable
+  /// from a per-item hit. Both the profile-scoped key and the public-server
+  /// key are tried per item; the scoped row wins when both exist. Items
+  /// with no row at all are absent; the caller falls back to the per-item
+  /// path.
+  @override
+  Future<Map<String, MediaItem>> getMetadataForKeys(List<({String scopeId, String itemId})> items) async {
+    if (items.isEmpty) return const {};
+    final cacheKeys = <String>{};
+    final keyToItemId = <String, String>{};
+    final keyToScope = <String, String>{};
+    for (final (:scopeId, :itemId) in items) {
+      final keys = <String>['$scopeId:/library/metadata/$itemId'];
+      final public = publicPlexServerIdFromCacheScope(scopeId);
+      if (public != null && public.value != scopeId) {
+        keys.add('${public.value}:/library/metadata/$itemId');
+      }
+      for (final key in keys) {
+        cacheKeys.add(key);
+        keyToItemId[key] = itemId;
+        keyToScope[key] = scopeId;
+      }
+    }
+    final rows =
+        await (database.select(
+          database.apiCache,
+        )..where((t) => t.cacheKey.isIn(cacheKeys.toList()))).get();
+    final out = <String, MediaItem>{};
+    for (final row in rows) {
+      final itemId = keyToItemId[row.cacheKey];
+      if (itemId == null || out.containsKey(itemId)) continue;
+      final scopeId = keyToScope[row.cacheKey]!;
+      try {
+        final cached = jsonDecode(row.data) as Map<String, dynamic>;
+        final container = PlexCacheParser.extractMediaContainer(cached);
+        final json = PlexCacheParser.extractFirstMetadata(cached);
+        if (json == null) continue;
+        final publicServerId = publicPlexServerIdFromCacheScope(scopeId) ?? ServerId(scopeId);
+        out[itemId] = PlexMappers.mediaItemFromCacheJson(
+          _withContainerLibrary(json, container),
+          serverId: publicServerId,
+        );
+      } catch (_) {
+        continue;
+      }
+    }
+    return out;
   }
 
   static Map<String, dynamic> _withContainerLibrary(Map<String, dynamic> json, Map<String, dynamic>? container) {

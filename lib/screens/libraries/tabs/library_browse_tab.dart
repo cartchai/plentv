@@ -369,7 +369,9 @@ class _LibraryBrowseTabState extends BaseLibraryTabState<MediaItem, LibraryBrows
   Timer? _alphaUpdateTimer;
 
   int _firstCharactersRequestId = 0;
-  static const int _fetchSize = 200;
+  // 1.5.3 F6r: tiered with the shared UI page size (50/100/150/200/200),
+  // not a flat 200 — fewer rows materialized per page on low-RAM devices.
+  static int get _fetchSize => defaultListPageSize;
   static const int _mediaBrowserFetchSize = 72;
   Timer? _scrollIdleTimer;
   bool _rangeLoadScheduled = false;

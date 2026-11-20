@@ -1,6 +1,7 @@
 import '../utils/app_logger.dart';
 import '../utils/external_ids.dart';
 import '../utils/media_server_http_client.dart';
+import 'library_query.dart';
 import 'media_item.dart';
 import 'media_kind.dart';
 import 'media_server_client.dart';
@@ -168,7 +169,9 @@ extension TitleCopiesLookup on MediaServerClient {
   Future<List<MediaItem>> _seasonEpisodes(MediaItem show, MediaItem season) async {
     final Object client = this;
     if (client is! SeasonEpisodePagingClient) return fetchChildren(season.id);
-    const pageSize = 200;
+    // 1.5.3 F6r: the loop still fetches the whole season — only the chunk
+    // size is tiered with the shared UI page size, not a flat 200.
+    final pageSize = defaultListPageSize;
     final items = <MediaItem>[];
     while (true) {
       final page = await client.fetchSeasonEpisodesPage(show.id, season.id, start: items.length, size: pageSize);

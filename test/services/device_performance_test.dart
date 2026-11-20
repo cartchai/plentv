@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plezy/media/library_query.dart';
 import 'package:plezy/services/device_performance.dart';
 
 void main() {
@@ -153,6 +154,23 @@ void main() {
         DevicePerformance.debugReset(tier: tier);
         expect(DevicePerformance.browsePageSize, pages[tier]);
         expect(DevicePerformance.searchRankWindow, ranks[tier]);
+      }
+    });
+
+    test('1.5.3 F6r: the shared UI page size follows the tier, not a flat 200', () {
+      // Library/hub/actor/collection/episode pages all read
+      // defaultListPageSize; it must move with the tier the way the
+      // IPTV index path already does, or the low-RAM pages stay 200.
+      const pages = {
+        DeviceTier.survival: 50,
+        DeviceTier.low: 100,
+        DeviceTier.standard: 150,
+        DeviceTier.mid: 200,
+        DeviceTier.full: 200,
+      };
+      for (final tier in DeviceTier.values) {
+        DevicePerformance.debugReset(tier: tier);
+        expect(defaultListPageSize, pages[tier], reason: '$tier');
       }
     });
   });

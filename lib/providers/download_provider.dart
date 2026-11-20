@@ -12,6 +12,7 @@ import '../media/media_item_sort.dart';
 import '../media/media_item_types.dart';
 import '../media/media_kind.dart';
 import '../media/media_version.dart';
+import '../media/xtream_season_parent.dart';
 import '../models/download_models.dart';
 import '../utils/download_version_utils.dart';
 import '../database/app_database.dart';
@@ -507,10 +508,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// null, so a chunk's `Future.wait` is not rejected by one bad row.
   Future<_MetadataHydrationResult?> _hydrateOneDownload(
     String globalKey,
-    Map<String, String?> scopesByServer, {
+    Map<String, ({MediaBackend backend, String? scopeId})> scopesByServer, {
     required bool fetchOnMiss,
     bool Function()? isStale,
     Map<String, MediaItem>? durableByKey,
+    Map<String, MediaItem>? bulkByKey,
   }) async {
     try {
       return await _hydrateDownloadMetadata(
@@ -519,11 +521,43 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
         fetchOnMiss: fetchOnMiss,
         isStale: isStale,
         durableByKey: durableByKey,
+        bulkByKey: bulkByKey,
       );
     } catch (e) {
       appLogger.d('Failed to hydrate metadata for $globalKey: $e');
       return null;
     }
+  }
+
+  /// Build the exact-rows bulk cache request for a refresh (K2): every leaf
+  /// key plus each leaf's parent/grandparent ids from its download row.
+  /// The set dedupes shared parents (one show/season serves many episodes).
+  /// Servers with no resolved scope/backend are skipped — their rows fall
+  /// back to the per-item lookup.
+  Future<List<({ServerId serverId, String itemId, MediaBackend backend, String? scopeId})>> _bulkCacheRequests(
+    Iterable<String> keys,
+    Map<String, ({MediaBackend backend, String? scopeId})> scopesByServer,
+  ) async {
+    final requests = <({ServerId serverId, String itemId, MediaBackend backend, String? scopeId})>{};
+    void add(ServerId serverId, String itemId) {
+      final scope = scopesByServer[serverId];
+      if (scope == null) return;
+      requests.add((serverId: serverId, itemId: itemId, backend: scope.backend, scopeId: scope.scopeId));
+    }
+
+    final keyList = keys.toList(growable: false);
+    for (final globalKey in keyList) {
+      final parsed = parseGlobalKey(globalKey);
+      if (parsed != null) add(parsed.serverId, parsed.ratingKey);
+    }
+    final keySet = keyList.toSet();
+    for (final row in await _downloadManager.getAllDownloads()) {
+      if (!keySet.contains(row.globalKey)) continue;
+      for (final parentId in [row.parentRatingKey, row.grandparentRatingKey]) {
+        if (parentId != null && parentId.isNotEmpty) add(ServerId(row.serverId), parentId);
+      }
+    }
+    return requests.toList(growable: false);
   }
 
   /// Shared hydration core for [_loadPersistedDownloads] and
@@ -543,7 +577,15 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     // into one Map). Each owned download resolves its own row per item
     // below ([lookupMetadata]), bounded by download count, and
     // collections/parents get the same per-item fallback.
-    final scopesByServer = await _downloadManager.getPinnedMetadataScopes(
+    //
+    // 1.5.3 K2: the scopes map also carries the resolved backend, and the
+    // refresh takes one bulk cache snapshot ([loadBulkCachedMetadata]) for
+    // exactly the leaves + parent rows it will walk — one IN select per
+    // (backend, scope) group instead of ~11 selects per download. Parent
+    // ids come from the download rows: without them, every concurrent
+    // chunk member would re-issue the parent lookups the moment the bulk
+    // map made the leaf lookups synchronous.
+    final scopesByServer = await _downloadManager.getPinnedMetadataScopesWithBackends(
       activeProfileId: _activeProfileId,
     );
     if (isStale?.call() ?? false) {
@@ -554,6 +596,13 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     // below consults this snapshot instead of issuing one select per
     // download (the cold-hydration select count stays constant).
     final durableByKey = await _downloadManager.loadDurableMetadata();
+    if (isStale?.call() ?? false) {
+      return (cacheHits: 0, networkFills: 0, misses: 0, synthesizedCount: 0);
+    }
+
+    final bulkByKey = await _downloadManager.loadBulkCachedMetadata(
+      await _bulkCacheRequests(keys, scopesByServer),
+    );
     if (isStale?.call() ?? false) {
       return (cacheHits: 0, networkFills: 0, misses: 0, synthesizedCount: 0);
     }
@@ -581,6 +630,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
             fetchOnMiss: fetchOnMiss,
             isStale: isStale,
             durableByKey: durableByKey,
+            bulkByKey: bulkByKey,
           ),
         ),
       );
@@ -639,6 +689,8 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     MediaItem leaf, {
     String? clientScopeId,
     Map<String, MediaItem>? durableByKey,
+    Map<String, MediaItem>? bulkByKey,
+    ({MediaBackend backend, String? scopeId})? resolvedScope,
   }) async {
     final serverId = leaf.serverId;
     if (serverId == null) return;
@@ -650,12 +702,14 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       if (clientScopeId != null && clientScopeId.isNotEmpty) {
         parent = _metadata[buildGlobalKey(ServerId(clientScopeId), parentId)];
       }
+      parent ??= bulkByKey?[parentKey];
       parent ??= await _downloadManager.lookupMetadata(
         ServerId(serverId),
         parentId,
         preferActiveScope: true,
         activeProfileId: _activeProfileId,
         durableByKey: durableByKey,
+        resolvedScope: resolvedScope,
       );
       if (parent == null) continue;
       _metadata[parentKey] = parent;
@@ -705,10 +759,11 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
 
   Future<_MetadataHydrationResult> _hydrateDownloadMetadata(
     String globalKey,
-    Map<String, String?> scopesByServer, {
+    Map<String, ({MediaBackend backend, String? scopeId})> scopesByServer, {
     bool fetchOnMiss = false,
     bool Function()? isStale,
     Map<String, MediaItem>? durableByKey,
+    Map<String, MediaItem>? bulkByKey,
   }) async {
     final parsed = parseGlobalKey(globalKey);
     if (parsed == null) return (metadata: null, networkFilled: false, stale: false);
@@ -716,15 +771,21 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     // MediaBrowser bulk keys are compound-scoped (`machine/user:item`); Plex
     // keys are public. The per-item lookup resolves the active profile's
     // namespace internally ([preferActiveScope]); [clientScopeId] is kept
-    // for the parent check below.
-    final clientScopeId = scopesByServer[parsed.serverId];
-    var cached = await _downloadManager.lookupMetadata(
-      parsed.serverId,
-      parsed.ratingKey,
-      preferActiveScope: true,
-      activeProfileId: _activeProfileId,
-      durableByKey: durableByKey,
-    );
+    // for the parent check below. The already-resolved (backend, scope)
+    // record is threaded through so the lookup does not re-resolve them
+    // per item (K2).
+    final resolvedScope = scopesByServer[parsed.serverId];
+    final clientScopeId = resolvedScope?.scopeId;
+    var cached =
+        bulkByKey?[globalKey] ??
+        await _downloadManager.lookupMetadata(
+          parsed.serverId,
+          parsed.ratingKey,
+          preferActiveScope: true,
+          activeProfileId: _activeProfileId,
+          durableByKey: durableByKey,
+          resolvedScope: resolvedScope,
+        );
     if (isStale?.call() ?? false) return (metadata: null, networkFilled: false, stale: true);
 
     var networkFilled = false;
@@ -764,11 +825,21 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
           libraryTitle: cached.libraryTitle ?? library.libraryTitle,
         );
       }
+      // 1.5.3 K1: re-stamp pre-1.5.3 Xtream leaves onto their per-season
+      // parent on load/refresh, so grouping and parent lookups see the
+      // season even though the durable row still carries the show.
+      cached = restampXtreamEpisodeParent(cached);
       _metadata[globalKey] = cached;
       if (cached.isEpisode || cached.kind == MediaKind.track) {
         // Resolve any missing parent rows per item, so show/season (or
         // artist/album) rows keep their stored metadata.
-        await _hydrateMissingParents(cached, clientScopeId: clientScopeId, durableByKey: durableByKey);
+        await _hydrateMissingParents(
+          cached,
+          clientScopeId: clientScopeId,
+          durableByKey: durableByKey,
+          bulkByKey: bulkByKey,
+          resolvedScope: resolvedScope,
+        );
       }
     }
     return (metadata: cached, networkFilled: networkFilled, stale: false);
@@ -1120,11 +1191,15 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     // show so same-numbered seasons of different shows never merge.
     final seasonMap = <String, List<MediaItem>>{};
     for (final episode in episodes) {
-      final seasonId = episode.parentId;
+      // 1.5.3 K1: re-stamp pre-1.5.3 leaves here too, so grouping splits
+      // even for rows already in memory that never passed through
+      // hydration (seeded state, queued rows).
+      final leaf = restampXtreamEpisodeParent(episode);
+      final seasonId = leaf.parentId;
       final key = seasonId != null && seasonId.isNotEmpty
-          ? '${episode.serverId}:${episode.grandparentId}:$seasonId'
-          : '${episode.serverId}:${episode.grandparentId}#${episode.parentIndex ?? 0}';
-      seasonMap.putIfAbsent(key, () => []).add(episode);
+          ? '${leaf.serverId}:${leaf.grandparentId}:$seasonId'
+          : '${leaf.serverId}:${leaf.grandparentId}#${leaf.parentIndex ?? 0}';
+      seasonMap.putIfAbsent(key, () => []).add(leaf);
     }
 
     final seasons = <MediaItem>[
@@ -1458,11 +1533,13 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
           // 1.4.4 F5: the show filter matches the grandparent id — and,
           // for episodes whose item never carried one (Xtream episodes
           // before the fix, or a fetch/merge round-trip that dropped it),
-          // falls back to the parent id, which is always
-          // 'series:<bare series id>'.
+          // falls back to the parent id, which is 'series:<bare series
+          // id>' on pre-1.5.3 leaves and 'season:<id>:<n>' on 1.5.3+
+          // leaves (1.5.3 K1).
           if (grandparentRatingKey != null &&
               meta.grandparentId != grandparentRatingKey &&
-              meta.parentId != 'series:$grandparentRatingKey') {
+              meta.parentId != 'series:$grandparentRatingKey' &&
+              !(meta.parentId?.startsWith('season:$grandparentRatingKey:') ?? false)) {
             return false;
           }
           if (parentRatingKey != null && meta.parentId != parentRatingKey) return false;
@@ -2026,7 +2103,7 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     final globalKey = metadata.globalKey;
     final hydration = await _hydrateDownloadMetadata(
       globalKey,
-      const <String, String?>{},
+      const <String, ({MediaBackend backend, String? scopeId})>{},
       isStale: () => !_isQueueOwnershipCurrent(ownership),
     );
     if (hydration.stale) return;

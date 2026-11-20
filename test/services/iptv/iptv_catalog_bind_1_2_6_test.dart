@@ -36,6 +36,7 @@ import 'package:plezy/connection/connection.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/iptv_search_index.dart';
+import 'package:plezy/services/lowend/phase_rss_sampler.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/utils/iptv_initials.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -291,6 +292,25 @@ void main() {
       },
       timeout: const Timeout(Duration(minutes: 5)),
     );
+
+    test('1.5.3 N4: the bind warm-up samples RSS after each index seed', () async {
+      // F4's trace had no sample between the seeds, so the seed split
+      // inside the bind was invisible (maxRss is a lifetime high-water
+      // mark). The warm-up now samples after each seed. The sampler is
+      // process-global, so snapshot the count first and read only the
+      // samples this warm-up added (this test sits right after M1, which
+      // samples nothing, so the ring cannot have dropped them).
+      await writeFixtureToDisk();
+      final c = newClient();
+      final countBefore = PhaseRssSampler.instance.samples.length;
+      await c.warmUpCatalogsSequentially(waitForFirstFrame: false);
+      expect(c.bindPhaseLog, ['live', 'vod', 'series']);
+      final fresh = PhaseRssSampler.instance.samples
+          .sublist(countBefore)
+          .map((s) => s.phase)
+          .toList();
+      expect(fresh, ['bind-seed-live', 'bind-seed-vod', 'bind-seed-series']);
+    });
 
     test(
       'M2 the bind chain (sequential warm-up + seed) RSS footprint at Trex scale',

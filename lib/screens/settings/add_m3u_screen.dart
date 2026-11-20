@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:material_symbols_icons/symbols.dart';
@@ -9,9 +12,9 @@ import '../../focus/focusable_text_field.dart';
 import '../../i18n/strings.g.dart';
 import '../../mixins/controller_disposer_mixin.dart';
 import '../../profiles/profile.dart';
+import '../../services/iptv/http_file_download.dart';
 import '../../services/iptv/m3u_parser.dart';
 import '../../utils/app_logger.dart';
-import '../../utils/media_server_timeouts.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/focused_scroll_scaffold.dart';
 import '../../widgets/loading_indicator_box.dart';
@@ -62,23 +65,34 @@ class _AddM3uScreenState extends State<AddM3uScreen> with AsyncFormStateMixin, C
   }
 
   /// Fetch the playlist URL and require at least one parseable entry.
+  /// The playlist streams straight to a temp file and is parsed from
+  /// that file inside an isolate (1.5.3 N1) — the old probe held the
+  /// whole playlist as a String and parsed it on the main isolate.
   Future<List<M3uEntry>> _probePlaylist(String playlistUrl) async {
     final uri = Uri.tryParse(playlistUrl);
     if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
       throw const _ProbeFailure('invalid-url');
     }
-    http.Response response;
+    final client = http.Client();
+    final tempDir = await Directory.systemTemp.createTemp('plezy_m3u_probe_');
+    final tempPath = '${tempDir.path}/playlist.m3u';
     try {
-      response = await http.get(uri).timeout(MediaServerTimeouts.response);
-    } catch (_) {
-      throw const _ProbeFailure('unreachable');
+      try {
+        await downloadHttpResponseToFile(client, uri, tempPath);
+      } catch (_) {
+        throw const _ProbeFailure('unreachable');
+      }
+      final entries = await compute(parseM3uFile, tempPath);
+      if (entries.isEmpty) throw const _ProbeFailure('empty');
+      return entries;
+    } finally {
+      client.close();
+      try {
+        await tempDir.delete(recursive: true);
+      } catch (_) {
+        // Best-effort temp cleanup; a leftover probe file is inert.
+      }
     }
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw const _ProbeFailure('unreachable');
-    }
-    final entries = parseM3u(response.body);
-    if (entries.isEmpty) throw const _ProbeFailure('empty');
-    return entries;
   }
 
   Future<void> _add() async {

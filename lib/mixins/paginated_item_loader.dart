@@ -157,7 +157,8 @@ mixin PaginatedItemLoader<T, W extends StatefulWidget> on State<W> {
 
   /// Throttled eager prefetch: if anything immediately outside the viewport
   /// is unloaded, fetch a page. Runs at most once per 100ms.
-  void prefetchAhead(int firstIndex, int visibleCount, {int pageSize = 200}) {
+  void prefetchAhead(int firstIndex, int visibleCount, {int? pageSize}) {
+    pageSize ??= defaultListPageSize;
     if (totalSize == 0) return;
 
     final now = DateTime.now();
@@ -318,7 +319,8 @@ mixin PaginatedItemLoader<T, W extends StatefulWidget> on State<W> {
   /// For callers that don't track viewport geometry — trigger this when a
   /// skeleton for [index] is built, and the containing page will backfill.
   /// Dedupes so multiple skeletons in the same page share one fetch.
-  void ensureIndexLoaded(int index, {int pageSize = 200}) {
+  void ensureIndexLoaded(int index, {int? pageSize}) {
+    pageSize ??= defaultListPageSize;
     if (totalSize == 0 || index >= totalSize || index < 0) return;
     if (loadedItems.containsKey(index) || _loadingRanges.contains(index)) return;
     final pageStart = (index ~/ pageSize) * pageSize;

@@ -15,6 +15,7 @@ import 'package:plezy/media/media_server_client.dart';
 import 'package:plezy/media/media_version.dart';
 import 'package:plezy/media/title_copies.dart';
 import 'package:plezy/services/data_aggregation_service.dart';
+import 'package:plezy/services/device_performance.dart';
 import 'package:plezy/services/jellyfin_api_cache.dart';
 import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/plex_api_cache.dart';
@@ -201,6 +202,15 @@ const _episodeQuery = TitleQuery.episode(
 List<String> _ids(List<MediaItem> items) => [for (final item in items) item.id];
 
 void main() {
+  // 1.5.3 F6r: the UI page size is tiered (50/100/150/200/200); the
+  // season-episode paging test verifies the loop at the full-tier 200,
+  // so pin the tier here. The tier→size mapping is covered by
+  // device_performance_test.dart.
+  setUp(() {
+    DevicePerformance.debugReset(tier: DeviceTier.full);
+    addTearDown(DevicePerformance.debugReset);
+  });
+
   group('movies', () {
     test('a match by IDs is the answer, without a title search', () async {
       final library = _Library(

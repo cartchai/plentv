@@ -7,6 +7,7 @@ import '../i18n/strings.g.dart';
 import '../media/media_item.dart';
 import '../media/media_item_types.dart';
 import '../media/media_kind.dart';
+import '../media/xtream_season_parent.dart';
 import '../models/download_models.dart';
 import '../utils/dialogs.dart';
 import '../utils/global_key_utils.dart';
@@ -176,7 +177,9 @@ class _DownloadTreeViewState extends State<DownloadTreeView> with UnsuppressFocu
         final meta = widget.metadata[episode.key];
         if (meta == null) continue;
 
-        final seasonKey = meta.parentId ?? 'unknown';
+        // 1.5.3 K1: re-stamp pre-1.5.3 leaves onto their per-season
+        // parent, so two seasons of one show do not merge into one row.
+        final seasonKey = restampXtreamEpisodeParent(meta).parentId ?? 'unknown';
         seasonGroups.putIfAbsent(seasonKey, () => []);
         seasonGroups[seasonKey]!.add(episode);
       }

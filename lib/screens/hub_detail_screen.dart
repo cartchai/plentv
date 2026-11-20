@@ -5,6 +5,7 @@ import '../media/ids.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../media/library_query.dart';
+import '../media/media_backend.dart';
 import '../media/media_hub.dart';
 import '../media/media_item.dart';
 import '../media/media_server_client.dart';
@@ -257,6 +258,11 @@ class _HubDetailScreenState extends State<HubDetailScreen>
   bool _shouldUsePaginatedLoader(MediaServerClient client) =>
       client.backend.usesMediaBrowserApi && widget.hub.id.endsWith('.recent');
 
+  /// IPTV backends (M3U and Xtream Codes). Their "Recommended" hubs are
+  /// the whole catalog, so they must never take the replace path (N2).
+  static bool _isIptvBackend(MediaBackend backend) =>
+      backend == MediaBackend.m3u || backend == MediaBackend.xtream;
+
   @override
   Future<LibraryPage<MediaItem>> fetchPage(int start, int size, AbortController? abort) async {
     final serverId = widget.hub.serverId;
@@ -333,7 +339,17 @@ class _HubDetailScreenState extends State<HubDetailScreen>
 
       _applySort();
       if (!usesCustomLoader && !_usesPaginatedLoader && client != null && loadedCount < totalCount) {
-        _replaceContinuationItems = !client.backend.usesMediaBrowserApi;
+        // 1.5.3 N2: the replace path fetches the whole hub through
+        // fetchMoreHubItems. That is fine for Plex (hubs are small), but
+        // an IPTV "Recommended" hub IS the whole catalog — tens of
+        // thousands of VOD/series rows built as MediaItems just to show
+        // the first screenful. IPTV pages correctly through
+        // fetchMoreHubItemsPage (index-backed, same hidden-category
+        // filter and provider order as the whole-list path, and the
+        // section filter is a no-op for IPTV library ids), so it takes
+        // the append path like Jellyfin/Emby.
+        _replaceContinuationItems =
+            !client.backend.usesMediaBrowserApi && !_isIptvBackend(client.backend);
         if (_replaceContinuationItems) {
           _continuation.setContinuation(startIndex: 0, totalCount: 1);
         } else {

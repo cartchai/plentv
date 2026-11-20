@@ -43,6 +43,7 @@ import '../services/device_performance.dart';
 import '../services/iptv/iptv_catalog_cache.dart';
 import '../services/iptv/iptv_epg_sources.dart';
 import '../services/lowend/epg_cadence_log.dart';
+import '../services/lowend/phase_rss_sampler.dart';
 import '../services/iptv/panel_reachability_store.dart';
 import '../services/iptv/iptv_playback_activity.dart';
 import '../services/iptv/iptv_heavy_work_gate.dart';
@@ -64,6 +65,7 @@ import 'watch_progress.dart';
 import '../services/iptv/iptv_item_favorites_repository.dart';
 import '../services/iptv/iptv_refusal_log.dart';
 import '../services/iptv/iptv_resume_repository.dart';
+import '../services/iptv/http_file_download.dart';
 import '../services/iptv/m3u_parser.dart';
 import '../services/iptv/xtream_api.dart';
 
@@ -2364,6 +2366,7 @@ class IptvClient implements MediaServerClient {
     _liveCategoryNamesFuture = null;
     _favoriteItemsFuture = null;
     _seriesInfoFutures.clear();
+    _seasonEpisodeItemsCache.clear();
     _xtreamChannelByKey.clear();
     _invalidateGuideChannelCache();
     _m3uChannelByKey.clear();
@@ -2408,6 +2411,7 @@ class IptvClient implements MediaServerClient {
     _seriesCategoryNamesFuture = null;
     _liveCategoryNamesFuture = null;
     _seriesInfoFutures.clear();
+    _seasonEpisodeItemsCache.clear();
     _xtreamChannelByKey.clear();
     _invalidateGuideChannelCache();
     _m3uChannelByKey.clear();
@@ -3450,19 +3454,23 @@ class IptvClient implements MediaServerClient {
     });
   }
 
-  /// Disk first (build #11): the playlist TEXT is the payload, stored
-  /// as-is and parsed with [parseM3u] on demand — no model serialization
-  /// needed. A stale playlist is served and refreshed in the background.
+  /// Disk first (build #11): the playlist is parsed from its disk file
+  /// inside the isolate ([parseM3uFile] streams it line by line), so the
+  /// main isolate never holds the playlist text and no whole-body copy
+  /// crosses the isolate port — the provider's ~300 MB playlist used to
+  /// spike RSS ~600 MB here (1.5.3 N1). A stale playlist is served and
+  /// refreshed in the background.
   Future<List<M3uEntry>> _loadM3uEntriesCached() async {
-    final disk = await _catalogCache.read(connection.id, IptvCatalogDiskCache.m3uDataset);
-    if (disk != null) {
+    final diskPath = await _catalogCache.filePath(connection.id, IptvCatalogDiskCache.m3uDataset);
+    if (diskPath != null) {
       try {
         final entries = await IptvHeavyWorkGate.instance.run(
-          () => compute(parseM3u, disk.body),
+          () => compute(parseM3uFile, diskPath),
           onStart: () => _trimCachesIfHot('M3U parse'),
         );
         if (entries.isNotEmpty) {
-          if (IptvCatalogDiskCache.isStale(disk.fetchedAt)) _refreshM3uEntriesInBackground();
+          final fetchedAt = (await File(diskPath).stat()).modified;
+          if (IptvCatalogDiskCache.isStale(fetchedAt)) _refreshM3uEntriesInBackground();
           return entries;
         }
         unawaited(_catalogCache.delete(connection.id, IptvCatalogDiskCache.m3uDataset));
@@ -3471,12 +3479,42 @@ class IptvClient implements MediaServerClient {
         unawaited(_catalogCache.delete(connection.id, IptvCatalogDiskCache.m3uDataset));
       }
     }
-    final text = await _fetchM3uPlaylistText();
-    _writeDiskText(IptvCatalogDiskCache.m3uDataset, text);
+    final destination = await _catalogCache.writeFilePath(connection.id, IptvCatalogDiskCache.m3uDataset);
+    if (destination == null) {
+      // No disk destination (cache disabled / storage low): fall back to
+      // the whole-text fetch + isolate parse, as before — the playlist is
+      // still parsed off the main isolate, just held as a String first.
+      final text = await _fetchM3uPlaylistText();
+      return IptvHeavyWorkGate.instance.run(
+        () => compute(parseM3u, text),
+        onStart: () => _trimCachesIfHot('M3U parse'),
+      );
+    }
+    final freshPath = await _downloadM3uPlaylistToFile(destination, _catalogGeneration);
+    if (freshPath == null) return const <M3uEntry>[];
     return IptvHeavyWorkGate.instance.run(
-      () => compute(parseM3u, text),
+      () => compute(parseM3uFile, freshPath),
       onStart: () => _trimCachesIfHot('M3U parse'),
     );
+  }
+
+  /// Stream the playlist straight to [destination] (1.5.3 N1): the
+  /// download lands in a temp file beside the cache file and is renamed
+  /// into place only on success, so a failed download leaves the
+  /// previous disk copy untouched — a partial file must never parse as a
+  /// truncated playlist. Returns the cache path, or null when the
+  /// download was empty or a clear landed mid-download ([generation]
+  /// moved on — the temp file is dropped instead of resurrecting the
+  /// cache). Callers treat null as "nothing fresh landed".
+  Future<String?> _downloadM3uPlaylistToFile(String destination, int generation) async {
+    final tempPath = '$destination.tmp-${DateTime.now().microsecondsSinceEpoch}';
+    final receivedBytes = await downloadHttpResponseToFile(_http, Uri.parse(_m3u.playlistUrl), tempPath);
+    if (receivedBytes == 0 || generation != _catalogGeneration) {
+      await File(tempPath).delete();
+      return null;
+    }
+    await File(tempPath).rename(destination);
+    return destination;
   }
 
   Future<String> _fetchM3uPlaylistText() async {
@@ -3494,25 +3532,24 @@ class IptvClient implements MediaServerClient {
   void _refreshM3uEntriesInBackground() {
     final generation = _catalogGeneration;
     unawaited(
-      _fetchM3uPlaylistText().then((text) async {
-        if (generation != _catalogGeneration || text.isEmpty) return;
-        await _catalogCache.write(connection.id, IptvCatalogDiskCache.m3uDataset, text);
-        if (generation != _catalogGeneration) {
-          // A clear landed during the write: drop the resurrected file.
-          await _catalogCache.delete(connection.id, IptvCatalogDiskCache.m3uDataset);
-          return;
-        }
-        _m3uEntriesFuture = Future.value(
-          await IptvHeavyWorkGate.instance.run(
-            () => compute(parseM3u, text),
-            onStart: () => _trimCachesIfHot('M3U parse'),
-          ),
-        );
-        notifyCatalogRefreshed();
-      }).catchError((Object e) {
+      _refreshM3uEntries(generation).catchError((Object e) {
         appLogger.w('IPTV: background M3U playlist refresh failed', error: e);
       }),
     );
+  }
+
+  Future<void> _refreshM3uEntries(int generation) async {
+    final destination = await _catalogCache.writeFilePath(connection.id, IptvCatalogDiskCache.m3uDataset);
+    if (destination == null || generation != _catalogGeneration) return;
+    final path = await _downloadM3uPlaylistToFile(destination, generation);
+    if (generation != _catalogGeneration || path == null) return;
+    _m3uEntriesFuture = Future.value(
+      await IptvHeavyWorkGate.instance.run(
+        () => compute(parseM3uFile, path),
+        onStart: () => _trimCachesIfHot('M3U parse'),
+      ),
+    );
+    notifyCatalogRefreshed();
   }
 
   /// The category lists for the Categories screen (build #15, item 5) —
@@ -3954,7 +3991,11 @@ class IptvClient implements MediaServerClient {
       kind: MediaKind.episode,
       title: episode.title.isEmpty ? 'Episode ${episode.episodeNum}' : episode.title,
       summary: episode.plot,
-      parentId: 'series:${series.seriesId}',
+      // 1.5.3 K1: the episode points at its per-season parent, not the
+      // show — the Downloads tree and _downloadedSeasons group by
+      // parentId, so a show-level parentId merged every season into one
+      // row. The per-season id is the same one _seasonItem builds.
+      parentId: 'season:${series.seriesId}:$season',
       // 1.4.4 F5: the show id the queue lookup filters on — without it
       // the show's downloads never match their series (the lookup
       // compares grandparentId against the bare series id).
@@ -4394,6 +4435,10 @@ class IptvClient implements MediaServerClient {
     try {
       await _seedSearchIndexTypeFromDisk(IptvSearchIndex.typeLive);
       _bindPhaseLog.add('live');
+      // 1.5.3 N4: one RSS sample per seed — the trace had no sample
+      // between the seeds, so the seed split inside the bind was
+      // invisible (maxRss is a lifetime high-water mark).
+      PhaseRssSampler.instance.sample('bind-seed-live');
       if (waitForFirstFrame) {
         await _waitForFirstFrame();
         _bindPhaseLog.add('first-frame');
@@ -4407,8 +4452,10 @@ class IptvClient implements MediaServerClient {
       }
       await _seedSearchIndexTypeFromDisk(IptvSearchIndex.typeMovie);
       _bindPhaseLog.add('vod');
+      PhaseRssSampler.instance.sample('bind-seed-vod');
       await _seedSearchIndexTypeFromDisk(IptvSearchIndex.typeSeries);
       _bindPhaseLog.add('series');
+      PhaseRssSampler.instance.sample('bind-seed-series');
     } catch (e) {
       appLogger.w('IPTV: sequential bind warm-up failed', error: e);
     }
@@ -4831,6 +4878,28 @@ class IptvClient implements MediaServerClient {
         if (liveFound == null) return null;
         final liveCategoryNames = await _liveCategoryNames();
         return _liveChannelItem(liveFound, categoryName: liveCategoryNames[liveFound.categoryId]);
+      case 'season':
+        // 1.5.3 K1: a season id ('season:<seriesId>:<n>') resolves to the
+        // synthetic season item, so _fetchAndStoreParentMetadata can store
+        // real season rows for IPTV downloads. Before this there was no
+        // season case, so the parent lookup always returned null.
+        if (parts.length < 3) return null;
+        final seasonSeriesId = int.tryParse(parts[1]);
+        final seasonNum = int.tryParse(parts[2]);
+        if (seasonSeriesId == null || seasonNum == null) return null;
+        var seasonSeries = (await _resolveIndexRow(IptvSearchIndex.typeSeries, seasonSeriesId))?.toSeries();
+        seasonSeries ??= (await _seriesByIdMap())[seasonSeriesId];
+        if (seasonSeries == null) return null;
+        final seasonInfo = await _seriesInfo(seasonSeriesId);
+        final seasonEpisodes = seasonInfo.episodesBySeason[seasonNum];
+        if (seasonEpisodes == null) return null;
+        final seasonCategoryNames = await _seriesCategoryNames();
+        return _seasonItem(
+          seasonSeries,
+          seasonNum,
+          seasonEpisodes.length,
+          seriesCategoryName: seasonCategoryNames[seasonSeries.categoryId],
+        );
       case 'episode':
         if (parts.length < 3) return null;
         final seriesId = int.tryParse(parts[1]);
@@ -4877,7 +4946,16 @@ class IptvClient implements MediaServerClient {
       try {
         final resume = await _resumeItems();
         final episodes = resume.values
-            .where((e) => e.kind == 'episode' && e.parentId == id)
+            .where((e) {
+              if (e.kind != 'episode') return false;
+              // Legacy rows carry the show as parentId; 1.5.3 K1 moved
+              // the episode parentId to the season, so match those via
+              // the grandparent (bare series id, or the old 'series:'
+              // form from fallback rows written before the fix).
+              if (e.parentId == id) return true;
+              final showId = id.startsWith('series:') ? id.substring('series:'.length) : id;
+              return e.grandparentId == showId || e.grandparentId == id;
+            })
             .toList()
           ..sort((a, b) => b.updatedAtMs.compareTo(a.updatedAtMs));
         if (episodes.isNotEmpty) {
@@ -4911,11 +4989,26 @@ class IptvClient implements MediaServerClient {
       final favorites = await _favoriteItems();
       final resume = await _resumeItems();
       final categoryNames = await _seriesCategoryNames();
+      // 1.5.3 N3: reuse the mapped list while every memo it was built
+      // from is still the same instance (see _seasonEpisodeItemsCache).
+      final cacheKey = 'season:$seriesId:$seasonNum';
+      final cached = _seasonEpisodeItemsCache[cacheKey];
+      if (cached != null &&
+          identical(cached.series, series) &&
+          identical(cached.info, info) &&
+          identical(cached.favorites, favorites) &&
+          identical(cached.resume, resume) &&
+          identical(cached.categoryNames, categoryNames)) {
+        // A fresh list per call (the old code returned a fresh list
+        // too): callers may sort or sublist freely, the cache stays
+        // intact, and the episode objects are shared.
+        return List<MediaItem>.of(cached.items, growable: false);
+      }
       final seriesCategoryName = categoryNames[series.categoryId];
       // Sort a copy: the info object's lists are shared state (and may
       // be unmodifiable), so sorting them in place mutates the cache.
       final sorted = seasonEpisodes.toList()..sort((a, b) => a.episodeNum.compareTo(b.episodeNum));
-      return sorted
+      final items = sorted
           .map(
             (episode) => _episodeItem(
               series,
@@ -4927,6 +5020,15 @@ class IptvClient implements MediaServerClient {
             ),
           )
           .toList(growable: false);
+      _seasonEpisodeItemsCache[cacheKey] = _SeasonEpisodeItems(
+        series: series,
+        info: info,
+        favorites: favorites,
+        resume: resume,
+        categoryNames: categoryNames,
+        items: items,
+      );
+      return List<MediaItem>.of(items, growable: false);
     }
     if (parts[0] != 'series') return const [];
     final seriesId = int.tryParse(parts[1]);
@@ -4990,6 +5092,19 @@ class IptvClient implements MediaServerClient {
   /// for the list. A failed fetch is evicted so a retry re-fetches.
   /// Cleared with the catalog cache.
   final Map<int, Future<XtreamSeriesInfo>> _seriesInfoFutures = {};
+
+  /// Mapped season-episode lists (1.5.3 N3): `fetchChildren('season:…')`
+  /// used to re-sort and re-map the whole season into fresh MediaItems
+  /// on every call, and `fetchChildrenPage` slices that full list — so
+  /// every season-pager page turn re-paid the whole-season map + sort.
+  /// The mapped list is cached per season, validated against the memo
+  /// identities it was built from (series row, series info, favorites,
+  /// resume, category names): any of those changing — a favorite toggle,
+  /// a resume write, a catalog re-seed — swaps the memo instance and
+  /// the cache re-maps on the next read instead of serving stale hearts
+  /// or resume positions. Cleared with the series-info futures when the
+  /// catalog is dropped, so a long session cannot accumulate seasons.
+  final Map<String, _SeasonEpisodeItems> _seasonEpisodeItemsCache = {};
 
   Future<XtreamSeriesInfo> _seriesInfo(int seriesId) {
     final cached = _seriesInfoFutures[seriesId];
@@ -6487,7 +6602,12 @@ class IptvClient implements MediaServerClient {
         parentTitle: stash?.parentTitle,
         // 1.4.6 G1: the show link for episodes. The id fallback mirrors
         // parentId above (an episode's grandparent IS its series).
-        grandparentId: stash?.grandparentId ?? (kind == 'episode' && parts.length >= 2 ? 'series:${parts[1]}' : null),
+        // 1.5.3 K1: the bare series id, matching _episodeItem and the
+        // 1.4.4 F5 queue lookup — the old 'series:' prefix here never
+        // matched either. The season is unknowable from the id alone,
+        // so the parentId fallback stays show-level; the stash path
+        // carries the correct season parentId.
+        grandparentId: stash?.grandparentId ?? (kind == 'episode' && parts.length >= 2 ? parts[1] : null),
         grandparentTitle: stash?.grandparentTitle,
         // 1.2.4: the category id is the precise signal for whether a
         // pruned resume entry needs a refresh (see IptvResumeItem).
@@ -7220,4 +7340,26 @@ class IptvSearchDiagnostics {
 
   /// When the search ran.
   final DateTime recordedAt;
+}
+
+/// One cached season-episode mapping (1.5.3 N3): the mapped items plus
+/// the memo instances they were built from, so a later call can tell —
+/// by identity, with no extra reads — whether the mapping is still
+/// current or must be rebuilt.
+class _SeasonEpisodeItems {
+  const _SeasonEpisodeItems({
+    required this.series,
+    required this.info,
+    required this.favorites,
+    required this.resume,
+    required this.categoryNames,
+    required this.items,
+  });
+
+  final XtreamSeries series;
+  final XtreamSeriesInfo info;
+  final Map<String, IptvFavoriteItem> favorites;
+  final Map<String, IptvResumeItem> resume;
+  final Map<String, String> categoryNames;
+  final List<MediaItem> items;
 }

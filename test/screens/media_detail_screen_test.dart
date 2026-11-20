@@ -34,6 +34,7 @@ import 'package:plezy/services/plex_mappers.dart';
 
 import '../test_helpers/download_fixtures.dart';
 import '../test_helpers/paged_fakes.dart';
+import 'package:plezy/services/device_performance.dart';
 import 'package:plezy/services/download_manager_service.dart';
 import 'package:plezy/services/download_storage_service.dart';
 import 'package:plezy/services/jellyfin_api_cache.dart';
@@ -73,6 +74,12 @@ void main() {
     SettingsService.resetForTesting();
     TvDetectionService.debugSetAppleTVOverride(true);
     LocaleSettings.setLocaleSync(AppLocale.en);
+    // 1.5.3 F6r: the UI page size is tiered (50/100/150/200/200); the
+    // season-page tests in this file verify paging mechanics at the
+    // full-tier 200, so pin the tier here. The tier→size mapping is
+    // covered by device_performance_test.dart.
+    DevicePerformance.debugReset(tier: DeviceTier.full);
+    addTearDown(DevicePerformance.debugReset);
   });
 
   tearDown(() {

@@ -268,6 +268,21 @@ abstract class ApiCache {
   /// `null` when the item isn't cached.
   Future<MediaItem?> getMetadata(ServerId serverId, String itemId);
 
+  /// Bulk variant of [getMetadata]: fetch cached [MediaItem]s for [items]
+  /// — (scopeId, itemId) pairs sharing one profile scope — keyed by itemId.
+  /// The default implementation loops the per-item [getMetadata]; backends
+  /// with an exact-key bulk read override it so a refresh pays a constant
+  /// number of selects as downloads grow (K2: the cold-Jellyfin hydration
+  /// select count must stay constant). Items with no cached row are absent.
+  Future<Map<String, MediaItem>> getMetadataForKeys(List<({String scopeId, String itemId})> items) async {
+    final out = <String, MediaItem>{};
+    for (final (:scopeId, :itemId) in items) {
+      final item = await getMetadata(ServerId(scopeId), itemId);
+      if (item != null) out[itemId] = item;
+    }
+    return out;
+  }
+
   /// Pin the cached metadata row(s) for [itemId] so they survive cache
   /// eviction (used by the offline-download pipeline).
   Future<void> pinForOffline(ServerId serverId, String itemId);

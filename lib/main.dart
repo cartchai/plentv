@@ -2887,9 +2887,18 @@ class _SetupScreenState extends State<SetupScreen> with MountedSetStateMixin {
       // catchError keeps a failing refresh from surfacing as an unhandled
       // async error now that nothing awaits it.
       unawaited(
-        downloadProvider.refreshMetadataFromCache().catchError((Object e, StackTrace st) {
-          appLogger.w('Setup: post-launch download metadata refresh failed', error: e, stackTrace: st);
-        }),
+        downloadProvider
+            .refreshMetadataFromCache()
+            .then((_) {
+              // 1.5.3 N4: the post-launch refresh was unattributed in the
+              // Phase RSS trace — sample once it lands, so the refresh's
+              // own RSS cost is visible instead of folding into whatever
+              // phase follows it.
+              PhaseRssSampler.instance.sample('post-launch-refresh');
+            })
+            .catchError((Object e, StackTrace st) {
+              appLogger.w('Setup: post-launch download metadata refresh failed', error: e, stackTrace: st);
+            }),
       );
     } finally {
       deepLinks.settleStartupProfile(applied: linkApplied);

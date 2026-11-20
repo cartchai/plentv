@@ -98,6 +98,70 @@ class JellyfinApiCache extends ApiCache {
     }
   }
 
+  /// Bulk variant of [getMetadata] (K2): one `cacheKey IN (...)` select for
+  /// every requested row plus one connections select, however many items
+  /// are requested. Rows are mapped exactly like [getMetadata] — same
+  /// server context, same absolutizer, same mapper — so a bulk hit is
+  /// indistinguishable from a per-item hit. When both the scoped and the
+  /// legacy key exist for one item the scoped row wins (it is visited
+  /// first). Items whose scope carries no user id, or with no row at all,
+  /// are absent; the caller falls back to the per-item path.
+  @override
+  Future<Map<String, MediaItem>> getMetadataForKeys(List<({String scopeId, String itemId})> items) async {
+    if (items.isEmpty) return const {};
+    final cacheKeys = <String>{};
+    final keyToItemId = <String, String>{};
+    for (final (:scopeId, :itemId) in items) {
+      for (final key in JellyfinCacheResolver.exactCacheKeysForItem(scopeId, itemId)) {
+        cacheKeys.add(key);
+        keyToItemId[key] = itemId;
+      }
+    }
+    if (cacheKeys.isEmpty) return const {};
+    final rows = await _resolver.findItemsByCacheKeys(cacheKeys.toList());
+    if (rows.isEmpty) return const {};
+    final connections = await _resolver.mediaBrowserConnectionsById();
+    final contexts = <String, ({String machineId, String name, String baseUrl, String accessToken, MediaBrowserDialect dialect})?>{};
+    final rowsByKey = <String, JellyfinCacheItem>{for (final row in rows) row.cacheRow.cacheKey: row};
+    final out = <String, MediaItem>{};
+    for (final key in cacheKeys) {
+      final row = rowsByKey[key];
+      if (row == null) continue;
+      final itemId = keyToItemId[key]!;
+      if (out.containsKey(itemId)) continue;
+      final connection =
+          connections[row.key.scopeId] ?? connections['${row.key.machineId}/${row.key.userId}'];
+      if (connection == null) continue;
+      // One server-context resolution per distinct connection, not per row
+      // (the vault reveal is async but select-free; caching it here also
+      // keeps the bulk path from repeating the per-item path's work).
+      final ({String machineId, String name, String baseUrl, String accessToken, MediaBrowserDialect dialect})? resolvedCtx;
+      if (contexts.containsKey(connection.id)) {
+        resolvedCtx = contexts[connection.id];
+      } else {
+        resolvedCtx = await _serverContext(connection, machineId: row.key.machineId);
+        contexts[connection.id] = resolvedCtx;
+      }
+      if (resolvedCtx == null) continue;
+      try {
+        final data = jsonDecode(row.cacheRow.data) as Map<String, dynamic>;
+        final absolutizer = JellyfinImageAbsolutizer(baseUrl: resolvedCtx.baseUrl, accessToken: resolvedCtx.accessToken);
+        final item = JellyfinMappers.mediaItem(
+          data,
+          serverId: ServerId(resolvedCtx.machineId),
+          serverName: resolvedCtx.name,
+          absolutizer: absolutizer,
+          dialect: resolvedCtx.dialect,
+        );
+        if (item == null) continue;
+        out[itemId] = item;
+      } catch (_) {
+        continue;
+      }
+    }
+    return out;
+  }
+
   /// Persist a watched/unwatched flip into cached `BaseItemDto` rows for
   /// [itemId]. Compound MediaBrowser scope ids update only their user. A legacy
   /// bare machine id is accepted only when its matching rows belong to one

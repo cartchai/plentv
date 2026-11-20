@@ -745,14 +745,57 @@ class DownloadManagerService {
   }
 
   Future<Map<String, String?>> getPinnedMetadataScopes({String? activeProfileId}) async {
+    final scopes = await getPinnedMetadataScopesWithBackends(activeProfileId: activeProfileId);
+    return {for (final entry in scopes.entries) entry.key: entry.value.scopeId};
+  }
+
+  /// Like [getPinnedMetadataScopes] but keeps the resolved backend with
+  /// each scope, so callers can thread both through per-item lookups (and
+  /// the bulk cache read) instead of re-resolving them per item — the
+  /// cold-hydration select count must stay constant as downloads grow.
+  Future<Map<String, ({MediaBackend backend, String? scopeId})>> getPinnedMetadataScopesWithBackends({
+    String? activeProfileId,
+  }) async {
     if (activeProfileId == null || activeProfileId.isEmpty) {
-      return const <String, String?>{};
+      return const <String, ({MediaBackend backend, String? scopeId})>{};
     }
-    final scopes = await _profileScopesForServers(
+    return _profileScopesForServers(
       await _ownedServerIds(activeProfileId),
       activeProfileId,
     );
-    return {for (final entry in scopes.entries) entry.key: entry.value.scopeId};
+  }
+
+  /// Bulk-load cached metadata for exactly [requests] — one `cacheKey IN
+  /// (...)` select per (backend, scope) group, plus one connections select
+  /// per MediaBrowser group — keyed by public globalKey. Requests the bulk
+  /// read cannot serve (IPTV rows, bare scopes, uncached rows) are simply
+  /// absent; callers fall back to the per-item [lookupMetadata]. Backends
+  /// without a cache implementation never reach the bulk read.
+  Future<Map<String, MediaItem>> loadBulkCachedMetadata(
+    List<({ServerId serverId, String itemId, MediaBackend backend, String? scopeId})> requests,
+  ) async {
+    final byGlobalKey = <String, MediaItem>{};
+    final groups = <(MediaBackend, String), List<({ServerId serverId, String itemId})>>{};
+    for (final request in requests) {
+      final scopeId = request.scopeId;
+      if (scopeId == null || scopeId.isEmpty) continue;
+      if (request.backend != MediaBackend.jellyfin &&
+          request.backend != MediaBackend.emby &&
+          request.backend != MediaBackend.plex) {
+        continue;
+      }
+      groups.putIfAbsent((request.backend, scopeId), () => []).add((serverId: request.serverId, itemId: request.itemId));
+    }
+    for (final entry in groups.entries) {
+      final (backend, scopeId) = entry.key;
+      final pairs = [for (final item in entry.value) (scopeId: scopeId, itemId: item.itemId)];
+      final found = await ApiCache.forBackend(backend).getMetadataForKeys(pairs);
+      for (final item in entry.value) {
+        final metadata = found[item.itemId];
+        if (metadata != null) byGlobalKey[buildGlobalKey(item.serverId, item.itemId)] = metadata;
+      }
+    }
+    return byGlobalKey;
   }
 
   Future<MediaItem?> lookupMetadata(
@@ -764,6 +807,13 @@ class DownloadManagerService {
     /// durable-first check reads this map instead of issuing one select
     /// per download; when null it falls back to the single-row read.
     Map<String, MediaItem>? durableByKey,
+    /// Already-resolved (backend, scope) for [serverId], from
+    /// [getPinnedMetadataScopesWithBackends]. When provided, the per-item
+    /// scope + backend re-resolution below is skipped — a null record
+    /// means "not resolved yet", while a record with a null scopeId is a
+    /// resolved IPTV backend (no per-profile namespace) and must still
+    /// fall through to the unscoped fan-out, never return null.
+    ({MediaBackend backend, String? scopeId})? resolvedScope,
   }) async {
     // The durable download-metadata store is scope-free (keyed by public
     // globalKey) and backend-agnostic JSON, so it answers before any scope
@@ -774,17 +824,25 @@ class DownloadManagerService {
     if (durable != null) return durable;
 
     if (preferActiveScope) {
-      final activeScopeId = await profileClientScopeIdForServer(serverId, activeProfileId);
+      final String? activeScopeId;
+      final MediaBackend? resolvedBackend;
+      if (resolvedScope != null) {
+        activeScopeId = resolvedScope.scopeId;
+        resolvedBackend = resolvedScope.backend;
+      } else {
+        activeScopeId = await profileClientScopeIdForServer(serverId, activeProfileId);
+        resolvedBackend = null;
+      }
       if (activeScopeId == null) {
         // IPTV backends have no per-profile cache namespace (their scope
         // is the public server id), so a null scope must not kill the
         // lookup the way it does for Plex/MediaBrowser — fall through to
         // the unscoped fan-out below. Anything else keeps the old
         // behaviour: a null scope means the backend cannot be resolved.
-        final backend = await _backendForServer(serverId);
+        final backend = resolvedBackend ?? await _backendForServer(serverId);
         if (backend != MediaBackend.xtream && backend != MediaBackend.m3u) return null;
       } else {
-        return _lookupMetadata(serverId, itemId, clientScopeId: activeScopeId);
+        return _lookupMetadata(serverId, itemId, clientScopeId: activeScopeId, resolvedBackend: resolvedBackend);
       }
     }
 
@@ -955,8 +1013,15 @@ class DownloadManagerService {
   /// download rows still reference it), fan out to every registered backend
   /// cache instead of silently defaulting to Plex. Otherwise MediaBrowser
   /// items would render with blank metadata after a connection is severed.
-  Future<MediaItem?> _lookupMetadata(ServerId serverId, String itemId, {String? clientScopeId}) async {
-    final backend = await _backendForServer(serverId);
+  Future<MediaItem?> _lookupMetadata(
+    ServerId serverId,
+    String itemId, {
+    String? clientScopeId,
+    /// Already-resolved backend for [serverId] (see [lookupMetadata]'s
+    /// `resolvedScope`): skips the [_backendForServer] re-resolution.
+    MediaBackend? resolvedBackend,
+  }) async {
+    final backend = resolvedBackend ?? await _backendForServer(serverId);
     final live = _getClient(serverId, clientScopeId: clientScopeId);
     if (backend != null) {
       return ApiCache.forBackend(

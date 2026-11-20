@@ -53,6 +53,48 @@ class JellyfinCacheResolver {
     return null;
   }
 
+  /// Exact `cacheKey` values under which an item cached for [scopeId] may
+  /// be stored: the compound-scoped key and the legacy bare-machine key.
+  /// Empty when the scope carries no user id — a bare machine id cannot
+  /// name one user's row exactly, so the caller falls back to the per-item
+  /// LIKE lookup ([_findItems]) instead of guessing.
+  static List<String> exactCacheKeysForItem(String scopeId, String itemId) {
+    final scope = _splitScope(scopeId);
+    final userId = scope.userId;
+    if (userId == null) return const [];
+    return <String>[
+      '$scopeId:/Users/$userId/Items/$itemId',
+      '${scope.machineId}:/Users/$userId/Items/$itemId',
+    ];
+  }
+
+  /// Fetch cached rows for exactly [cacheKeys] in one select. Rows whose
+  /// key does not parse ([parseItemKey]) are dropped. Unlike [_findItems]
+  /// this performs no scope filtering — the caller built the keys from the
+  /// already-resolved profile scope, so every key names one user's row.
+  Future<List<JellyfinCacheItem>> findItemsByCacheKeys(List<String> cacheKeys) async {
+    if (cacheKeys.isEmpty) return const [];
+    final rows =
+        await (database.select(
+          database.apiCache,
+        )..where((t) => t.cacheKey.isIn(cacheKeys))).get();
+    final matches = <JellyfinCacheItem>[];
+    for (final row in rows) {
+      final key = parseItemKey(row.cacheKey);
+      if (key == null) continue;
+      matches.add((cacheRow: row, key: key));
+    }
+    return matches;
+  }
+
+  /// All MediaBrowser connections in one select, keyed by connection id,
+  /// so a bulk cache read can resolve each row's server context without
+  /// one [findConnection] per row.
+  Future<Map<String, ConnectionRow>> mediaBrowserConnectionsById() async {
+    final connections = await (database.select(database.connections)..where((t) => _mediaBrowserKind(t.kind))).get();
+    return {for (final connection in connections) connection.id: connection};
+  }
+
   Future<List<JellyfinCacheItem>> _findItems(String serverOrScopeId, String itemId) async {
     final rows =
         await (database.select(database.apiCache)

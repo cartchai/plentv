@@ -17,6 +17,7 @@ import 'package:plezy/media/media_sort.dart';
 import 'package:plezy/media/server_capabilities.dart';
 import 'package:plezy/providers/multi_server_provider.dart';
 import 'package:plezy/screens/hub_detail_screen.dart';
+import 'package:plezy/services/device_performance.dart';
 import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/settings_service.dart';
 import 'package:plezy/theme/mono_theme.dart';
@@ -40,6 +41,12 @@ void main() {
     resetSharedPreferencesForTest();
     SettingsService.resetForTesting();
     LocaleSettings.setLocaleSync(AppLocale.en);
+    // 1.5.3 F6r: the UI page size is tiered (50/100/150/200/200); the
+    // tests in this file verify paging mechanics at the full-tier 200,
+    // so pin the tier here. The tier→size mapping itself is covered by
+    // device_performance_test.dart.
+    DevicePerformance.debugReset(tier: DeviceTier.full);
+    addTearDown(DevicePerformance.debugReset);
   });
 
   testWidgets('Jellyfin hub advances by raw page size after screen filtering', (tester) async {
@@ -215,6 +222,49 @@ void main() {
 
     expect(harness.client.requestedStarts, [0]);
     expect(harness.client.fullHubRequests, 1);
+    expect(find.text(t.common.retry), findsNothing);
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -30000));
+    await tester.pumpAndSettle();
+    expect(find.text('Item 204'), findsOneWidget);
+  });
+
+  testWidgets('1.5.3 N2: Xtream hub pages instead of replacing with the full-hub response', (tester) async {
+    // An IPTV "Recommended" hub IS the whole catalog (tens of thousands
+    // of VOD/series rows), so the replace path — fetchMoreHubItems with
+    // no limit — would build every row as a MediaItem just to show the
+    // first screenful. The paged path returns the same visible rows
+    // (index-backed, same hidden-category filter and provider order),
+    // so the hub must page like Jellyfin/Emby instead. Failing-first:
+    // on 1.5.2 this hub took the replace path (fullHubRequests == 1,
+    // requestedStarts == [0]).
+    //
+    // testMediaItem does not support the xtream backend, so the items
+    // are built with MediaItem.xtream directly (same seam as the K1
+    // tests).
+    final items = List.generate(205, (index) => _xtreamItem(index));
+    final harness = await _createHarness(items, backend: MediaBackend.xtream);
+
+    await tester.pumpWidget(
+      harness.wrap(
+        HubDetailScreen(
+          hub: MediaHub(
+            id: 'iptv:server_1:movies:recommended',
+            title: 'Recommended',
+            type: 'movie',
+            items: items.take(5).toList(),
+            size: items.length,
+            more: true,
+            libraryId: 'iptv:server_1:movies',
+            serverId: 'server_1',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(harness.client.requestedStarts, [0, 200]);
+    expect(harness.client.fullHubRequests, 0);
     expect(find.text(t.common.retry), findsNothing);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -30000));
@@ -552,6 +602,19 @@ MediaItem _item(int index, {required MediaBackend backend, String? libraryId}) =
   title: 'Item $index',
   libraryId: libraryId,
   serverId: 'server_1',
+  serverName: 'Server',
+);
+
+/// An Xtream movie item (1.5.3 N2): testMediaItem throws for the xtream
+/// backend, so this builds MediaItem.xtream directly. libraryId mirrors
+/// a real IPTV movies library (`iptv:<server>:movies` — not an int, so
+/// the hub's section filter is a no-op for it, as in production).
+MediaItem _xtreamItem(int index) => MediaItem.xtream(
+  id: 'item_$index',
+  kind: MediaKind.movie,
+  title: 'Item $index',
+  libraryId: 'iptv:server_1:movies',
+  serverId: ServerId('server_1'),
   serverName: 'Server',
 );
 

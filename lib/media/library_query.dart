@@ -1,6 +1,7 @@
 // ignore_for_file: invalid_annotation_target
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../services/device_performance.dart';
 import '../utils/media_server_http_client.dart' show AbortController;
 import 'media_kind.dart';
 
@@ -13,7 +14,14 @@ enum LibrarySortDirection { ascending, descending }
 /// episode lists): one shared value so the screens don't each re-declare
 /// 200. Backend clients keep their own API page sizes (their
 /// `_...PageSize` consts) — those are server pagination, not UI paging.
-const int defaultListPageSize = 200;
+///
+/// 1.5.3 F6r: tiered, not flat 200 — 50 / 100 / 150 / 200 / 200 on T0–T4
+/// ([DevicePerformance.browsePageSize]), so a low-RAM device materializes
+/// fewer rows (+ posters + widgets) per page. The IPTV index path was
+/// already tiered (1.2.19 L-37); this brings the Library/hub pages in
+/// line. Paging already exists everywhere, so this is a size swap, not a
+/// data-source change.
+int get defaultListPageSize => DevicePerformance.browsePageSize;
 
 @freezed
 sealed class LibrarySort with _$LibrarySort {

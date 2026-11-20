@@ -16,6 +16,7 @@ import 'package:plezy/media/media_playlist.dart';
 import 'package:plezy/models/plex/plex_config.dart';
 import 'package:plezy/providers/multi_server_provider.dart';
 import 'package:plezy/screens/libraries/tabs/library_playlists_tab.dart';
+import 'package:plezy/services/device_performance.dart';
 import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/plex_client.dart';
 import 'package:plezy/services/plex_api_cache.dart';
@@ -55,6 +56,12 @@ void main() {
     SettingsService.resetForTesting();
     CardInflationBudget.reset();
     TvDetectionService.debugSetAppleTVOverride(false);
+    // 1.5.3 F6r: the UI page size is tiered (50/100/150/200/200); this
+    // file verifies lazy-grid mechanics at the full-tier 200, so pin
+    // the tier here. The tier→size mapping is covered by
+    // device_performance_test.dart.
+    DevicePerformance.debugReset(tier: DeviceTier.full);
+    addTearDown(DevicePerformance.debugReset);
     await SettingsService.getInstance();
   });
 
