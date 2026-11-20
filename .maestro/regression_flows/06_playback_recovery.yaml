@@ -1,4 +1,4 @@
-appId: com.pleztv.app
+appId: com.plentv.app
 name: Playback recovers after a transient stream failure
 tags:
   - e2e

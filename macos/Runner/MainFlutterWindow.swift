@@ -45,7 +45,7 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
-    self.setFrameAutosaveName("com.pleztv.app.MainWindow")
+    self.setFrameAutosaveName("com.plentv.app.MainWindow")
     WindowUtilsPlugin.syncWindowChrome()
 
     super.awakeFromNib()

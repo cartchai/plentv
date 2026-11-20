@@ -15,7 +15,7 @@ import '../test_helpers/io_fakes.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const channel = MethodChannel('com.pleztv.app/downloads');
+  const channel = MethodChannel('com.plentv.app/downloads');
   late Directory tempDir;
   late PathProviderPlatform originalPathProvider;
 

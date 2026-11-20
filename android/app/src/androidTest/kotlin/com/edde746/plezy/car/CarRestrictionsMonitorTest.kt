@@ -1,4 +1,4 @@
-package com.pleztv.app.car
+package com.plentv.app.car
 
 import android.content.pm.PackageManager
 import androidx.test.ext.junit.runners.AndroidJUnit4

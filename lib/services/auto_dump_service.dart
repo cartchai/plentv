@@ -32,7 +32,7 @@ import 'storage_health.dart';
 /// Destination (scoped storage — the literal external-storage root is NOT
 /// writable on modern Android TV without a manual all-files-access grant):
 /// the app-specific external files dir
-/// (`/storage/emulated/0/Android/data/com.pleztv.app/files/`, no
+/// (`/storage/emulated/0/Android/data/com.plentv.app/files/`, no
 /// permission needed, reachable via a TV file manager / adb / in-app copy
 /// of the path), falling back to the app docs dir. Never requests
 /// MANAGE_EXTERNAL_STORAGE. Every step is best-effort: a dump failure

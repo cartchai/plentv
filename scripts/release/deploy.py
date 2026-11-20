@@ -506,9 +506,9 @@ def phase_preflight(ctx: Context) -> None:
         if not (env.get("SUPPLY_JSON_KEY_DATA") or env.get("SUPPLY_JSON_KEY")):
             raise DeployError("play: set SUPPLY_JSON_KEY_DATA or SUPPLY_JSON_KEY in .env")
         require_env(env, ["SUPPLY_PACKAGE_NAME"], "play")
-        if env["SUPPLY_PACKAGE_NAME"] != "com.pleztv.app":
+        if env["SUPPLY_PACKAGE_NAME"] != "com.plentv.app":
             raise DeployError(
-                "play: SUPPLY_PACKAGE_NAME must be com.pleztv.app; "
+                "play: SUPPLY_PACKAGE_NAME must be com.plentv.app; "
                 f"got {env['SUPPLY_PACKAGE_NAME']!r}"
             )
     if "amazon" in pending:
@@ -522,9 +522,9 @@ def phase_preflight(ctx: Context) -> None:
             ],
             "amazon",
         )
-        if env["AMAZON_APPSTORE_PACKAGE_NAME"] != "com.pleztv.app3":
+        if env["AMAZON_APPSTORE_PACKAGE_NAME"] != "com.plentv.app3":
             raise DeployError(
-                "amazon: AMAZON_APPSTORE_PACKAGE_NAME must be com.pleztv.app3; "
+                "amazon: AMAZON_APPSTORE_PACKAGE_NAME must be com.plentv.app3; "
                 f"got {env['AMAZON_APPSTORE_PACKAGE_NAME']!r}"
             )
         if not env["AMAZON_APPSTORE_APP_ID"].startswith("amzn1.devportal.mobileapp."):
@@ -540,9 +540,9 @@ def phase_preflight(ctx: Context) -> None:
             "app store connect",
         )
         require_env(env, ["DELIVER_APP_IDENTIFIER"], "app store connect")
-        if env["DELIVER_APP_IDENTIFIER"] != "com.pleztv.app":
+        if env["DELIVER_APP_IDENTIFIER"] != "com.plentv.app":
             raise DeployError(
-                "app store connect: DELIVER_APP_IDENTIFIER must be com.pleztv.app; "
+                "app store connect: DELIVER_APP_IDENTIFIER must be com.plentv.app; "
                 f"got {env['DELIVER_APP_IDENTIFIER']!r}"
             )
         key_path = Path(env["ASC_KEY_PATH"]).expanduser()

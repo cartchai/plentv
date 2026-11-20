@@ -173,7 +173,7 @@ void main() {
     // the key. (The DecoderOptions composition tests still use the
     // key as an arbitrary helper key; this is about the native file.)
     final content = File(
-      'android/app/src/main/kotlin/com/pleztv/app/mpv/MpvPlayerCore.kt',
+      'android/app/src/main/kotlin/com/plentv/app/mpv/MpvPlayerCore.kt',
     ).readAsStringSync();
     expect(
       content.contains('decoderOptions.put("frame_rate"'),

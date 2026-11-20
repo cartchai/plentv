@@ -40,7 +40,7 @@ Local equivalent (slow path): the T1 matrix AVD from
 `tool/emulator-matrix/`:
 ```sh
 ./gradlew :benchmark:connectedBenchmarkAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.pleztv.app.benchmark.StartupBenchmark#generateBaselineProfile
+  -Pandroid.testInstrumentationRunnerArguments.class=com.plentv.app.benchmark.StartupBenchmark#generateBaselineProfile
 ```
 Copy the generated profile from under
 `android/benchmark/build/` (the exact output directory varies by AGP;

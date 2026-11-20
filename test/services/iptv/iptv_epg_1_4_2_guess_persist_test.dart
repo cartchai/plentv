@@ -278,7 +278,7 @@ void main() {
     // tests do, or (j) dies on a MissingPluginException.
     PackageInfo.setMockInitialValues(
       appName: 'PlezTV',
-      packageName: 'com.pleztv.app',
+      packageName: 'com.plentv.app',
       version: '1.4.2-2.25.0',
       buildNumber: '226',
       buildSignature: '',

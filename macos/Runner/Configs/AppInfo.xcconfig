@@ -1,6 +1,6 @@
 
 PRODUCT_NAME = PlenTV
 
-PRODUCT_BUNDLE_IDENTIFIER = com.pleztv.app
+PRODUCT_BUNDLE_IDENTIFIER = com.plentv.app
 
 PRODUCT_COPYRIGHT = Copyright © 2026 cartchai

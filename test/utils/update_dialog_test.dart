@@ -30,7 +30,7 @@ void main() {
 
   late Directory tempDir;
   late PathProviderPlatform originalPathProvider;
-  const installerChannel = MethodChannel('com.pleztv.app/apk_install');
+  const installerChannel = MethodChannel('com.plentv.app/apk_install');
 
   // 1.2.21: the helper carries the new map keys (apkAssetAbi /
   // apkAssetNoMatch, defaults matching the existing fake asset). Pass

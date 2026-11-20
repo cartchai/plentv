@@ -1,10 +1,10 @@
-appId: com.pleztv.app
+appId: com.plentv.app
 ---
 - retry:
     maxRetries: 1
     commands:
       - launchApp:
-          appId: com.pleztv.app
+          appId: com.plentv.app
           clearState: true
           permissions:
             all: allow

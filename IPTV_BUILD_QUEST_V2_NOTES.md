@@ -35,7 +35,7 @@ with mouse + thumbstick.
 
 ### 1. Veto removed — ONLY the veto
 
-- `android/app/src/main/kotlin/com/pleztv/app/PlezyActivity.kt`:
+- `android/app/src/main/kotlin/com/plentv/app/PlezyActivity.kt`:
   `isTv` back to `(!isAutomotive && reasons.isNotEmpty())` — the
   `!isHorizonOs &&` removed. The
   `hasSystemFeature("horizonos.software.horizon_os")` check, the

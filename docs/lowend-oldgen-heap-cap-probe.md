@@ -24,7 +24,7 @@ So the probe is not "find the plumbing" — it is "measure whether a
 ## What this worktree delivers (probe mechanism, BUILT)
 
 A build-time override in `getFlutterShellArgs()`: when the manifest
-meta-data `com.pleztv.app.OldGenHeapSizeMb` is present and > 0, its
+meta-data `com.plentv.app.OldGenHeapSizeMb` is present and > 0, its
 value replaces the 256 MB low-RAM cap for that build only. No manifest
 entry ships by default, so shipped behaviour is unchanged (256 MB).
 
@@ -46,13 +46,13 @@ real Hisense), three runs each, median peak:
 | Arm | Manifest meta-data | Old-gen cap |
 |---|---|---|
 | Control (shipped) | absent | 256 MB |
-| Probe arm | `com.pleztv.app.OldGenHeapSizeMb = 64` | 64 MB |
+| Probe arm | `com.plentv.app.OldGenHeapSizeMb = 64` | 64 MB |
 | No-cap arm | (code change: skip the flag — scratch branch only) | half of RAM (engine default) |
 
 ```xml
 <!-- A/B build only — do NOT ship this in the manifest: -->
 <meta-data
-    android:name="com.pleztv.app.OldGenHeapSizeMb"
+    android:name="com.plentv.app.OldGenHeapSizeMb"
     android:value="64" />
 ```
 

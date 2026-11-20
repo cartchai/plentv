@@ -1,4 +1,4 @@
-appId: com.pleztv.app
+appId: com.plentv.app
 name: Logout returns to authentication
 tags:
   - e2e

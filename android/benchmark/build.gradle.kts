@@ -20,7 +20,7 @@ plugins {
 }
 
 android {
-  namespace = "com.pleztv.app.benchmark"
+  namespace = "com.plentv.app.benchmark"
   compileSdk = 36
 
   defaultConfig {

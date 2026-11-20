@@ -17,14 +17,14 @@ class ApkInstallException implements Exception {
 }
 
 /// Opens the Android system install prompt for a downloaded APK (build
-/// #10), over the `com.pleztv.app/apk_install` channel. The native side
+/// #10), over the `com.plentv.app/apk_install` channel. The native side
 /// shares the file through the app's FileProvider
-/// (`com.pleztv.app.fileprovider`) and fires an ACTION_VIEW intent with
+/// (`com.plentv.app.fileprovider`) and fires an ACTION_VIEW intent with
 /// `application/vnd.android.package-archive`. Only Android can install an
 /// APK this way — on every other platform (and on a build whose native side
 /// never registered the channel) this returns false instead of throwing.
 class ApkInstaller {
-  static const MethodChannel _channel = MethodChannel('com.pleztv.app/apk_install');
+  static const MethodChannel _channel = MethodChannel('com.plentv.app/apk_install');
 
   /// Test-only override for the Android platform check: unit tests run on
   /// the host platform, so they set this true to drive the channel.

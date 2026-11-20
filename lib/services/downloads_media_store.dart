@@ -22,7 +22,7 @@ import 'package:path_provider/path_provider.dart';
 /// falls back to the app folder. The native side returns null below
 /// API 29 (MediaStore.Downloads needs Q+) and on any failure.
 class DownloadsMediaStore {
-  static const _channel = MethodChannel('com.pleztv.app/downloads');
+  static const _channel = MethodChannel('com.plentv.app/downloads');
 
   /// Test seam: when set, the write is answered by this function and
   /// the channel is never touched. Returning null means "Downloads

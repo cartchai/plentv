@@ -1,4 +1,4 @@
-appId: com.pleztv.app
+appId: com.plentv.app
 ---
 - assertVisible: "${AUDIO_TRACK}"
 - tapOn:

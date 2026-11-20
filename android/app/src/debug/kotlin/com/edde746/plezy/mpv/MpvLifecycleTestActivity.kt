@@ -1,4 +1,4 @@
-package com.pleztv.app.mpv
+package com.plentv.app.mpv
 
 import android.app.Activity
 import android.os.Bundle

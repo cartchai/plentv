@@ -1,4 +1,4 @@
-appId: com.pleztv.app
+appId: com.plentv.app
 ---
 # Reach phone Settings from signed-in Home. The profile menu is an overlay
 # sheet; retry while the previous route settles.

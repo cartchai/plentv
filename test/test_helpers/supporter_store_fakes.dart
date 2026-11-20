@@ -124,7 +124,7 @@ GooglePlayPurchaseDetails playPurchase({
 }) => GooglePlayPurchaseDetails.fromPurchase(
   PurchaseWrapper(
     orderId: 'GPA.0000-$productId',
-    packageName: 'com.pleztv.app',
+    packageName: 'com.plentv.app',
     purchaseTime: 0,
     purchaseToken: 'token-$productId',
     signature: 'signature',

@@ -5,10 +5,10 @@ project(runner LANGUAGES CXX)
 # registered by the runner subdirectory.
 include(CTest)
 
-set(BINARY_NAME "pleztv")
+set(BINARY_NAME "plentv")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.pleztv.app")
+set(APPLICATION_ID "com.plentv.app")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

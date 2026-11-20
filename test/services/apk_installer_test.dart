@@ -6,7 +6,7 @@ import 'package:plezy/services/apk_installer.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  const channel = MethodChannel('com.pleztv.app/apk_install');
+  const channel = MethodChannel('com.plentv.app/apk_install');
 
   setUp(() {
     ApkInstaller.debugPlatformIsAndroid = true;

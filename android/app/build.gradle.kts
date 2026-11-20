@@ -287,7 +287,7 @@ val downloadLibdovi = tasks.register("downloadLibdovi") {
 }
 
 android {
-  namespace = "com.pleztv.app"
+  namespace = "com.plentv.app"
   compileSdk = flutter.compileSdkVersion
   buildToolsVersion = "36.1.0"
   ndkVersion = "29.0.14206865"
@@ -303,7 +303,7 @@ android {
   }
 
   defaultConfig {
-    applicationId = "com.pleztv.app"
+    applicationId = "com.plentv.app"
     minSdk = 25 // Fire OS 6.x (API 25); the mpv-android AAR shares the same floor
     targetSdk = flutter.targetSdkVersion
     versionCode = flutter.versionCode

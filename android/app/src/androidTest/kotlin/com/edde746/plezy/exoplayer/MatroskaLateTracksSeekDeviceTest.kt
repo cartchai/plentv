@@ -1,4 +1,4 @@
-package com.pleztv.app.exoplayer
+package com.plentv.app.exoplayer
 
 import android.net.Uri
 import android.os.Handler
