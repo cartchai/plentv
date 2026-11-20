@@ -16,8 +16,8 @@ METADATA = {
     "name": "plezy",
     "license": "GPL-3.0",
     "vendor": "edde746",
-    "maintainer": "PlezTV <noreply@github.com>",
-    "url": "https://github.com/cartchai/pleztv",
+    "maintainer": "PlenTV <noreply@github.com>",
+    "url": "https://github.com/cartchai/plentv",
     "description": "A modern Plex and Jellyfin client for desktop and mobile",
 }
 

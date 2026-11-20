@@ -19,7 +19,6 @@ import android.view.ViewTreeObserver
 import com.edde746.mpv.*
 import com.pleztv.app.DeviceTier
 import com.pleztv.app.LibassBudget
-import com.pleztv.app.NativeModuleCache
 import com.pleztv.app.TvDetection
 import com.pleztv.app.exoplayer.DoviBridge
 import com.pleztv.app.shared.AudioFocusManager
@@ -1264,8 +1263,6 @@ class MpvPlayerCore private constructor(
               created
             }
           }
-          // libmpv and FFmpeg are loaded by now; see NativeModuleCache.
-          NativeModuleCache.invalidate()
           if (demuxerBudget != null) {
             appliedDemuxerBudget = demuxerBudget
             steadyDemuxerBudget = demuxerBudget
