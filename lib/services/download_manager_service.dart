@@ -2021,17 +2021,25 @@ class DownloadManagerService {
 
   /// Delete a file if it exists and log the deletion
   /// Returns true if file was deleted, false otherwise
+  /// Delete a file if it exists. Also drops its public-downloads MediaStore
+  /// row when the file lives under the public root (1.6): deleting the file
+  /// alone can leave a stale row behind. Returns true when a file or a row
+  /// was removed. Missing targets are a silent no-op.
   Future<bool> _deleteFileIfExists(File file, String description) async {
+    var removed = false;
     try {
       if (await file.exists()) {
         await file.delete();
         appLogger.i('Deleted $description: ${file.path}');
-        return true;
+        removed = true;
       }
     } catch (e) {
       appLogger.w('Failed to delete $description: ${file.path}', error: e);
     }
-    return false;
+    if (await _storageService.deletePublicEntryForPath(file.path)) {
+      removed = true;
+    }
+    return removed;
   }
 
   /// Delete a SAF file or directory. Missing targets are a silent no-op.
@@ -2057,13 +2065,21 @@ class DownloadManagerService {
 
   /// Delete the empty directories below [dir], deepest first; files (and
   /// links) are never touched. Returns whether [dir] itself is left empty.
+  /// A directory that cannot be deleted (e.g. a public-downloads folder
+  /// the system owns) counts as non-empty — the prune is best-effort and
+  /// must never fail a delete.
   Future<bool> _pruneEmptySubdirectories(Directory dir) async {
     if (!await dir.exists()) return false;
     var empty = true;
     for (final entry in await dir.list(followLinks: false).toList()) {
       if (entry is Directory && await _pruneEmptySubdirectories(entry)) {
-        await entry.delete();
-        appLogger.i('Cleaned up empty directory: ${entry.path}');
+        try {
+          await entry.delete();
+          appLogger.i('Cleaned up empty directory: ${entry.path}');
+        } catch (e) {
+          appLogger.d('Could not remove empty directory: ${entry.path}', error: e);
+          empty = false;
+        }
       } else {
         empty = false;
       }
@@ -2742,14 +2758,21 @@ class DownloadManagerService {
         // retry restart from 0%. The downloader itself discards the partial
         // when it cannot resume (no resume data / server sent 200 to a Range
         // request), and only then.
-        await File(downloadFilePath).parent.create(recursive: true);
+        //
+        // 1.6: reserve the target in the public Downloads folder first
+        // (MediaStore entries for the temp and final files — scoped storage
+        // blocks raw file creation there). Falls back to the app-private
+        // folder when the public location is unavailable; the returned path
+        // is the one the task must write to.
+        final taskId = taskIdForDownload(globalKey, partIndex);
+        final resolvedFilePath = await _storageService.prepareDownloadTarget(downloadFilePath, taskId);
 
-        final taskLocation = await _storageService.resolveTaskDirectory(downloadFilePath);
+        final taskLocation = await _storageService.resolveTaskDirectory(resolvedFilePath);
 
         task = DownloadTask(
-          taskId: taskIdForDownload(globalKey, partIndex),
+          taskId: taskId,
           url: url,
-          filename: path.basename(downloadFilePath),
+          filename: path.basename(resolvedFilePath),
           directory: taskLocation.directory,
           baseDirectory: taskLocation.baseDirectory,
           group: _downloadGroup,
@@ -2765,7 +2788,7 @@ class DownloadManagerService {
           metaData: globalKey,
           displayName: displayName,
         );
-        filePath = downloadFilePath;
+        filePath = resolvedFilePath;
         safRootUri = null;
       }
 
@@ -3708,6 +3731,17 @@ class DownloadManagerService {
           stampDownloadedAt: partIndex == partCount - 1,
         );
       }
+
+      // 1.6 public root: the downloader's rename already landed the file;
+      // clear the MediaStore pending flag so it shows in the Files app and
+      // drop the stale `.part` row. Best-effort — the file plays even if
+      // this fails. SAF tasks have no MediaStore rows.
+      final isSafMode = ctx?.isSafMode ?? task is UriDownloadTask;
+      if (!isSafMode) {
+        final absolutePath = ctx?.filePath ?? await _storageService.ensureAbsolutePath(storedPath);
+        await _storageService.finalizePublicDownload(absolutePath, task.taskId);
+      }
+
       final recorded = await _database.getDownloadedMedia(globalKey);
       final missingPart = recorded?.nextMissingPartIndex;
       if (missingPart != null) {
@@ -4081,13 +4115,18 @@ class DownloadManagerService {
             );
           }
 
-          final file = File(subtitlePath);
+          // 1.6 public root: reserve the subtitle (and the `.download`
+          // temp file the HTTP client writes through) before writing —
+          // scoped storage blocks raw file creation in shared folders.
+          final readyPath = await _storageService.preparePublicFile(subtitlePath);
+          final file = File(readyPath);
           if (await file.exists()) {
             appLogger.d('Subtitle ${subtitle.id} already exists for $globalKey');
             continue;
           }
-          await file.parent.create(recursive: true);
-          await _http.downloadFile(subtitle.url, subtitlePath);
+          await _storageService.ensureDownloadParentDirectory(readyPath);
+          await _http.downloadFile(subtitle.url, readyPath);
+          await _storageService.finishPublicFile(readyPath);
           appLogger.d('Downloaded subtitle ${subtitle.id} for $globalKey');
         } catch (e, st) {
           allSettled = false;

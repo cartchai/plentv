@@ -16,6 +16,7 @@ export 'src/permissions.dart' show PermissionType, PermissionStatus;
 export 'src/persistent_storage.dart';
 export 'src/progress_widget.dart';
 export 'src/queue/task_queue.dart';
+export 'src/resume_data_cleanup.dart' show partFileSuffix, partialDownloadFilePath;
 export 'src/task.dart';
 export 'src/transfer.dart';
 export 'src/transfers.dart';

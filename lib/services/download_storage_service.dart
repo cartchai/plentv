@@ -12,6 +12,7 @@ import '../media/media_item.dart';
 import '../media/media_item_types.dart';
 import '../utils/app_logger.dart';
 import '../utils/formatters.dart';
+import 'downloads_media_store.dart';
 import 'settings_service.dart';
 
 /// Thrown when the downloads storage layer cannot create or access a directory
@@ -46,7 +47,17 @@ class DownloadStorageService {
   static void resetForTesting() {
     _instance = null;
     _excludesFromBackupOverride = null;
+    debugPublicRootOverride = null;
   }
+
+  /// Test seam: when set, the default downloads root is this path on any
+  /// platform, so host tests can exercise the public-downloads flow (the
+  /// real root is Android-only). Reset by [resetForTesting].
+  @visibleForTesting
+  static String? debugPublicRootOverride;
+
+  /// Name of the app's folder inside the shared Downloads collection.
+  static const String publicDownloadsFolderName = 'PlenTV';
 
   static const bool _tvosBuild = bool.fromEnvironment('TVOS_BUILD');
   static const MethodChannel _backupExclusionChannel = MethodChannel('com.plezy/backup_exclusion');
@@ -66,6 +77,12 @@ class DownloadStorageService {
 
   Directory? _baseDownloadsDir;
   String? _artworkDirectoryPath;
+
+  /// Absolute path of the public downloads root (`Download/PlenTV`) when
+  /// it resolved, or null when the public location is unavailable (the
+  /// default root is then the app-private folder). Cached after the first
+  /// resolution; the public root never moves while the app is installed.
+  String? _publicDownloadsRootPath;
 
   SettingsService? _settingsService;
   String? _customDownloadPath;
@@ -176,11 +193,228 @@ class DownloadStorageService {
       // Fall through to default if custom path is not writable
     }
 
+    // Default (1.6): the public `Download/PlenTV` folder, so downloads
+    // show up in the Files app instead of hiding in the app-private
+    // folder. Falls back to the app-private folder when the public
+    // location is unavailable (below API 29, or the MediaStore insert
+    // failed) — downloads keep working, just not visible.
+    final publicRoot = await _resolvePublicDownloadsRoot();
+    if (publicRoot != null) {
+      _baseDownloadsDir = publicRoot;
+      return _baseDownloadsDir!;
+    }
+
     final baseDir = await _getBaseAppDir();
     final downloadsDir = await _ensureDirectoryExists(Directory(path.join(baseDir.path, 'downloads')));
     await _excludeFromBackup(downloadsDir);
     _baseDownloadsDir = downloadsDir;
     return downloadsDir;
+  }
+
+  /// Resolve the public downloads root (`Download/PlenTV`) on Android, or
+  /// null when it is unavailable. The [debugPublicRootOverride] test seam
+  /// forces a root on any platform. The path is cached: the root never
+  /// moves while the app is installed.
+  Future<Directory?> _resolvePublicDownloadsRoot() async {
+    if (_publicDownloadsRootPath != null) return Directory(_publicDownloadsRootPath!);
+    final override = debugPublicRootOverride;
+    String? rootPath;
+    if (override != null) {
+      rootPath = override;
+    } else if (Platform.isAndroid) {
+      rootPath = await DownloadsMediaStore.publicDownloadsRoot();
+    }
+    if (rootPath == null || rootPath.isEmpty) return null;
+    _publicDownloadsRootPath = rootPath;
+    return Directory(rootPath);
+  }
+
+  /// Whether [filePath] is inside the public downloads root. Only
+  /// meaningful after the root resolved (see [getDownloadsDirectory]).
+  bool isPublicPath(String filePath) =>
+      _publicDownloadsRootPath != null &&
+      (path.equals(_publicDownloadsRootPath!, filePath) ||
+          path.isWithin(_publicDownloadsRootPath!, filePath));
+
+  /// Whether the default downloads root is the public folder. False for a
+  /// custom download path, for the app-private fallback, and before the
+  /// root has resolved.
+  bool get isUsingPublicDownloads =>
+      _baseDownloadsDir != null && _publicDownloadsRootPath != null && _baseDownloadsDir!.path == _publicDownloadsRootPath;
+
+  /// MIME type for a download file, from its extension. MediaStore needs
+  /// one at insert time; unknown extensions get the generic type.
+  String _mimeTypeFor(String filePath) {
+    switch (path.extension(filePath).toLowerCase()) {
+      case '.mp4':
+        return 'video/mp4';
+      case '.mkv':
+        return 'video/x-matroska';
+      case '.webm':
+        return 'video/webm';
+      case '.avi':
+        return 'video/x-msvideo';
+      case '.mov':
+        return 'video/quicktime';
+      case '.mp3':
+        return 'audio/mpeg';
+      case '.flac':
+        return 'audio/flac';
+      case '.m4a':
+        return 'audio/mp4';
+      case '.srt':
+        return 'application/x-subrip';
+      case '.vtt':
+        return 'text/vtt';
+      case '.ass':
+      case '.ssa':
+        return 'text/x-ssa';
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  /// Reserve a public file at [filePath] (MediaStore entry, IS_PENDING=1)
+  /// and return the real path to write to, or null when the entry could
+  /// not be created. The returned path may differ from [filePath] when
+  /// MediaStore suffixed the name on collision — the caller must use the
+  /// returned path. Non-public paths pass through unchanged.
+  Future<String?> _preparePublicFile(String filePath) async {
+    if (!isPublicPath(filePath)) return filePath;
+    final root = _publicDownloadsRootPath!;
+    final relativeDir = path.relative(path.dirname(filePath), from: path.dirname(root));
+    return DownloadsMediaStore.createDownloadEntry(
+      relativePath: relativeDir,
+      fileName: path.basename(filePath),
+      mimeType: _mimeTypeFor(filePath),
+    );
+  }
+
+  /// App-private equivalent of a public [filePath] (same layout under the
+  /// private downloads folder), for the fallback when the public location
+  /// is unavailable. The parent directory is created.
+  Future<String> _privateEquivalent(String filePath) async {
+    final baseDir = await _getBaseAppDir();
+    final privateRoot = Directory(path.join(baseDir.path, 'downloads'));
+    final relative = path.relative(filePath, from: _publicDownloadsRootPath!);
+    final target = path.join(privateRoot.path, relative);
+    await _ensureDirectoryExists(Directory(path.dirname(target)));
+    return target;
+  }
+
+  /// Resolve the writable target for a download of [filePath] (task
+  /// [taskId]) and return the path the downloader must write to.
+  ///
+  /// Public root: reserves MediaStore entries for the downloader's temp
+  /// (`.part`) file and the final file first — scoped storage blocks raw
+  /// file creation in shared directories, so without the entries the
+  /// download cannot write there at all. The final entry is reserved
+  /// first because its real (possibly suffixed) name fixes the temp
+  /// file's name. Falls back to the app-private folder (same layout)
+  /// when the public location is unavailable. Non-public paths pass
+  /// through unchanged. Never throws.
+  Future<String> prepareDownloadTarget(String filePath, String taskId) async {
+    if (!isPublicPath(filePath)) {
+      await ensureDownloadParentDirectory(filePath);
+      return filePath;
+    }
+    try {
+      final readyFinal = await _preparePublicFile(filePath);
+      if (readyFinal == null) return await _privateEquivalent(filePath);
+      final partPath = partialDownloadFilePath(readyFinal, taskId);
+      final readyPart = await _preparePublicFile(partPath);
+      if (readyPart == null) {
+        // The temp entry failed: drop the final entry so a stale pending
+        // row does not litter Downloads, and fall back to private.
+        await DownloadsMediaStore.deleteDownloadEntry(path: readyFinal);
+        return await _privateEquivalent(readyFinal);
+      }
+      return readyFinal;
+    } catch (e, st) {
+      appLogger.w('prepareDownloadTarget failed for $filePath; falling back to private', error: e, stackTrace: st);
+      return await _privateEquivalent(filePath);
+    }
+  }
+
+  /// Settle a public download after its file has landed (task [taskId]):
+  /// clears the MediaStore pending flag so the file shows in the Files
+  /// app and drops the stale `.part` row. Best-effort and never throws —
+  /// the file plays even if this fails; the row just stays hidden.
+  Future<void> finalizePublicDownload(String filePath, String taskId) async {
+    if (!isPublicPath(filePath)) return;
+    try {
+      final ok = await DownloadsMediaStore.finalizeDownloadEntry(
+        finalPath: filePath,
+        partPath: partialDownloadFilePath(filePath, taskId),
+      );
+      if (!ok) appLogger.w('finalizePublicDownload failed for $filePath (file may stay hidden)');
+    } catch (e, st) {
+      appLogger.w('finalizePublicDownload failed for $filePath', error: e, stackTrace: st);
+    }
+  }
+
+  /// Reserve a public file the Dart side writes directly (a subtitle):
+  /// creates the MediaStore entries for the file and for the `.download`
+  /// temp file [MediaServerHttpClient.downloadFile] writes through, and
+  /// returns the real path to write to. Non-public paths pass through
+  /// unchanged. The caller must call [finishPublicFile] after the write.
+  Future<String> preparePublicFile(String filePath) async {
+    if (!isPublicPath(filePath)) return filePath;
+    try {
+      final readyTemp = await _preparePublicFile('$filePath.download');
+      if (readyTemp == null) return filePath;
+      final readyFinal = await _preparePublicFile(filePath);
+      if (readyFinal == null) {
+        await DownloadsMediaStore.deleteDownloadEntry(path: '$filePath.download');
+        return filePath;
+      }
+      return readyFinal;
+    } catch (e, st) {
+      appLogger.w('preparePublicFile failed for $filePath', error: e, stackTrace: st);
+      return filePath;
+    }
+  }
+
+  /// Settle a directly-written public file after the write: clears the
+  /// pending flag on the final entry and drops the stale `.download`
+  /// temp row. Best-effort, never throws.
+  Future<void> finishPublicFile(String filePath) async {
+    if (!isPublicPath(filePath)) return;
+    try {
+      final ok = await DownloadsMediaStore.finalizeDownloadEntry(
+        finalPath: filePath,
+        partPath: '$filePath.download',
+      );
+      if (!ok) appLogger.w('finishPublicFile failed for $filePath (file may stay hidden)');
+    } catch (e, st) {
+      appLogger.w('finishPublicFile failed for $filePath', error: e, stackTrace: st);
+    }
+  }
+
+  /// Delete the public entry (and file) for [filePath]. Best-effort,
+  /// never throws. Returns true when a row or a file was removed.
+  /// Non-public paths are a no-op returning false.
+  Future<bool> deletePublicEntryForPath(String filePath) async {
+    if (!isPublicPath(filePath)) return false;
+    try {
+      return await DownloadsMediaStore.deleteDownloadEntry(path: filePath);
+    } catch (e, st) {
+      appLogger.w('deletePublicEntryForPath failed for $filePath', error: e, stackTrace: st);
+      return false;
+    }
+  }
+
+  /// Ensure the parent directory of [filePath] exists. A no-op inside
+  /// the public root: MediaStore entries materialize those directories,
+  /// and raw mkdir is blocked there by scoped storage.
+  Future<void> ensureDownloadParentDirectory(String filePath) async {
+    if (isPublicPath(filePath)) return;
+    await File(filePath).parent.create(recursive: true);
   }
 
   /// Get centralized artwork directory for offline artwork caching
@@ -324,7 +558,15 @@ class DownloadStorageService {
   /// Ensure a directory exists, creating it if necessary.
   /// `Directory.create(recursive: true)` is idempotent — it no-ops if the
   /// directory already exists.
+  ///
+  /// Inside the public downloads root this is a no-op: MediaStore entries
+  /// materialize those directories when files are reserved, and raw mkdir
+  /// in a shared directory is blocked by scoped storage (API 30+), so
+  /// attempting it would only throw. Callers must go through
+  /// [getDownloadsDirectory] first, which is what resolves (and caches)
+  /// the public root this check reads.
   Future<Directory> _ensureDirectoryExists(Directory dir) async {
+    if (isPublicPath(dir.path)) return dir;
     try {
       await dir.create(recursive: true);
       return dir;
