@@ -30,6 +30,7 @@ import '../media/media_kind.dart';
 import '../media/media_library.dart';
 import '../media/media_person.dart';
 import '../media/media_playlist.dart';
+import '../media/media_role.dart';
 import '../media/media_server_client.dart';
 import '../media/media_sort.dart';
 import '../media/media_source_info.dart';
@@ -2367,6 +2368,7 @@ class IptvClient implements MediaServerClient {
     _favoriteItemsFuture = null;
     _seriesInfoFutures.clear();
     _seasonEpisodeItemsCache.clear();
+    _vodInfoFutures.clear();
     _xtreamChannelByKey.clear();
     _invalidateGuideChannelCache();
     _m3uChannelByKey.clear();
@@ -2412,6 +2414,7 @@ class IptvClient implements MediaServerClient {
     _liveCategoryNamesFuture = null;
     _seriesInfoFutures.clear();
     _seasonEpisodeItemsCache.clear();
+    _vodInfoFutures.clear();
     _xtreamChannelByKey.clear();
     _invalidateGuideChannelCache();
     _m3uChannelByKey.clear();
@@ -3918,18 +3921,54 @@ class IptvClient implements MediaServerClient {
     return libraries;
   }
 
+  /// Release year from a provider date string (`'1997-08-13'`, `'2008'`).
+  /// Null when the date is missing or malformed. (1.6.10 M0)
+  static int? _parseYear(String? value) {
+    final text = value?.trim();
+    if (text == null || text.length < 4) return null;
+    return int.tryParse(text.substring(0, 4));
+  }
+
+  /// Comma-separated provider list (`'Animation, Comedy'`) as a trimmed
+  /// list, or null when the value is missing or empty. (1.6.10 M0)
+  static List<String>? _splitCommaList(String? value) {
+    if (value == null) return null;
+    final parts = value.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    return parts.isEmpty ? null : parts;
+  }
+
+  /// Cast names as [MediaRole]s (name only — the provider sends no
+  /// character or photo). (1.6.10 M0)
+  static List<MediaRole>? _castRoles(String? cast) {
+    final names = _splitCommaList(cast);
+    if (names == null) return null;
+    return names.map((name) => MediaRole(tag: name)).toList();
+  }
+
   MediaItem _movieItem(
     XtreamVodStream stream, {
     bool isFavorite = false,
     String? categoryName,
     IptvResumeItem? resume,
+    // 1.6.10 M1: full detail from `get_vod_info` (memoized, detail open
+    // only). Null on the grid path — the grid never fetches it, so
+    // browsing costs nothing extra.
+    XtreamVodInfo? vodInfo,
   }) {
     final url = _xtreamApi.movieStreamUrl('${stream.streamId}', stream.containerExtension);
+    final durationSecs = vodInfo?.durationSecs;
+    final trailer = vodInfo?.youtubeTrailer;
     return MediaItem.xtream(
       id: 'movie:${stream.streamId}',
       kind: MediaKind.movie,
       title: stripCategoryPrefix(stream.name, categoryName),
+      summary: vodInfo?.plot,
       thumbPath: stream.cover ?? stream.streamIcon,
+      backdropPaths: vodInfo?.backdropPaths,
+      year: _parseYear(vodInfo?.releaseDate),
+      genres: _splitCommaList(vodInfo?.genre),
+      directors: _splitCommaList(vodInfo?.director),
+      roles: _castRoles(vodInfo?.cast),
       rating: stream.rating,
       streamUrl: url,
       categoryId: stream.categoryId,
@@ -3938,21 +3977,39 @@ class IptvClient implements MediaServerClient {
       serverId: connection.id,
       serverName: _name,
       isFavorite: isFavorite,
+      // 1.6.10 M1: the trailer id rides in `raw` — the trailer button
+      // itself is M4, so nothing renders it yet.
+      raw: trailer == null ? null : {'youtubeTrailer': trailer},
       // Build #25: the catalog carries no movie duration, so the stored
       // position AND duration both come from the player's report.
-      durationMs: resume?.durationMs,
+      // 1.6.10 M1: `get_vod_info` supplies the runtime when the player
+      // has not reported one yet.
+      durationMs: durationSecs == null ? resume?.durationMs : durationSecs * 1000,
       viewOffsetMs: resume?.positionMs,
       lastViewedAt: resume?.updatedAtMs,
     );
   }
 
   MediaItem _seriesItem(XtreamSeries series, {bool isFavorite = false, String? categoryName}) {
+    final backdrop = series.backdropPath;
+    final trailer = series.youtubeTrailer;
+    final episodeRunTime = series.episodeRunTime;
     return MediaItem.xtream(
       id: 'series:${series.seriesId}',
       kind: MediaKind.show,
       title: stripCategoryPrefix(series.name, categoryName),
       summary: series.plot,
       thumbPath: series.cover,
+      // 1.6.10 M0: the provider fields the catalog row already owns —
+      // backdrop, genres, cast, director, year, episode runtime, and
+      // the trailer id (in `raw`; the trailer button itself is M4).
+      // `episode_run_time` is MINUTES (Xtream docs), not seconds.
+      backdropPaths: backdrop == null ? null : [backdrop],
+      year: _parseYear(series.releaseDate),
+      genres: _splitCommaList(series.genre),
+      directors: _splitCommaList(series.director),
+      roles: _castRoles(series.cast),
+      durationMs: episodeRunTime == null ? null : episodeRunTime * 60 * 1000,
       rating: series.rating,
       categoryId: series.categoryId,
       libraryId: _seriesLibraryId,
@@ -3960,6 +4017,7 @@ class IptvClient implements MediaServerClient {
       serverId: connection.id,
       serverName: _name,
       isFavorite: isFavorite,
+      raw: trailer == null ? null : {'youtubeTrailer': trailer},
     );
   }
 
@@ -3986,11 +4044,18 @@ class IptvClient implements MediaServerClient {
     IptvResumeItem? resume,
   }) {
     final url = _xtreamApi.seriesStreamUrl('${episode.id}', episode.containerExtension);
+    final backdrop = series.backdropPath;
     return MediaItem.xtream(
       id: 'episode:${series.seriesId}:${episode.id}',
       kind: MediaKind.episode,
       title: episode.title.isEmpty ? 'Episode ${episode.episodeNum}' : episode.title,
       summary: episode.plot,
+      // 1.6.10 M0: the episode's own still is its thumbnail (the
+      // Continue Watching card); the series poster/backdrop ride along
+      // as the inherited art the hero and card fallbacks read.
+      thumbPath: episode.movieImage,
+      grandparentThumbPath: series.cover,
+      grandparentBackdropPaths: backdrop == null ? null : [backdrop],
       // 1.5.3 K1: the episode points at its per-season parent, not the
       // show — the Downloads tree and _downloadedSeasons group by
       // parentId, so a show-level parentId merged every season into one
@@ -4848,11 +4913,21 @@ class IptvClient implements MediaServerClient {
         final movieFavorites = await _favoriteItems();
         final movieResume = await _resumeItems();
         final vodCategoryNames = await _vodCategoryNames();
+        // 1.6.10 M1: one memoized `get_vod_info` per movie detail open
+        // (zero on revisit). A failure leaves the base item — the page
+        // still opens with title/poster/rating.
+        XtreamVodInfo? vodInfo;
+        try {
+          vodInfo = await _vodInfo(stream.streamId);
+        } catch (_) {
+          vodInfo = null;
+        }
         return _movieItem(
           stream,
           isFavorite: movieFavorites.containsKey('movie:${stream.streamId}'),
           categoryName: vodCategoryNames[stream.categoryId],
           resume: movieResume['movie:${stream.streamId}'],
+          vodInfo: vodInfo,
         );
       case 'series':
         final seriesId = int.tryParse(parts[1]);
@@ -4913,6 +4988,9 @@ class IptvClient implements MediaServerClient {
           var series = (await _resolveIndexRow(IptvSearchIndex.typeSeries, seriesId))?.toSeries();
           series ??= (await _seriesByIdMap())[seriesId];
           if (series == null) return null;
+          // 1.6.10 M0: the info block is already fetched above — fill
+          // the list row's blanks from it at zero new calls.
+          series = series.withInfoGapsFilled(info.info);
           final episodeFavorites = await _favoriteItems();
           final episodeResume = await _resumeItems();
           final episodeCategoryNames = await _seriesCategoryNames();
@@ -4981,9 +5059,12 @@ class IptvClient implements MediaServerClient {
       final seriesId = int.tryParse(parts[1]);
       final seasonNum = parts.length >= 3 ? int.tryParse(parts[2]) : null;
       if (seriesId == null || seasonNum == null) return const [];
-      final series = (await _seriesByIdMap())[seriesId];
-      if (series == null) return const [];
+      final row = (await _seriesByIdMap())[seriesId];
+      if (row == null) return const [];
       final info = await _seriesInfo(seriesId);
+      // 1.6.10 M0: fill the list row's blanks from the info block —
+      // already fetched for the season list, so zero new calls.
+      final series = row.withInfoGapsFilled(info.info);
       final seasonEpisodes = info.episodesBySeason[seasonNum];
       if (seasonEpisodes == null) return const [];
       final favorites = await _favoriteItems();
@@ -5033,9 +5114,11 @@ class IptvClient implements MediaServerClient {
     if (parts[0] != 'series') return const [];
     final seriesId = int.tryParse(parts[1]);
     if (seriesId == null) return const [];
-    final series = (await _seriesByIdMap())[seriesId];
-    if (series == null) return const [];
+    final row = (await _seriesByIdMap())[seriesId];
+    if (row == null) return const [];
     final info = await _seriesInfo(seriesId);
+    // 1.6.10 M0: same info-block fallback as the season branch above.
+    final series = row.withInfoGapsFilled(info.info);
     final seasons = info.episodesBySeason.keys.toList()..sort();
     // One synthetic season item per season (build #17): the detail
     // screen — and the download / sync / title-copy callers — treat
@@ -5068,6 +5151,7 @@ class IptvClient implements MediaServerClient {
     int episodeCount, {
     String? seriesCategoryName,
   }) {
+    final backdrop = series.backdropPath;
     return MediaItem.xtream(
       id: 'season:${series.seriesId}:$season',
       kind: MediaKind.season,
@@ -5077,6 +5161,9 @@ class IptvClient implements MediaServerClient {
       index: season,
       leafCount: episodeCount,
       thumbPath: series.cover,
+      // 1.6.10 M0: the series backdrop, so the season detail hero has
+      // art instead of a black panel.
+      backdropPaths: backdrop == null ? null : [backdrop],
       categoryId: series.categoryId,
       libraryId: _seriesLibraryId,
       libraryTitle: '$_name — Series',
@@ -5114,6 +5201,24 @@ class IptvClient implements MediaServerClient {
       throw e;
     });
     _seriesInfoFutures[seriesId] = future;
+    return future;
+  }
+
+  /// Memoized movie-info fetch (1.6.10 M1): mirrors [_seriesInfo] —
+  /// one `get_vod_info` per movie detail open, shared with
+  /// [fetchExternalIds], so the detail page and the ratings row cost
+  /// one small call between them and zero on revisit. A failed fetch
+  /// is evicted so a retry re-fetches. Cleared with the catalog cache.
+  final Map<int, Future<XtreamVodInfo>> _vodInfoFutures = {};
+
+  Future<XtreamVodInfo> _vodInfo(int vodId) {
+    final cached = _vodInfoFutures[vodId];
+    if (cached != null) return cached;
+    final future = _xtreamApi.getVodInfo(vodId).catchError((Object e) {
+      _vodInfoFutures.remove(vodId);
+      throw e;
+    });
+    _vodInfoFutures[vodId] = future;
     return future;
   }
 
@@ -6457,7 +6562,25 @@ class IptvClient implements MediaServerClient {
   String externalImageUrl(String url, {int? width, int? height, bool cover = true}) => url;
 
   @override
-  Future<ExternalIds> fetchExternalIds(String itemId) async => const ExternalIds();
+  Future<ExternalIds> fetchExternalIds(String itemId) async {
+    // 1.6.10 M2: movies carry their external id in `get_vod_info`
+    // (memoized with the detail page — zero new calls on a revisit).
+    // The ratings loader + MDBList client were already built and never
+    // given an id; now they light up with no new UI. Series and
+    // episodes have no provider id — their ratings wait for the M3
+    // TMDB match.
+    if (itemId.startsWith('movie:')) {
+      final vodId = int.tryParse(itemId.substring('movie:'.length));
+      if (vodId == null) return const ExternalIds();
+      try {
+        final info = await _vodInfo(vodId);
+        return ExternalIds(tmdb: info.tmdbId, imdb: info.imdbId);
+      } catch (_) {
+        return const ExternalIds();
+      }
+    }
+    return const ExternalIds();
+  }
 
   @override
   Future<List<MediaItem>?> findByExternalIds(

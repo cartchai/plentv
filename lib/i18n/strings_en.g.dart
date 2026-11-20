@@ -3911,6 +3911,13 @@ class Translations$about$en {
 		'Removed: the app no longer points at the old services or funding page',
 		'Cleanup: the unused crash-reporting code is gone',
 	];
+	List<String> get changelog2329 => [
+		'Fixed: TV show pages now show the details your TV service already sends — poster art, genres, cast, director, year and episode length — instead of a bare title and a star score',
+		'Fixed: episode rows now show their own still image, and fall back to the show\'s poster when a still is missing, instead of a black placeholder',
+		'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
+		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
+		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+	];
 	List<String> get changelog2326 => [
 		'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — the app no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 		'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
@@ -11498,6 +11505,11 @@ extension on Translations {
 			'about.changelog2328.4' => 'New: downloads now save to your Downloads folder, so you can find them in the Files app',
 			'about.changelog2328.5' => 'Removed: the app no longer points at the old services or funding page',
 			'about.changelog2328.6' => 'Cleanup: the unused crash-reporting code is gone',
+			'about.changelog2329.0' => 'Fixed: TV show pages now show the details your TV service already sends — poster art, genres, cast, director, year and episode length — instead of a bare title and a star score',
+			'about.changelog2329.1' => 'Fixed: episode rows now show their own still image, and fall back to the show\'s poster when a still is missing, instead of a black placeholder',
+			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
+			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
+			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2326.0' => 'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — the app no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 			'about.changelog2326.1' => 'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
 			'about.changelog2326.2' => 'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
@@ -11617,13 +11629,13 @@ extension on Translations {
 			'about.changelog2297.1' => 'The guide, the movie and series lists, and the category counts all show the same channels and movies as before',
 			'about.changelog2297.2' => 'Reloading the TV details still shows the fresh channels right away, and the saved catalog catches up behind it',
 			'about.changelog2297.3' => 'If the saved catalog is not ready yet, everything still works the old way from the downloaded lists',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2296.0' => 'Refreshing the catalog now uses less memory: each list is downloaded straight to a file and read once, instead of being held in memory and read three times',
 			'about.changelog2296.1' => 'The refresh still keeps the same safety checks — a partial or empty list keeps your old channels and movies instead of wiping them',
 			'about.changelog2296.2' => 'Hidden categories still stay out of search and the saved catalog, and showing one again still needs a refresh',
 			'about.changelog2296.3' => 'The scheduled background refresh uses the same lighter path',
 			'about.title' => 'About',
-			_ => null,
-		} ?? switch (path) {
 			'about.openSourceLicenses' => 'Open Source Licenses',
 			'about.versionLabel' => ({required Object version}) => 'Version ${version}',
 			'about.appDescription' => 'A beautiful Plex, Jellyfin, and Emby client for Flutter',
@@ -12131,13 +12143,13 @@ extension on Translations {
 			'liveTv.guideReloadFailed' => 'Couldn\'t refresh the guide',
 			'liveTv.rulesProcessRequested' => 'Rule re-evaluation requested',
 			'liveTv.rulesProcessFailed' => 'Couldn\'t re-evaluate recording rules',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.recordShow' => 'Record show',
 			'liveTv.recordSettings.startEarly' => 'Start early (seconds)',
 			'liveTv.recordSettings.endLate' => 'End late (seconds)',
 			'liveTv.recordSettings.newOnly' => 'Only new episodes',
 			'liveTv.recordSettings.anyChannel' => 'Record on any channel',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.recordSettings.anyTime' => 'Record at any time',
 			'liveTv.recordSettings.skipInLibrary' => 'Skip episodes already in the library',
 			'liveTv.recordSettings.keepUpTo' => 'Episodes to keep',
@@ -12645,13 +12657,13 @@ extension on Translations {
 			'performanceOverlay.minLuma' => 'Min Luma',
 			'performanceOverlay.maxCll' => 'MaxCLL',
 			'performanceOverlay.maxFall' => 'MaxFALL',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.cacheUsed' => 'Cache Used',
 			'performanceOverlay.cacheLimit' => 'Cache Limit',
 			'performanceOverlay.speed' => 'Speed',
 			'performanceOverlay.player' => 'Player',
 			'performanceOverlay.playMethod' => 'Play Method',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.memory' => 'Memory',
 			'performanceOverlay.uiFps' => 'UI FPS',
 			'performanceOverlay.fps' => 'FPS',
@@ -13159,13 +13171,13 @@ extension on Translations {
 			'iptv.epgDetailsMatchMethod' => 'Matched by',
 			'iptv.epgDetailsPrograms' => 'Programmes',
 			'iptv.epgDetailsProgramsCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} programme', other: '${n} programmes', ), 
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgDetailsLastFetch' => 'Last fetched',
 			'iptv.epgDetailsNextFetch' => 'Next refresh',
 			'iptv.epgDetailsWhyNoMatch' => 'Why no guide',
 			'iptv.epgDetailsRefresh' => 'Refresh this channel',
 			'iptv.epgMatchMethodTvgId' => 'Channel ID',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgMatchMethodName' => 'Channel name',
 			'iptv.epgMatchMethodManual' => 'Assigned by hand',
 			'iptv.epgMatchMethodNameLoose' => 'Loose name match',

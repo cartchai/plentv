@@ -1559,6 +1559,13 @@
       "Removed: the app no longer points at the old services or funding page",
       "Cleanup: the unused crash-reporting code is gone"
     ],
+    "changelog2329": [
+      "Fixed: TV show pages now show the details your TV service already sends — poster art, genres, cast, director, year and episode length — instead of a bare title and a star score",
+      "Fixed: episode rows now show their own still image, and fall back to the show's poster when a still is missing, instead of a black placeholder",
+      "Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime",
+      "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
+      "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
+    ],
     "changelog2326": [
       "Removed: Trakt, Simkl, MyAnimeList and AniList are gone — the app no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show",
       "Removed: the anime title mappings are gone — the app no longer downloads anything from the creator's servers, and AniList and MyAnimeList entries no longer get extra IDs from that file",

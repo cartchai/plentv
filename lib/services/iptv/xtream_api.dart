@@ -1035,6 +1035,29 @@ class XtreamApi {
     return XtreamSeriesInfo.fromJson(decoded);
   }
 
+  /// Full movie detail for one VOD id (1.6.10 M1). The details live
+  /// under `info`; the stream row under `movie_data` is the same row
+  /// `get_vod_streams` already returns, so it is not parsed here.
+  /// Memoized by the caller ([IptvClient._vodInfo]): one call per
+  /// movie detail open, zero on revisit, never at startup or sync.
+  Future<XtreamVodInfo> getVodInfo(int vodId) async {
+    final decoded = await _getJson(_playerApiUri(action: 'get_vod_info', extra: {'vod_id': '$vodId'}));
+    if (decoded is! Map<String, dynamic>) {
+      throw MediaServerHttpException(
+        type: MediaServerHttpErrorType.unknown,
+        message: 'Xtream get_vod_info returned an unexpected payload',
+      );
+    }
+    final info = decoded['info'];
+    if (info is! Map<String, dynamic>) {
+      throw MediaServerHttpException(
+        type: MediaServerHttpErrorType.unknown,
+        message: 'Xtream get_vod_info returned no info block',
+      );
+    }
+    return XtreamVodInfo.fromJson(info);
+  }
+
   /// Short EPG for one stream (up to [limit] listings). Titles and
   /// descriptions arrive Base64-encoded; they are decoded here, falling
   /// back to the raw string when decoding fails.
@@ -2020,6 +2043,37 @@ class XtreamSeries {
     );
   }
 
+  /// Fill fields the `get_series` list row left blank from the
+  /// `get_series_info` `info` block (the same record, second copy).
+  /// The list row wins wherever it has a value; only blanks are
+  /// filled. Pure — no network. Used by `fetchChildren`, where the
+  /// info is already in hand, so the fallback costs zero new calls.
+  /// (1.6.10 M0)
+  XtreamSeries withInfoGapsFilled(Map<String, dynamic>? info) {
+    if (info == null) return this;
+    String? fill(String? row, Object? infoValue) {
+      if (row != null && row.isNotEmpty) return row;
+      final value = flexibleString(infoValue);
+      return (value == null || value.isEmpty) ? null : value;
+    }
+
+    return XtreamSeries(
+      seriesId: seriesId,
+      name: name,
+      cover: fill(cover, info['cover']),
+      plot: fill(plot, info['plot']),
+      cast: fill(cast, info['cast']),
+      director: fill(director, info['director']),
+      genre: fill(genre, info['genre']),
+      releaseDate: fill(releaseDate, info['releaseDate']),
+      rating: rating ?? flexibleDouble(info['rating']),
+      categoryId: categoryId,
+      backdropPath: fill(backdropPath, info['backdrop_path']),
+      youtubeTrailer: fill(youtubeTrailer, info['youtube_trailer']),
+      episodeRunTime: episodeRunTime ?? flexibleInt(info['episode_run_time']),
+    );
+  }
+
   /// API-shaped map (build #11) — see [XtreamCategory.toJson].
   Map<String, dynamic> toJson() => {
     'series_id': seriesId,
@@ -2046,6 +2100,11 @@ class XtreamEpisode {
   final int? durationSeconds;
   final String? plot;
 
+  /// The provider's per-episode still (`info.movie_image`). The episode
+  /// row thumbnail — without it the episode card is a black
+  /// placeholder. (1.6.10 M0)
+  final String? movieImage;
+
   const XtreamEpisode({
     required this.id,
     required this.episodeNum,
@@ -2053,6 +2112,7 @@ class XtreamEpisode {
     this.containerExtension = 'mp4',
     this.durationSeconds,
     this.plot,
+    this.movieImage,
   });
 
   factory XtreamEpisode.fromJson(Map<String, dynamic> json) {
@@ -2065,6 +2125,91 @@ class XtreamEpisode {
       containerExtension: flexibleString(json['container_extension']) ?? 'mp4',
       durationSeconds: flexibleInt(info?['duration']),
       plot: flexibleString(info?['plot']),
+      movieImage: flexibleString(info?['movie_image']),
+    );
+  }
+}
+
+/// Full movie detail from `get_vod_info` (1.6.10 M1). The panel answers
+/// with the details under `info` and the stream row under `movie_data`;
+/// only `info` is parsed here — the stream row already arrives via
+/// `get_vod_streams`. The `tmdb` field is often an IMDb `tt…` id in
+/// practice, not a numeric TMDB id; [tmdbId]/[imdbId] classify it, and
+/// M2 hands those to `fetchExternalIds` so the ratings row lights up.
+class XtreamVodInfo {
+  final String? plot;
+  final String? cast;
+  final String? director;
+  final String? genre;
+  final List<String>? backdropPaths;
+  final int? durationSecs;
+  final String? releaseDate;
+  final String? youtubeTrailer;
+  final String? country;
+  final double? rating;
+  final int? tmdbId;
+  final String? imdbId;
+
+  const XtreamVodInfo({
+    this.plot,
+    this.cast,
+    this.director,
+    this.genre,
+    this.backdropPaths,
+    this.durationSecs,
+    this.releaseDate,
+    this.youtubeTrailer,
+    this.country,
+    this.rating,
+    this.tmdbId,
+    this.imdbId,
+  });
+
+  factory XtreamVodInfo.fromJson(Map<String, dynamic> json) {
+    final backdrops = switch (json['backdrop_path']) {
+      List() => (json['backdrop_path'] as List)
+          .map((v) => flexibleString(v))
+          .whereType<String>()
+          .where((v) => v.isNotEmpty)
+          .toList(),
+      String() => [json['backdrop_path'] as String],
+      _ => null,
+    };
+    // The provider's `tmdb` field is often an IMDb `tt…` id, not a
+    // numeric TMDB id; a numeric string is a TMDB id.
+    int? tmdbId;
+    String? imdbId;
+    void classify(Object? value) {
+      if (value == null) return;
+      if (value is int) {
+        tmdbId ??= value;
+        return;
+      }
+      final text = value.toString().trim();
+      if (text.isEmpty) return;
+      if (text.startsWith('tt')) {
+        imdbId ??= text;
+        return;
+      }
+      tmdbId ??= int.tryParse(text);
+    }
+
+    classify(json['tmdb']);
+    classify(json['tmdb_id']);
+    classify(json['imdb_id']);
+    return XtreamVodInfo(
+      plot: flexibleString(json['plot']) ?? flexibleString(json['description']),
+      cast: flexibleString(json['cast']),
+      director: flexibleString(json['director']),
+      genre: flexibleString(json['genre']),
+      backdropPaths: (backdrops == null || backdrops.isEmpty) ? null : backdrops,
+      durationSecs: flexibleInt(json['duration_secs']),
+      releaseDate: flexibleString(json['releasedate']),
+      youtubeTrailer: flexibleString(json['youtube_trailer']),
+      country: flexibleString(json['country']),
+      rating: flexibleDouble(json['rating']),
+      tmdbId: tmdbId,
+      imdbId: imdbId,
     );
   }
 }
