@@ -929,6 +929,14 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   bool get _isReplacingWithVideo => _videoPlayerRoute?.isReplacingWithVideo ?? false;
   ScrubPreviewSource? _scrubPreviewSource;
 
+  /// The BIF load waiting for the first seek-bar touch (1.5.3 P6): the
+  /// preview file is only fetched when the viewer actually scrubs — a
+  /// load on open wastes up to 16 MB + download/parse work for viewers
+  /// who never scrub. Set by [_resetScrubPreviewForNewItem], consumed
+  /// once by [_ensureScrubPreviewLoaded] on the first scrub start.
+  ({MediaItem metadata, MediaSourceInfo? mediaInfo, MediaServerClient? mediaClient})?
+  _pendingScrubPreviewLoad;
+
   /// Live TV session state (tune identity, heartbeats, capture buffer,
   /// retry ladder) — inert for VOD screens. See [LiveTvSessionState].
   late final LiveTvSessionState _live = LiveTvSessionState(widget.live);

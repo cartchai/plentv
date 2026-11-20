@@ -269,6 +269,13 @@ extension _PlexVideoControlsPlaybackInputMethods on _PlexVideoControlsState {
     widget.chromeController.hold(PlayerChromeHold.scrub);
   }
 
+  /// Scrub-drag start: hold the chrome AND tell the owning screen, so
+  /// the parked BIF fetch starts on the first seek-bar touch (1.5.3 P6).
+  void _handleScrubStart() {
+    _holdTimelineScrub();
+    widget.onScrubStart?.call();
+  }
+
   void _releaseTimelineScrub() {
     widget.chromeController.release(PlayerChromeHold.scrub);
   }

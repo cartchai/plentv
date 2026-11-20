@@ -71,8 +71,10 @@ import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 import com.pleztv.app.AndroidRuntimeDiagnostics
 import com.pleztv.app.DeviceTier
+import com.pleztv.app.LibassBudget
 import com.edde746.mpv.MediaCodecQuery
 import com.edde746.plezy.libass.media.AssHandler
+import com.edde746.plezy.libass.media.AssHandlerConfig
 import com.edde746.plezy.libass.media.parser.AssSubtitleParserFactory
 import com.edde746.plezy.libass.media.widget.AssSubtitleSurfaceView
 import com.pleztv.app.shared.AudioFocusManager
@@ -830,7 +832,15 @@ class ExoPlayerCore(private val activity: Activity) :
         .setTsExtractorTimestampSearchBytes(TS_TIMESTAMP_SEARCH_PACKETS * TsExtractor.TS_PACKET_SIZE)
 
       // Inline buildWithAssSupport to retain AssHandler reference for font scale control.
-      val handler = AssHandler()
+      // 1.5.3 N6: tier the libass cache off the device tier (T0–T2 get a
+      // smaller bitmap/glyph cap); MID/FULL keep AssHandlerConfig's
+      // defaults (128 MB / 10000 glyphs, the libass defaults).
+      val libassBudget = LibassBudget.forDeviceTier(DeviceTier.current(activity))
+      val handler = if (libassBudget != null) {
+        AssHandler(AssHandlerConfig(glyphSize = libassBudget.glyphLimit, cacheSize = libassBudget.bitmapMb))
+      } else {
+        AssHandler()
+      }
       assHandler = handler
 
       // PGS goes through PgsCompositionParser; media3's parser drops all but one

@@ -597,6 +597,11 @@ class PlexVideoControls extends StatefulWidget {
   /// playback state around the native player seek.
   final Future<void> Function(Duration position)? onSeekRequested;
 
+  /// Called when the viewer starts a scrub drag on the seek bar (1.5.3
+  /// P6): the owning screen starts the parked BIF fetch here, so the
+  /// preview file only downloads for viewers who actually scrub.
+  final VoidCallback? onScrubStart;
+
   /// Called for app-level playback-rate requests (speed sheet, keyboard
   /// shortcuts, long-press 2x) so the owning screen can apply the rate and
   /// declare it to a Watch Together room. Falls back to [Player.setRate].
@@ -742,6 +747,7 @@ class PlexVideoControls extends StatefulWidget {
     this.onSubtitleTrackChanged,
     this.onSecondarySubtitleTrackChanged,
     this.onSeekRequested,
+    this.onScrubStart,
     this.onRateRequested,
     this.onPlayPauseRequested,
     this.onSeekCompleted,
@@ -1355,7 +1361,7 @@ class _PlexVideoControlsState extends State<PlexVideoControls>
                                                       ),
                                                       onSeek: _throttledSeek,
                                                       onSeekEnd: _finalizeSeek,
-                                                      onScrubStart: _holdTimelineScrub,
+                                                      onScrubStart: _handleScrubStart,
                                                       onScrubEnd: _releaseTimelineScrub,
                                                       onSeekRequested: widget.onSeekRequested,
                                                       onSeekCompleted: widget.onSeekCompleted,

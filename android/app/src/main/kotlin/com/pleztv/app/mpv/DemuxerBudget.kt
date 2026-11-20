@@ -101,6 +101,24 @@ data class DemuxerBudget(val aheadBytes: Long, val backBytes: Long) {
       DeviceTier.FULL -> null
     }
 
+    /**
+     * The stream-cache time cap for [tier] (1.5.3 P5): mpv's `cache-secs`
+     * defaults to ~1000 h, so the byte bounds above do all the work in
+     * practice — this only stops a low-bitrate stream sitting on a long
+     * cached tail inside the byte cap. 30 s on the reduced tiers, 60 s on
+     * MID, null on FULL (mpv's default stands). Applied as a pre-init
+     * option next to the byte bounds, so a `cache-secs` line in the
+     * user's mpv.conf still wins; never re-written by the trim/restore
+     * path, which only moves the byte bounds.
+     */
+    fun cacheSecsForTier(tier: DeviceTier): Int? = when (tier) {
+      DeviceTier.SURVIVAL,
+      DeviceTier.LOW,
+      DeviceTier.STANDARD -> 30
+      DeviceTier.MID -> 60
+      DeviceTier.FULL -> null
+    }
+
     /** How often the core samples memory while a budget is narrowed. */
     const val RESTORE_POLL_MS = 30_000L
 

@@ -18,6 +18,7 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import com.edde746.mpv.*
 import com.pleztv.app.DeviceTier
+import com.pleztv.app.LibassBudget
 import com.pleztv.app.NativeModuleCache
 import com.pleztv.app.TvDetection
 import com.pleztv.app.exoplayer.DoviBridge
@@ -1107,11 +1108,12 @@ class MpvPlayerCore private constructor(
           }
           val displayFpsOverride = currentDisplayFpsOverride()
           val heapClassMB = largeMemoryClassMB()
+          val deviceTier = DeviceTier.current(context)
           // Both core kinds cap their demuxer cache off the device tier
           // first (1.2.19 L-17: T0 16+8, T1/T2 32+16, T3 64+32, T4 the
           // heap-class sizing below); rationale on DemuxerBudget. Null
           // (unknown class / full tier) keeps mpv defaults.
-          val demuxerBudget = DemuxerBudget.forDeviceTier(DeviceTier.current(context))
+          val demuxerBudget = DemuxerBudget.forDeviceTier(deviceTier)
             ?: DemuxerBudget.forHeapClassMB(heapClassMB)
           val p = writeOperations.run("initialization") {
             withContext(NonCancellable) {
@@ -1215,6 +1217,26 @@ class MpvPlayerCore private constructor(
                 }
                 if (demuxerBudget != null) {
                   demuxerBudgetWrites(demuxerBudget) { name, value -> setOption(name, value) }
+                }
+                // 1.5.3 N6: tier the libass subtitle cache off the device
+                // tier, next to the demuxer budget — the bitmap cache is
+                // a latent ~128 MB worst case on 1 GB TV boxes. Applied
+                // as pre-init options, so an osd-bitmap-max-size /
+                // osd-glyph-limit line in the user's mpv.conf still wins.
+                // mpv takes MB for osd-bitmap-max-size (0 = libass
+                // default); MID/FULL keep the libass defaults (null).
+                LibassBudget.forDeviceTier(deviceTier)?.let { libass ->
+                  setOption("osd-bitmap-max-size", libass.bitmapMb.toString())
+                  setOption("osd-glyph-limit", libass.glyphLimit.toString())
+                }
+                // 1.5.3 P5: cap the stream cache by time on the reduced
+                // tiers — 30 s (60 s on MID), mpv default (~1000 h) on
+                // FULL. Pre-init option, so a cache-secs line in the
+                // user's mpv.conf still wins. The byte bounds above do
+                // the real work; this only bounds the cached tail on
+                // low-bitrate streams.
+                DemuxerBudget.cacheSecsForTier(deviceTier)?.let { secs ->
+                  setOption("cache-secs", secs.toString())
                 }
                 setOption("ao", "audiotrack,opensles")
                 // Pause on the last frame at EOF instead of unloading the file, so a

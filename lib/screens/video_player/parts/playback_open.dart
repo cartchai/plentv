@@ -753,8 +753,11 @@ extension _VideoPlayerOpenMethods on VideoPlayerScreenState {
     );
   }
 
-  /// Drop the previous item's scrub-preview source and kick off the async
-  /// thumbnail load for the new one.
+  /// Drop the previous item's scrub-preview source and park the new
+  /// item's load until the first seek-bar touch (1.5.3 P6): the BIF is
+  /// only fetched when the viewer actually scrubs (see
+  /// [_ensureScrubPreviewLoaded]) — opening a VOD no longer pays for a
+  /// multi-MB preview file nobody asked for.
   void _resetScrubPreviewForNewItem({
     required MediaItem metadata,
     required MediaSourceInfo? mediaInfo,
@@ -762,7 +765,7 @@ extension _VideoPlayerOpenMethods on VideoPlayerScreenState {
   }) {
     _scrubPreviewSource?.dispose();
     _setPlayerState(() => _scrubPreviewSource = null);
-    _queueScrubPreviewLoad(metadata: metadata, mediaInfo: mediaInfo, mediaClient: mediaClient);
+    _pendingScrubPreviewLoad = (metadata: metadata, mediaInfo: mediaInfo, mediaClient: mediaClient);
   }
 
   /// Per-open network stream tunings: ffmpeg auto-reconnect plus an enlarged

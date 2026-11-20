@@ -57,6 +57,20 @@ class DemuxerBudgetTest {
   }
 
   @Test
+  fun `stream cache time cap follows the tier (1_5_3 P5)`() {
+    // 30 s on the reduced tiers, 60 s on MID, mpv default on FULL.
+    for (tier in listOf(
+      com.pleztv.app.DeviceTier.SURVIVAL,
+      com.pleztv.app.DeviceTier.LOW,
+      com.pleztv.app.DeviceTier.STANDARD,
+    )) {
+      assertEquals("$tier", 30, DemuxerBudget.cacheSecsForTier(tier))
+    }
+    assertEquals(60, DemuxerBudget.cacheSecsForTier(com.pleztv.app.DeviceTier.MID))
+    assertNull(DemuxerBudget.cacheSecsForTier(com.pleztv.app.DeviceTier.FULL))
+  }
+
+  @Test
   fun `running low frees the back cache and leaves read-ahead alone`() {
     // Shrinking read-ahead is what forces a rebuffer on a slow link, so the
     // first pressure level must not touch it.

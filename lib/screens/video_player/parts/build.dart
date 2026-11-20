@@ -348,6 +348,9 @@ extension _VideoPlayerBuildMethods on VideoPlayerScreenState {
                         onSubtitleTrackChanged: _onSubtitleTrackChanged,
                         onSecondarySubtitleTrackChanged: _onSecondarySubtitleTrackChanged,
                         onSeekRequested: _seekPlayback,
+                        // 1.5.3 P6: the BIF fetch starts on the first
+                        // seek-bar touch, not on open.
+                        onScrubStart: _ensureScrubPreviewLoaded,
                         onRateRequested: _setPlaybackRate,
                         onPlayPauseRequested: _handleControlsTransport,
                         onBack: _handleBackButton,

@@ -1,11 +1,27 @@
 part of '../../video_player_screen.dart';
 
 extension _VideoPlayerPlaybackServiceMethods on VideoPlayerScreenState {
+  /// Starts the parked scrub-preview load on the first seek-bar touch
+  /// (1.5.3 P6): the BIF is fetched only when the viewer actually
+  /// scrubs. Consumes [_pendingScrubPreviewLoad] — one load per item,
+  /// so a second scrub never re-fetches. The very first scrub shows no
+  /// preview until the fetch lands; later scrubs show thumbnails once
+  /// the source is set.
+  void _ensureScrubPreviewLoaded() {
+    final pending = _pendingScrubPreviewLoad;
+    if (pending == null || _scrubPreviewSource != null) return;
+    _pendingScrubPreviewLoad = null;
+    _queueScrubPreviewLoad(metadata: pending.metadata, mediaInfo: pending.mediaInfo, mediaClient: pending.mediaClient);
+  }
+
   /// Loads the scrub preview once the open has a frame on screen. A Plex or
   /// Emby preview is a BIF file of several to tens of MB, and receiving it
   /// mid-open drove back-to-back old-generation GCs on the UI thread that
   /// stalled the open's frames on low-end TV boxes; with the video up the UI
   /// is static, and a scrub can't happen before there is something to scrub.
+  /// (1.5.3 P6: the call now starts on the first seek-bar touch — see
+  /// [_ensureScrubPreviewLoaded] — so the first-frame wait below is a
+  /// no-op in practice and stays only as a guard.)
   void _queueScrubPreviewLoad({
     required MediaItem metadata,
     required MediaSourceInfo? mediaInfo,
