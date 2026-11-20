@@ -15,7 +15,7 @@
 // (stack-trace continuations) attach to the previous line's tag.
 //
 // Usage:
-//   dart run tool/log-rate-meter/log_rate_meter.dart pleztv-debug-20261115-120000.txt
+//   dart run tool/log-rate-meter/log_rate_meter.dart plentv-debug-20261115-120000.txt
 //   dart run tool/log-rate-meter/log_rate_meter.dart --threshold 50 log.txt
 //
 // Verdict rule (T2-14): any tag over ~50 lines/s gets rate-limited

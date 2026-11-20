@@ -1,4 +1,4 @@
-# PlezTV — Baseline-profile generation + startup measurement (1.5.3 S1)
+# PlenTV — Baseline-profile generation + startup measurement (1.5.3 S1)
 #
 # Why: `android/app/src/main/baseline-prof.txt` does not exist yet, so
 # the shipped APK carries no baseline profile — the Java/Kotlin side of
