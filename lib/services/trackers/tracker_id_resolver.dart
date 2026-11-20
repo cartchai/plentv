@@ -1,53 +1,22 @@
 import '../../media/media_item.dart';
 import '../../media/media_kind.dart';
 import '../../media/media_server_client.dart';
-import '../../models/trackers/anime_ids.dart';
-import '../../models/trackers/anime_lists_mapping.dart';
-import '../../models/trackers/fribb_mapping_row.dart';
 import '../../utils/external_ids.dart';
-import 'anime_episode_progress_resolver.dart';
-import 'anime_lists_index.dart';
-import 'fribb_index.dart';
-import 'future_coalescer.dart';
-import 'noop_anime_mappings.dart';
+import '../future_coalescer.dart';
 
-/// Paired ID output: always-present Plex external IDs (tvdb/imdb/tmdb) plus
-/// optional Fribb-sourced anime IDs (mal/anilist/simkl). Simkl uses [external]
-/// directly for non-anime titles; MAL/AniList no-op when [anime] is null.
+/// The resolved external IDs for one item: the media server's own
+/// tvdb/imdb/tmdb set, which is all MDBList — the only tracker left in
+/// 1.5.2 — needs. Trakt, Simkl, MAL and AniList were removed; the anime
+/// mapping lookups that used to attach Fribb IDs here went with them.
 class TrackerIds {
   final ExternalIds external;
-  final AnimeIds? anime;
-  final AnimeProgressScope? animeProgressScope;
-  final int? animeProgress;
-  final AnimeEpisodeMatch? animeEpisodeMatch;
-  final int? animeEpisodeNumber;
 
-  const TrackerIds({
-    required this.external,
-    required this.anime,
-    this.animeProgressScope,
-    this.animeProgress,
-    this.animeEpisodeMatch,
-    this.animeEpisodeNumber,
-  });
-
-  TrackerIds withAnimeProgress(ResolvedAnimeProgress? animeProgress) {
-    return TrackerIds(
-      external: external,
-      anime: anime,
-      animeProgressScope: animeProgressScope,
-      animeProgress: animeProgress?.progress,
-      animeEpisodeMatch: animeEpisodeMatch,
-      animeEpisodeNumber: animeEpisodeNumber,
-    );
-  }
+  const TrackerIds({required this.external});
 }
 
-/// Resolved IDs for manually rating a media item on external trackers.
+/// Resolved IDs for manually rating a media item on MDBList.
 ///
-/// For TV items, [ids.external] is the show-level ID set. Trakt can then rate
-/// the show/season/episode through nested season/episode numbers, while MAL,
-/// AniList, and Simkl rate the mapped anime/show entry itself.
+/// For TV items, [ids.external] is the show-level ID set.
 class TrackerRatingContext {
   final TrackerIds ids;
   final MediaKind kind;
@@ -59,47 +28,18 @@ class TrackerRatingContext {
   bool get isMovie => kind == MediaKind.movie;
 }
 
-/// Resolves item ids → tracker external IDs. Returns the backend-native
-/// external IDs (used by Trakt and by Simkl for non-anime matches). The anime
-/// mappings were removed in 1.5.2, so no Fribb anime IDs are resolved
-/// anymore: MAL/AniList contexts carry the external IDs only, and Simkl
-/// falls back to them for anime too. Episodes resolve against the show's
-/// GUIDs.
-///
-/// A HAMA-matched Plex library supplies an AniDB id and nothing else. That
-/// used to resolve an anime directly through Fribb; with the mappings
-/// removed it maps to nothing, and those items fall back to the show's own
-/// numbering, which is what HAMA's plain `anidb` mode already uses.
-///
-/// The anime lookup is a no-op since the mappings were removed in 1.5.2
-/// (every lookup answers "no mapping"). [needsFribb] still short-circuits
-/// it — set this way for Trakt (which never uses anime IDs) and for a
-/// Simkl-only configuration — so those users skip the lookup entirely.
+/// Resolves item ids → external IDs for MDBList writes and ratings. Returns
+/// the backend-native external IDs; episodes resolve against the show's
+/// GUIDs. Null when the server has no IDs MDBList can address (IMDb/TMDb).
 class TrackerIdResolver {
   final MediaServerClient _client;
-  final FribbMappingLookup _store;
-  final AnimeListsMappingLookup _animeLists;
-  final AnimeEpisodeProgressLookup _animeProgress;
-  final bool Function() _needsFribb;
 
   /// Null entries mean "the server had no IDs" — cached so scrubbing on an
   /// un-matched item doesn't re-hit the server every position update.
   final Map<String, TrackerIds?> _cache = {};
   final KeyedFutureCache<String, ExternalIds> _externalIdLoads = KeyedFutureCache();
 
-  TrackerIdResolver(
-    MediaServerClient client, {
-    bool Function()? needsFribb,
-    FribbMappingLookup? store,
-    AnimeListsMappingLookup? animeLists,
-    AnimeEpisodeProgressLookup? animeProgress,
-  }) : _client = client,
-       _needsFribb = needsFribb ?? _returnTrue,
-       _store = store ?? const NoopAnimeMappingsLookup(),
-       _animeLists = animeLists ?? const NoopAnimeMappingsLookup(),
-       _animeProgress = animeProgress ?? AnimeEpisodeProgressResolver(client);
-
-  static bool _returnTrue() => true;
+  TrackerIdResolver(MediaServerClient client) : _client = client;
 
   /// Fetch external IDs for an item via the neutral
   /// [MediaServerClient.fetchExternalIds] surface — Plex hits
@@ -108,55 +48,40 @@ class TrackerIdResolver {
   Future<ExternalIds> _fetchExternalIds(String itemId) =>
       _externalIdLoads.run(itemId, () => _client.fetchExternalIds(itemId));
 
+  /// The id set with no mapping attached. Null for an item with no IMDb/TMDb/
+  /// TVDB id at all, and for an AniDB-only item: MDBList does not speak
+  /// AniDB, so handing it a context it cannot address would trade the "no
+  /// external IDs" log for a silent no-op further down.
+  TrackerIds? _withoutMapping(ExternalIds external) =>
+      external.hasCatalogIds ? TrackerIds(external: external) : null;
+
   Future<TrackerIds?> resolveForMovie(String itemId) async {
     if (_cache.containsKey(itemId)) return _cache[itemId];
 
     final external = await _fetchExternalIds(itemId);
-    final ids = await _build(external, isEpisodeSeason: null, episodeNumber: null, isMovie: true);
+    final ids = _withoutMapping(external);
     _cache[itemId] = ids;
     return ids;
   }
 
   /// Resolve IDs for an episode. Looks up the *show's* external IDs (via
-  /// `grandparentId`), then disambiguates among candidate Fribb rows using
-  /// Anime-Lists episode mappings first and season mappings as fallback.
-  Future<TrackerIds?> resolveShowForEpisode(
-    MediaItem episode, {
-    bool includeAnimeProgress = true,
-    bool includeCurrentEpisode = true,
-  }) async {
+  /// `grandparentId`).
+  Future<TrackerIds?> resolveShowForEpisode(MediaItem episode) async {
     final showId = episode.grandparentId;
     if (showId == null || showId.isEmpty) return null;
 
     final season = episode.parentIndex;
     final number = episode.index;
-    // Cache under the full aired episode coordinate. Same-season split-cour
-    // mappings can point different episode ranges at different anime entries.
     final cacheKey = season != null && number != null ? '$showId#s$season#e$number' : showId;
-    TrackerIds? ids;
-    if (_cache.containsKey(cacheKey)) {
-      ids = _cache[cacheKey];
-    } else {
-      final external = await _fetchExternalIds(showId);
-      ids = await _build(external, isEpisodeSeason: season, episodeNumber: number, isMovie: false);
-      _cache[cacheKey] = ids;
-    }
+    if (_cache.containsKey(cacheKey)) return _cache[cacheKey];
 
-    final resolvedIds = ids;
-    if (!includeAnimeProgress || resolvedIds == null || resolvedIds.animeProgressScope == null) return resolvedIds;
-    final progress = await _animeProgress.resolve(
-      episode,
-      scope: resolvedIds.animeProgressScope!,
-      animeMatch: resolvedIds.animeEpisodeMatch,
-      episodeMatcher: resolvedIds.animeEpisodeMatch == null
-          ? null
-          : (item) => _lookupAnimeEpisodeMatch(resolvedIds.external, item),
-      includeCurrentEpisode: includeCurrentEpisode,
-    );
-    return resolvedIds.withAnimeProgress(progress);
+    final external = await _fetchExternalIds(showId);
+    final ids = _withoutMapping(external);
+    _cache[cacheKey] = ids;
+    return ids;
   }
 
-  /// Resolve IDs for manual tracker ratings. Ratings can be attached to a
+  /// Resolve IDs for a manual MDBList rating. Ratings can be attached to a
   /// movie, show, season, or episode from the detail screen/context menu.
   Future<TrackerRatingContext?> resolveForRating(MediaItem item) async {
     switch (item.kind) {
@@ -176,7 +101,7 @@ class TrackerIdResolver {
         final season = item.parentIndex;
         final number = item.index;
         if (season == null || number == null) return null;
-        final ids = await resolveShowForEpisode(item, includeAnimeProgress: false);
+        final ids = await resolveShowForEpisode(item);
         return ids == null
             ? null
             : TrackerRatingContext(ids: ids, kind: MediaKind.episode, season: season, episodeNumber: number);
@@ -191,7 +116,7 @@ class TrackerIdResolver {
     if (_cache.containsKey(cacheKey)) return _cache[cacheKey];
 
     final external = await _fetchExternalIds(showId);
-    final ids = await _buildShowRating(external, season: season);
+    final ids = _withoutMapping(external);
     _cache[cacheKey] = ids;
     return ids;
   }
@@ -199,243 +124,5 @@ class TrackerIdResolver {
   void clearCache() {
     _cache.clear();
     _externalIdLoads.clear();
-    _animeProgress.clearCache();
-  }
-
-  Future<TrackerIds?> _build(
-    ExternalIds external, {
-    int? isEpisodeSeason,
-    int? episodeNumber,
-    required bool isMovie,
-  }) async {
-    if (!external.hasAny) return null;
-    if (!_needsFribb()) return _withoutAnimeMapping(external);
-    final anidbId = _usableAnidbId(external, season: isMovie ? null : isEpisodeSeason);
-    final rows = await _store.lookup(
-      movie: isMovie,
-      anidbId: anidbId,
-      tvdbId: external.tvdb,
-      tmdbId: external.tmdb,
-      imdbId: external.imdb,
-    );
-    final animeMatch = isMovie || isEpisodeSeason == null || episodeNumber == null
-        ? null
-        : await _lookupAnimeEpisodeMatchByCoordinate(external, isEpisodeSeason, episodeNumber);
-    // An AniDB special (anidbseason 0) is numbered S1, S2… beside its entry's
-    // regular episodes, and the list trackers have nowhere to count it: its
-    // number written as progress would rewind or complete the main series.
-    // Trackers that address the episode by its external ids still get it.
-    if (animeMatch != null && animeMatch.anidbSeason == 0) return _withoutAnimeMapping(external);
-    final row = isMovie
-        ? _pickMovieRow(rows)
-        : _pickShowRow(rows, season: isEpisodeSeason, anidbId: anidbId, animeMatch: animeMatch);
-    final anime = row == null ? null : AnimeIds.fromFribb(row);
-    return TrackerIds(
-      external: external,
-      anime: anime,
-      animeProgressScope: _animeProgressScope(
-        selected: row,
-        rows: rows,
-        season: isEpisodeSeason,
-        isMovie: isMovie,
-        animeMatch: animeMatch,
-      ),
-      animeEpisodeMatch: animeMatch,
-      animeEpisodeNumber: animeMatch?.anidbEpisode,
-    );
-  }
-
-  /// The id set with no Fribb mapping attached, for trackers that never use one
-  /// and for an episode no anime entry counts.
-  ///
-  /// Null for an AniDB-only item: Trakt and Simkl are the only trackers that
-  /// report `needsFribb == false`, and neither speaks AniDB, so handing them a
-  /// context they cannot address would trade the "no external IDs" log for a
-  /// silent no-op further down.
-  TrackerIds? _withoutAnimeMapping(ExternalIds external) =>
-      external.hasCatalogIds ? TrackerIds(external: external, anime: null) : null;
-
-  /// The AniDB id to look Fribb up by, or null when it cannot be trusted.
-  ///
-  /// Only Plex's HAMA agent supplies one, and only in its plain `anidb` mode:
-  /// one AniDB entry per Plex show, its episodes in season 1 and its specials
-  /// in season 0. A higher season means the library is numbered by TVDB
-  /// instead — HAMA warns about that itself — so the guid's entry does not
-  /// describe what is playing and the tvdb/tmdb/imdb ladder must handle it.
-  int? _usableAnidbId(ExternalIds external, {required int? season}) {
-    final anidb = external.anidb;
-    if (anidb == null) return null;
-    return season == null || season == 1 ? anidb : null;
-  }
-
-  Future<TrackerIds?> _buildShowRating(ExternalIds external, {int? season}) async {
-    if (!external.hasAny) return null;
-    if (!_needsFribb()) return _withoutAnimeMapping(external);
-    final anidbId = _usableAnidbId(external, season: season);
-    final rows = await _store.lookup(
-      movie: false,
-      anidbId: anidbId,
-      tvdbId: external.tvdb,
-      tmdbId: external.tmdb,
-      imdbId: external.imdb,
-    );
-    FribbMappingRow? row;
-
-    final animeIds = season == null
-        ? await _lookupAnimeIdsForShow(external)
-        : await _lookupAnimeIdsForSeason(external, season);
-    if (animeIds.length == 1) {
-      row = _rowForAnidb(rows, animeIds.single);
-    } else if (animeIds.isEmpty) {
-      row = _pickShowRow(rows, season: season, anidbId: anidbId, animeMatch: null);
-    }
-
-    return TrackerIds(external: external, anime: row == null ? null : AnimeIds.fromFribb(row));
-  }
-
-  Future<AnimeEpisodeMatch?> _lookupAnimeEpisodeMatch(ExternalIds external, MediaItem episode) async {
-    final season = episode.parentIndex;
-    final number = episode.index;
-    if (season == null || number == null) return null;
-    return _lookupAnimeEpisodeMatchByCoordinate(external, season, number);
-  }
-
-  Future<AnimeEpisodeMatch?> _lookupAnimeEpisodeMatchByCoordinate(
-    ExternalIds external,
-    int season,
-    int episodeNumber,
-  ) async {
-    try {
-      return await _animeLists.lookupEpisode(
-        tvdbId: external.tvdb,
-        tmdbId: external.tmdb,
-        season: season,
-        episodeNumber: episodeNumber,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<Set<int>> _lookupAnimeIdsForSeason(ExternalIds external, int season) async {
-    try {
-      return await _animeLists.lookupAnimeIdsForSeason(tvdbId: external.tvdb, tmdbId: external.tmdb, season: season);
-    } catch (_) {
-      return const <int>{};
-    }
-  }
-
-  Future<Set<int>> _lookupAnimeIdsForShow(ExternalIds external) async {
-    try {
-      return await _animeLists.lookupAnimeIdsForShow(tvdbId: external.tvdb, tmdbId: external.tmdb);
-    } catch (_) {
-      return const <int>{};
-    }
-  }
-
-  /// Pick the best row for a movie lookup — prefer rows marked `type: MOVIE`.
-  FribbMappingRow? _pickMovieRow(List<FribbMappingRow> rows) {
-    if (rows.isEmpty) return null;
-    final movies = rows.where((r) => r.isMovie);
-    if (movies.isNotEmpty) return movies.first;
-    // Fall back to any row if no explicit MOVIE row matches: the lookup only
-    // searched movie-namespace ids, and some rows have no type field while TMDB
-    // lists some OVAs and specials as films.
-    return rows.first;
-  }
-
-  /// Pick the best row for a show lookup. When Fribb has multiple rows
-  /// sharing the same show-level external ID (split-cour anime), prefer the
-  /// one whose `season.tvdb` or `season.tmdb` matches the Plex episode's
-  /// season; otherwise prefer regular TV/ONA rows.
-  FribbMappingRow? _pickShowRow(
-    List<FribbMappingRow> rows, {
-    int? season,
-    int? anidbId,
-    AnimeEpisodeMatch? animeMatch,
-  }) {
-    if (rows.isEmpty) return null;
-
-    final match = animeMatch;
-    if (match != null) return _rowForAnidb(rows, match.anidbId);
-
-    // A usable AniDB id names its entry outright: HAMA numbers that entry as
-    // season 1 whatever season Fribb places it in.
-    if (anidbId != null) {
-      final row = _rowForAnidb(rows, anidbId);
-      if (row != null) return row;
-    }
-
-    var candidates = rows;
-    if (season != null) {
-      for (final row in rows) {
-        if (row.tvdbSeason == season || row.tmdbSeason == season) return row;
-      }
-      // A row mapped to a season describes that season alone, so a season
-      // Fribb has not mapped yet (a new cour, typically) must not land on
-      // another one — every episode would rewrite a finished season 1 entry
-      // as a rewatch. An unmapped row covers the show in absolute numbering
-      // and still applies, but never to specials, which that numbering leaves
-      // out.
-      if (season <= 0) return null;
-      candidates = [
-        for (final row in rows)
-          if (!_hasSeasonMapping(row)) row,
-      ];
-      if (candidates.isEmpty) return null;
-    }
-
-    // No season match — prefer regular TV/ONA rows over movies/OVAs/specials.
-    for (final row in candidates) {
-      if (_isRegularSeriesRow(row)) return row;
-    }
-
-    // Fall back to the first non-MOVIE row (prefer series-like entries).
-    for (final row in candidates) {
-      if (!row.isMovie) return row;
-    }
-    return candidates.first;
-  }
-
-  FribbMappingRow? _rowForAnidb(List<FribbMappingRow> rows, int anidbId) {
-    for (final row in rows) {
-      if (row.anidbId == anidbId) return row;
-    }
-    return null;
-  }
-
-  AnimeProgressScope? _animeProgressScope({
-    required FribbMappingRow? selected,
-    required List<FribbMappingRow> rows,
-    required int? season,
-    required bool isMovie,
-    required AnimeEpisodeMatch? animeMatch,
-  }) {
-    if (isMovie) return null;
-    if (season == null || season <= 0) return null;
-    if (selected == null) return null;
-    if (animeMatch != null && selected.anidbId == animeMatch.anidbId) return AnimeProgressScope.mapped;
-    if (_hasSeasonMapping(selected)) {
-      final exactSeason = selected.tvdbSeason == season || selected.tmdbSeason == season;
-      return exactSeason && _isRegularSeriesRow(selected) ? AnimeProgressScope.season : null;
-    }
-
-    final regularRows = rows.where(_isRegularSeriesRow).toList(growable: false);
-    if (regularRows.length == 1 && identical(regularRows.single, selected)) {
-      return AnimeProgressScope.show;
-    }
-    return null;
-  }
-
-  bool _hasSeasonMapping(FribbMappingRow row) => row.tvdbSeason != null || row.tmdbSeason != null;
-
-  bool _isRegularSeriesRow(FribbMappingRow row) {
-    if (row.isMovie) return false;
-    if (row.tvdbSeason == 0 || row.tmdbSeason == 0) return false;
-
-    return switch (row.type?.toUpperCase()) {
-      null || 'TV' || 'ONA' || 'UNKNOWN' => true,
-      _ => false,
-    };
   }
 }

@@ -109,10 +109,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Rotten Tomatoes tanqidchilari",
       "rottenTomatoesAudience": "Rotten Tomatoes tomoshabinlari",
       "metacritic": "Metacritic",
@@ -392,7 +388,6 @@
     "discordRichPresence": "Discord Rich Presence",
     "discordRichPresenceDescription": "Discord-da nima tomosha qilayotganingizni koʻrsatish",
     "services": "Xizmatlar",
-    "servicesDescription": "Trakt, MyAnimeList, Seerr va boshqalarni ulang",
     "manageLibrariesDescription": "Kutubxonalarni tartiblash va yashirish",
     "companionRemoteServer": "Yordamchi pult serveri",
     "companionRemoteServerDescription": "Tarmoqdagi mobil qurilmalarga ushbu ilovani boshqarishga ruxsat berish",
@@ -1409,7 +1404,6 @@
     "repairBodyOneCredential": "Bitta saqlangan kirish maʼlumoti shikastlangan va uni oʻqib boʻlmaydi. Tiklash faqat uni olib tashlaydi; boshqa sozlamalaringizga tegilmaydi.",
     "repairBodySignInsKept": "Serverlaringiz va profillaringiz tizimga kirgan holda qoladi.",
     "repairBodySignInsLost": "Saqlangan kirish maʼlumotlaringizni himoya qiluvchi kalitni ushbu fayldan tiklab boʻlmaydi, shuning uchun har bir server va profilga qaytadan kirishingiz kerak boʻladi. Media serveringizdagi hech narsaga taʼsir qilmaydi.",
-    "repairBodySessionsUncertain": "Trekerlar (MAL, AniList, Simkl, Trakt) va Seerr alohida saqlanadi va ular saqlanib qolishi ham, yoʻqolishi ham mumkin. PlezTV aynan nimani saqlaganini sizga xabar qiladi.",
     "repairConfirm": "Tiklash",
     "repairSucceeded": "Saqlash tiklandi",
     "repairNeedsRestart": "Saqlash tiklandi — qayta ishga tushirish kerak",
@@ -1467,7 +1461,6 @@
       "other": "${n} qism"
     },
     "cast": "Aktyorlar",
-    "characters": "Qahramonlar",
     "addToWatchlist": "Tomosha roʻyxatiga qoʻshish",
     "removeFromWatchlist": "Tomosha roʻyxatidan oʻchirish",
     "addedToWatchlist": "Tomosha roʻyxatiga qoʻshildi",
@@ -2383,17 +2376,6 @@
     "failedToLoad": "Vazifalarni yuklab boʻlmadi",
     "noTasks": "Bajarilayotgan vazifalar yoʻq"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "Ulandi",
-    "connectedAs": "@${username} sifatida ulandi",
-    "disconnectConfirm": "Trakt uzilsinmi?",
-    "disconnectConfirmBody": "PlezTV Trakt-ga maʼlumot yuborishni toʻxtatadi.",
-    "scrobble": "Real vaqt rejimida kuzatish",
-    "scrobbleDescription": "Ijro paytida Trakt-ga maʼlumot yuborish.",
-    "watchedSync": "Koʻrish holatini sinxronlash",
-    "watchedSyncDescription": "PlezTV-da belgilanganda Trakt-da ham belgilanadi."
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "Seerr ulash",
@@ -2458,15 +2440,8 @@
     "disconnectConfirmBody": "PlezTV ${service} yangilashni toʻxtatadi. Istalgan vaqtda qayta ulanishingiz mumkin.",
     "connectFailed": "${service} ulana olmadi. Qaytadan urinib koʻring.",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "Simkl-ni qayta ulash",
-      "subtitle": "Simkl bu ulanishda ishlatiladigan kirish usulini toʻxtatmoqda. Qayta ulanganda PlezTV-ni tasdiqlash uchun simkl.com ochiladi — PlezTV parolingizni hech qachon koʻrmaydi. Tomosha tarixingiz Simkl-da saqlanib qoladi."
     },
     "deviceCode": {
       "title": "PlezTV-ni ${service} xizmatida faollashtiring",

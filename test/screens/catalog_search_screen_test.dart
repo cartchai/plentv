@@ -29,10 +29,10 @@ class _FakeSearchSource implements CatalogSource {
   CatalogItem? result;
 
   @override
-  CatalogSourceId get id => CatalogSourceId.trakt;
+  CatalogSourceId get id => CatalogSourceId.mdblist;
 
   @override
-  String get displayName => 'Trakt';
+  String get displayName => 'MDBList';
 
   @override
   bool get supportsWatchlist => false;
@@ -174,13 +174,13 @@ void main() {
   testWidgets('catalog result menu exposes trailer and provider links', (tester) async {
     final source = _FakeSearchSource()
       ..result = const CatalogItem(
-        source: CatalogSourceId.trakt,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'result: menu',
         ids: CatalogItemIds(tmdb: 1),
         trailerUrl: 'https://example.com/trailer',
         links: [
-          CatalogLink(label: 'Trakt', url: 'https://example.com/trakt'),
+          CatalogLink(label: 'MDBList', url: 'https://example.com/mdblist'),
           CatalogLink(label: 'Stream Co', url: 'https://example.com/watch', isStreaming: true),
         ],
       );
@@ -191,7 +191,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(t.explore.detail.watchTrailer), findsOneWidget);
-    expect(find.text(t.explore.detail.openOn(site: 'Trakt')), findsOneWidget);
+    expect(find.text(t.explore.detail.openOn(site: 'MDBList')), findsOneWidget);
     expect(find.text(t.explore.detail.openOn(site: 'Stream Co')), findsOneWidget);
   });
 }

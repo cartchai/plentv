@@ -109,10 +109,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Rotten Tomatoes kritikusok",
       "rottenTomatoesAudience": "Rotten Tomatoes közönség",
       "metacritic": "Metacritic",
@@ -392,7 +388,6 @@
     "discordRichPresence": "Discord Rich Presence",
     "discordRichPresenceDescription": "Megjeleníti a Discordon, hogy éppen mit nézel",
     "services": "Szolgáltatások",
-    "servicesDescription": "Trakt, MyAnimeList, Seerr és egyéb szolgáltatások csatlakoztatása",
     "manageLibrariesDescription": "Könyvtárak sorrendjének módosítása és elrejtése",
     "companionRemoteServer": "Kísérőtávirányító szervere",
     "companionRemoteServerDescription": "Lehetővé teszi, hogy a hálózaton lévő mobileszközökről vezéreld az alkalmazást",
@@ -1409,7 +1404,6 @@
     "repairBodyOneCredential": "Egy mentett bejelentkezés sérült, és nem olvasható. A javítás csak azt távolítja el; a többi beállítása érintetlen marad.",
     "repairBodySignInsKept": "A szervereinek és profiljainak bejelentkezve kell maradniuk.",
     "repairBodySignInsLost": "A mentett bejelentkezéseket védő kulcs nem nyerhető vissza ebből a fájlból, ezért minden szerverre és profilba újra be kell jelentkeznie. A médiaszerveren semmi nem érintett.",
-    "repairBodySessionsUncertain": "A nyomkövetők (MAL, AniList, Simkl, Trakt) és a Seerr külön vannak tárolva, és megmaradhatnak vagy nem. A PlezTV pontosan megmondja, mit őrzött meg.",
     "repairConfirm": "Javítás",
     "repairSucceeded": "A tárhely javítva",
     "repairNeedsRestart": "A tárhely javítva – újraindítás szükséges",
@@ -1467,7 +1461,6 @@
       "other": "${n} epizód"
     },
     "cast": "Szereplők",
-    "characters": "Karakterek",
     "addToWatchlist": "Hozzáadás a Néznivalókhoz",
     "removeFromWatchlist": "Eltávolítás a Néznivalókból",
     "addedToWatchlist": "Hozzáadva a figyelőlistához",
@@ -2383,17 +2376,6 @@
     "failedToLoad": "Nem sikerült a feladatok betöltése",
     "noTasks": "Nincsenek futó feladatok"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "Csatlakoztatva",
-    "connectedAs": "@${username} néven csatlakoztatva",
-    "disconnectConfirm": "Leválasztod a Trakt-fiókot?",
-    "disconnectConfirmBody": "A PlezTV nem küld több eseményt a Traktnak. Bármikor újracsatlakozhatsz.",
-    "scrobble": "Valós idejű scrobbling",
-    "scrobbleDescription": "Lejátszási, szüneteltetési és leállítási események küldése a Traktnak lejátszás közben.",
-    "watchedSync": "Megtekintési állapot szinkronizálása",
-    "watchedSyncDescription": "Ha egy elemet megtekintettként jelölsz meg a PlezTVben, a Trakt is megtekintettként jelöli."
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "Seerr csatlakoztatása",
@@ -2458,15 +2440,8 @@
     "disconnectConfirmBody": "A PlezTV nem frissíti többé a(z) ${service} adatait. Bármikor újracsatlakozhatsz.",
     "connectFailed": "Nem sikerült csatlakozni a következőhöz: ${service}. Próbáld újra.",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "Simkl újracsatlakoztatása",
-      "subtitle": "A Simkl kivezeti a kapcsolat által használt bejelentkezési módot. Az újracsatlakozás megnyitja a simkl.com oldalt, ahol jóváhagyhatod a PlezTVt — a PlezTV sosem látja a jelszavadat. A megtekintési előzményeid a Simklen maradnak."
     },
     "deviceCode": {
       "title": "PlezTV aktiválása a következőn: ${service}",

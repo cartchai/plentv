@@ -518,8 +518,8 @@ void main() {
 
     test('resetAllSettings refreshes active dynamic tracker prefs', () async {
       final settings = await SettingsService.getInstance();
-      final modePref = SettingsService.trackerFilterModePref(TrackerService.trakt);
-      final idsPref = SettingsService.trackerFilterIdsPref(TrackerService.trakt);
+      final modePref = SettingsService.trackerFilterModePref(TrackerService.mdblist);
+      final idsPref = SettingsService.trackerFilterIdsPref(TrackerService.mdblist);
 
       await settings.write(modePref, TrackerLibraryFilterMode.whitelist);
       await settings.write(idsPref, ['library-1']);
@@ -537,18 +537,18 @@ void main() {
 
     test('tracker library filter only allows unknown libraries when no filter is configured', () async {
       final settings = await SettingsService.getInstance();
-      final modePref = SettingsService.trackerFilterModePref(TrackerService.trakt);
-      final idsPref = SettingsService.trackerFilterIdsPref(TrackerService.trakt);
+      final modePref = SettingsService.trackerFilterModePref(TrackerService.mdblist);
+      final idsPref = SettingsService.trackerFilterIdsPref(TrackerService.mdblist);
 
-      expect(settings.isLibraryAllowedForTracker(TrackerService.trakt, null), isTrue);
+      expect(settings.isLibraryAllowedForTracker(TrackerService.mdblist, null), isTrue);
 
       await settings.write(idsPref, ['server:blocked']);
-      expect(settings.isLibraryAllowedForTracker(TrackerService.trakt, null), isFalse);
+      expect(settings.isLibraryAllowedForTracker(TrackerService.mdblist, null), isFalse);
 
       await settings.write(modePref, TrackerLibraryFilterMode.whitelist);
       await settings.write(idsPref, ['server:allowed']);
-      expect(settings.isLibraryAllowedForTracker(TrackerService.trakt, null), isFalse);
-      expect(settings.isLibraryAllowedForTracker(TrackerService.trakt, 'server:allowed'), isTrue);
+      expect(settings.isLibraryAllowedForTracker(TrackerService.mdblist, null), isFalse);
+      expect(settings.isLibraryAllowedForTracker(TrackerService.mdblist, 'server:allowed'), isTrue);
     });
   });
   group('BaseSharedPreferencesService initialization generations', () {

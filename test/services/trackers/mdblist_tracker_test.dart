@@ -30,7 +30,6 @@ TrackerSession _session() =>
 TrackerContext _episode({ExternalIds external = const ExternalIds(imdb: 'tt0903747', tmdb: 1396)}) =>
     TrackerContext.episode(
       external: external,
-      anime: null,
       ratingKey: 'episode-1',
       libraryGlobalKey: null,
       season: 2,
@@ -38,7 +37,7 @@ TrackerContext _episode({ExternalIds external = const ExternalIds(imdb: 'tt09037
     );
 
 TrackerContext _movie({ExternalIds external = const ExternalIds(imdb: 'tt0372784', tmdb: 272)}) =>
-    TrackerContext.movie(external: external, anime: null, ratingKey: 'movie-1', libraryGlobalKey: null);
+    TrackerContext.movie(external: external, ratingKey: 'movie-1', libraryGlobalKey: null);
 
 void main() {
   late _Recorder recorder;
@@ -190,7 +189,7 @@ void main() {
     test('rates a season through the nested show shape', () async {
       await MdblistTracker.instance.rate(
         TrackerRatingContext(
-          ids: const TrackerIds(external: ExternalIds(imdb: 'tt0903747'), anime: null),
+          ids: const TrackerIds(external: ExternalIds(imdb: 'tt0903747')),
           kind: MediaKind.season,
           season: 2,
         ),
@@ -213,7 +212,7 @@ void main() {
     test('clears a movie rating without sending a score', () async {
       await MdblistTracker.instance.clearRating(
         TrackerRatingContext(
-          ids: const TrackerIds(external: ExternalIds(imdb: 'tt0372784'), anime: null),
+          ids: const TrackerIds(external: ExternalIds(imdb: 'tt0372784')),
           kind: MediaKind.movie,
         ),
       );
@@ -228,7 +227,7 @@ void main() {
       await expectLater(
         MdblistTracker.instance.rate(
           TrackerRatingContext(
-            ids: const TrackerIds(external: ExternalIds(tvdb: 81189), anime: null),
+            ids: const TrackerIds(external: ExternalIds(tvdb: 81189)),
             kind: MediaKind.movie,
           ),
           7,

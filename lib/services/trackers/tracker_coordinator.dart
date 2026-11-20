@@ -9,34 +9,24 @@ import '../../media/playback_timeline.dart';
 import '../../models/trackers/tracker_context.dart';
 import '../../utils/app_logger.dart';
 import '../../media/episode_collection.dart';
-import 'anime_episode_progress_resolver.dart';
-import 'anime_lists_index.dart';
-import 'anilist/anilist_tracker.dart';
-import 'fribb_index.dart';
-import 'mal/mal_tracker.dart';
 import 'mdblist/mdblist_tracker.dart';
-import 'simkl/simkl_tracker.dart';
 import 'tracker.dart';
 import 'tracker_constants.dart';
 import 'tracker_exceptions.dart';
 import 'tracker_id_resolver.dart';
 import 'tracker_write_queue.dart';
-import 'trakt/trakt_tracker.dart';
 
 /// The single seam through which every tracker write leaves the app.
 ///
-/// Three mechanisms, chosen per tracker kind:
+/// MDBList is the only tracker left in 1.5.2 (Trakt, Simkl, MAL and AniList
+/// were removed). Two mechanisms:
 ///
-/// * [RealtimeScrobbleTracker]s (Simkl, Trakt, MDBList) receive the playback
+/// * [RealtimeScrobbleTracker] (MDBList) receives the playback
 ///   lifecycle — start/resume, pause, seek, stop — with the current progress,
-///   and decide watched state themselves. They are excluded from the threshold
-///   fan-out so a single watch never produces two writes.
-/// * Threshold trackers (MAL, AniList) are notified exactly once when progress
-///   crosses the watched threshold, with a safety-net fire on stop if the
-///   crossing was missed (e.g. the user stopped between ticks).
+///   and decides watched state itself.
 /// * Manual, container, offline-replay, external-player and server-observed
-///   marks bypass playback entirely and go to every tracker that can write. A
-///   container's episodes reach each history tracker as batched
+///   marks bypass playback entirely and go to MDBList when it can write. A
+///   container's episodes reach it as batched
 ///   [EpisodeHistoryTracker.writeHistory] requests, never one per episode.
 ///
 /// A failed per-item history write is persisted in [TrackerWriteQueue] and
@@ -48,15 +38,10 @@ class TrackerCoordinator {
 
   TrackerCoordinator._();
 
-  /// The registry. Everything below partitions this list by capability rather
-  /// than naming services, so adding one means adding it here and nowhere else.
-  late final List<Tracker> _trackers = [
-    MalTracker.instance,
-    AnilistTracker.instance,
-    SimklTracker.instance,
-    TraktTracker.instance,
-    MdblistTracker.instance,
-  ];
+  /// The registry. MDBList is the only tracker left in 1.5.2; everything
+  /// below partitions this list by capability rather than naming services, so
+  /// adding one means adding it here and nowhere else.
+  late final List<Tracker> _trackers = [MdblistTracker.instance];
 
   /// One transport per real-time tracker, created once and outliving individual
   /// playbacks: an episode swap stops the old item and starts the new one back
@@ -85,10 +70,6 @@ class TrackerCoordinator {
   /// cancelled — and dropped on profile switch.
   TrackerIdResolver? _resolver;
   MediaServerClient? _resolverClient;
-  String? _activeLibraryGlobalKey;
-  FribbMappingLookup? _debugFribbStore;
-  AnimeListsMappingLookup? _debugAnimeListsStore;
-  AnimeEpisodeProgressLookup? _debugAnimeProgress;
 
   TrackerContext? _ctx;
 
@@ -100,7 +81,6 @@ class TrackerCoordinator {
   /// Captures position, duration, and the active client's watched threshold so
   /// tracker crossing semantics stay aligned with playback progress reporting.
   final PlaybackTimeline _timeline = PlaybackTimeline(watchedThreshold: _fallbackWatchedThreshold);
-  bool _thresholdCrossed = false;
   int _playbackRevision = 0;
 
   /// Drop a duplicate state transition within this window — the player emits
@@ -194,10 +174,9 @@ class TrackerCoordinator {
       return;
     }
 
-    _activeLibraryGlobalKey = libraryGlobalKey;
     if (_resolver == null || !identical(_resolverClient, client)) {
       _resolver?.clearCache();
-      _resolver = _newResolver(client, needsFribb: _anyTrackerNeedsFribb);
+      _resolver = _newResolver(client);
       _resolverClient = client;
     }
     final TrackerContext? ctx;
@@ -243,39 +222,15 @@ class TrackerCoordinator {
     unawaited(_scrobble(TrackerScrobbleState.start));
   }
 
-  bool _anyTrackerNeedsFribb() => _anyTrackerNeedsFribbForLibrary(_activeLibraryGlobalKey);
-
   /// True when at least one tracker would act on this playback — either by
-  /// receiving reports or by recording the watch when progress crosses over.
-  /// Trakt can be in the second group without being in the first: its scrobble
-  /// and watched-sync settings are independent.
+  /// receiving reports or by recording the watch.
   bool _hasPlaybackInterest(String? libraryGlobalKey) => _trackers.any(
     (t) => _canWrite(t, libraryGlobalKey) || (t is RealtimeScrobbleTracker && _canReport(t, libraryGlobalKey)),
   );
 
   bool _hasWatchedInterest(String? libraryGlobalKey) => _trackers.any((t) => _canWrite(t, libraryGlobalKey));
 
-  bool _anyTrackerNeedsFribbForLibrary(String? libraryGlobalKey) =>
-      _trackers.any((t) => t.needsFribb && _canWrite(t, libraryGlobalKey));
-
-  void debugUseResolverDependencies({
-    FribbMappingLookup? store,
-    AnimeListsMappingLookup? animeLists,
-    AnimeEpisodeProgressLookup? animeProgress,
-  }) {
-    _debugFribbStore = store;
-    _debugAnimeListsStore = animeLists;
-    _debugAnimeProgress = animeProgress;
-    invalidateResolverCache();
-  }
-
-  TrackerIdResolver _newResolver(MediaServerClient client, {required bool Function() needsFribb}) => TrackerIdResolver(
-    client,
-    needsFribb: needsFribb,
-    store: _debugFribbStore,
-    animeLists: _debugAnimeListsStore,
-    animeProgress: _debugAnimeProgress,
-  );
+  TrackerIdResolver _newResolver(MediaServerClient client) => TrackerIdResolver(client);
 
   Future<void> markWatched(MediaItem item, MediaServerClient client) => _markManual(item, client, watched: true);
 
@@ -298,7 +253,7 @@ class TrackerCoordinator {
     final libraryGlobalKey = item.libraryGlobalKey;
     if (!_hasWatchedInterest(libraryGlobalKey)) return;
 
-    final resolver = _newResolver(client, needsFribb: () => _anyTrackerNeedsFribbForLibrary(libraryGlobalKey));
+    final resolver = _newResolver(client);
 
     final scope = _currentScope;
     if (kind == MediaKind.movie || kind == MediaKind.episode) {
@@ -323,28 +278,17 @@ class TrackerCoordinator {
     _WriteScope scope,
   ) async {
     final contexts = <TrackerContext>[];
-    final seriesGroups = <String, _ManualSeriesProgress>{};
 
     for (final episode in episodes) {
-      final ctx = await _buildContext(episode, resolver, includeAnimeProgress: false);
+      final ctx = await _buildContext(episode, resolver);
       if (!_isCurrent(scope)) return;
       if (ctx == null) continue;
       contexts.add(ctx);
-
-      final key = _seriesGroupKey(ctx);
-      if (key == null) continue;
-      (seriesGroups[key] ??= _ManualSeriesProgress(ctx, fallbackToCount: true)).add(ctx);
     }
 
     appLogger.d('Trackers: manual container resolved ${contexts.length}/${episodes.length} episodes');
 
     await _dispatchHistory(contexts, scope, watched: true);
-
-    for (final group in seriesGroups.values) {
-      final ctx = group.context;
-      if (ctx != null) await _dispatch(_seriesProgressTrackers, ctx, scope, watched: true);
-    }
-    appLogger.d('Trackers: manual container resolved ${seriesGroups.length} series entries');
   }
 
   Future<void> _markContainerEpisodesUnwatched(
@@ -353,47 +297,17 @@ class TrackerCoordinator {
     _WriteScope scope,
   ) async {
     final contexts = <TrackerContext>[];
-    // One context per series entry: a show maps to a single list entry, so all
-    // of its episodes collapse into one reset.
-    final seriesEntries = <String, TrackerContext>{};
 
     for (final episode in episodes) {
-      final ctx = await _buildContext(
-        episode,
-        resolver,
-        includeAnimeProgress: false,
-        fallbackToAnimeEpisodeNumber: false,
-      );
+      final ctx = await _buildContext(episode, resolver);
       if (!_isCurrent(scope)) return;
       if (ctx == null) continue;
       contexts.add(ctx);
-
-      final key = _seriesGroupKey(ctx);
-      if (key != null) seriesEntries.putIfAbsent(key, () => ctx);
     }
 
     appLogger.d('Trackers: manual container unwatched resolved ${contexts.length}/${episodes.length} episodes');
 
     await _dispatchHistory(contexts, scope, watched: false);
-
-    for (final ctx in seriesEntries.values) {
-      await _dispatch(_seriesProgressTrackers, ctx, scope, watched: false);
-    }
-    appLogger.d('Trackers: manual container unwatched reset ${seriesEntries.length} series entries');
-  }
-
-  /// Group key over the series entries a container's episodes would touch, so
-  /// one entry receives one write however many episodes map to it. Null when no
-  /// active series tracker can map the item.
-  String? _seriesGroupKey(TrackerContext ctx) {
-    final parts = <String>[];
-    for (final tracker in _seriesProgressTrackers) {
-      if (!_canWrite(tracker, ctx.libraryGlobalKey)) continue;
-      final entryId = tracker.seriesEntryId(ctx);
-      if (entryId == null) continue;
-      parts.add('${tracker.service.name}=$entryId');
-    }
-    return parts.isEmpty ? null : parts.join('|');
   }
 
   Future<void> _markSingleWatched(MediaItem item, TrackerIdResolver resolver, _WriteScope scope) async {
@@ -401,7 +315,7 @@ class TrackerCoordinator {
     // watched counts the progress rollup reads already include this episode,
     // while [item] may still carry its unwatched view count. Adding it on top,
     // as playback start must, would count it twice.
-    final ctx = await _buildContext(item, resolver, includeCurrentEpisode: false);
+    final ctx = await _buildContext(item, resolver);
     if (ctx == null) {
       appLogger.d('Trackers: no external IDs for manually watched ${item.id}');
       return;
@@ -410,30 +324,26 @@ class TrackerCoordinator {
   }
 
   Future<void> _markSingleUnwatched(MediaItem item, TrackerIdResolver resolver, _WriteScope scope) async {
-    final ctx = await _buildContext(item, resolver, includeAnimeProgress: false, fallbackToAnimeEpisodeNumber: false);
+    final ctx = await _buildContext(item, resolver);
     if (ctx == null) {
       appLogger.d('Trackers: no external IDs for manually unwatched ${item.id}');
       return;
     }
-    // A single episode cannot be unwatched on a series-progress tracker: its
-    // entry counts episodes, so only a whole-container reset (the container
-    // path) means anything there.
-    await _dispatch(ctx.isMovie ? _trackers : _episodeHistoryTrackers, ctx, scope, watched: false);
+    await _dispatch(_episodeHistoryTrackers, ctx, scope, watched: false);
   }
 
   /// Terminal report for the current playback.
   ///
-  /// Threshold trackers get the safety-net watched mark. Real-time trackers get
-  /// a `stop` carrying the true progress — which is also the user's resume
-  /// position, so it is never inflated to force a watched state — followed by
+  /// The real-time tracker gets a `stop` carrying the true progress — which is
+  /// also the user's resume position, so it is never inflated to force a
+  /// watched state — followed by
   /// [RealtimeScrobbleTracker.reconcileWatchedAfterStop] when Plezy counts the
   /// playback as watched, because only the tracker knows whether its own stop
   /// already recorded that.
   Future<void> stopPlayback() async {
     ++_playbackRevision;
     final ctx = _ctx;
-    final watched = _thresholdCrossed || _timeline.watchedThresholdReached;
-    final missedThresholdMark = !_thresholdCrossed && _timeline.watchedThresholdReached;
+    final watched = _timeline.watchedThresholdReached;
     final progress = _timeline.progressPercent;
     // Snapshotted before [_reset] clears the field: the terminal report and the
     // reconciliation that follows belong to the account this playback began on.
@@ -443,13 +353,10 @@ class TrackerCoordinator {
 
     final scope = _currentScope;
     // Ownership is decided here, once, so the two ways of recording a watch stay
-    // mutually exclusive: whoever owns its own stop is not told about the
-    // crossing, and whoever was told is not reconciled.
+    // mutually exclusive: the owner of the stop is reconciled, and a stop that
+    // never landed falls back to a history write.
     final owners = _watchOwners(targets);
-    await Future.wait([
-      if (missedThresholdMark) _dispatch(_thresholdTrackers(owners), ctx, scope, watched: true),
-      _sendScrobble(ctx, TrackerScrobbleState.stop, progress, targets),
-    ]);
+    await Future.wait([_sendScrobble(ctx, TrackerScrobbleState.stop, progress, targets)]);
     await _settleScrobbles();
     if (!watched) return;
 
@@ -474,7 +381,7 @@ class TrackerCoordinator {
   }
 
   /// The player paused, or the app was backgrounded. Saves resumable progress
-  /// on real-time trackers; threshold trackers are unaffected.
+  /// on the real-time tracker.
   Future<void> pausePlayback() => _scrobble(TrackerScrobbleState.pause);
 
   Future<void> resumePlayback() => _scrobble(TrackerScrobbleState.start);
@@ -486,10 +393,6 @@ class TrackerCoordinator {
     // A seek is a checkpoint, not a transition: services that expose no seek
     // event opt out through their [ScrobblePolicy] and never see one.
     if (isSeek) unawaited(_scrobble(TrackerScrobbleState.seek));
-    if (_thresholdCrossed) return;
-    if (!_timeline.watchedThresholdReached) return;
-    _thresholdCrossed = true;
-    unawaited(_dispatch(_thresholdTrackers(_watchOwners(_playbackTargets)), ctx, _currentScope, watched: true));
   }
 
   void updateDuration(Duration duration) {
@@ -512,15 +415,13 @@ class TrackerCoordinator {
   }
 
   /// Drop the resolver's ID cache without touching in-flight playback state.
-  /// Called after a tracker is connected/disconnected so cached lookups
-  /// re-evaluate the `needsFribb` predicate.
+  /// Called after the tracker is connected/disconnected so cached lookups
+  /// re-evaluate against the new session.
   void invalidateResolverCache() => _resolver?.clearCache();
 
   void _reset() {
     _ctx = null;
-    _activeLibraryGlobalKey = null;
     _timeline.reset(watchedThreshold: _fallbackWatchedThreshold);
-    _thresholdCrossed = false;
     // Per-playback report bookkeeping lives on the targets, so dropping them
     // clears the debounce/throttle state with it.
     _playbackTargets = const [];
@@ -528,28 +429,19 @@ class TrackerCoordinator {
 
   /// The real-time targets that own the watched state of this playback: their own
   /// terminal stop — plus [RealtimeScrobbleTracker.reconcileWatchedAfterStop] —
-  /// records the watch, so the threshold crossing must leave them alone.
+  /// records the watch.
   ///
   /// Ownership follows the session, not the current settings. A target that never
-  /// got a session open is not an owner: no stop will be sent for it, so the
-  /// crossing is the only thing that would record its watch. One whose scrobbling
-  /// the user turned off mid-playback stays an owner — its stop simply never goes
-  /// out, and the unconfirmed-stop path then falls back to a history write. Were
-  /// ownership re-evaluated at stop time instead, a toggle flipped after the
-  /// crossing would leave the watch recorded by neither route.
+  /// got a session open is not an owner: no stop will be sent for it. One whose
+  /// scrobbling the user turned off mid-playback stays an owner — its stop simply
+  /// never goes out, and the unconfirmed-stop path then falls back to a history
+  /// write.
   List<_PlaybackTarget> _watchOwners(List<_PlaybackTarget> targets) => [
     for (final target in targets)
       if (target.sessionStarted) target,
   ];
 
-  /// Trackers that must be told about the threshold crossing: everyone that does
-  /// not own this playback's watched state. One watch, one write.
-  Iterable<Tracker> _thresholdTrackers(List<_PlaybackTarget> owners) =>
-      _trackers.where((tracker) => !owners.any((owner) => identical(owner.tracker, tracker)));
-
   Iterable<EpisodeHistoryTracker> get _episodeHistoryTrackers => _trackers.whereType<EpisodeHistoryTracker>();
-
-  Iterable<SeriesProgressTracker> get _seriesProgressTrackers => _trackers.whereType<SeriesProgressTracker>();
 
   bool _canWrite(Tracker tracker, String? libraryGlobalKey) =>
       tracker.canWriteWatched && tracker.shouldScrobbleForLibrary(libraryGlobalKey);
@@ -708,10 +600,7 @@ class TrackerCoordinator {
   /// Whether a failed write should be dropped rather than queued for retry.
   ///
   /// A history write states the current truth about an item, so any newer intent
-  /// for that row — however it ends — owns it and this one is stale. A series
-  /// claim is monotonic instead: only a completed write that already covers the
-  /// claim makes it pointless, and two queued claims coalesce to the higher, so
-  /// the outcome does not depend on which failure is persisted first.
+  /// for that row — however it ends — owns it and this one is stale.
   bool _shouldDropFailedWrite(_WriteScope scope, String key, int intent, {required int? progressClaim}) {
     final state = _rowIntents[_rowKey(scope, key)];
     if (state == null) return false;
@@ -786,28 +675,23 @@ class TrackerCoordinator {
     return Future.wait([for (final earlier in previous) earlier.future]).then((_) => run());
   }
 
-  /// Identity a queued write coalesces on. A per-item history tracker keys on the
-  /// remote media row; a series-progress tracker keys on the remote list entry,
-  /// because every episode of one show restates the same counter. Both are
-  /// server-independent — a rating key is not, and would let two items on two
-  /// servers replace each other. Null when the tracker cannot name a remote
-  /// target, in which case the write could not have applied either.
+  /// Identity a queued write coalesces on. A per-item history tracker keys on
+  /// the remote media row. Server-independent — a rating key is not, and would
+  /// let two items on two servers replace each other. Null when the tracker
+  /// cannot name a remote target, in which case the write could not have
+  /// applied either.
   String? _coalesceKeyFor(Tracker tracker, TrackerContext ctx) {
-    if (tracker is SeriesProgressTracker) {
-      final entryId = tracker.seriesEntryId(ctx);
-      return entryId == null ? null : trackerSeriesCoalesceKey(tracker.service, entryId);
-    }
     if (tracker is EpisodeHistoryTracker) {
       return trackerItemCoalesceKey(tracker.service, ctx, tracker.historyRowIdentity(ctx));
     }
     return null;
   }
 
-  /// The absolute progress a watched write would claim, for the trackers that
-  /// store one. Null everywhere else: a history write is a statement about an
-  /// item, not a monotonic claim.
-  int? _progressClaim(Tracker tracker, TrackerContext ctx) =>
-      tracker is SeriesProgressTracker ? tracker.seriesProgress(ctx) : null;
+  /// The absolute progress a watched write would claim. No tracker stores one
+  /// anymore: a history write is a statement about an item, not a monotonic
+  /// claim — so this is always null, and the queue machinery that understands
+  /// claims simply never sees one.
+  int? _progressClaim(Tracker tracker, TrackerContext ctx) => null;
 
   Future<void> _enqueueWrites(
     Tracker tracker,
@@ -984,49 +868,27 @@ class TrackerCoordinator {
   /// caller (screen teardown, app shutdown) moves on.
   Future<void> _settleScrobbles() => Future.wait(_channels.map((channel) => channel.settle()));
 
-  Future<TrackerContext?> _buildContext(
-    MediaItem metadata,
-    TrackerIdResolver resolver, {
-    bool includeAnimeProgress = true,
-    bool includeCurrentEpisode = true,
-    bool fallbackToAnimeEpisodeNumber = true,
-  }) async {
+  Future<TrackerContext?> _buildContext(MediaItem metadata, TrackerIdResolver resolver) async {
     final libraryKey = metadata.libraryGlobalKey;
 
     if (metadata.kind == MediaKind.movie) {
       final ids = await resolver.resolveForMovie(metadata.id);
       if (ids == null) return null;
-      return TrackerContext.movie(
-        external: ids.external,
-        anime: ids.anime,
-        ratingKey: metadata.id,
-        libraryGlobalKey: libraryKey,
-      );
+      return TrackerContext.movie(external: ids.external, ratingKey: metadata.id, libraryGlobalKey: libraryKey);
     }
 
     final season = metadata.parentIndex;
     final number = metadata.index;
     if (season == null || number == null) return null;
 
-    final ids = await resolver.resolveShowForEpisode(
-      metadata,
-      includeAnimeProgress: includeAnimeProgress,
-      includeCurrentEpisode: includeCurrentEpisode,
-    );
+    final ids = await resolver.resolveShowForEpisode(metadata);
     if (ids == null) return null;
-    final animeProgress = includeAnimeProgress
-        ? ids.animeProgress ?? (fallbackToAnimeEpisodeNumber ? ids.animeEpisodeNumber : null)
-        : fallbackToAnimeEpisodeNumber
-        ? ids.animeEpisodeNumber
-        : null;
     return TrackerContext.episode(
       external: ids.external,
-      anime: ids.anime,
       ratingKey: metadata.id,
       libraryGlobalKey: libraryKey,
       season: season,
       episodeNumber: number,
-      animeProgress: animeProgress,
     );
   }
 }
@@ -1167,41 +1029,6 @@ class _PlaybackTarget {
     _lastState = state;
     _lastSentAt = now;
     if (state == TrackerScrobbleState.start) _sessionStarted = true;
-  }
-}
-
-/// Aggregates a container's episodes into the single progress value a
-/// series-progress tracker should end up with.
-class _ManualSeriesProgress {
-  final TrackerContext _base;
-  final bool _fallbackToCount;
-  int _count = 0;
-  int? _maxMappedProgress;
-
-  _ManualSeriesProgress(this._base, {required this._fallbackToCount});
-
-  void add(TrackerContext ctx) {
-    _count++;
-    final mapped = ctx.animeProgress;
-    if (mapped != null && (_maxMappedProgress == null || mapped > _maxMappedProgress!)) {
-      _maxMappedProgress = mapped;
-    }
-  }
-
-  int? get progress => _maxMappedProgress ?? (_fallbackToCount ? _count : null);
-
-  TrackerContext? get context {
-    final progress = this.progress;
-    if (progress == null) return null;
-    return TrackerContext.episode(
-      external: _base.external,
-      anime: _base.anime,
-      ratingKey: _base.ratingKey,
-      libraryGlobalKey: _base.libraryGlobalKey,
-      season: _base.season!,
-      episodeNumber: progress,
-      animeProgress: progress,
-    );
   }
 }
 

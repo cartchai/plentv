@@ -12,11 +12,9 @@ import 'tracker_constants.dart';
 /// Transport shared by the tracker clients: builds, times and logs a request,
 /// then hands back the raw response.
 ///
-/// Status handling stays with each client because the rules genuinely differ:
-/// MAL and Simkl accept any 2xx, Trakt a per-call set (200/201/204, plus 409
-/// for scrobble), AniList only 200 (GraphQL errors ride a 200 body); and a 401
-/// means refresh-and-retry for Trakt/MAL/MDBList and Simkl AUTH V2 sessions
-/// but a terminal session for AniList and legacy Simkl AUTH V1 sessions.
+/// Status handling stays with each client because the rules genuinely differ
+/// per service; MDBList accepts 200/201/204, and a 401 means refresh-and-retry
+/// for its sessions.
 class TrackerHttpClient {
   static const Set<String> allMethods = {'GET', 'POST', 'PATCH', 'PUT', 'DELETE'};
 

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plezy/models/companion_remote/remote_command.dart';
 import 'package:plezy/models/mpv_config_models.dart';
-import 'package:plezy/models/trakt/trakt_ids.dart';
+import 'package:plezy/models/catalog/catalog_item.dart';
 import 'package:plezy/watch_together/services/recent_rooms_service.dart';
 
 void main() {
@@ -18,14 +18,13 @@ void main() {
       expect(decoded.createdAt, createdAt);
     });
 
-    test('TraktIds omits null fields and accepts numeric ids', () {
-      const ids = TraktIds(imdb: 'tt123', tmdb: 42);
+    test('CatalogItemIds omits null fields on round trip', () {
+      const ids = CatalogItemIds(imdb: 'tt123', tmdb: 42);
 
       expect(ids.toJson(), {'imdb': 'tt123', 'tmdb': 42});
 
-      final decoded = TraktIds.fromJson({'trakt': 1.0, 'slug': 'movie', 'tmdb': 42.0, 'tvdb': 9});
-      expect(decoded.trakt, 1);
-      expect(decoded.slug, 'movie');
+      final decoded = CatalogItemIds.fromJson({'imdb': 'tt123', 'tmdb': 42, 'tvdb': 9});
+      expect(decoded.imdb, 'tt123');
       expect(decoded.tmdb, 42);
       expect(decoded.tvdb, 9);
       expect(decoded.hasAny, isTrue);

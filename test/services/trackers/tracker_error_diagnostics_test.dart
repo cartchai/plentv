@@ -4,18 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:plezy/models/trackers/device_code.dart';
-import 'package:plezy/services/trackers/anilist/anilist_auth_service.dart';
-import 'package:plezy/services/trackers/anilist/anilist_client.dart';
-import 'package:plezy/services/trackers/mal/mal_auth_service.dart';
-import 'package:plezy/services/trackers/mal/mal_client.dart';
-import 'package:plezy/services/trackers/simkl/simkl_auth_service.dart';
-import 'package:plezy/services/trackers/simkl/simkl_client.dart';
+import 'package:plezy/services/trackers/mdblist/mdblist_auth_service.dart';
+import 'package:plezy/services/trackers/mdblist/mdblist_client.dart';
 import 'package:plezy/services/trackers/tracker_connect_runner.dart';
 import 'package:plezy/services/trackers/tracker_exceptions.dart';
 import 'package:plezy/services/trackers/tracker_constants.dart';
 import 'package:plezy/services/trackers/tracker_session.dart';
-import 'package:plezy/services/trackers/trakt/trakt_auth_service.dart';
-import 'package:plezy/services/trackers/trakt/trakt_client.dart';
 import 'package:plezy/utils/app_logger.dart';
 import 'package:plezy/utils/log_redaction_manager.dart';
 
@@ -105,78 +99,22 @@ void main() {
   });
 
   group('tracker API diagnostics', () {
-    test('rejected Trakt, MAL, Simkl, and AniList bodies never reach the real connect catch', () async {
-      final cases = <({String service, Future<void> Function() run, void Function() dispose})>[];
-
-      final trakt = TraktClient(
+    test('rejected MDBList bodies never reach the real connect catch', () async {
+      final client = MdblistClient(
         _session(),
         onSessionInvalidated: () {},
         httpClient: MockClient((_) async => http.Response(_rejectedBody, 503)),
-      );
-      cases.add((service: 'trakt', run: () async => trakt.getUserSettings(), dispose: trakt.dispose));
-
-      final mal = MalClient(
-        _session(),
-        onSessionInvalidated: () {},
-        httpClient: MockClient((_) async => http.Response(_rejectedBody, 503)),
-        authService: MalAuthService(
-          httpClient: MockClient((_) async => fail('unused MAL auth client')),
-        ),
-      );
-      cases.add((service: 'mal', run: () async => mal.getMyUser(), dispose: mal.dispose));
-
-      final simkl = SimklClient(
-        _session(),
-        onSessionInvalidated: () {},
-        httpClient: MockClient((_) async => http.Response(_rejectedBody, 503)),
-      );
-      cases.add((service: 'simkl', run: () async => simkl.getUserSettings(), dispose: simkl.dispose));
-
-      final anilist = AnilistClient(
-        _session(),
-        onSessionInvalidated: () {},
-        httpClient: MockClient((_) async => http.Response(_rejectedBody, 503)),
-      );
-      cases.add((service: 'anilist', run: () async => anilist.getViewerName(), dispose: anilist.dispose));
-
-      try {
-        for (final testCase in cases) {
-          MemoryLogOutput.clearLogs();
-          expect(await _runThroughConnect(testCase.run, label: testCase.service), isFalse);
-          _expectNoCanaries(
-            expectedText: ['${testCase.service} connect failed', 'TrackerApiException(${testCase.service}, HTTP 503)'],
-          );
-        }
-      } finally {
-        for (final testCase in cases) {
-          testCase.dispose();
-        }
-      }
-    });
-
-    test('AniList GraphQL errors use a fixed HTTP-200 category', () async {
-      final client = AnilistClient(
-        _session(),
-        onSessionInvalidated: () {},
-        httpClient: MockClient(
-          (_) async => http.Response(
-            json.encode({
-              'errors': [json.decode(_rejectedBody)],
-            }),
-            200,
-          ),
-        ),
       );
       addTearDown(client.dispose);
 
-      expect(await _runThroughConnect(() async => client.getViewerName(), label: 'anilist'), isFalse);
-
+      expect(await _runThroughConnect(() async => client.getUser(), label: 'mdblist'), isFalse);
       _expectNoCanaries(
-        expectedText: ['anilist connect failed', 'TrackerApiException(anilist, HTTP 200, graphqlErrors)'],
+        expectedText: ['mdblist connect failed', 'TrackerApiException(mdblist, HTTP 503)'],
       );
     });
-    test('Trakt rate-limit metadata remains typed and body-free', () async {
-      final client = TraktClient(
+
+    test('MDBList rate-limit metadata remains typed and body-free', () async {
+      final client = MdblistClient(
         _session(),
         onSessionInvalidated: () {},
         httpClient: MockClient((_) async => http.Response(_rejectedBody, 429, headers: {'retry-after': '23'})),
@@ -185,41 +123,24 @@ void main() {
 
       TrackerRateLimitException? thrown;
       try {
-        await client.getUserSettings();
+        await client.getUser();
       } on TrackerRateLimitException catch (error) {
         thrown = error;
       }
       expect(thrown, isNotNull);
-      expect(thrown!.service, TrackerService.trakt);
+      expect(thrown!.service, TrackerService.mdblist);
       expect(thrown.retryAfterSeconds, 23);
 
       MemoryLogOutput.clearLogs();
-      expect(await _runThroughConnect(() async => client.getUserSettings(), label: 'trakt'), isFalse);
-      _expectNoCanaries(expectedText: ['TrackerRateLimitException(trakt, retry-after: 23 s)']);
-    });
-
-    test('Simkl refusals stay typed and body-free', () async {
-      final client = SimklClient(
-        _session(),
-        onSessionInvalidated: () {},
-        httpClient: MockClient((_) async => http.Response(_rejectedBody, 429, headers: {'retry-after': '23'})),
-      );
-      addTearDown(client.dispose);
-
-      expect(await _runThroughConnect(() async => client.getUserSettings(), label: 'simkl'), isFalse);
-      _expectNoCanaries(
-        expectedText: [
-          'Simkl: refused (HTTP 429, rate limit); holding requests for 23s',
-          'TrackerRateLimitException(simkl, retry-after: 23 s)',
-        ],
-      );
+      expect(await _runThroughConnect(() async => client.getUser(), label: 'mdblist'), isFalse);
+      _expectNoCanaries(expectedText: ['TrackerRateLimitException(mdblist, retry-after: 23 s)']);
     });
   });
 
   group('auth diagnostics', () {
     for (final status in [400, 503]) {
-      test('MAL refresh HTTP $status preserves classification without retaining its body', () async {
-        final service = MalAuthService(
+      test('MDBList refresh HTTP $status preserves classification without retaining its body', () async {
+        final service = MdblistAuthService(
           httpClient: MockClient((_) async => http.Response(_rejectedBody, status)),
         );
         addTearDown(service.dispose);
@@ -234,46 +155,46 @@ void main() {
         expect(thrown, isNotNull);
         expect(thrown!.statusCode, status);
         expect(thrown.isPermanent, status == 400);
-        _expectNoCanaries(expectedText: ['MAL: refresh failed (HTTP $status)']);
+        _expectNoCanaries(expectedText: ['MDBList: refresh failed (HTTP $status)']);
       });
     }
 
-    test('Trakt and Simkl code-creation errors retain only local operation and status', () async {
-      final trakt = TraktAuthService(httpClient: MockClient((_) async => http.Response(_rejectedBody, 502)));
-      final simkl = SimklAuthService(httpClient: MockClient((_) async => http.Response(_rejectedBody, 503)));
-      addTearDown(trakt.dispose);
-      addTearDown(simkl.dispose);
+    test('MDBList code-creation errors retain only local operation and status', () async {
+      final service = MdblistAuthService(
+        httpClient: MockClient((_) async => http.Response(_rejectedBody, 502)),
+      );
+      addTearDown(service.dispose);
 
-      expect(await _runThroughConnect(() async => trakt.createDeviceCode(), label: 'trakt'), isFalse);
-      expect(await _runThroughConnect(() async => simkl.createDeviceCode(), label: 'simkl'), isFalse);
+      expect(await _runThroughConnect(() async => service.createDeviceCode(), label: 'mdblist'), isFalse);
 
       _expectNoCanaries(
-        expectedText: [
-          'DeviceCodeAuthFlowException: Trakt device code request failed: HTTP 502',
-          'DeviceCodeAuthFlowException: Simkl device code request failed: HTTP 503',
-        ],
+        expectedText: ['DeviceCodeAuthFlowException: MDBList device code request failed: HTTP 502'],
       );
     });
 
-    test('Trakt unexpected poll status remains pending with fixed status diagnostics', () async {
-      final service = TraktAuthService(httpClient: MockClient((_) async => http.Response(_rejectedBody, 451)));
+    test('MDBList unexpected poll response remains pending with fixed status diagnostics', () async {
+      final service = MdblistAuthService(
+        httpClient: MockClient((_) async => http.Response(_rejectedBody, 451)),
+      );
       addTearDown(service.dispose);
 
       expect(await service.probe(_deviceCode), isA<DevicePollPending>());
 
-      _expectNoCanaries(expectedText: ['Trakt device-code unexpected HTTP 451']);
+      _expectNoCanaries(expectedText: ['MDBList device-code unexpected response (HTTP 451, error=null)']);
     });
-    test('Trakt device poll status mapping remains unchanged', () async {
+
+    test('MDBList device poll error mapping remains unchanged', () async {
+      // Unlike Trakt, MDBList reports poll state in the JSON body, so the
+      // mapping switches on `error`, not the status code.
       for (final testCase in <({int status, String body, Matcher matcher})>[
         (status: 200, body: json.encode({'access_token': 'local-token'}), matcher: isA<DevicePollSuccess>()),
-        (status: 400, body: _rejectedBody, matcher: isA<DevicePollPending>()),
-        (status: 404, body: _rejectedBody, matcher: isA<DevicePollExpired>()),
-        (status: 410, body: _rejectedBody, matcher: isA<DevicePollExpired>()),
-        (status: 409, body: _rejectedBody, matcher: isA<DevicePollDenied>()),
-        (status: 418, body: _rejectedBody, matcher: isA<DevicePollDenied>()),
-        (status: 429, body: _rejectedBody, matcher: isA<DevicePollSlowDown>()),
+        (status: 400, body: json.encode({'error': 'authorization_pending'}), matcher: isA<DevicePollPending>()),
+        (status: 400, body: json.encode({'error': 'slow_down'}), matcher: isA<DevicePollSlowDown>()),
+        (status: 400, body: json.encode({'error': 'access_denied'}), matcher: isA<DevicePollDenied>()),
+        (status: 400, body: json.encode({'error': 'expired_token'}), matcher: isA<DevicePollExpired>()),
+        (status: 400, body: json.encode({'error': 'device_not_found'}), matcher: isA<DevicePollExpired>()),
       ]) {
-        final service = TraktAuthService(
+        final service = MdblistAuthService(
           httpClient: MockClient((_) async => http.Response(testCase.body, testCase.status)),
         );
         try {
@@ -283,56 +204,6 @@ void main() {
         }
       }
       _expectNoCanaries(expectedText: const []);
-    });
-  });
-
-  group('direct OAuth diagnostics', () {
-    test('exchange rejected bodies are status-only through the real connect catch', () async {
-      final mal = MalAuthService(
-        httpClient: MockClient((_) async => http.Response(_rejectedBody, 502)),
-      );
-      addTearDown(mal.dispose);
-      final anilist = AnilistAuthService(
-        httpClient: MockClient((_) async => http.Response(_rejectedBody, 503)),
-      );
-      addTearDown(anilist.dispose);
-
-      expect(
-        await _runThroughConnect(
-          () async => mal.exchangeCode(code: 'local-code', codeVerifier: 'local-verifier'),
-          label: 'mal',
-        ),
-        isFalse,
-      );
-      expect(
-        await _runThroughConnect(() async => anilist.exchangeCode(code: 'local-code'), label: 'anilist'),
-        isFalse,
-      );
-
-      _expectNoCanaries(
-        expectedText: [
-          'TrackerAuthException(mal): MAL sign-in failed: HTTP 502',
-          'TrackerAuthException(anilist): AniList sign-in failed: HTTP 503',
-        ],
-      );
-    });
-
-    test('a wrong or expired code is a plain 400, never permanent', () async {
-      final mal = MalAuthService(
-        httpClient: MockClient((_) async => http.Response(json.encode({'error': 'invalid_grant'}), 400)),
-      );
-      addTearDown(mal.dispose);
-
-      TrackerAuthException? thrown;
-      try {
-        await mal.exchangeCode(code: 'stale-code', codeVerifier: 'local-verifier');
-      } on TrackerAuthException catch (error) {
-        thrown = error;
-      }
-      expect(thrown, isNotNull);
-      expect(thrown!.statusCode, 400);
-      expect(thrown.isPermanent, isFalse);
-      expect(thrown.message, contains('HTTP 400'));
     });
   });
 }

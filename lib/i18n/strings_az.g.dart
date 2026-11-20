@@ -89,7 +89,6 @@ class TranslationsAz extends Translations with BaseTranslations<AppLocale, Trans
 	@override late final _Translations$metadataEdit$az metadataEdit = _Translations$metadataEdit$az._(_root);
 	@override late final _Translations$matchScreen$az matchScreen = _Translations$matchScreen$az._(_root);
 	@override late final _Translations$serverTasks$az serverTasks = _Translations$serverTasks$az._(_root);
-	@override late final _Translations$trakt$az trakt = _Translations$trakt$az._(_root);
 	@override late final _Translations$seerr$az seerr = _Translations$seerr$az._(_root);
 	@override late final _Translations$services$az services = _Translations$services$az._(_root);
 	@override late final _Translations$addServer$az addServer = _Translations$addServer$az._(_root);
@@ -485,7 +484,6 @@ class _Translations$settings$az extends Translations$settings$en {
 	@override String get discordRichPresence => 'Discord Rich Presence';
 	@override String get discordRichPresenceDescription => 'Discord-da nəyə baxdığınızı göstərin';
 	@override String get services => 'Xidmətlər';
-	@override String get servicesDescription => 'Trakt, MyAnimeList, Seerr və daha çoxunu qoşun';
 	@override String get manageLibrariesDescription => 'Kitabxanaları yenidən sıralayın və gizlədin';
 	@override String get companionRemoteServer => 'Köməkçi pult serveri';
 	@override String get companionRemoteServerDescription => 'Şəbəkənizdəki mobil cihazların bu tətbiqi idarə etməsinə icazə verin';
@@ -1502,7 +1500,6 @@ class _Translations$startup$az extends Translations$startup$en {
 	@override String get repairBodyOneCredential => 'Bir saxlanmış daxil olma məlumatı zədələnib və oxuna bilmir. Təmir yalnız onu silir; digər tənzimləmələrinizə toxunulmur.';
 	@override String get repairBodySignInsKept => 'Serverləriniz və profilləriniz daxil olmuş vəziyyətdə qalmalıdır.';
 	@override String get repairBodySignInsLost => 'Saxlanmış daxil olmalarınızı qoruyan açar bu fayldan bərpa edilə bilmir, ona görə də hər serverə və profilə yenidən daxil olmalı olacaqsınız. Media serverinizdə heç nəyə təsir olunmur.';
-	@override String get repairBodySessionsUncertain => 'İzləyicilər (MAL, AniList, Simkl, Trakt) və Seerr ayrıca saxlanılır və qalıb-qalmayacaqları bəlli deyil. PlezTV sizə nəyi saxladığını dəqiq bildirəcək.';
 	@override String get repairConfirm => 'Təmir et';
 	@override String get repairSucceeded => 'Yaddaş təmir edildi';
 	@override String get repairNeedsRestart => 'Yaddaş təmir edildi — yenidən başlatma tələb olunur';
@@ -1561,7 +1558,6 @@ class _Translations$explore$az extends Translations$explore$en {
 		other: '${n} seriya',
 	);
 	@override String get cast => 'Aktyorlar';
-	@override String get characters => 'Personajlar';
 	@override String get addToWatchlist => 'İzləmə siyahısına əlavə et';
 	@override String get removeFromWatchlist => 'İzləmə siyahısından sil';
 	@override String get addedToWatchlist => 'Baxış siyahısına əlavə edildi';
@@ -2300,24 +2296,6 @@ class _Translations$serverTasks$az extends Translations$serverTasks$en {
 	@override String get noTasks => 'İcra olunan tapşırıq yoxdur';
 }
 
-// Path: trakt
-class _Translations$trakt$az extends Translations$trakt$en {
-	_Translations$trakt$az._(TranslationsAz root) : this._root = root, super.internal(root);
-
-	final TranslationsAz _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Trakt';
-	@override String get connected => 'Qoşuldu';
-	@override String connectedAs({required Object username}) => '@${username} olaraq qoşuldu';
-	@override String get disconnectConfirm => 'Trakt hesabı ayırılsın?';
-	@override String get disconnectConfirmBody => 'PlezTV Trakt-a məlumat göndərməyi dayandıracaq.';
-	@override String get scrobble => 'Real vaxt rejimində izləmə';
-	@override String get scrobbleDescription => 'Oynatma zamanı Trakt-a məlumat göndər.';
-	@override String get watchedSync => 'Baxış statusunu eyniləşdir';
-	@override String get watchedSyncDescription => 'PlezTV-də baxıldı işarələdikdə Trakt-da da işarələnsin.';
-}
-
 // Path: seerr
 class _Translations$seerr$az extends Translations$seerr$en {
 	_Translations$seerr$az._(TranslationsAz root) : this._root = root, super.internal(root);
@@ -2395,7 +2373,6 @@ class _Translations$services$az extends Translations$services$en {
 	@override String disconnectConfirmBody({required Object service}) => 'PlezTV ${service} yeniləməyi dayandıracaq. İstənilən vaxt yenidən qoşula bilərsiniz.';
 	@override String connectFailed({required Object service}) => '${service} qoşula bilmədi. Təzədən cəhd edin.';
 	@override late final _Translations$services$names$az names = _Translations$services$names$az._(_root);
-	@override late final _Translations$services$simklReconnect$az simklReconnect = _Translations$services$simklReconnect$az._(_root);
 	@override late final _Translations$services$deviceCode$az deviceCode = _Translations$services$deviceCode$az._(_root);
 	@override late final _Translations$services$pendingAuth$az pendingAuth = _Translations$services$pendingAuth$az._(_root);
 	@override late final _Translations$services$libraryFilter$az libraryFilter = _Translations$services$libraryFilter$az._(_root);
@@ -2501,10 +2478,6 @@ class _Translations$common$ratingSource$az extends Translations$common$ratingSou
 	@override String get imdb => 'IMDb';
 	@override String get tmdb => 'TMDB';
 	@override String get rottenTomatoes => 'Rotten Tomatoes';
-	@override String get simkl => 'Simkl';
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get trakt => 'Trakt';
 	@override String get rottenTomatoesCritic => 'Rotten Tomatoes tənqidçiləri';
 	@override String get rottenTomatoesAudience => 'Rotten Tomatoes tamaşaçıları';
 	@override String get metacritic => 'Metacritic';
@@ -3311,22 +3284,8 @@ class _Translations$services$names$az extends Translations$services$names$en {
 	final TranslationsAz _root; // ignore: unused_field
 
 	// Translations
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get simkl => 'Simkl';
 	@override String get seerr => 'Seerr';
 	@override String get mdblist => 'MDBList';
-}
-
-// Path: services.simklReconnect
-class _Translations$services$simklReconnect$az extends Translations$services$simklReconnect$en {
-	_Translations$services$simklReconnect$az._(TranslationsAz root) : this._root = root, super.internal(root);
-
-	final TranslationsAz _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Simkl-ə yenidən qoşul';
-	@override String get subtitle => 'Simkl bu bağlantının istifadə etdiyi daxil olma üsulunu ləğv edir. Yenidən qoşulduqda PlezTV-ni təsdiqləmək üçün simkl.com açılır — PlezTV parolunuzu heç vaxt görmür. Baxış tarixçəniz Simkl-də qalır.';
 }
 
 // Path: services.deviceCode
@@ -3484,10 +3443,6 @@ extension on TranslationsAz {
 			'common.ratingSource.imdb' => 'IMDb',
 			'common.ratingSource.tmdb' => 'TMDB',
 			'common.ratingSource.rottenTomatoes' => 'Rotten Tomatoes',
-			'common.ratingSource.simkl' => 'Simkl',
-			'common.ratingSource.mal' => 'MyAnimeList',
-			'common.ratingSource.anilist' => 'AniList',
-			'common.ratingSource.trakt' => 'Trakt',
 			'common.ratingSource.rottenTomatoesCritic' => 'Rotten Tomatoes tənqidçiləri',
 			'common.ratingSource.rottenTomatoesAudience' => 'Rotten Tomatoes tamaşaçıları',
 			'common.ratingSource.metacritic' => 'Metacritic',
@@ -3754,7 +3709,6 @@ extension on TranslationsAz {
 			'settings.discordRichPresence' => 'Discord Rich Presence',
 			'settings.discordRichPresenceDescription' => 'Discord-da nəyə baxdığınızı göstərin',
 			'settings.services' => 'Xidmətlər',
-			'settings.servicesDescription' => 'Trakt, MyAnimeList, Seerr və daha çoxunu qoşun',
 			'settings.manageLibrariesDescription' => 'Kitabxanaları yenidən sıralayın və gizlədin',
 			'settings.companionRemoteServer' => 'Köməkçi pult serveri',
 			'settings.companionRemoteServerDescription' => 'Şəbəkənizdəki mobil cihazların bu tətbiqi idarə etməsinə icazə verin',
@@ -3896,13 +3850,13 @@ extension on TranslationsAz {
 			'themeEditor.slots.textMuted' => 'Köməkçi mətn',
 			'themeEditor.slots.accent' => 'Vurğu',
 			'themeEditor.opacity' => 'Şəffaflıq',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.hexHint' => '#RRGGBB və ya #AARRGGBB',
 			'themeEditor.fromOtherThemes' => 'Digər mövzulardan',
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme}: ${color}',
 			'themeEditor.contrast.textOnBg' => 'Arxa fonda mətn',
 			'themeEditor.contrast.textOnSurface' => 'Səthdə mətn',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Arxa fonda köməkçi mətn',
 			'themeEditor.contrast.textMutedOnSurface' => 'Səthdə köməkçi mətn',
 			'themeEditor.contrast.accentOnBg' => 'Arxa fonda vurğu',
@@ -4410,13 +4364,13 @@ extension on TranslationsAz {
 			'profiles.tokenIdentityMismatch' => 'Plex profil tokeni gözlənilməyən serveri müəyyən etdi',
 			'connections.sectionTitle' => 'Qoşulmalar',
 			'connections.addConnection' => 'Qoşulma əlavə et',
-			_ => null,
-		} ?? switch (path) {
 			'connections.addConnectionSubtitleNoProfile' => 'Plex ilə daxil olun və ya Jellyfin yaxud Emby serverinə qoşulun',
 			'connections.addConnectionSubtitleScoped' => ({required Object displayName}) => '${displayName} profilinə əlavə et: Plex, Jellyfin, Emby və ya başqa profil qoşulması',
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name} üçün seansın vaxtı bitdi',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} server üçün seansın vaxtı bitdi',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} bu hesaba girişi rədd etdi',
+			_ => null,
+		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} server bu hesaba girişi rədd etdi',
 			'connections.signInAgain' => 'Yenidən daxil ol',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} qoşulmasını düzəliş et',
@@ -4670,7 +4624,6 @@ extension on TranslationsAz {
 			'startup.repairBodyOneCredential' => 'Bir saxlanmış daxil olma məlumatı zədələnib və oxuna bilmir. Təmir yalnız onu silir; digər tənzimləmələrinizə toxunulmur.',
 			'startup.repairBodySignInsKept' => 'Serverləriniz və profilləriniz daxil olmuş vəziyyətdə qalmalıdır.',
 			'startup.repairBodySignInsLost' => 'Saxlanmış daxil olmalarınızı qoruyan açar bu fayldan bərpa edilə bilmir, ona görə də hər serverə və profilə yenidən daxil olmalı olacaqsınız. Media serverinizdə heç nəyə təsir olunmur.',
-			'startup.repairBodySessionsUncertain' => 'İzləyicilər (MAL, AniList, Simkl, Trakt) və Seerr ayrıca saxlanılır və qalıb-qalmayacaqları bəlli deyil. PlezTV sizə nəyi saxladığını dəqiq bildirəcək.',
 			'startup.repairConfirm' => 'Təmir et',
 			'startup.repairSucceeded' => 'Yaddaş təmir edildi',
 			'startup.repairNeedsRestart' => 'Yaddaş təmir edildi — yenidən başlatma tələb olunur',
@@ -4715,7 +4668,6 @@ extension on TranslationsAz {
 			'explore.status.upcoming' => 'Gələcək',
 			'explore.episodeCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('az'))(n, one: '${n} seriya', other: '${n} seriya', ), 
 			'explore.cast' => 'Aktyorlar',
-			'explore.characters' => 'Personajlar',
 			'explore.addToWatchlist' => 'İzləmə siyahısına əlavə et',
 			'explore.removeFromWatchlist' => 'İzləmə siyahısından sil',
 			'explore.addedToWatchlist' => 'Baxış siyahısına əlavə edildi',
@@ -4924,8 +4876,6 @@ extension on TranslationsAz {
 			'liveTv.recordSettings.skipInLibrary' => 'Kitabxanada artıq olan epizodları ötür',
 			'liveTv.recordSettings.keepUpTo' => 'Saxlanılacaq epizodlar',
 			'liveTv.recordSettings.keepUpToHint' => '0 bütün epizodları saxlayır',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => '${minutes} dəq sonra başlayır',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day}, saat ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => '${product} etibarsız Canlı TV oynatma məlumatı qaytardı',
@@ -4933,6 +4883,8 @@ extension on TranslationsAz {
 			'liveTv.failedToBuildStreamUrl' => 'Yayım URL-i yaratmaq olmadı',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Kanal başladıla bilmədi: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Kanal dəyişdirilə bilmədi: ${reason}',
+			_ => null,
+		} ?? switch (path) {
 			'collections.title' => 'Kolleksiyalar',
 			'collections.collection' => 'Kolleksiya',
 			'collections.empty' => 'Kolleksiya boşdur',
@@ -5438,8 +5390,6 @@ extension on TranslationsAz {
 			'performanceOverlay.decoderExynosHw' => 'Exynos HW',
 			'performanceOverlay.decoderSoftware' => 'Proqram təminatı',
 			'performanceOverlay.decoderHardware' => 'Aparat təminatı',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.tunnelingActive' => 'Aktiv',
 			'performanceOverlay.dvRpuFailed' => ({required Object converted, required Object failures}) => '${converted} (${failures} uğursuz)',
 			'externalPlayer.title' => 'Xarici oynadıcı',
@@ -5447,6 +5397,8 @@ extension on TranslationsAz {
 			'externalPlayer.useExternalPlayerDescription' => 'Videoları başqa tətbiqdə açın',
 			'externalPlayer.selectPlayer' => 'Oynadıcı seç',
 			'externalPlayer.customPlayers' => 'Xüsusi oynadıcılar',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Sistem defoltu',
 			'externalPlayer.addCustomPlayer' => 'Xüsusi oynadıcı əlavə et',
 			'externalPlayer.playerName' => 'Oynadıcı adı',
@@ -5548,15 +5500,6 @@ extension on TranslationsAz {
 			'serverTasks.title' => 'Server tapşırıqları',
 			'serverTasks.failedToLoad' => 'Tapşırıqlar yüklənə bilmədi',
 			'serverTasks.noTasks' => 'İcra olunan tapşırıq yoxdur',
-			'trakt.title' => 'Trakt',
-			'trakt.connected' => 'Qoşuldu',
-			'trakt.connectedAs' => ({required Object username}) => '@${username} olaraq qoşuldu',
-			'trakt.disconnectConfirm' => 'Trakt hesabı ayırılsın?',
-			'trakt.disconnectConfirmBody' => 'PlezTV Trakt-a məlumat göndərməyi dayandıracaq.',
-			'trakt.scrobble' => 'Real vaxt rejimində izləmə',
-			'trakt.scrobbleDescription' => 'Oynatma zamanı Trakt-a məlumat göndər.',
-			'trakt.watchedSync' => 'Baxış statusunu eyniləşdir',
-			'trakt.watchedSyncDescription' => 'PlezTV-də baxıldı işarələdikdə Trakt-da da işarələnsin.',
 			'seerr.title' => 'Seerr',
 			'seerr.connectTitle' => 'Seerr qoş',
 			'seerr.serverUrl' => 'Server URL-i',
@@ -5617,13 +5560,8 @@ extension on TranslationsAz {
 			'services.disconnectConfirm' => ({required Object service}) => '${service} ayırılsın?',
 			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV ${service} yeniləməyi dayandıracaq. İstənilən vaxt yenidən qoşula bilərsiniz.',
 			'services.connectFailed' => ({required Object service}) => '${service} qoşula bilmədi. Təzədən cəhd edin.',
-			'services.names.mal' => 'MyAnimeList',
-			'services.names.anilist' => 'AniList',
-			'services.names.simkl' => 'Simkl',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.simklReconnect.title' => 'Simkl-ə yenidən qoşul',
-			'services.simklReconnect.subtitle' => 'Simkl bu bağlantının istifadə etdiyi daxil olma üsulunu ləğv edir. Yenidən qoşulduqda PlezTV-ni təsdiqləmək üçün simkl.com açılır — PlezTV parolunuzu heç vaxt görmür. Baxış tarixçəniz Simkl-də qalır.',
 			'services.deviceCode.title' => ({required Object service}) => 'PlezTV-ni ${service} üzərində aktivləşdirin',
 			'services.deviceCode.instructions' => 'QR kodunu skan edin və ya aşağıdakı ünvana keçib bu kodu daxil edin:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => 'Aktivləşdirmək üçün ${service} açın',

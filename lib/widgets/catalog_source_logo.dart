@@ -9,18 +9,13 @@ import '../models/catalog/catalog_item.dart';
 /// scores on the ratings rows. The marks draw in `currentColor`.
 String catalogSourceLogoAsset(CatalogSourceId id) => switch (id) {
   CatalogSourceId.plex => 'assets/plex_chevron.svg',
-  CatalogSourceId.trakt => 'assets/trakt_circlemark.svg',
-  CatalogSourceId.mal => 'assets/mal_mark.svg',
-  CatalogSourceId.anilist => 'assets/anilist_mark.svg',
-  CatalogSourceId.simkl => 'assets/simkl_mark.svg',
   CatalogSourceId.seerr => 'assets/seerr_mark.svg',
   CatalogSourceId.mdblist => 'assets/mdblist_mark.svg',
 };
 
 /// Brand mark of a service, tinted with the ambient icon color. Uses
-/// [SvgTheme.currentColor] so SVGs with multiple explicit fills (AniList keeps
-/// its brand-blue L while the A follows the theme) render correctly alongside
-/// single-color wordmarks.
+/// [SvgTheme.currentColor] so SVGs with multiple explicit fills render
+/// correctly alongside single-color wordmarks.
 class CatalogSourceLogo extends StatelessWidget {
   final CatalogSourceId id;
   final double size;

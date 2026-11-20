@@ -110,10 +110,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Rotten Tomatoes critics",
       "rottenTomatoesAudience": "Rotten Tomatoes audience",
       "metacritic": "Metacritic",
@@ -438,7 +434,7 @@
     "discordRichPresence": "Discord Rich Presence",
     "discordRichPresenceDescription": "Show what you're watching on Discord",
     "services": "Services",
-    "servicesDescription": "Connect Trakt, MyAnimeList, Seerr, and more",
+    "servicesDescription": "Connect MDBList and Seerr",
     "manageLibrariesDescription": "Reorder and hide libraries",
     "companionRemoteServer": "Companion Remote Server",
     "companionRemoteServerDescription": "Allow mobile devices on your network to control this app",
@@ -1545,6 +1541,7 @@
       "A new 'Benchmark mode' switch in Settings, Logs records a fixed test run for measuring performance"
     ],
     "changelog2326": [
+      "Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show",
       "Removed: the anime title mappings are gone — the app no longer downloads anything from the creator's servers, and AniList and MyAnimeList entries no longer get extra IDs from that file",
       "Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can't drift apart again",
       "Fixed: opening Downloads no longer starts the same details refresh twice at once",
@@ -2046,7 +2043,7 @@
     "repairBodyOneCredential": "One saved sign-in is damaged and cannot be read. Repairing removes just that one; your other settings are left alone.",
     "repairBodySignInsKept": "Your servers and profiles should stay signed in.",
     "repairBodySignInsLost": "The key protecting your saved sign-ins cannot be recovered from this file, so you will have to sign in to every server and profile again. Nothing on your media server is affected.",
-    "repairBodySessionsUncertain": "Trackers (MAL, AniList, Simkl, Trakt) and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.",
+    "repairBodySessionsUncertain": "MDBList and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.",
     "repairConfirm": "Repair",
     "repairSucceeded": "Storage repaired",
     "repairNeedsRestart": "Storage repaired — restart required",
@@ -2107,7 +2104,6 @@
       "other": "${n} episodes"
     },
     "cast": "Cast",
-    "characters": "Characters",
     "addToWatchlist": "Add to Watchlist",
     "removeFromWatchlist": "Remove from Watchlist",
     "addedToWatchlist": "Added to watchlist",
@@ -3054,17 +3050,6 @@
     "failedToLoad": "Failed to load tasks",
     "noTasks": "No tasks running"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "Connected",
-    "connectedAs": "Connected as @${username}",
-    "disconnectConfirm": "Disconnect Trakt account?",
-    "disconnectConfirmBody": "PlezTV will stop sending events to Trakt. You can reconnect any time.",
-    "scrobble": "Real-time scrobbling",
-    "scrobbleDescription": "Send play, pause, and stop events to Trakt during playback.",
-    "watchedSync": "Sync watched status",
-    "watchedSyncDescription": "When you mark items as watched in PlezTV, they are also marked as watched on Trakt."
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "Connect Seerr",
@@ -3123,21 +3108,15 @@
     "integrations": "Integrations",
     "notConnected": "Not connected",
     "connectedAs": "Connected as @${username}",
+    "connected": "Connected",
     "scrobble": "Track progress automatically",
     "scrobbleDescription": "Update your list when you finish an episode or movie.",
     "disconnectConfirm": "Disconnect ${service}?",
     "disconnectConfirmBody": "PlezTV will stop updating ${service}. Reconnect any time.",
     "connectFailed": "Couldn't connect to ${service}. Try again.",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "Reconnect Simkl",
-      "subtitle": "Simkl is retiring the sign-in method this connection uses. Reconnecting opens simkl.com to approve PlezTV — PlezTV never sees your password. Your watch history stays on Simkl."
     },
     "deviceCode": {
       "title": "Activate PlezTV on ${service}",
@@ -3146,16 +3125,6 @@
       "copyCode": "Copy activation code",
       "waitingForAuthorization": "Waiting for authorization…",
       "codeCopied": "Code copied"
-    },
-    "directOAuth": {
-      "title": "Sign in to ${service}",
-      "body": "Sign in on the page that opens, then paste the code it shows you into the box below.",
-      "openToSignIn": "Open ${service} to sign in",
-      "codeLabel": "Code from ${service}",
-      "codeHint": "Paste the code, or the full sign-in link",
-      "submitLabel": "Continue",
-      "invalidCode": "That code doesn't look right — check it and try again.",
-      "notConfigured": "Sign-in for ${service} isn't set up in this build yet."
     },
     "pendingAuth": {
       "copyUrl": "Copy sign-in URL",

@@ -90,7 +90,6 @@ class TranslationsZhHant extends TranslationsZh with BaseTranslations<AppLocale,
 	@override late final _Translations$metadataEdit$zh_Hant metadataEdit = _Translations$metadataEdit$zh_Hant._(_root);
 	@override late final _Translations$matchScreen$zh_Hant matchScreen = _Translations$matchScreen$zh_Hant._(_root);
 	@override late final _Translations$serverTasks$zh_Hant serverTasks = _Translations$serverTasks$zh_Hant._(_root);
-	@override late final _Translations$trakt$zh_Hant trakt = _Translations$trakt$zh_Hant._(_root);
 	@override late final _Translations$seerr$zh_Hant seerr = _Translations$seerr$zh_Hant._(_root);
 	@override late final _Translations$services$zh_Hant services = _Translations$services$zh_Hant._(_root);
 	@override late final _Translations$addServer$zh_Hant addServer = _Translations$addServer$zh_Hant._(_root);
@@ -486,7 +485,6 @@ class _Translations$settings$zh_Hant extends Translations$settings$zh {
 	@override String get discordRichPresence => 'Discord 狀態整合（Rich Presence）';
 	@override String get discordRichPresenceDescription => '在 Discord 上顯示您正在觀看的內容';
 	@override String get services => '外部服務';
-	@override String get servicesDescription => '連結 Trakt、MyAnimeList、Seerr 等服務';
 	@override String get manageLibrariesDescription => '重新排序與隱藏媒體庫';
 	@override String get companionRemoteServer => '隨身遙控器伺服器';
 	@override String get companionRemoteServerDescription => '允許區域網路中的行動裝置控制此應用程式';
@@ -1498,7 +1496,6 @@ class _Translations$startup$zh_Hant extends Translations$startup$zh {
 	@override String get repairBodyOneCredential => '有一筆已儲存的登入資訊損壞且無法讀取。修復僅會移除該筆資訊，其他設定將保持不變。';
 	@override String get repairBodySignInsKept => '您的伺服器與使用者設定檔應可保持登入狀態。';
 	@override String get repairBodySignInsLost => '保護已儲存登入資訊的金鑰無法從此檔案中復原，因此您必須重新登入每個伺服器與使用者設定檔。您媒體伺服器上的內容不受影響。';
-	@override String get repairBodySessionsUncertain => '追蹤服務（MAL、AniList、Simkl、Trakt）與 Seerr 分別儲存，可能保留也可能遺失。PlezTV 會明確告知保留了哪些項目。';
 	@override String get repairConfirm => '修復';
 	@override String get repairSucceeded => '儲存空間已修復';
 	@override String get repairNeedsRestart => '儲存空間已修復 — 需要重新啟動';
@@ -1556,7 +1553,6 @@ class _Translations$explore$zh_Hant extends Translations$explore$zh {
 		other: '${n} 集',
 	);
 	@override String get cast => '演員陣容';
-	@override String get characters => '角色';
 	@override String get addToWatchlist => '新增至待看清單';
 	@override String get removeFromWatchlist => '從待看清單移除';
 	@override String get addedToWatchlist => '已加入待看清單';
@@ -2291,24 +2287,6 @@ class _Translations$serverTasks$zh_Hant extends Translations$serverTasks$zh {
 	@override String get noTasks => '目前沒有執行中的工作';
 }
 
-// Path: trakt
-class _Translations$trakt$zh_Hant extends Translations$trakt$zh {
-	_Translations$trakt$zh_Hant._(TranslationsZhHant root) : this._root = root, super.internal(root);
-
-	final TranslationsZhHant _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Trakt';
-	@override String get connected => '已連線';
-	@override String connectedAs({required Object username}) => '已以 @${username} 身分連線';
-	@override String get disconnectConfirm => '中斷與 Trakt 帳戶的連結？';
-	@override String get disconnectConfirmBody => 'PlezTV 將停止向 Trakt 傳送事件。您可以隨時重新連線。';
-	@override String get scrobble => '即時同步記錄（Scrobble）';
-	@override String get scrobbleDescription => '在播放時向 Trakt 傳送播放、暫停和停止等狀態。';
-	@override String get watchedSync => '同步已觀看狀態';
-	@override String get watchedSyncDescription => '在 PlezTV 中將項目標記為已觀看時，也會在 Trakt 上標記為已觀看。';
-}
-
 // Path: seerr
 class _Translations$seerr$zh_Hant extends Translations$seerr$zh {
 	_Translations$seerr$zh_Hant._(TranslationsZhHant root) : this._root = root, super.internal(root);
@@ -2386,7 +2364,6 @@ class _Translations$services$zh_Hant extends Translations$services$zh {
 	@override String disconnectConfirmBody({required Object service}) => 'PlezTV 將停止更新 ${service}。您可以隨時重新連線。';
 	@override String connectFailed({required Object service}) => '無法連線至 ${service}。請重試。';
 	@override late final _Translations$services$names$zh_Hant names = _Translations$services$names$zh_Hant._(_root);
-	@override late final _Translations$services$simklReconnect$zh_Hant simklReconnect = _Translations$services$simklReconnect$zh_Hant._(_root);
 	@override late final _Translations$services$deviceCode$zh_Hant deviceCode = _Translations$services$deviceCode$zh_Hant._(_root);
 	@override late final _Translations$services$pendingAuth$zh_Hant pendingAuth = _Translations$services$pendingAuth$zh_Hant._(_root);
 	@override late final _Translations$services$libraryFilter$zh_Hant libraryFilter = _Translations$services$libraryFilter$zh_Hant._(_root);
@@ -2492,10 +2469,6 @@ class _Translations$common$ratingSource$zh_Hant extends Translations$common$rati
 	@override String get imdb => 'IMDb';
 	@override String get tmdb => 'TMDB';
 	@override String get rottenTomatoes => 'Rotten Tomatoes';
-	@override String get simkl => 'Simkl';
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get trakt => 'Trakt';
 	@override String get rottenTomatoesCritic => 'Rotten Tomatoes 影評人';
 	@override String get rottenTomatoesAudience => 'Rotten Tomatoes 觀眾';
 	@override String get metacritic => 'Metacritic';
@@ -3300,22 +3273,8 @@ class _Translations$services$names$zh_Hant extends Translations$services$names$z
 	final TranslationsZhHant _root; // ignore: unused_field
 
 	// Translations
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get simkl => 'Simkl';
 	@override String get seerr => 'Seerr';
 	@override String get mdblist => 'MDBList';
-}
-
-// Path: services.simklReconnect
-class _Translations$services$simklReconnect$zh_Hant extends Translations$services$simklReconnect$zh {
-	_Translations$services$simklReconnect$zh_Hant._(TranslationsZhHant root) : this._root = root, super.internal(root);
-
-	final TranslationsZhHant _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => '重新連線 Simkl';
-	@override String get subtitle => 'Simkl 即將停用此連線所使用的登入方式。重新連線會開啟 simkl.com 以核准 PlezTV — PlezTV 絕不會看到您的密碼。您的觀看紀錄仍會保留在 Simkl 上。';
 }
 
 // Path: services.deviceCode
@@ -3473,10 +3432,6 @@ extension on TranslationsZhHant {
 			'common.ratingSource.imdb' => 'IMDb',
 			'common.ratingSource.tmdb' => 'TMDB',
 			'common.ratingSource.rottenTomatoes' => 'Rotten Tomatoes',
-			'common.ratingSource.simkl' => 'Simkl',
-			'common.ratingSource.mal' => 'MyAnimeList',
-			'common.ratingSource.anilist' => 'AniList',
-			'common.ratingSource.trakt' => 'Trakt',
 			'common.ratingSource.rottenTomatoesCritic' => 'Rotten Tomatoes 影評人',
 			'common.ratingSource.rottenTomatoesAudience' => 'Rotten Tomatoes 觀眾',
 			'common.ratingSource.metacritic' => 'Metacritic',
@@ -3743,7 +3698,6 @@ extension on TranslationsZhHant {
 			'settings.discordRichPresence' => 'Discord 狀態整合（Rich Presence）',
 			'settings.discordRichPresenceDescription' => '在 Discord 上顯示您正在觀看的內容',
 			'settings.services' => '外部服務',
-			'settings.servicesDescription' => '連結 Trakt、MyAnimeList、Seerr 等服務',
 			'settings.manageLibrariesDescription' => '重新排序與隱藏媒體庫',
 			'settings.companionRemoteServer' => '隨身遙控器伺服器',
 			'settings.companionRemoteServerDescription' => '允許區域網路中的行動裝置控制此應用程式',
@@ -3885,13 +3839,13 @@ extension on TranslationsZhHant {
 			'themeEditor.slots.textMuted' => '次要文字',
 			'themeEditor.slots.accent' => '強調色',
 			'themeEditor.opacity' => '不透明度',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.hexHint' => '#RRGGBB 或 #AARRGGBB',
 			'themeEditor.fromOtherThemes' => '來自其他主題',
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme} ${color}',
 			'themeEditor.contrast.textOnBg' => '背景上的文字',
 			'themeEditor.contrast.textOnSurface' => '面板上的文字',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => '背景上的次要文字',
 			'themeEditor.contrast.textMutedOnSurface' => '面板上的次要文字',
 			'themeEditor.contrast.accentOnBg' => '背景上的強調色',
@@ -4399,13 +4353,13 @@ extension on TranslationsZhHant {
 			'profiles.tokenIdentityMismatch' => 'Plex 使用者設定檔權杖解析到非預期的伺服器',
 			'connections.sectionTitle' => '連線',
 			'connections.addConnection' => '新增連線',
-			_ => null,
-		} ?? switch (path) {
 			'connections.addConnectionSubtitleNoProfile' => '使用 Plex 登入或連線至 Jellyfin 或 Emby 伺服器',
 			'connections.addConnectionSubtitleScoped' => ({required Object displayName}) => '新增至 ${displayName}：Plex、Jellyfin、Emby 或其他設定檔連線',
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name} 的工作階段已過期',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} 個伺服器的工作階段已過期',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} 拒絕此帳戶存取',
+			_ => null,
+		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} 台伺服器拒絕此帳戶存取',
 			'connections.signInAgain' => '重新登入',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '編輯 ${product} 連線',
@@ -4659,7 +4613,6 @@ extension on TranslationsZhHant {
 			'startup.repairBodyOneCredential' => '有一筆已儲存的登入資訊損壞且無法讀取。修復僅會移除該筆資訊，其他設定將保持不變。',
 			'startup.repairBodySignInsKept' => '您的伺服器與使用者設定檔應可保持登入狀態。',
 			'startup.repairBodySignInsLost' => '保護已儲存登入資訊的金鑰無法從此檔案中復原，因此您必須重新登入每個伺服器與使用者設定檔。您媒體伺服器上的內容不受影響。',
-			'startup.repairBodySessionsUncertain' => '追蹤服務（MAL、AniList、Simkl、Trakt）與 Seerr 分別儲存，可能保留也可能遺失。PlezTV 會明確告知保留了哪些項目。',
 			'startup.repairConfirm' => '修復',
 			'startup.repairSucceeded' => '儲存空間已修復',
 			'startup.repairNeedsRestart' => '儲存空間已修復 — 需要重新啟動',
@@ -4704,7 +4657,6 @@ extension on TranslationsZhHant {
 			'explore.status.upcoming' => '即將上線',
 			'explore.episodeCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('zh'))(n, other: '${n} 集', ), 
 			'explore.cast' => '演員陣容',
-			'explore.characters' => '角色',
 			'explore.addToWatchlist' => '新增至待看清單',
 			'explore.removeFromWatchlist' => '從待看清單移除',
 			'explore.addedToWatchlist' => '已加入待看清單',
@@ -4913,8 +4865,6 @@ extension on TranslationsZhHant {
 			'liveTv.recordSettings.skipInLibrary' => '略過媒體庫中已有的劇集',
 			'liveTv.recordSettings.keepUpTo' => '要保留的劇集數',
 			'liveTv.recordSettings.keepUpToHint' => '0 表示保留所有劇集',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => '${minutes} 分鐘後開始',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day} ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => '${product} 傳回了無效的直播電視播放資料',
@@ -4922,6 +4872,8 @@ extension on TranslationsZhHant {
 			'liveTv.failedToBuildStreamUrl' => '無法建立串流 URL',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => '無法開始播放此頻道：${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => '無法切換頻道：${reason}',
+			_ => null,
+		} ?? switch (path) {
 			'collections.title' => '收藏集',
 			'collections.collection' => '收藏集',
 			'collections.empty' => '收藏集為空',
@@ -5427,8 +5379,6 @@ extension on TranslationsZhHant {
 			'performanceOverlay.decoderExynosHw' => 'Exynos 硬體',
 			'performanceOverlay.decoderSoftware' => '軟體',
 			'performanceOverlay.decoderHardware' => '硬體',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.tunnelingActive' => '已啟用',
 			'performanceOverlay.dvRpuFailed' => ({required Object converted, required Object failures}) => '${converted}（${failures} 個失敗）',
 			'externalPlayer.title' => '外部播放器',
@@ -5436,6 +5386,8 @@ extension on TranslationsZhHant {
 			'externalPlayer.useExternalPlayerDescription' => '在其他應用程式中開啟影片',
 			'externalPlayer.selectPlayer' => '選擇播放器',
 			'externalPlayer.customPlayers' => '自訂播放器',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.systemDefault' => '系統預設',
 			'externalPlayer.addCustomPlayer' => '新增自訂播放器',
 			'externalPlayer.playerName' => '播放器名稱',
@@ -5537,15 +5489,6 @@ extension on TranslationsZhHant {
 			'serverTasks.title' => '伺服器工作',
 			'serverTasks.failedToLoad' => '載入工作失敗',
 			'serverTasks.noTasks' => '目前沒有執行中的工作',
-			'trakt.title' => 'Trakt',
-			'trakt.connected' => '已連線',
-			'trakt.connectedAs' => ({required Object username}) => '已以 @${username} 身分連線',
-			'trakt.disconnectConfirm' => '中斷與 Trakt 帳戶的連結？',
-			'trakt.disconnectConfirmBody' => 'PlezTV 將停止向 Trakt 傳送事件。您可以隨時重新連線。',
-			'trakt.scrobble' => '即時同步記錄（Scrobble）',
-			'trakt.scrobbleDescription' => '在播放時向 Trakt 傳送播放、暫停和停止等狀態。',
-			'trakt.watchedSync' => '同步已觀看狀態',
-			'trakt.watchedSyncDescription' => '在 PlezTV 中將項目標記為已觀看時，也會在 Trakt 上標記為已觀看。',
 			'seerr.title' => 'Seerr',
 			'seerr.connectTitle' => '連線至 Seerr',
 			'seerr.serverUrl' => '伺服器 URL',
@@ -5606,13 +5549,8 @@ extension on TranslationsZhHant {
 			'services.disconnectConfirm' => ({required Object service}) => '中斷與 ${service} 的連線？',
 			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV 將停止更新 ${service}。您可以隨時重新連線。',
 			'services.connectFailed' => ({required Object service}) => '無法連線至 ${service}。請重試。',
-			'services.names.mal' => 'MyAnimeList',
-			'services.names.anilist' => 'AniList',
-			'services.names.simkl' => 'Simkl',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.simklReconnect.title' => '重新連線 Simkl',
-			'services.simklReconnect.subtitle' => 'Simkl 即將停用此連線所使用的登入方式。重新連線會開啟 simkl.com 以核准 PlezTV — PlezTV 絕不會看到您的密碼。您的觀看紀錄仍會保留在 Simkl 上。',
 			'services.deviceCode.title' => ({required Object service}) => '在 ${service} 啟用 PlezTV',
 			'services.deviceCode.instructions' => '掃描 QR 碼，或前往下方網址並輸入此代碼：',
 			'services.deviceCode.openToActivate' => ({required Object service}) => '開啟 ${service} 進行啟用',

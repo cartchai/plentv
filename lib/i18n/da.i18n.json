@@ -109,10 +109,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Rotten Tomatoes-anmeldere",
       "rottenTomatoesAudience": "Rotten Tomatoes-publikum",
       "metacritic": "Metacritic",
@@ -392,7 +388,6 @@
     "discordRichPresence": "Discord Rich Presence",
     "discordRichPresenceDescription": "Vis på Discord, hvad du ser",
     "services": "Tjenester",
-    "servicesDescription": "Forbind Trakt, MyAnimeList, Seerr og mere",
     "manageLibrariesDescription": "Omarranger og skjul biblioteker",
     "companionRemoteServer": "Fjernbetjeningsserver",
     "companionRemoteServerDescription": "Tillad mobilenheder på dit netværk at styre denne app",
@@ -1409,7 +1404,6 @@
     "repairBodyOneCredential": "Én gemt loginoplysning er beskadiget og kan ikke læses. Reparation fjerner kun den; dine andre indstillinger forbliver urørt.",
     "repairBodySignInsKept": "Dine servere og profiler bør forblive logget ind.",
     "repairBodySignInsLost": "Nøglen, der beskytter dine gemte loginoplysninger, kan ikke gendannes fra denne fil, så du skal logge ind på alle servere og profiler igen. Intet på din medieserver er påvirket.",
-    "repairBodySessionsUncertain": "Trackere (MAL, AniList, Simkl, Trakt) og Seerr gemmes separat, og det er uvist, om de overlever. PlezTV fortæller dig præcis, hvad det beholdt.",
     "repairConfirm": "Reparer",
     "repairSucceeded": "Lager repareret",
     "repairNeedsRestart": "Lager repareret — genstart påkrævet",
@@ -1467,7 +1461,6 @@
       "other": "${n} afsnit"
     },
     "cast": "Rollebesætning",
-    "characters": "Figurer",
     "addToWatchlist": "Føj til ønskeliste",
     "removeFromWatchlist": "Fjern fra ønskeliste",
     "addedToWatchlist": "Føjet til overvågningslisten",
@@ -2383,17 +2376,6 @@
     "failedToLoad": "Kunne ikke indlæse opgaver",
     "noTasks": "Ingen opgaver kører"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "Forbundet",
-    "connectedAs": "Forbundet som @${username}",
-    "disconnectConfirm": "Frakobl Trakt-konto?",
-    "disconnectConfirmBody": "PlezTV stopper med at sende hændelser til Trakt. Du kan tilslutte igen når som helst.",
-    "scrobble": "Realtids-scrobbling",
-    "scrobbleDescription": "Send afspil-, pause- og stop-begivenheder til Trakt under afspilning.",
-    "watchedSync": "Synkroniser set-status",
-    "watchedSyncDescription": "Når du markerer elementer som set i PlezTV, markeres de også på Trakt."
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "Forbind Seerr",
@@ -2458,15 +2440,8 @@
     "disconnectConfirmBody": "PlezTV stopper med at opdatere ${service}. Du kan altid oprette forbindelse igen.",
     "connectFailed": "Kunne ikke forbinde til ${service}. Prøv igen.",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "Genopret forbindelse til Simkl",
-      "subtitle": "Simkl udfaser den loginmetode, som denne forbindelse bruger. Når du genopretter forbindelsen, åbnes simkl.com, hvor du godkender PlezTV — PlezTV ser aldrig din adgangskode. Din visningshistorik forbliver på Simkl."
     },
     "deviceCode": {
       "title": "Aktiver PlezTV på ${service}",

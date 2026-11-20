@@ -158,11 +158,10 @@ class _FakeCatalogSourcesProvider extends CatalogSourcesProvider {
 
 Future<_FakeCatalogSourcesProvider> _pumpExplore(
   WidgetTester tester, {
-  int? traktItemId = 1,
-  int? malItemId = 2,
+  int? mdblistItemId = 1,
   bool? tv,
-  CatalogItem? traktItem,
-  int? traktTotalResults,
+  CatalogItem? mdblistItem,
+  int? mdblistTotalResults,
   CatalogHubStyle? plexHubStyle,
 }) async {
   if (tv != null) TvDetectionService.debugSetAppleTVOverride(tv);
@@ -171,33 +170,25 @@ Future<_FakeCatalogSourcesProvider> _pumpExplore(
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
 
-  final trakt = _FakeCatalogSource(
-    CatalogSourceId.trakt,
-    'Trakt',
-    traktItemId,
-    rowItem: traktItem,
-    rowTotalResults: traktTotalResults,
+  final mdblist = _FakeCatalogSource(
+    CatalogSourceId.mdblist,
+    'MDBList',
+    mdblistItemId,
+    rowItem: mdblistItem,
+    rowTotalResults: mdblistTotalResults,
   );
-  final mal = _FakeCatalogSource(CatalogSourceId.mal, 'MyAnimeList', malItemId);
-  final anilist = _FakeCatalogSource(CatalogSourceId.anilist, 'AniList', 3);
-  final simkl = _FakeCatalogSource(CatalogSourceId.simkl, 'Simkl', 4);
-  final mdblist = _FakeCatalogSource(CatalogSourceId.mdblist, 'MDBList', 5);
   final plex = _FakeCatalogSource(
     CatalogSourceId.plex,
     'Plex',
-    6,
+    2,
     providerHubTitle: 'Trending on Plex',
     providerHubStyle: plexHubStyle,
   );
-  final seerr = _FakeCatalogSource(CatalogSourceId.seerr, 'Seerr', 7);
-  final sources = _FakeCatalogSourcesProvider([trakt, mal, anilist, simkl, mdblist, plex, seerr]);
+  final seerr = _FakeCatalogSource(CatalogSourceId.seerr, 'Seerr', 3);
+  final sources = _FakeCatalogSourcesProvider([mdblist, plex, seerr]);
   final explore = ExploreProvider(sources);
   addTearDown(explore.dispose);
   addTearDown(sources.dispose);
-  addTearDown(trakt.dispose);
-  addTearDown(mal.dispose);
-  addTearDown(anilist.dispose);
-  addTearDown(simkl.dispose);
   addTearDown(mdblist.dispose);
   addTearDown(plex.dispose);
   addTearDown(seerr.dispose);
@@ -253,14 +244,14 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await tester.pumpAndSettle();
-    expect(find.text('MyAnimeList'), findsOneWidget);
+    expect(find.text('Plex'), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await tester.pumpAndSettle();
 
-    expect(sources.activeSource?.id, CatalogSourceId.mal);
-    expect(find.text('MyAnimeList'), findsOneWidget);
+    expect(sources.activeSource?.id, CatalogSourceId.plex);
+    expect(find.text('Plex'), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
@@ -276,20 +267,20 @@ void main() {
     expect(finder, findsOneWidget);
     final node = tester.getSemantics(finder);
     var data = node.getSemanticsData();
-    expect(data.value, 'Trakt');
+    expect(data.value, 'MDBList');
     expect(data.flagsCollection.isButton, isTrue);
     expect(data.hasAction(SemanticsAction.tap), isTrue);
 
     node.owner!.performAction(node.id, SemanticsAction.tap);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('MyAnimeList'));
+    await tester.tap(find.text('Plex'));
     await tester.pumpAndSettle();
 
-    expect(sources.activeSource?.id, CatalogSourceId.mal);
+    expect(sources.activeSource?.id, CatalogSourceId.plex);
     finder = find.bySemanticsLabel(t.explore.selectSource);
     expect(finder, findsOneWidget);
     data = tester.getSemantics(finder).getSemanticsData();
-    expect(data.value, 'MyAnimeList');
+    expect(data.value, 'Plex');
     expect(data.hasAction(SemanticsAction.tap), isTrue);
     semantics.dispose();
   });
@@ -302,16 +293,16 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await tester.pumpAndSettle();
 
-    for (final name in ['Trakt', 'MyAnimeList', 'AniList', 'Simkl', 'MDBList', 'Plex', 'Seerr']) {
+    for (final name in ['MDBList', 'Plex', 'Seerr']) {
       expect(find.text(name), findsAtLeast(1));
     }
-    expect(find.byType(CatalogSourceLogo), findsAtLeast(7));
+    expect(find.byType(CatalogSourceLogo), findsAtLeast(3));
 
-    await tester.tap(find.text('MDBList'));
+    await tester.tap(find.text('Seerr'));
     await tester.pumpAndSettle();
-    expect(sources.activeSource?.id, CatalogSourceId.mdblist);
-    expect(find.text('MDBList'), findsOneWidget);
-    expect(find.text('MDBList Movie'), findsAtLeast(1));
+    expect(sources.activeSource?.id, CatalogSourceId.seerr);
+    expect(find.text('Seerr'), findsOneWidget);
+    expect(find.text('Seerr Movie'), findsAtLeast(1));
   });
 
   testWidgets('a null-style Plex provider hub keeps the existing Explore shelf', (tester) async {
@@ -347,7 +338,7 @@ void main() {
   });
 
   testWidgets('a provider total result count reaches the existing shelf header', (tester) async {
-    await _pumpExplore(tester, tv: false, traktTotalResults: 87);
+    await _pumpExplore(tester, tv: false, mdblistTotalResults: 87);
 
     expect(find.text(t.explore.totalResults(n: 87)), findsOneWidget);
   });
@@ -355,7 +346,7 @@ void main() {
   group('TV catalog spotlight', () {
     testWidgets('prefers logo and banner art, applies the accent tint, and shows the next episode', (tester) async {
       final item = CatalogItem(
-        source: CatalogSourceId.trakt,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.show,
         title: 'Logo Series',
         ids: const CatalogItemIds(tmdb: 101),
@@ -367,7 +358,7 @@ void main() {
         nextEpisode: CatalogNextEpisode(episode: 8, airsAt: DateTime.now().add(const Duration(days: 2))),
       );
 
-      await _pumpExplore(tester, traktItem: item);
+      await _pumpExplore(tester, mdblistItem: item);
 
       final spotlightFinder = find.byType(TvSpotlightBackground);
       final spotlight = tester.widget<TvSpotlightBackground>(spotlightFinder);
@@ -393,14 +384,14 @@ void main() {
 
     testWidgets('falls back to the plain text title when a catalog logo is absent', (tester) async {
       final item = CatalogItem(
-        source: CatalogSourceId.trakt,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Plain Title',
         ids: const CatalogItemIds(tmdb: 102),
         backdropUrl: 'https://images.example/backdrop.jpg',
       );
 
-      await _pumpExplore(tester, traktItem: item);
+      await _pumpExplore(tester, mdblistItem: item);
 
       final spotlightFinder = find.byType(TvSpotlightBackground);
       final spotlight = tester.widget<TvSpotlightBackground>(spotlightFinder);
@@ -411,7 +402,7 @@ void main() {
 
     testWidgets('selects backdrop variants from logical width and device pixel ratio', (tester) async {
       final item = CatalogItem(
-        source: CatalogSourceId.trakt,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Variant Movie',
         ids: const CatalogItemIds(tmdb: 103),
@@ -423,7 +414,7 @@ void main() {
         },
       );
 
-      await _pumpExplore(tester, traktItem: item);
+      await _pumpExplore(tester, mdblistItem: item);
       String? selectedBackdrop() =>
           tester.widget<TvSpotlightBackground>(find.byType(TvSpotlightBackground)).item?.artPath;
 
@@ -443,7 +434,7 @@ void main() {
   });
 
   testWidgets('TV source switcher remains focused when the active source has no rows', (tester) async {
-    final sources = await _pumpExplore(tester, traktItemId: null);
+    final sources = await _pumpExplore(tester, mdblistItemId: null);
 
     tester.state<ExploreScreenState>(find.byType(ExploreScreen)).focusActiveTabIfReady();
     await tester.pump();
@@ -456,7 +447,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await tester.pumpAndSettle();
 
-    expect(sources.activeSource?.id, CatalogSourceId.mal);
+    expect(sources.activeSource?.id, CatalogSourceId.plex);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv_browse_rail');
@@ -465,9 +456,9 @@ void main() {
   group('inline search', () {
     testWidgets('results replace the shelves while the query is live and the shelves return on clear', (tester) async {
       final sources = await _pumpExplore(tester, tv: false);
-      final trakt = _fakeSource(sources, CatalogSourceId.trakt);
+      final mdblist = _fakeSource(sources, CatalogSourceId.mdblist);
 
-      expect(find.text(t.explore.searchHint(source: 'Trakt')), findsOneWidget);
+      expect(find.text(t.explore.searchHint(source: 'MDBList')), findsOneWidget);
       // The pushed search route is TV-only now; the inline field replaces it.
       expect(find.byTooltip(t.common.search), findsNothing);
       expect(find.text(t.explore.rows.popularMovies), findsOneWidget);
@@ -476,20 +467,20 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
 
-      expect(trakt.searchQueries, ['incep']);
+      expect(mdblist.searchQueries, ['incep']);
       expect(find.text(t.explore.rows.popularMovies), findsNothing);
-      expect(find.text('Trakt search: incep'), findsOneWidget);
+      expect(find.text('MDBList search: incep'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), '');
       await tester.pumpAndSettle();
 
-      expect(find.text('Trakt search: incep'), findsNothing);
+      expect(find.text('MDBList search: incep'), findsNothing);
       expect(find.text(t.explore.rows.popularMovies), findsOneWidget);
     });
 
     testWidgets('a query with no hits keeps the shelves hidden behind the empty state', (tester) async {
       final sources = await _pumpExplore(tester, tv: false);
-      _fakeSource(sources, CatalogSourceId.trakt).searchTitles = const [];
+      _fakeSource(sources, CatalogSourceId.mdblist).searchTitles = const [];
 
       await tester.enterText(find.byType(TextField), 'zzz');
       await tester.pump(const Duration(milliseconds: 600));
@@ -501,20 +492,20 @@ void main() {
 
     testWidgets('a failed search shows the failure state and recovers on the next query', (tester) async {
       final sources = await _pumpExplore(tester, tv: false);
-      final trakt = _fakeSource(sources, CatalogSourceId.trakt)..searchFails = true;
+      final mdblist = _fakeSource(sources, CatalogSourceId.mdblist)..searchFails = true;
 
       await tester.enterText(find.byType(TextField), 'abc');
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       expect(find.text(t.explore.searchFailed), findsOneWidget);
 
-      trakt.searchFails = false;
+      mdblist.searchFails = false;
       await tester.enterText(find.byType(TextField), 'abcd');
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
 
       expect(find.text(t.explore.searchFailed), findsNothing);
-      expect(find.text('Trakt search: abcd'), findsOneWidget);
+      expect(find.text('MDBList search: abcd'), findsOneWidget);
     });
 
     testWidgets('switching source re-runs the live query against the new source', (tester) async {
@@ -523,14 +514,14 @@ void main() {
       await tester.enterText(find.byType(TextField), 'abc');
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
-      expect(find.text('Trakt search: abc'), findsOneWidget);
+      expect(find.text('MDBList search: abc'), findsOneWidget);
 
-      await sources.setActiveSource(CatalogSourceId.mal);
+      await sources.setActiveSource(CatalogSourceId.plex);
       await tester.pumpAndSettle();
 
-      expect(_fakeSource(sources, CatalogSourceId.mal).searchQueries, ['abc']);
-      expect(find.text('MyAnimeList search: abc'), findsOneWidget);
-      expect(find.text('Trakt search: abc'), findsNothing);
+      expect(_fakeSource(sources, CatalogSourceId.plex).searchQueries, ['abc']);
+      expect(find.text('Plex search: abc'), findsOneWidget);
+      expect(find.text('MDBList search: abc'), findsNothing);
     });
 
     testWidgets('the field sits between the app bar and the first shelf at phone width', (tester) async {
@@ -538,7 +529,7 @@ void main() {
       tester.view.physicalSize = const Size(390, 844);
       await tester.pumpAndSettle();
 
-      final title = tester.getRect(find.text('Trakt'));
+      final title = tester.getRect(find.text('MDBList'));
       final field = tester.getRect(find.byType(SearchInputField));
       final shelf = tester.getRect(find.text(t.explore.rows.popularMovies));
 

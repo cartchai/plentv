@@ -73,43 +73,43 @@ void main() {
 
   group('resolveWatchlistCandidates', () {
     test('pairs each source with its resolved ids, skipping out-of-domain and failing sources', () async {
-      final trakt = _FakeWatchlistSource(CatalogSourceId.trakt, resolveTo: const CatalogItemIds(imdb: 'tt1'));
-      final mal = _FakeWatchlistSource(CatalogSourceId.mal); // resolves null: not in domain
-      final simkl = _FakeWatchlistSource(CatalogSourceId.simkl, resolveError: StateError('down'));
+      final mdblist = _FakeWatchlistSource(CatalogSourceId.mdblist, resolveTo: const CatalogItemIds(imdb: 'tt1'));
+      final seerr = _FakeWatchlistSource(CatalogSourceId.seerr); // resolves null: not in domain
+      final plex = _FakeWatchlistSource(CatalogSourceId.plex, resolveError: StateError('down'));
 
       final failed = <CatalogSource>[];
       final candidates = await resolveWatchlistCandidates(
         client: _ExternalIdsClient(const ExternalIds(imdb: 'tt1')),
         item: item,
-        sources: [trakt, mal, simkl],
+        sources: [mdblist, seerr, plex],
         onSourceFailed: failed.add,
       );
 
-      expect(candidates.map((c) => c.source.id), [CatalogSourceId.trakt]);
-      expect(failed, [simkl], reason: 'out-of-domain is an answer; only the failure is reported');
+      expect(candidates.map((c) => c.source.id), [CatalogSourceId.mdblist]);
+      expect(failed, [plex], reason: 'out-of-domain is an answer; only the failure is reported');
       expect(candidates.single.ids.imdb, 'tt1');
-      expect(mal.resolveCalls, 1);
-      expect(simkl.resolveCalls, 1);
+      expect(seerr.resolveCalls, 1);
+      expect(plex.resolveCalls, 1);
     });
 
     test('an item without external ids resolves to nothing without asking any source', () async {
-      final trakt = _FakeWatchlistSource(CatalogSourceId.trakt, resolveTo: const CatalogItemIds(imdb: 'tt1'));
+      final mdblist = _FakeWatchlistSource(CatalogSourceId.mdblist, resolveTo: const CatalogItemIds(imdb: 'tt1'));
 
       final candidates = await resolveWatchlistCandidates(
         client: _ExternalIdsClient(const ExternalIds()),
         item: item,
-        sources: [trakt],
+        sources: [mdblist],
       );
 
       expect(candidates, isEmpty);
-      expect(trakt.resolveCalls, 0);
+      expect(mdblist.resolveCalls, 0);
     });
 
     test('a null client (server offline) resolves to nothing', () async {
       final candidates = await resolveWatchlistCandidates(
         client: null,
         item: item,
-        sources: [_FakeWatchlistSource(CatalogSourceId.trakt)],
+        sources: [_FakeWatchlistSource(CatalogSourceId.mdblist)],
       );
       expect(candidates, isEmpty);
     });
@@ -119,7 +119,7 @@ void main() {
         resolveWatchlistCandidates(
           client: _ExternalIdsClient(const ExternalIds(), error: StateError('unreachable')),
           item: item,
-          sources: [_FakeWatchlistSource(CatalogSourceId.trakt)],
+          sources: [_FakeWatchlistSource(CatalogSourceId.mdblist)],
         ),
         throwsStateError,
       );
@@ -130,7 +130,7 @@ void main() {
     const ids = CatalogItemIds(imdb: 'tt1');
 
     test('dispatches add and remove to the candidate source', () async {
-      final source = _FakeWatchlistSource(CatalogSourceId.trakt);
+      final source = _FakeWatchlistSource(CatalogSourceId.mdblist);
 
       expect(await mutateWatchlistMembership(MediaKind.movie, (source: source, ids: ids), add: true), isTrue);
       expect(await mutateWatchlistMembership(MediaKind.movie, (source: source, ids: ids), add: false), isTrue);
@@ -141,7 +141,7 @@ void main() {
 
     test('an identical mutation already in flight is refused instead of double-firing', () async {
       final gate = Completer<void>();
-      final source = _FakeWatchlistSource(CatalogSourceId.trakt, mutationGate: gate);
+      final source = _FakeWatchlistSource(CatalogSourceId.mdblist, mutationGate: gate);
       final candidate = (source: source, ids: ids);
 
       final first = mutateWatchlistMembership(MediaKind.movie, candidate, add: true);
@@ -158,12 +158,12 @@ void main() {
     });
 
     test('a failed mutation rethrows and releases the guard', () async {
-      final failing = _FakeWatchlistSource(CatalogSourceId.trakt, mutationError: StateError('api down'));
+      final failing = _FakeWatchlistSource(CatalogSourceId.mdblist, mutationError: StateError('api down'));
       final candidate = (source: failing, ids: ids);
 
       await expectLater(mutateWatchlistMembership(MediaKind.movie, candidate, add: true), throwsStateError);
 
-      final working = _FakeWatchlistSource(CatalogSourceId.trakt);
+      final working = _FakeWatchlistSource(CatalogSourceId.mdblist);
       expect(await mutateWatchlistMembership(MediaKind.movie, (source: working, ids: ids), add: true), isTrue);
       expect(working.mutations, hasLength(1));
     });

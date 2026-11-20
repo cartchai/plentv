@@ -89,7 +89,6 @@ class TranslationsDa extends Translations with BaseTranslations<AppLocale, Trans
 	@override late final _Translations$metadataEdit$da metadataEdit = _Translations$metadataEdit$da._(_root);
 	@override late final _Translations$matchScreen$da matchScreen = _Translations$matchScreen$da._(_root);
 	@override late final _Translations$serverTasks$da serverTasks = _Translations$serverTasks$da._(_root);
-	@override late final _Translations$trakt$da trakt = _Translations$trakt$da._(_root);
 	@override late final _Translations$seerr$da seerr = _Translations$seerr$da._(_root);
 	@override late final _Translations$services$da services = _Translations$services$da._(_root);
 	@override late final _Translations$addServer$da addServer = _Translations$addServer$da._(_root);
@@ -485,7 +484,6 @@ class _Translations$settings$da extends Translations$settings$en {
 	@override String get discordRichPresence => 'Discord Rich Presence';
 	@override String get discordRichPresenceDescription => 'Vis på Discord, hvad du ser';
 	@override String get services => 'Tjenester';
-	@override String get servicesDescription => 'Forbind Trakt, MyAnimeList, Seerr og mere';
 	@override String get manageLibrariesDescription => 'Omarranger og skjul biblioteker';
 	@override String get companionRemoteServer => 'Fjernbetjeningsserver';
 	@override String get companionRemoteServerDescription => 'Tillad mobilenheder på dit netværk at styre denne app';
@@ -1502,7 +1500,6 @@ class _Translations$startup$da extends Translations$startup$en {
 	@override String get repairBodyOneCredential => 'Én gemt loginoplysning er beskadiget og kan ikke læses. Reparation fjerner kun den; dine andre indstillinger forbliver urørt.';
 	@override String get repairBodySignInsKept => 'Dine servere og profiler bør forblive logget ind.';
 	@override String get repairBodySignInsLost => 'Nøglen, der beskytter dine gemte loginoplysninger, kan ikke gendannes fra denne fil, så du skal logge ind på alle servere og profiler igen. Intet på din medieserver er påvirket.';
-	@override String get repairBodySessionsUncertain => 'Trackere (MAL, AniList, Simkl, Trakt) og Seerr gemmes separat, og det er uvist, om de overlever. PlezTV fortæller dig præcis, hvad det beholdt.';
 	@override String get repairConfirm => 'Reparer';
 	@override String get repairSucceeded => 'Lager repareret';
 	@override String get repairNeedsRestart => 'Lager repareret — genstart påkrævet';
@@ -1561,7 +1558,6 @@ class _Translations$explore$da extends Translations$explore$en {
 		other: '${n} afsnit',
 	);
 	@override String get cast => 'Rollebesætning';
-	@override String get characters => 'Figurer';
 	@override String get addToWatchlist => 'Føj til ønskeliste';
 	@override String get removeFromWatchlist => 'Fjern fra ønskeliste';
 	@override String get addedToWatchlist => 'Føjet til overvågningslisten';
@@ -2300,24 +2296,6 @@ class _Translations$serverTasks$da extends Translations$serverTasks$en {
 	@override String get noTasks => 'Ingen opgaver kører';
 }
 
-// Path: trakt
-class _Translations$trakt$da extends Translations$trakt$en {
-	_Translations$trakt$da._(TranslationsDa root) : this._root = root, super.internal(root);
-
-	final TranslationsDa _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Trakt';
-	@override String get connected => 'Forbundet';
-	@override String connectedAs({required Object username}) => 'Forbundet som @${username}';
-	@override String get disconnectConfirm => 'Frakobl Trakt-konto?';
-	@override String get disconnectConfirmBody => 'PlezTV stopper med at sende hændelser til Trakt. Du kan tilslutte igen når som helst.';
-	@override String get scrobble => 'Realtids-scrobbling';
-	@override String get scrobbleDescription => 'Send afspil-, pause- og stop-begivenheder til Trakt under afspilning.';
-	@override String get watchedSync => 'Synkroniser set-status';
-	@override String get watchedSyncDescription => 'Når du markerer elementer som set i PlezTV, markeres de også på Trakt.';
-}
-
 // Path: seerr
 class _Translations$seerr$da extends Translations$seerr$en {
 	_Translations$seerr$da._(TranslationsDa root) : this._root = root, super.internal(root);
@@ -2395,7 +2373,6 @@ class _Translations$services$da extends Translations$services$en {
 	@override String disconnectConfirmBody({required Object service}) => 'PlezTV stopper med at opdatere ${service}. Du kan altid oprette forbindelse igen.';
 	@override String connectFailed({required Object service}) => 'Kunne ikke forbinde til ${service}. Prøv igen.';
 	@override late final _Translations$services$names$da names = _Translations$services$names$da._(_root);
-	@override late final _Translations$services$simklReconnect$da simklReconnect = _Translations$services$simklReconnect$da._(_root);
 	@override late final _Translations$services$deviceCode$da deviceCode = _Translations$services$deviceCode$da._(_root);
 	@override late final _Translations$services$pendingAuth$da pendingAuth = _Translations$services$pendingAuth$da._(_root);
 	@override late final _Translations$services$libraryFilter$da libraryFilter = _Translations$services$libraryFilter$da._(_root);
@@ -2501,10 +2478,6 @@ class _Translations$common$ratingSource$da extends Translations$common$ratingSou
 	@override String get imdb => 'IMDb';
 	@override String get tmdb => 'TMDB';
 	@override String get rottenTomatoes => 'Rotten Tomatoes';
-	@override String get simkl => 'Simkl';
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get trakt => 'Trakt';
 	@override String get rottenTomatoesCritic => 'Rotten Tomatoes-anmeldere';
 	@override String get rottenTomatoesAudience => 'Rotten Tomatoes-publikum';
 	@override String get metacritic => 'Metacritic';
@@ -3311,22 +3284,8 @@ class _Translations$services$names$da extends Translations$services$names$en {
 	final TranslationsDa _root; // ignore: unused_field
 
 	// Translations
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get simkl => 'Simkl';
 	@override String get seerr => 'Seerr';
 	@override String get mdblist => 'MDBList';
-}
-
-// Path: services.simklReconnect
-class _Translations$services$simklReconnect$da extends Translations$services$simklReconnect$en {
-	_Translations$services$simklReconnect$da._(TranslationsDa root) : this._root = root, super.internal(root);
-
-	final TranslationsDa _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Genopret forbindelse til Simkl';
-	@override String get subtitle => 'Simkl udfaser den loginmetode, som denne forbindelse bruger. Når du genopretter forbindelsen, åbnes simkl.com, hvor du godkender PlezTV — PlezTV ser aldrig din adgangskode. Din visningshistorik forbliver på Simkl.';
 }
 
 // Path: services.deviceCode
@@ -3484,10 +3443,6 @@ extension on TranslationsDa {
 			'common.ratingSource.imdb' => 'IMDb',
 			'common.ratingSource.tmdb' => 'TMDB',
 			'common.ratingSource.rottenTomatoes' => 'Rotten Tomatoes',
-			'common.ratingSource.simkl' => 'Simkl',
-			'common.ratingSource.mal' => 'MyAnimeList',
-			'common.ratingSource.anilist' => 'AniList',
-			'common.ratingSource.trakt' => 'Trakt',
 			'common.ratingSource.rottenTomatoesCritic' => 'Rotten Tomatoes-anmeldere',
 			'common.ratingSource.rottenTomatoesAudience' => 'Rotten Tomatoes-publikum',
 			'common.ratingSource.metacritic' => 'Metacritic',
@@ -3754,7 +3709,6 @@ extension on TranslationsDa {
 			'settings.discordRichPresence' => 'Discord Rich Presence',
 			'settings.discordRichPresenceDescription' => 'Vis på Discord, hvad du ser',
 			'settings.services' => 'Tjenester',
-			'settings.servicesDescription' => 'Forbind Trakt, MyAnimeList, Seerr og mere',
 			'settings.manageLibrariesDescription' => 'Omarranger og skjul biblioteker',
 			'settings.companionRemoteServer' => 'Fjernbetjeningsserver',
 			'settings.companionRemoteServerDescription' => 'Tillad mobilenheder på dit netværk at styre denne app',
@@ -3896,13 +3850,13 @@ extension on TranslationsDa {
 			'themeEditor.slots.textMuted' => 'Sekundær tekst',
 			'themeEditor.slots.accent' => 'Accentfarve',
 			'themeEditor.opacity' => 'Opacitet',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.hexHint' => '#RRGGBB eller #AARRGGBB',
 			'themeEditor.fromOtherThemes' => 'Fra andre temaer',
 			'themeEditor.swatchLabel' => ({required Object color, required Object theme}) => '${color} (${theme})',
 			'themeEditor.contrast.textOnBg' => 'Tekst på baggrund',
 			'themeEditor.contrast.textOnSurface' => 'Tekst på overflade',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Sekundær tekst på baggrund',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundær tekst på overflade',
 			'themeEditor.contrast.accentOnBg' => 'Accentfarve på baggrund',
@@ -4410,13 +4364,13 @@ extension on TranslationsDa {
 			'profiles.tokenIdentityMismatch' => 'Plex-profiltokenet blev knyttet til en uventet server',
 			'connections.sectionTitle' => 'Forbindelser',
 			'connections.addConnection' => 'Tilføj forbindelse',
-			_ => null,
-		} ?? switch (path) {
 			'connections.addConnectionSubtitleNoProfile' => 'Log ind med Plex eller forbind til en Jellyfin- eller Emby-server',
 			'connections.addConnectionSubtitleScoped' => ({required Object displayName}) => 'Føj til ${displayName}: Plex, Jellyfin, Emby eller en anden profilforbindelse',
 			'connections.sessionExpiredOne' => ({required Object name}) => 'Sessionen er udløbet for ${name}',
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Sessionerne er udløbet for ${count} servere',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} nægtede adgang for denne konto',
+			_ => null,
+		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servere nægtede adgang for denne konto',
 			'connections.signInAgain' => 'Log ind igen',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Rediger ${product}-forbindelse',
@@ -4670,7 +4624,6 @@ extension on TranslationsDa {
 			'startup.repairBodyOneCredential' => 'Én gemt loginoplysning er beskadiget og kan ikke læses. Reparation fjerner kun den; dine andre indstillinger forbliver urørt.',
 			'startup.repairBodySignInsKept' => 'Dine servere og profiler bør forblive logget ind.',
 			'startup.repairBodySignInsLost' => 'Nøglen, der beskytter dine gemte loginoplysninger, kan ikke gendannes fra denne fil, så du skal logge ind på alle servere og profiler igen. Intet på din medieserver er påvirket.',
-			'startup.repairBodySessionsUncertain' => 'Trackere (MAL, AniList, Simkl, Trakt) og Seerr gemmes separat, og det er uvist, om de overlever. PlezTV fortæller dig præcis, hvad det beholdt.',
 			'startup.repairConfirm' => 'Reparer',
 			'startup.repairSucceeded' => 'Lager repareret',
 			'startup.repairNeedsRestart' => 'Lager repareret — genstart påkrævet',
@@ -4715,7 +4668,6 @@ extension on TranslationsDa {
 			'explore.status.upcoming' => 'Kommende',
 			'explore.episodeCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('da'))(n, one: '${n} afsnit', other: '${n} afsnit', ), 
 			'explore.cast' => 'Rollebesætning',
-			'explore.characters' => 'Figurer',
 			'explore.addToWatchlist' => 'Føj til ønskeliste',
 			'explore.removeFromWatchlist' => 'Fjern fra ønskeliste',
 			'explore.addedToWatchlist' => 'Føjet til overvågningslisten',
@@ -4924,8 +4876,6 @@ extension on TranslationsDa {
 			'liveTv.recordSettings.skipInLibrary' => 'Spring afsnit over, der allerede er i biblioteket',
 			'liveTv.recordSettings.keepUpTo' => 'Afsnit der skal beholdes',
 			'liveTv.recordSettings.keepUpToHint' => '0 beholder alle afsnit',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => 'Starter om ${minutes} min',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day} kl. ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => '${product} returnerede ugyldige afspilningsdata for Live TV',
@@ -4933,6 +4883,8 @@ extension on TranslationsDa {
 			'liveTv.failedToBuildStreamUrl' => 'Kunne ikke oprette stream-URL\'en',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Kunne ikke starte kanalen: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Kunne ikke skifte kanal: ${reason}',
+			_ => null,
+		} ?? switch (path) {
 			'collections.title' => 'Samlinger',
 			'collections.collection' => 'Samling',
 			'collections.empty' => 'Samlingen er tom',
@@ -5438,8 +5390,6 @@ extension on TranslationsDa {
 			'performanceOverlay.decoderExynosHw' => 'Exynos HW',
 			'performanceOverlay.decoderSoftware' => 'Software',
 			'performanceOverlay.decoderHardware' => 'Hardware',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.tunnelingActive' => 'Aktiv',
 			'performanceOverlay.dvRpuFailed' => ({required Object converted, required Object failures}) => '${converted} (${failures} mislykkedes)',
 			'externalPlayer.title' => 'Ekstern afspiller',
@@ -5447,6 +5397,8 @@ extension on TranslationsDa {
 			'externalPlayer.useExternalPlayerDescription' => 'Åbn videoer i en anden app',
 			'externalPlayer.selectPlayer' => 'Vælg afspiller',
 			'externalPlayer.customPlayers' => 'Brugerdefinerede afspillere',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Systemstandard',
 			'externalPlayer.addCustomPlayer' => 'Tilføj brugerdefineret afspiller',
 			'externalPlayer.playerName' => 'Afspillernavn',
@@ -5548,15 +5500,6 @@ extension on TranslationsDa {
 			'serverTasks.title' => 'Serveropgaver',
 			'serverTasks.failedToLoad' => 'Kunne ikke indlæse opgaver',
 			'serverTasks.noTasks' => 'Ingen opgaver kører',
-			'trakt.title' => 'Trakt',
-			'trakt.connected' => 'Forbundet',
-			'trakt.connectedAs' => ({required Object username}) => 'Forbundet som @${username}',
-			'trakt.disconnectConfirm' => 'Frakobl Trakt-konto?',
-			'trakt.disconnectConfirmBody' => 'PlezTV stopper med at sende hændelser til Trakt. Du kan tilslutte igen når som helst.',
-			'trakt.scrobble' => 'Realtids-scrobbling',
-			'trakt.scrobbleDescription' => 'Send afspil-, pause- og stop-begivenheder til Trakt under afspilning.',
-			'trakt.watchedSync' => 'Synkroniser set-status',
-			'trakt.watchedSyncDescription' => 'Når du markerer elementer som set i PlezTV, markeres de også på Trakt.',
 			'seerr.title' => 'Seerr',
 			'seerr.connectTitle' => 'Forbind Seerr',
 			'seerr.serverUrl' => 'Server-URL',
@@ -5617,13 +5560,8 @@ extension on TranslationsDa {
 			'services.disconnectConfirm' => ({required Object service}) => 'Afbryd forbindelsen til ${service}?',
 			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV stopper med at opdatere ${service}. Du kan altid oprette forbindelse igen.',
 			'services.connectFailed' => ({required Object service}) => 'Kunne ikke forbinde til ${service}. Prøv igen.',
-			'services.names.mal' => 'MyAnimeList',
-			'services.names.anilist' => 'AniList',
-			'services.names.simkl' => 'Simkl',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.simklReconnect.title' => 'Genopret forbindelse til Simkl',
-			'services.simklReconnect.subtitle' => 'Simkl udfaser den loginmetode, som denne forbindelse bruger. Når du genopretter forbindelsen, åbnes simkl.com, hvor du godkender PlezTV — PlezTV ser aldrig din adgangskode. Din visningshistorik forbliver på Simkl.',
 			'services.deviceCode.title' => ({required Object service}) => 'Aktiver PlezTV på ${service}',
 			'services.deviceCode.instructions' => 'Scan QR-koden, eller gå til adressen nedenfor, og indtast denne kode:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => 'Åbn ${service} for at aktivere',

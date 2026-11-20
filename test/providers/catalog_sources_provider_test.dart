@@ -139,7 +139,7 @@ void main() {
     final item = testMediaItem(id: 'movie-1', serverId: 'server-1');
 
     test('resolves an item once per session and hands menus the cached result', () async {
-      final source = _FakeWatchlistSource(CatalogSourceId.trakt);
+      final source = _FakeWatchlistSource(CatalogSourceId.mdblist);
       final provider = _FakeSourcesProvider([source]);
       addTearDown(provider.dispose);
       final client = _ExternalIdsClient(const ExternalIds(imdb: 'tt1'));
@@ -155,7 +155,7 @@ void main() {
     });
 
     test('concurrent loads for the same item coalesce into one resolution', () async {
-      final provider = _FakeSourcesProvider([_FakeWatchlistSource(CatalogSourceId.trakt)]);
+      final provider = _FakeSourcesProvider([_FakeWatchlistSource(CatalogSourceId.mdblist)]);
       addTearDown(provider.dispose);
       final gate = Completer<void>();
       final client = _ExternalIdsClient(const ExternalIds(imdb: 'tt1'), gate: gate);
@@ -169,7 +169,7 @@ void main() {
     });
 
     test('a failed resolution is retried instead of cached', () async {
-      final provider = _FakeSourcesProvider([_FakeWatchlistSource(CatalogSourceId.trakt)]);
+      final provider = _FakeSourcesProvider([_FakeWatchlistSource(CatalogSourceId.mdblist)]);
       addTearDown(provider.dispose);
       final client = _ExternalIdsClient(const ExternalIds(imdb: 'tt1'), error: StateError('unreachable'));
 
@@ -183,24 +183,24 @@ void main() {
     });
 
     test('an answer missing a source that failed to resolve is retried instead of cached', () async {
-      final trakt = _FakeWatchlistSource(CatalogSourceId.trakt);
-      final mal = _FakeWatchlistSource(CatalogSourceId.mal)..resolveError = StateError('mapping unavailable');
-      final provider = _FakeSourcesProvider([trakt, mal]);
+      final mdblist = _FakeWatchlistSource(CatalogSourceId.mdblist);
+      final seerr = _FakeWatchlistSource(CatalogSourceId.seerr)..resolveError = StateError('mapping unavailable');
+      final provider = _FakeSourcesProvider([mdblist, seerr]);
       addTearDown(provider.dispose);
       final client = _ExternalIdsClient(const ExternalIds(imdb: 'tt1'));
 
       final partial = await provider.watchlistCandidatesFor(item, client: client);
-      expect(partial.map((candidate) => candidate.source.id), [CatalogSourceId.trakt]);
+      expect(partial.map((candidate) => candidate.source.id), [CatalogSourceId.mdblist]);
       expect(provider.cachedWatchlistCandidatesFor(item), isNull);
 
-      mal.resolveError = null;
+      seerr.resolveError = null;
       final complete = await provider.watchlistCandidatesFor(item, client: client);
-      expect(complete.map((candidate) => candidate.source.id), [CatalogSourceId.trakt, CatalogSourceId.mal]);
+      expect(complete.map((candidate) => candidate.source.id), [CatalogSourceId.mdblist, CatalogSourceId.seerr]);
       expect(provider.cachedWatchlistCandidatesFor(item), same(complete));
     });
 
     test('a null client resolves to nothing without caching the miss', () async {
-      final provider = _FakeSourcesProvider([_FakeWatchlistSource(CatalogSourceId.trakt)]);
+      final provider = _FakeSourcesProvider([_FakeWatchlistSource(CatalogSourceId.mdblist)]);
       addTearDown(provider.dispose);
 
       expect(await provider.watchlistCandidatesFor(item, client: null), isEmpty);
@@ -216,7 +216,7 @@ void main() {
     test('a source rebind invalidates cached candidates', () async {
       PlexDiscoverSession? session = const PlexDiscoverSession(accessToken: 'a', clientIdentifier: 'client-id');
       final provider = _FakeSourcesProvider([
-        _FakeWatchlistSource(CatalogSourceId.trakt),
+        _FakeWatchlistSource(CatalogSourceId.mdblist),
       ], plexSessionSupplier: () async => session);
       addTearDown(provider.dispose);
       await provider.onActiveProfileChanged('profile-1');
@@ -237,8 +237,8 @@ void main() {
     List<String> sourcesOf(List<MediaRatingSource> ratings) => [for (final r in ratings) r.source];
 
     test('a library item resolves its external ids once for the watchlist and the scores', () async {
-      final trakt = _FakeScoringSource(CatalogSourceId.trakt, [rating('trakt', 9.1)]);
-      final provider = _FakeSourcesProvider([trakt]);
+      final mdblist = _FakeScoringSource(CatalogSourceId.mdblist, [rating('imdb', 9.3)]);
+      final provider = _FakeSourcesProvider([mdblist]);
       addTearDown(provider.dispose);
       final client = _ExternalIdsClient(const ExternalIds(imdb: 'tt1'));
       final item = testMediaItem(id: 'movie-1', serverId: 'server-1');
@@ -247,15 +247,15 @@ void main() {
       final emissions = await provider.communityRatingsForLibraryItem(item, client: client).toList();
 
       expect(client.calls, 1);
-      expect(trakt.askedIds.single.imdb, 'tt1');
+      expect(mdblist.askedIds.single.imdb, 'tt1');
       expect(emissions.map(sourcesOf), [
-        ['trakt'],
+        ['imdb'],
       ]);
     });
 
     test('an episode is not scored: the trackers score whole titles', () async {
-      final trakt = _FakeScoringSource(CatalogSourceId.trakt, [rating('trakt', 9.1)]);
-      final provider = _FakeSourcesProvider([trakt]);
+      final mdblist = _FakeScoringSource(CatalogSourceId.mdblist, [rating('imdb', 9.3)]);
+      final provider = _FakeSourcesProvider([mdblist]);
       addTearDown(provider.dispose);
       final client = _ExternalIdsClient(const ExternalIds(imdb: 'tt1'));
       final episode = testMediaItem(id: 'episode-1', serverId: 'server-1', kind: MediaKind.episode);
@@ -264,22 +264,24 @@ void main() {
       expect(client.calls, 0);
     });
 
-    test('a catalog item is not asked of its own tracker, and the others\' copy of its score is dropped', () async {
-      final trakt = _FakeScoringSource(CatalogSourceId.trakt, [rating('trakt', 9.1)]);
-      final mdblist = _FakeScoringSource(CatalogSourceId.mdblist, [rating('imdb', 9.3), rating('trakt', 9.0)]);
-      final provider = _FakeSourcesProvider([trakt, mdblist]);
+    test('every connected source is asked for a catalog item, and MDBList\'s copy of a score wins', () async {
+      final seerr = _FakeScoringSource(CatalogSourceId.seerr, [rating('imdb', 8.0)]);
+      final mdblist = _FakeScoringSource(CatalogSourceId.mdblist, [rating('imdb', 9.3), rating('tmdb', 8.7)]);
+      final provider = _FakeSourcesProvider([seerr, mdblist]);
       addTearDown(provider.dispose);
       const item = CatalogItem(
-        source: CatalogSourceId.trakt,
+        source: CatalogSourceId.seerr,
         kind: MediaKind.movie,
         title: 'The Shawshank Redemption',
-        ids: CatalogItemIds(trakt: 234, imdb: 'tt0111161'),
+        ids: CatalogItemIds(imdb: 'tt0111161', tmdb: 278),
       );
 
       final emissions = await provider.communityRatingsForCatalogItem(item).toList();
 
-      expect(trakt.askedIds, isEmpty);
-      expect(emissions.map(sourcesOf).last, ['imdb']);
+      expect(seerr.askedIds, isNotEmpty);
+      expect(mdblist.askedIds, isNotEmpty);
+      expect(emissions.map(sourcesOf).last, ['imdb', 'tmdb']);
+      expect(emissions.last.firstWhere((r) => r.source == 'imdb').value, 9.3);
     });
 
     test('an MDBList item is asked of MDBList, which has no score of its own', () async {
@@ -298,23 +300,23 @@ void main() {
       expect(emissions.map(sourcesOf).last, ['imdb', 'trakt']);
     });
 
-    test('a tracker that cannot place a catalog item still gets the item\'s own ids', () async {
-      // AniList rows carry MAL ids but no imdb/tmdb, so MAL's own id lookup
-      // has nothing to go on.
-      final mal = _FakeScoringSource(CatalogSourceId.mal, [rating('mal', 8.6)])..resolves = false;
-      final provider = _FakeSourcesProvider([mal]);
+    test('a source that cannot place a catalog item still gets the item\'s own ids', () async {
+      // A source whose id lookup has nothing to go on still gets asked with
+      // the item's native ids, which are all a fetcher reads.
+      final mdblist = _FakeScoringSource(CatalogSourceId.mdblist, [rating('imdb', 9.3)])..resolves = false;
+      final provider = _FakeSourcesProvider([mdblist]);
       addTearDown(provider.dispose);
       const item = CatalogItem(
-        source: CatalogSourceId.anilist,
+        source: CatalogSourceId.seerr,
         kind: MediaKind.show,
         title: 'Frieren',
-        ids: CatalogItemIds(anilist: 154587, mal: 52991),
+        ids: CatalogItemIds(imdb: 'tt27688198', tmdb: 209867),
       );
 
       final emissions = await provider.communityRatingsForCatalogItem(item).toList();
 
-      expect(mal.askedIds.single.mal, 52991);
-      expect(emissions.map(sourcesOf).last, ['mal']);
+      expect(mdblist.askedIds.single.tmdb, 209867);
+      expect(emissions.map(sourcesOf).last, ['imdb']);
     });
   });
 }
@@ -368,8 +370,8 @@ class _FakeScoringSource implements CatalogSource, CatalogCommunityRatings {
   final CatalogSourceId id;
   final List<MediaRatingSource> ratings;
 
-  /// Whether [resolveItemIds] places titles; false answers null, as MAL does
-  /// for a title it has no mapping for.
+  /// Whether [resolveItemIds] places titles; false answers null, as a
+  /// source does for a title it has no mapping for.
   bool resolves = true;
   final List<CatalogItemIds> askedIds = [];
 

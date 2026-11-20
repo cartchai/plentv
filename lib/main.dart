@@ -67,6 +67,7 @@ import 'services/image_cache_service.dart';
 import 'services/storage_health.dart';
 import 'services/app_icon/app_icon_service.dart';
 import 'services/gamepad_service.dart';
+import 'services/trackers/tracker_account_store.dart';
 import 'services/trackers/tracker_coordinator.dart';
 import 'services/playback_coordinator.dart';
 import 'services/deep_links/deep_link_service.dart';
@@ -1132,6 +1133,9 @@ void _startNonessentialInitialization(SettingsService settings) {
     () => initializeDateFormatting(settings.read(SettingsService.appLocale).intlLocaleName, null),
   );
   bestEffort('Download storage', () => DownloadStorageService.instance.initialize(settings));
+  // 1.5.2: Trakt, Simkl, MAL and AniList are gone. Wipe any session tokens
+  // they left behind before the coordinator loads its (MDBList-only) sessions.
+  bestEffort('Tracker removal purge', TrackerAccountStore.purgeRemovedServiceSessions);
   bestEffort('Trackers', TrackerCoordinator.instance.initialize);
 
   // 1.2.19, L-13b: the codec probe runs here, after the first frame —

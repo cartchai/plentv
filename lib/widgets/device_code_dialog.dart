@@ -6,8 +6,7 @@ import '../models/trackers/device_code.dart';
 import '../utils/snackbar_helper.dart';
 import 'pending_auth_dialog.dart';
 
-/// Shared device-code activation dialog for Trakt, Simkl, and MDBList
-/// (RFC 8628).
+/// Shared device-code activation dialog for MDBList (RFC 8628).
 ///
 /// The [PendingAuthDialog] shell contributes the QR code (encoding the
 /// code-prefilled verification URL when the service provides one), the

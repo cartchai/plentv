@@ -89,7 +89,6 @@ class TranslationsIt extends Translations with BaseTranslations<AppLocale, Trans
 	@override late final _Translations$metadataEdit$it metadataEdit = _Translations$metadataEdit$it._(_root);
 	@override late final _Translations$matchScreen$it matchScreen = _Translations$matchScreen$it._(_root);
 	@override late final _Translations$serverTasks$it serverTasks = _Translations$serverTasks$it._(_root);
-	@override late final _Translations$trakt$it trakt = _Translations$trakt$it._(_root);
 	@override late final _Translations$seerr$it seerr = _Translations$seerr$it._(_root);
 	@override late final _Translations$services$it services = _Translations$services$it._(_root);
 	@override late final _Translations$addServer$it addServer = _Translations$addServer$it._(_root);
@@ -485,7 +484,6 @@ class _Translations$settings$it extends Translations$settings$en {
 	@override String get discordRichPresence => 'Discord Rich Presence';
 	@override String get discordRichPresenceDescription => 'Mostra su Discord cosa stai guardando';
 	@override String get services => 'Servizi';
-	@override String get servicesDescription => 'Connetti Trakt, MyAnimeList, Seerr e altro';
 	@override String get manageLibrariesDescription => 'Riordina e nascondi le librerie';
 	@override String get companionRemoteServer => 'Server del telecomando';
 	@override String get companionRemoteServerDescription => 'Consenti ai dispositivi mobili della tua rete di controllare questa app';
@@ -1502,7 +1500,6 @@ class _Translations$startup$it extends Translations$startup$en {
 	@override String get repairBodyOneCredential => 'Un accesso salvato è danneggiato e non può essere letto. La riparazione rimuove solo quello; le altre impostazioni restano intatte.';
 	@override String get repairBodySignInsKept => 'I tuoi server e profili dovrebbero rimanere con accesso effettuato.';
 	@override String get repairBodySignInsLost => 'La chiave che protegge i tuoi accessi salvati non può essere recuperata da questo file, quindi dovrai effettuare di nuovo l\'accesso a ogni server e profilo. Nulla sul tuo server multimediale è interessato.';
-	@override String get repairBodySessionsUncertain => 'I tracker (MAL, AniList, Simkl, Trakt) e Seerr sono archiviati separatamente e potrebbero sopravvivere o meno. PlezTV ti dirà esattamente cosa ha conservato.';
 	@override String get repairConfirm => 'Ripara';
 	@override String get repairSucceeded => 'Storage riparato';
 	@override String get repairNeedsRestart => 'Storage riparato — riavvio richiesto';
@@ -1561,7 +1558,6 @@ class _Translations$explore$it extends Translations$explore$en {
 		other: '${n} episodi',
 	);
 	@override String get cast => 'Attori';
-	@override String get characters => 'Personaggi';
 	@override String get addToWatchlist => 'Aggiungi alla lista da guardare';
 	@override String get removeFromWatchlist => 'Rimuovi dalla lista da guardare';
 	@override String get addedToWatchlist => 'Aggiunto alla lista titoli';
@@ -2300,24 +2296,6 @@ class _Translations$serverTasks$it extends Translations$serverTasks$en {
 	@override String get noTasks => 'Nessuna attività in corso';
 }
 
-// Path: trakt
-class _Translations$trakt$it extends Translations$trakt$en {
-	_Translations$trakt$it._(TranslationsIt root) : this._root = root, super.internal(root);
-
-	final TranslationsIt _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Trakt';
-	@override String get connected => 'Connesso';
-	@override String connectedAs({required Object username}) => 'Connesso come @${username}';
-	@override String get disconnectConfirm => 'Disconnettere l\'account Trakt?';
-	@override String get disconnectConfirmBody => 'PlezTV smetterà di inviare eventi a Trakt. Puoi riconnetterti quando vuoi.';
-	@override String get scrobble => 'Scrobbling in tempo reale';
-	@override String get scrobbleDescription => 'Invia eventi di riproduzione, pausa e arresto a Trakt durante la riproduzione.';
-	@override String get watchedSync => 'Sincronizza lo stato di visione';
-	@override String get watchedSyncDescription => 'Quando contrassegni un elemento come visto in PlezTV, viene contrassegnato come visto anche su Trakt.';
-}
-
 // Path: seerr
 class _Translations$seerr$it extends Translations$seerr$en {
 	_Translations$seerr$it._(TranslationsIt root) : this._root = root, super.internal(root);
@@ -2395,7 +2373,6 @@ class _Translations$services$it extends Translations$services$en {
 	@override String disconnectConfirmBody({required Object service}) => 'PlezTV smetterà di aggiornare ${service}. Riconnetti quando vuoi.';
 	@override String connectFailed({required Object service}) => 'Impossibile connettersi a ${service}. Riprova.';
 	@override late final _Translations$services$names$it names = _Translations$services$names$it._(_root);
-	@override late final _Translations$services$simklReconnect$it simklReconnect = _Translations$services$simklReconnect$it._(_root);
 	@override late final _Translations$services$deviceCode$it deviceCode = _Translations$services$deviceCode$it._(_root);
 	@override late final _Translations$services$pendingAuth$it pendingAuth = _Translations$services$pendingAuth$it._(_root);
 	@override late final _Translations$services$libraryFilter$it libraryFilter = _Translations$services$libraryFilter$it._(_root);
@@ -2501,10 +2478,6 @@ class _Translations$common$ratingSource$it extends Translations$common$ratingSou
 	@override String get imdb => 'IMDb';
 	@override String get tmdb => 'TMDB';
 	@override String get rottenTomatoes => 'Rotten Tomatoes';
-	@override String get simkl => 'Simkl';
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get trakt => 'Trakt';
 	@override String get rottenTomatoesCritic => 'Critici di Rotten Tomatoes';
 	@override String get rottenTomatoesAudience => 'Pubblico di Rotten Tomatoes';
 	@override String get metacritic => 'Metacritic';
@@ -3311,22 +3284,8 @@ class _Translations$services$names$it extends Translations$services$names$en {
 	final TranslationsIt _root; // ignore: unused_field
 
 	// Translations
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get simkl => 'Simkl';
 	@override String get seerr => 'Seerr';
 	@override String get mdblist => 'MDBList';
-}
-
-// Path: services.simklReconnect
-class _Translations$services$simklReconnect$it extends Translations$services$simklReconnect$en {
-	_Translations$services$simklReconnect$it._(TranslationsIt root) : this._root = root, super.internal(root);
-
-	final TranslationsIt _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Riconnetti Simkl';
-	@override String get subtitle => 'Simkl sta dismettendo il metodo di accesso usato da questa connessione. La riconnessione apre simkl.com per autorizzare PlezTV — PlezTV non vede mai la tua password. La tua cronologia di visione resta su Simkl.';
 }
 
 // Path: services.deviceCode
@@ -3484,10 +3443,6 @@ extension on TranslationsIt {
 			'common.ratingSource.imdb' => 'IMDb',
 			'common.ratingSource.tmdb' => 'TMDB',
 			'common.ratingSource.rottenTomatoes' => 'Rotten Tomatoes',
-			'common.ratingSource.simkl' => 'Simkl',
-			'common.ratingSource.mal' => 'MyAnimeList',
-			'common.ratingSource.anilist' => 'AniList',
-			'common.ratingSource.trakt' => 'Trakt',
 			'common.ratingSource.rottenTomatoesCritic' => 'Critici di Rotten Tomatoes',
 			'common.ratingSource.rottenTomatoesAudience' => 'Pubblico di Rotten Tomatoes',
 			'common.ratingSource.metacritic' => 'Metacritic',
@@ -3754,7 +3709,6 @@ extension on TranslationsIt {
 			'settings.discordRichPresence' => 'Discord Rich Presence',
 			'settings.discordRichPresenceDescription' => 'Mostra su Discord cosa stai guardando',
 			'settings.services' => 'Servizi',
-			'settings.servicesDescription' => 'Connetti Trakt, MyAnimeList, Seerr e altro',
 			'settings.manageLibrariesDescription' => 'Riordina e nascondi le librerie',
 			'settings.companionRemoteServer' => 'Server del telecomando',
 			'settings.companionRemoteServerDescription' => 'Consenti ai dispositivi mobili della tua rete di controllare questa app',
@@ -3896,13 +3850,13 @@ extension on TranslationsIt {
 			'themeEditor.slots.textMuted' => 'Testo secondario',
 			'themeEditor.slots.accent' => 'Accento',
 			'themeEditor.opacity' => 'Opacità',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.hexHint' => '#RRGGBB o #AARRGGBB',
 			'themeEditor.fromOtherThemes' => 'Da altri temi',
 			'themeEditor.swatchLabel' => ({required Object color, required Object theme}) => '${color} ${theme}',
 			'themeEditor.contrast.textOnBg' => 'Testo sullo sfondo',
 			'themeEditor.contrast.textOnSurface' => 'Testo sulla superficie',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Testo secondario sullo sfondo',
 			'themeEditor.contrast.textMutedOnSurface' => 'Testo secondario sulla superficie',
 			'themeEditor.contrast.accentOnBg' => 'Accento sullo sfondo',
@@ -4410,13 +4364,13 @@ extension on TranslationsIt {
 			'profiles.tokenIdentityMismatch' => 'Il token del profilo Plex è stato associato a un server imprevisto',
 			'connections.sectionTitle' => 'Connessioni',
 			'connections.addConnection' => 'Aggiungi connessione',
-			_ => null,
-		} ?? switch (path) {
 			'connections.addConnectionSubtitleNoProfile' => 'Accedi con Plex o collega un server Jellyfin o Emby',
 			'connections.addConnectionSubtitleScoped' => ({required Object displayName}) => 'Aggiungi a ${displayName}: Plex, Jellyfin, Emby o la connessione di un altro profilo',
 			'connections.sessionExpiredOne' => ({required Object name}) => 'Sessione scaduta per ${name}',
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Sessione scaduta per ${count} server',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} ha negato l\'accesso a questo account',
+			_ => null,
+		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} server hanno negato l\'accesso a questo account',
 			'connections.signInAgain' => 'Accedi di nuovo',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Modifica connessione ${product}',
@@ -4670,7 +4624,6 @@ extension on TranslationsIt {
 			'startup.repairBodyOneCredential' => 'Un accesso salvato è danneggiato e non può essere letto. La riparazione rimuove solo quello; le altre impostazioni restano intatte.',
 			'startup.repairBodySignInsKept' => 'I tuoi server e profili dovrebbero rimanere con accesso effettuato.',
 			'startup.repairBodySignInsLost' => 'La chiave che protegge i tuoi accessi salvati non può essere recuperata da questo file, quindi dovrai effettuare di nuovo l\'accesso a ogni server e profilo. Nulla sul tuo server multimediale è interessato.',
-			'startup.repairBodySessionsUncertain' => 'I tracker (MAL, AniList, Simkl, Trakt) e Seerr sono archiviati separatamente e potrebbero sopravvivere o meno. PlezTV ti dirà esattamente cosa ha conservato.',
 			'startup.repairConfirm' => 'Ripara',
 			'startup.repairSucceeded' => 'Storage riparato',
 			'startup.repairNeedsRestart' => 'Storage riparato — riavvio richiesto',
@@ -4715,7 +4668,6 @@ extension on TranslationsIt {
 			'explore.status.upcoming' => 'In arrivo',
 			'explore.episodeCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('it'))(n, one: '${n} episodio', other: '${n} episodi', ), 
 			'explore.cast' => 'Attori',
-			'explore.characters' => 'Personaggi',
 			'explore.addToWatchlist' => 'Aggiungi alla lista da guardare',
 			'explore.removeFromWatchlist' => 'Rimuovi dalla lista da guardare',
 			'explore.addedToWatchlist' => 'Aggiunto alla lista titoli',
@@ -4924,8 +4876,6 @@ extension on TranslationsIt {
 			'liveTv.recordSettings.skipInLibrary' => 'Salta gli episodi già presenti nella libreria',
 			'liveTv.recordSettings.keepUpTo' => 'Episodi da conservare',
 			'liveTv.recordSettings.keepUpToHint' => '0 conserva tutti gli episodi',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => 'Inizia tra ${minutes} min',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day} alle ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => '${product} ha restituito dati di riproduzione della TV in diretta non validi',
@@ -4933,6 +4883,8 @@ extension on TranslationsIt {
 			'liveTv.failedToBuildStreamUrl' => 'Impossibile creare l\'URL dello stream',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Impossibile avviare il canale: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Impossibile cambiare canale: ${reason}',
+			_ => null,
+		} ?? switch (path) {
 			'collections.title' => 'Raccolte',
 			'collections.collection' => 'Raccolta',
 			'collections.empty' => 'La raccolta è vuota',
@@ -5438,8 +5390,6 @@ extension on TranslationsIt {
 			'performanceOverlay.decoderExynosHw' => 'Exynos HW',
 			'performanceOverlay.decoderSoftware' => 'Software',
 			'performanceOverlay.decoderHardware' => 'Hardware',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.tunnelingActive' => 'Attivo',
 			'performanceOverlay.dvRpuFailed' => ({required Object converted, required Object failures}) => '${converted} (${failures} errori)',
 			'externalPlayer.title' => 'Lettore esterno',
@@ -5447,6 +5397,8 @@ extension on TranslationsIt {
 			'externalPlayer.useExternalPlayerDescription' => 'Apri i video in un\'altra app',
 			'externalPlayer.selectPlayer' => 'Seleziona il lettore',
 			'externalPlayer.customPlayers' => 'Lettori personalizzati',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Predefinito di sistema',
 			'externalPlayer.addCustomPlayer' => 'Aggiungi lettore personalizzato',
 			'externalPlayer.playerName' => 'Nome del lettore',
@@ -5548,15 +5500,6 @@ extension on TranslationsIt {
 			'serverTasks.title' => 'Attività del server',
 			'serverTasks.failedToLoad' => 'Impossibile caricare le attività',
 			'serverTasks.noTasks' => 'Nessuna attività in corso',
-			'trakt.title' => 'Trakt',
-			'trakt.connected' => 'Connesso',
-			'trakt.connectedAs' => ({required Object username}) => 'Connesso come @${username}',
-			'trakt.disconnectConfirm' => 'Disconnettere l\'account Trakt?',
-			'trakt.disconnectConfirmBody' => 'PlezTV smetterà di inviare eventi a Trakt. Puoi riconnetterti quando vuoi.',
-			'trakt.scrobble' => 'Scrobbling in tempo reale',
-			'trakt.scrobbleDescription' => 'Invia eventi di riproduzione, pausa e arresto a Trakt durante la riproduzione.',
-			'trakt.watchedSync' => 'Sincronizza lo stato di visione',
-			'trakt.watchedSyncDescription' => 'Quando contrassegni un elemento come visto in PlezTV, viene contrassegnato come visto anche su Trakt.',
 			'seerr.title' => 'Seerr',
 			'seerr.connectTitle' => 'Connetti Seerr',
 			'seerr.serverUrl' => 'URL del server',
@@ -5617,13 +5560,8 @@ extension on TranslationsIt {
 			'services.disconnectConfirm' => ({required Object service}) => 'Disconnettere ${service}?',
 			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV smetterà di aggiornare ${service}. Riconnetti quando vuoi.',
 			'services.connectFailed' => ({required Object service}) => 'Impossibile connettersi a ${service}. Riprova.',
-			'services.names.mal' => 'MyAnimeList',
-			'services.names.anilist' => 'AniList',
-			'services.names.simkl' => 'Simkl',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.simklReconnect.title' => 'Riconnetti Simkl',
-			'services.simklReconnect.subtitle' => 'Simkl sta dismettendo il metodo di accesso usato da questa connessione. La riconnessione apre simkl.com per autorizzare PlezTV — PlezTV non vede mai la tua password. La tua cronologia di visione resta su Simkl.',
 			'services.deviceCode.title' => ({required Object service}) => 'Attiva PlezTV su ${service}',
 			'services.deviceCode.instructions' => 'Scansiona il codice QR oppure visita l\'indirizzo qui sotto e inserisci questo codice:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => 'Apri ${service} per attivare',

@@ -109,10 +109,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Rotten Tomatoes 影评人",
       "rottenTomatoesAudience": "Rotten Tomatoes 观众",
       "metacritic": "Metacritic",
@@ -392,7 +388,6 @@
     "discordRichPresence": "Discord 动态状态",
     "discordRichPresenceDescription": "在 Discord 上显示您正在观看的内容",
     "services": "服务",
-    "servicesDescription": "连接 Trakt、MyAnimeList、Seerr 等",
     "manageLibrariesDescription": "重新排序和隐藏媒体库",
     "companionRemoteServer": "远程控制服务器",
     "companionRemoteServerDescription": "允许同一网络中的移动设备控制此应用",
@@ -1404,7 +1399,6 @@
     "repairBodyOneCredential": "有一项已保存的登录信息已损坏且无法读取。修复只会移除这一项，其他设置保持不变。",
     "repairBodySignInsKept": "你的服务器和个人资料应保持登录状态。",
     "repairBodySignInsLost": "保护已保存登录信息的密钥无法从此文件中恢复，因此你需要重新登录每个服务器和个人资料。媒体服务器上的内容不受影响。",
-    "repairBodySessionsUncertain": "追踪服务（MAL、AniList、Simkl、Trakt）和 Seerr 是分开存储的，可能保留也可能无法保留。PlezTV 会明确告诉你保留了哪些。",
     "repairConfirm": "修复",
     "repairSucceeded": "存储已修复",
     "repairNeedsRestart": "存储已修复 — 需要重启",
@@ -1461,7 +1455,6 @@
       "other": "${n} 集"
     },
     "cast": "演员表",
-    "characters": "角色",
     "addToWatchlist": "添加到想看列表",
     "removeFromWatchlist": "从想看列表移除",
     "addedToWatchlist": "已加入待看列表",
@@ -2371,17 +2364,6 @@
     "failedToLoad": "加载任务失败",
     "noTasks": "没有正在运行的任务"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "已连接",
-    "connectedAs": "已以 @${username} 身份连接",
-    "disconnectConfirm": "断开 Trakt 账户？",
-    "disconnectConfirmBody": "PlezTV 将停止向 Trakt 发送事件。你可随时重新连接。",
-    "scrobble": "实时同步播放状态",
-    "scrobbleDescription": "播放期间将播放、暂停和停止事件发送到 Trakt。",
-    "watchedSync": "同步已观看状态",
-    "watchedSyncDescription": "在 PlezTV 中将内容标记为已观看时，也会在 Trakt 上标记为已观看。"
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "连接 Seerr",
@@ -2446,15 +2428,8 @@
     "disconnectConfirmBody": "PlezTV 将停止更新 ${service}。可随时重新连接。",
     "connectFailed": "无法连接到 ${service}。请重试。",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "重新连接 Simkl",
-      "subtitle": "Simkl 即将停用此连接所使用的登录方式。重新连接将打开 simkl.com 以授权 PlezTV — PlezTV 永远不会看到你的密码。你的观看记录仍保留在 Simkl 上。"
     },
     "deviceCode": {
       "title": "在 ${service} 上激活 PlezTV",

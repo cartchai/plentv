@@ -1615,7 +1615,7 @@ void main() {
 
   group('watchlist entry', () {
     testWidgets('cold open offers Add and adds to the single capable source', (tester) async {
-      final source = _MenuWatchlistSource(CatalogSourceId.trakt, 'Trakt', resolveTo: const CatalogItemIds(imdb: 'tt1'));
+      final source = _MenuWatchlistSource(CatalogSourceId.mdblist, 'MDBList', resolveTo: const CatalogItemIds(imdb: 'tt1'));
       final harness = await _pumpWatchlistMenu(tester, sources: [source], guids: ['imdb://tt1']);
 
       harness.menuKey.currentState!.showContextMenu(tester.element(find.text('watchlist target')));
@@ -1635,7 +1635,7 @@ void main() {
     });
 
     testWidgets('offers Remove once cached membership is known, and removes', (tester) async {
-      final source = _MenuWatchlistSource(CatalogSourceId.trakt, 'Trakt', resolveTo: const CatalogItemIds(imdb: 'tt1'))
+      final source = _MenuWatchlistSource(CatalogSourceId.mdblist, 'MDBList', resolveTo: const CatalogItemIds(imdb: 'tt1'))
         ..membership = true;
       final harness = await _pumpWatchlistMenu(tester, sources: [source]);
       await harness.catalogSources.watchlistCandidatesFor(
@@ -1656,7 +1656,7 @@ void main() {
     });
 
     testWidgets('hides the entry when the item resolved in no capable source', (tester) async {
-      final source = _MenuWatchlistSource(CatalogSourceId.mal, 'MAL'); // resolves null: out of domain
+      final source = _MenuWatchlistSource(CatalogSourceId.seerr, 'Seerr'); // resolves null: out of domain
       final harness = await _pumpWatchlistMenu(tester, sources: [source]);
       await harness.catalogSources.watchlistCandidatesFor(
         harness.item,
@@ -1672,7 +1672,7 @@ void main() {
     });
 
     testWidgets('reports when the tapped item matches no watchlist', (tester) async {
-      final source = _MenuWatchlistSource(CatalogSourceId.trakt, 'Trakt', resolveTo: const CatalogItemIds(imdb: 'tt1'));
+      final source = _MenuWatchlistSource(CatalogSourceId.mdblist, 'MDBList', resolveTo: const CatalogItemIds(imdb: 'tt1'));
       // The metadata answer carries no Guid entries: no external ids.
       final harness = await _pumpWatchlistMenu(tester, sources: [source]);
 
@@ -1687,10 +1687,10 @@ void main() {
     });
 
     testWidgets('several capable sources open a per-source chooser', (tester) async {
-      final trakt = _MenuWatchlistSource(CatalogSourceId.trakt, 'Trakt', resolveTo: const CatalogItemIds(imdb: 'tt1'));
-      final simkl = _MenuWatchlistSource(CatalogSourceId.simkl, 'Simkl', resolveTo: const CatalogItemIds(imdb: 'tt1'))
+      final mdblist = _MenuWatchlistSource(CatalogSourceId.mdblist, 'MDBList', resolveTo: const CatalogItemIds(imdb: 'tt1'));
+      final seerr = _MenuWatchlistSource(CatalogSourceId.seerr, 'Seerr', resolveTo: const CatalogItemIds(imdb: 'tt1'))
         ..membership = true;
-      final harness = await _pumpWatchlistMenu(tester, sources: [trakt, simkl]);
+      final harness = await _pumpWatchlistMenu(tester, sources: [mdblist, seerr]);
       await harness.catalogSources.watchlistCandidatesFor(
         harness.item,
         client: _SeedIdsClient(const ExternalIds(imdb: 'tt1')),
@@ -1704,16 +1704,16 @@ void main() {
       await tester.pumpAndSettle();
 
       // The chooser names each source with its own pending action.
-      expect(find.text('Trakt'), findsOneWidget);
-      expect(find.text('Simkl'), findsOneWidget);
+      expect(find.text('MDBList'), findsOneWidget);
+      expect(find.text('Seerr'), findsOneWidget);
       expect(find.text(t.explore.addToWatchlist), findsOneWidget);
       expect(find.text(t.explore.removeFromWatchlist), findsOneWidget);
 
-      await tester.tap(find.text('Simkl'));
+      await tester.tap(find.text('Seerr'));
       await tester.pumpAndSettle();
 
-      expect(simkl.mutations.map((m) => m.add), [false]);
-      expect(trakt.mutations, isEmpty);
+      expect(seerr.mutations.map((m) => m.add), [false]);
+      expect(mdblist.mutations, isEmpty);
       expect(find.text(t.explore.removedFromWatchlist), findsOneWidget);
     });
   });

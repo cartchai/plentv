@@ -17,9 +17,8 @@ import 'seerr_connect_screen.dart';
 import 'seerr_settings_screen.dart';
 import 'tracker_service_info.dart';
 
-/// Unified hub for all connected services: the watch-progress trackers
-/// (Trakt, MyAnimeList, AniList, Simkl) and the Seerr request server. Each
-/// row opens its service-specific settings screen.
+/// Unified hub for all connected services: the MDBList tracker and the
+/// Seerr request server. Each row opens its service-specific settings screen.
 class ServicesSettingsScreen extends StatelessWidget {
   const ServicesSettingsScreen({super.key});
 

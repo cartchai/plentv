@@ -89,7 +89,6 @@ class TranslationsHu extends Translations with BaseTranslations<AppLocale, Trans
 	@override late final _Translations$metadataEdit$hu metadataEdit = _Translations$metadataEdit$hu._(_root);
 	@override late final _Translations$matchScreen$hu matchScreen = _Translations$matchScreen$hu._(_root);
 	@override late final _Translations$serverTasks$hu serverTasks = _Translations$serverTasks$hu._(_root);
-	@override late final _Translations$trakt$hu trakt = _Translations$trakt$hu._(_root);
 	@override late final _Translations$seerr$hu seerr = _Translations$seerr$hu._(_root);
 	@override late final _Translations$services$hu services = _Translations$services$hu._(_root);
 	@override late final _Translations$addServer$hu addServer = _Translations$addServer$hu._(_root);
@@ -485,7 +484,6 @@ class _Translations$settings$hu extends Translations$settings$en {
 	@override String get discordRichPresence => 'Discord Rich Presence';
 	@override String get discordRichPresenceDescription => 'Megjeleníti a Discordon, hogy éppen mit nézel';
 	@override String get services => 'Szolgáltatások';
-	@override String get servicesDescription => 'Trakt, MyAnimeList, Seerr és egyéb szolgáltatások csatlakoztatása';
 	@override String get manageLibrariesDescription => 'Könyvtárak sorrendjének módosítása és elrejtése';
 	@override String get companionRemoteServer => 'Kísérőtávirányító szervere';
 	@override String get companionRemoteServerDescription => 'Lehetővé teszi, hogy a hálózaton lévő mobileszközökről vezéreld az alkalmazást';
@@ -1502,7 +1500,6 @@ class _Translations$startup$hu extends Translations$startup$en {
 	@override String get repairBodyOneCredential => 'Egy mentett bejelentkezés sérült, és nem olvasható. A javítás csak azt távolítja el; a többi beállítása érintetlen marad.';
 	@override String get repairBodySignInsKept => 'A szervereinek és profiljainak bejelentkezve kell maradniuk.';
 	@override String get repairBodySignInsLost => 'A mentett bejelentkezéseket védő kulcs nem nyerhető vissza ebből a fájlból, ezért minden szerverre és profilba újra be kell jelentkeznie. A médiaszerveren semmi nem érintett.';
-	@override String get repairBodySessionsUncertain => 'A nyomkövetők (MAL, AniList, Simkl, Trakt) és a Seerr külön vannak tárolva, és megmaradhatnak vagy nem. A PlezTV pontosan megmondja, mit őrzött meg.';
 	@override String get repairConfirm => 'Javítás';
 	@override String get repairSucceeded => 'A tárhely javítva';
 	@override String get repairNeedsRestart => 'A tárhely javítva – újraindítás szükséges';
@@ -1561,7 +1558,6 @@ class _Translations$explore$hu extends Translations$explore$en {
 		other: '${n} epizód',
 	);
 	@override String get cast => 'Szereplők';
-	@override String get characters => 'Karakterek';
 	@override String get addToWatchlist => 'Hozzáadás a Néznivalókhoz';
 	@override String get removeFromWatchlist => 'Eltávolítás a Néznivalókból';
 	@override String get addedToWatchlist => 'Hozzáadva a figyelőlistához';
@@ -2300,24 +2296,6 @@ class _Translations$serverTasks$hu extends Translations$serverTasks$en {
 	@override String get noTasks => 'Nincsenek futó feladatok';
 }
 
-// Path: trakt
-class _Translations$trakt$hu extends Translations$trakt$en {
-	_Translations$trakt$hu._(TranslationsHu root) : this._root = root, super.internal(root);
-
-	final TranslationsHu _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Trakt';
-	@override String get connected => 'Csatlakoztatva';
-	@override String connectedAs({required Object username}) => '@${username} néven csatlakoztatva';
-	@override String get disconnectConfirm => 'Leválasztod a Trakt-fiókot?';
-	@override String get disconnectConfirmBody => 'A PlezTV nem küld több eseményt a Traktnak. Bármikor újracsatlakozhatsz.';
-	@override String get scrobble => 'Valós idejű scrobbling';
-	@override String get scrobbleDescription => 'Lejátszási, szüneteltetési és leállítási események küldése a Traktnak lejátszás közben.';
-	@override String get watchedSync => 'Megtekintési állapot szinkronizálása';
-	@override String get watchedSyncDescription => 'Ha egy elemet megtekintettként jelölsz meg a PlezTVben, a Trakt is megtekintettként jelöli.';
-}
-
 // Path: seerr
 class _Translations$seerr$hu extends Translations$seerr$en {
 	_Translations$seerr$hu._(TranslationsHu root) : this._root = root, super.internal(root);
@@ -2395,7 +2373,6 @@ class _Translations$services$hu extends Translations$services$en {
 	@override String disconnectConfirmBody({required Object service}) => 'A PlezTV nem frissíti többé a(z) ${service} adatait. Bármikor újracsatlakozhatsz.';
 	@override String connectFailed({required Object service}) => 'Nem sikerült csatlakozni a következőhöz: ${service}. Próbáld újra.';
 	@override late final _Translations$services$names$hu names = _Translations$services$names$hu._(_root);
-	@override late final _Translations$services$simklReconnect$hu simklReconnect = _Translations$services$simklReconnect$hu._(_root);
 	@override late final _Translations$services$deviceCode$hu deviceCode = _Translations$services$deviceCode$hu._(_root);
 	@override late final _Translations$services$pendingAuth$hu pendingAuth = _Translations$services$pendingAuth$hu._(_root);
 	@override late final _Translations$services$libraryFilter$hu libraryFilter = _Translations$services$libraryFilter$hu._(_root);
@@ -2501,10 +2478,6 @@ class _Translations$common$ratingSource$hu extends Translations$common$ratingSou
 	@override String get imdb => 'IMDb';
 	@override String get tmdb => 'TMDB';
 	@override String get rottenTomatoes => 'Rotten Tomatoes';
-	@override String get simkl => 'Simkl';
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get trakt => 'Trakt';
 	@override String get rottenTomatoesCritic => 'Rotten Tomatoes kritikusok';
 	@override String get rottenTomatoesAudience => 'Rotten Tomatoes közönség';
 	@override String get metacritic => 'Metacritic';
@@ -3311,22 +3284,8 @@ class _Translations$services$names$hu extends Translations$services$names$en {
 	final TranslationsHu _root; // ignore: unused_field
 
 	// Translations
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get simkl => 'Simkl';
 	@override String get seerr => 'Seerr';
 	@override String get mdblist => 'MDBList';
-}
-
-// Path: services.simklReconnect
-class _Translations$services$simklReconnect$hu extends Translations$services$simklReconnect$en {
-	_Translations$services$simklReconnect$hu._(TranslationsHu root) : this._root = root, super.internal(root);
-
-	final TranslationsHu _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Simkl újracsatlakoztatása';
-	@override String get subtitle => 'A Simkl kivezeti a kapcsolat által használt bejelentkezési módot. Az újracsatlakozás megnyitja a simkl.com oldalt, ahol jóváhagyhatod a PlezTVt — a PlezTV sosem látja a jelszavadat. A megtekintési előzményeid a Simklen maradnak.';
 }
 
 // Path: services.deviceCode
@@ -3484,10 +3443,6 @@ extension on TranslationsHu {
 			'common.ratingSource.imdb' => 'IMDb',
 			'common.ratingSource.tmdb' => 'TMDB',
 			'common.ratingSource.rottenTomatoes' => 'Rotten Tomatoes',
-			'common.ratingSource.simkl' => 'Simkl',
-			'common.ratingSource.mal' => 'MyAnimeList',
-			'common.ratingSource.anilist' => 'AniList',
-			'common.ratingSource.trakt' => 'Trakt',
 			'common.ratingSource.rottenTomatoesCritic' => 'Rotten Tomatoes kritikusok',
 			'common.ratingSource.rottenTomatoesAudience' => 'Rotten Tomatoes közönség',
 			'common.ratingSource.metacritic' => 'Metacritic',
@@ -3754,7 +3709,6 @@ extension on TranslationsHu {
 			'settings.discordRichPresence' => 'Discord Rich Presence',
 			'settings.discordRichPresenceDescription' => 'Megjeleníti a Discordon, hogy éppen mit nézel',
 			'settings.services' => 'Szolgáltatások',
-			'settings.servicesDescription' => 'Trakt, MyAnimeList, Seerr és egyéb szolgáltatások csatlakoztatása',
 			'settings.manageLibrariesDescription' => 'Könyvtárak sorrendjének módosítása és elrejtése',
 			'settings.companionRemoteServer' => 'Kísérőtávirányító szervere',
 			'settings.companionRemoteServerDescription' => 'Lehetővé teszi, hogy a hálózaton lévő mobileszközökről vezéreld az alkalmazást',
@@ -3896,13 +3850,13 @@ extension on TranslationsHu {
 			'themeEditor.slots.textMuted' => 'Másodlagos szöveg',
 			'themeEditor.slots.accent' => 'Kiemelőszín',
 			'themeEditor.opacity' => 'Átlátszatlanság',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.hexHint' => '#RRGGBB vagy #AARRGGBB',
 			'themeEditor.fromOtherThemes' => 'Más témákból',
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme} – ${color}',
 			'themeEditor.contrast.textOnBg' => 'Szöveg a háttéren',
 			'themeEditor.contrast.textOnSurface' => 'Szöveg a felületen',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Másodlagos szöveg a háttéren',
 			'themeEditor.contrast.textMutedOnSurface' => 'Másodlagos szöveg a felületen',
 			'themeEditor.contrast.accentOnBg' => 'Kiemelőszín a háttéren',
@@ -4410,13 +4364,13 @@ extension on TranslationsHu {
 			'profiles.tokenIdentityMismatch' => 'A Plex-profil tokenje nem a várt szerverhez tartozik',
 			'connections.sectionTitle' => 'Kapcsolatok',
 			'connections.addConnection' => 'Kapcsolat hozzáadása',
-			_ => null,
-		} ?? switch (path) {
 			'connections.addConnectionSubtitleNoProfile' => 'Jelentkezz be Plexszel, vagy csatlakoztass egy Jellyfin- vagy Emby-szervert',
 			'connections.addConnectionSubtitleScoped' => ({required Object displayName}) => 'Hozzáadás a következőhöz (${displayName}): Plex, Jellyfin, Emby vagy más profilkapcsolat',
 			'connections.sessionExpiredOne' => ({required Object name}) => 'A(z) ${name} munkamenete lejárt',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count} szerver munkamenete lejárt',
 			'connections.accessDeniedOne' => ({required Object name}) => 'A(z) ${name} megtagadta a hozzáférést ettől a fióktól',
+			_ => null,
+		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} szerver megtagadta a hozzáférést ettől a fióktól',
 			'connections.signInAgain' => 'Bejelentkezés újra',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'A(z) ${product} kapcsolat szerkesztése',
@@ -4670,7 +4624,6 @@ extension on TranslationsHu {
 			'startup.repairBodyOneCredential' => 'Egy mentett bejelentkezés sérült, és nem olvasható. A javítás csak azt távolítja el; a többi beállítása érintetlen marad.',
 			'startup.repairBodySignInsKept' => 'A szervereinek és profiljainak bejelentkezve kell maradniuk.',
 			'startup.repairBodySignInsLost' => 'A mentett bejelentkezéseket védő kulcs nem nyerhető vissza ebből a fájlból, ezért minden szerverre és profilba újra be kell jelentkeznie. A médiaszerveren semmi nem érintett.',
-			'startup.repairBodySessionsUncertain' => 'A nyomkövetők (MAL, AniList, Simkl, Trakt) és a Seerr külön vannak tárolva, és megmaradhatnak vagy nem. A PlezTV pontosan megmondja, mit őrzött meg.',
 			'startup.repairConfirm' => 'Javítás',
 			'startup.repairSucceeded' => 'A tárhely javítva',
 			'startup.repairNeedsRestart' => 'A tárhely javítva – újraindítás szükséges',
@@ -4715,7 +4668,6 @@ extension on TranslationsHu {
 			'explore.status.upcoming' => 'Közelgő',
 			'explore.episodeCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('hu'))(n, one: '${n} epizód', other: '${n} epizód', ), 
 			'explore.cast' => 'Szereplők',
-			'explore.characters' => 'Karakterek',
 			'explore.addToWatchlist' => 'Hozzáadás a Néznivalókhoz',
 			'explore.removeFromWatchlist' => 'Eltávolítás a Néznivalókból',
 			'explore.addedToWatchlist' => 'Hozzáadva a figyelőlistához',
@@ -4924,8 +4876,6 @@ extension on TranslationsHu {
 			'liveTv.recordSettings.skipInLibrary' => 'A könyvtárban már meglévő epizódok kihagyása',
 			'liveTv.recordSettings.keepUpTo' => 'Megtartandó epizódok',
 			'liveTv.recordSettings.keepUpToHint' => 'A 0 minden epizódot megtart',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => '${minutes} perc múlva kezdődik',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day}, ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => 'A(z) ${product} érvénytelen Élő TV-lejátszási adatokat adott vissza',
@@ -4933,6 +4883,8 @@ extension on TranslationsHu {
 			'liveTv.failedToBuildStreamUrl' => 'Nem sikerült összeállítani a stream URL-címét',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Nem sikerült elindítani a csatornát: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Nem sikerült csatornát váltani: ${reason}',
+			_ => null,
+		} ?? switch (path) {
 			'collections.title' => 'Gyűjtemények',
 			'collections.collection' => 'Gyűjtemény',
 			'collections.empty' => 'A gyűjtemény üres',
@@ -5438,8 +5390,6 @@ extension on TranslationsHu {
 			'performanceOverlay.decoderExynosHw' => 'Exynos HW',
 			'performanceOverlay.decoderSoftware' => 'Szoftveres',
 			'performanceOverlay.decoderHardware' => 'Hardveres',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.tunnelingActive' => 'Aktív',
 			'performanceOverlay.dvRpuFailed' => ({required Object converted, required Object failures}) => '${converted} (${failures} sikertelen)',
 			'externalPlayer.title' => 'Külső lejátszó',
@@ -5447,6 +5397,8 @@ extension on TranslationsHu {
 			'externalPlayer.useExternalPlayerDescription' => 'Videók megnyitása egy másik alkalmazásban',
 			'externalPlayer.selectPlayer' => 'Lejátszó kiválasztása',
 			'externalPlayer.customPlayers' => 'Egyéni lejátszók',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Rendszer alapértelmezése',
 			'externalPlayer.addCustomPlayer' => 'Egyéni lejátszó hozzáadása',
 			'externalPlayer.playerName' => 'Lejátszó neve',
@@ -5548,15 +5500,6 @@ extension on TranslationsHu {
 			'serverTasks.title' => 'Szerverfeladatok',
 			'serverTasks.failedToLoad' => 'Nem sikerült a feladatok betöltése',
 			'serverTasks.noTasks' => 'Nincsenek futó feladatok',
-			'trakt.title' => 'Trakt',
-			'trakt.connected' => 'Csatlakoztatva',
-			'trakt.connectedAs' => ({required Object username}) => '@${username} néven csatlakoztatva',
-			'trakt.disconnectConfirm' => 'Leválasztod a Trakt-fiókot?',
-			'trakt.disconnectConfirmBody' => 'A PlezTV nem küld több eseményt a Traktnak. Bármikor újracsatlakozhatsz.',
-			'trakt.scrobble' => 'Valós idejű scrobbling',
-			'trakt.scrobbleDescription' => 'Lejátszási, szüneteltetési és leállítási események küldése a Traktnak lejátszás közben.',
-			'trakt.watchedSync' => 'Megtekintési állapot szinkronizálása',
-			'trakt.watchedSyncDescription' => 'Ha egy elemet megtekintettként jelölsz meg a PlezTVben, a Trakt is megtekintettként jelöli.',
 			'seerr.title' => 'Seerr',
 			'seerr.connectTitle' => 'Seerr csatlakoztatása',
 			'seerr.serverUrl' => 'Szerver URL-címe',
@@ -5617,13 +5560,8 @@ extension on TranslationsHu {
 			'services.disconnectConfirm' => ({required Object service}) => 'Leválasztod a(z) ${service} szolgáltatást?',
 			'services.disconnectConfirmBody' => ({required Object service}) => 'A PlezTV nem frissíti többé a(z) ${service} adatait. Bármikor újracsatlakozhatsz.',
 			'services.connectFailed' => ({required Object service}) => 'Nem sikerült csatlakozni a következőhöz: ${service}. Próbáld újra.',
-			'services.names.mal' => 'MyAnimeList',
-			'services.names.anilist' => 'AniList',
-			'services.names.simkl' => 'Simkl',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.simklReconnect.title' => 'Simkl újracsatlakoztatása',
-			'services.simklReconnect.subtitle' => 'A Simkl kivezeti a kapcsolat által használt bejelentkezési módot. Az újracsatlakozás megnyitja a simkl.com oldalt, ahol jóváhagyhatod a PlezTVt — a PlezTV sosem látja a jelszavadat. A megtekintési előzményeid a Simklen maradnak.',
 			'services.deviceCode.title' => ({required Object service}) => 'PlezTV aktiválása a következőn: ${service}',
 			'services.deviceCode.instructions' => 'Olvasd be a QR-kódot, vagy nyisd meg az alábbi címet, és írd be ezt a kódot:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => 'Nyisd meg a(z) ${service} oldalt az aktiváláshoz',

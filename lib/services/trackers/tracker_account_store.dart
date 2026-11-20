@@ -13,14 +13,38 @@ import 'tracker_session.dart';
 /// before a profile has been selected).
 class TrackerAccountStore {
   static final Map<TrackerService, TrackerAccountStore> _stores = {
-    TrackerService.mal: TrackerAccountStore._(TrackerService.mal, 'mal_session'),
-    TrackerService.anilist: TrackerAccountStore._(TrackerService.anilist, 'anilist_session'),
-    TrackerService.simkl: TrackerAccountStore._(TrackerService.simkl, 'simkl_session'),
-    TrackerService.trakt: TrackerAccountStore._(TrackerService.trakt, 'trakt_session'),
     TrackerService.mdblist: TrackerAccountStore._(TrackerService.mdblist, 'mdblist_session'),
   };
 
   static TrackerAccountStore forService(TrackerService service) => _stores[service]!;
+
+  /// One-time purge for the 1.5.2 tracker removal: delete the stored OAuth
+  /// sessions of the removed services (Trakt, Simkl, MAL, AniList) for every
+  /// profile, plus any queued writes for them. The MDBList session and its
+  /// queue rows are untouched. Idempotent and guarded by a flag so it runs
+  /// once, on first launch after the update; callers that already hold a
+  /// removed service's session in memory never re-read it afterwards.
+  static const String _purgeFlagKey = 'tracker_removal_1_5_2_purged';
+
+  static const List<String> _removedSessionBaseKeys = <String>[
+    'mal_session',
+    'anilist_session',
+    'simkl_session',
+    'trakt_session',
+  ];
+
+  static Future<void> purgeRemovedServiceSessions() async {
+    final prefs = await BaseSharedPreferencesService.sharedCache();
+    if (prefs.getBool(_purgeFlagKey) ?? false) return;
+    for (final key in prefs.keys) {
+      for (final base in _removedSessionBaseKeys) {
+        if (key == base || key.endsWith('_$base')) {
+          await prefs.remove(key);
+        }
+      }
+    }
+    await prefs.setBool(_purgeFlagKey, true);
+  }
 
   final TrackerService service;
   final String _baseKey;

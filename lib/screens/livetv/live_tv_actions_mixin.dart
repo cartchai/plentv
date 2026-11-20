@@ -25,7 +25,7 @@ mixin LiveTvActionsMixin<T extends StatefulWidget> on State<T> {
   /// Start live playback for [channel] on its owning server.
   ///
   /// Both backends route through the live-TV navigator so the player
-  /// inherits the live-only branches (no Trakt scrobble, no progress
+  /// inherits the live-only branches (no tracker scrobble, no progress
   /// scrobble, channel up/down nav, no resume bookmark). The player starts
   /// the backend-neutral session itself (Plex tune / Jellyfin stream
   /// negotiation under its loading spinner).

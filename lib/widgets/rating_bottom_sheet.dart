@@ -59,7 +59,6 @@ class _RatingBottomSheetState extends State<RatingBottomSheet> {
   final Set<String> _loading = {};
   final Map<String, _SectionStatus> _statuses = {};
   TrackerIdResolver? _resolver;
-  bool _resolverNeedsFribb = false;
   String? _trackerLoadKey;
 
   @override
@@ -85,12 +84,11 @@ class _RatingBottomSheetState extends State<RatingBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // Trakt's account provider is watched by [_trackerSources] via `context`.
+    // The trackers provider is watched by [_trackerSources] via `context`.
     return Consumer<TrackersProvider>(
       builder: (context, trackers, _) {
         final trackerSources = _trackerSources(context);
         _updateTrackerSourceMap(trackerSources);
-        _resolverNeedsFribb = trackers.isMalConnected || trackers.isAnilistConnected;
         _queueTrackerScoreLoad(trackerSources);
 
         final serverCaps = widget.serverClient?.capabilities;
@@ -247,7 +245,7 @@ class _RatingBottomSheetState extends State<RatingBottomSheet> {
           service: info.service,
           title: info.displayName,
           username: info.username(context),
-          connectedLabel: t.trakt.connected,
+          connectedLabel: t.services.connected,
           logoSource: info.logoSource,
           ratingSource: info.ratingSource,
         ),
@@ -434,7 +432,7 @@ class _RatingBottomSheetState extends State<RatingBottomSheet> {
   Future<TrackerRatingContext> _resolveTrackerContext() async {
     final client = widget.serverClient;
     if (client == null) throw const TrackerRatingUnavailableException('tracker');
-    _resolver ??= TrackerIdResolver(client, needsFribb: () => _resolverNeedsFribb);
+    _resolver ??= TrackerIdResolver(client);
     final ctx = await _resolver!.resolveForRating(widget.item);
     if (ctx == null) throw const TrackerRatingUnavailableException('tracker');
     return ctx;

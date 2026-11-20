@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plezy/models/trackers/tracker_context.dart';
@@ -23,7 +22,6 @@ TrackerContext _episode({
   int episodeNumber = 2,
 }) => TrackerContext.episode(
   external: external,
-  anime: null,
   ratingKey: ratingKey,
   libraryGlobalKey: libraryGlobalKey,
   season: season,
@@ -34,12 +32,12 @@ TrackerContext _movie({
   String ratingKey = 'movie-1',
   String? libraryGlobalKey = 'server-1:8',
   ExternalIds external = const ExternalIds(tmdb: 456),
-}) => TrackerContext.movie(external: external, anime: null, ratingKey: ratingKey, libraryGlobalKey: libraryGlobalKey);
+}) => TrackerContext.movie(external: external, ratingKey: ratingKey, libraryGlobalKey: libraryGlobalKey);
 
 TrackerWriteQueueItem _item({
   required TrackerContext ctx,
   required String coalesceKey,
-  TrackerService service = TrackerService.trakt,
+  TrackerService service = TrackerService.mdblist,
   bool watched = true,
   int? progressClaim,
   String watchedAtIso = _watchedAt,
@@ -70,7 +68,7 @@ void main() {
   test('done flush sends and removes the queued write', () async {
     final queue = TrackerWriteQueue();
     final ctx = _episode();
-    final key = trackerItemCoalesceKey(TrackerService.trakt, ctx, trackerExternalRowIdentity(ctx.external))!;
+    final key = trackerItemCoalesceKey(TrackerService.mdblist, ctx, trackerExternalRowIdentity(ctx.external))!;
     await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key));
 
     final sent = <TrackerWriteQueueItem>[];
@@ -85,24 +83,28 @@ void main() {
     expect(await queue.load('user-a'), isEmpty);
   });
 
-  test('a drain spaces Trakt writes by its one-write-per-second limit', () async {
+  test('a drain spaces requests by the fixed request spacing', () async {
     final pauses = <Duration>[];
     final queue = TrackerWriteQueue(pause: (duration) async => pauses.add(duration));
-    for (final (number, service) in [(1, TrackerService.trakt), (2, TrackerService.trakt), (3, TrackerService.simkl)]) {
+    for (var number = 1; number <= 3; number++) {
       final ctx = _episode(ratingKey: 'episode-$number', episodeNumber: number);
-      final key = trackerItemCoalesceKey(service, ctx, trackerExternalRowIdentity(ctx.external))!;
-      await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, service: service));
+      final key = trackerItemCoalesceKey(TrackerService.mdblist, ctx, trackerExternalRowIdentity(ctx.external))!;
+      await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key));
     }
 
     await _flushEach(queue, 'user-a', (item) async => TrackerWriteDisposition.done);
 
-    expect(pauses, [const Duration(seconds: 1), const Duration(seconds: 1), const Duration(milliseconds: 50)]);
+    expect(pauses, [
+      const Duration(milliseconds: 50),
+      const Duration(milliseconds: 50),
+      const Duration(milliseconds: 50),
+    ]);
   });
 
   test('failed flush increments attempts and a later flush drops an exhausted write without sending', () async {
     final queue = TrackerWriteQueue();
     final ctx = _episode();
-    final key = trackerItemCoalesceKey(TrackerService.trakt, ctx, trackerExternalRowIdentity(ctx.external))!;
+    final key = trackerItemCoalesceKey(TrackerService.mdblist, ctx, trackerExternalRowIdentity(ctx.external))!;
     await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, attempts: TrackerWriteQueue.maxAttempts - 1));
 
     var sendCalls = 0;
@@ -125,7 +127,7 @@ void main() {
   test('skipped flush keeps the write without burning an attempt', () async {
     final queue = TrackerWriteQueue();
     final ctx = _episode();
-    final key = trackerItemCoalesceKey(TrackerService.trakt, ctx, trackerExternalRowIdentity(ctx.external))!;
+    final key = trackerItemCoalesceKey(TrackerService.mdblist, ctx, trackerExternalRowIdentity(ctx.external))!;
     await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, attempts: 2));
 
     await _flushEach(queue, 'user-a', (item) async => TrackerWriteDisposition.skipped);
@@ -138,7 +140,7 @@ void main() {
   test('newer per-item history intent replaces the older intent for its coalesce key', () async {
     final queue = TrackerWriteQueue();
     final ctx = _episode();
-    final key = trackerItemCoalesceKey(TrackerService.trakt, ctx, trackerExternalRowIdentity(ctx.external))!;
+    final key = trackerItemCoalesceKey(TrackerService.mdblist, ctx, trackerExternalRowIdentity(ctx.external))!;
     await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key));
     await queue.enqueue(
       'user-a',
@@ -151,15 +153,15 @@ void main() {
     expect(remaining.single.watchedAtIso, '2026-05-13T00:00:00.000Z');
   });
 
-  test('series progress coalescing retains the greatest monotonic claim', () async {
+  test('coalescing retains the greatest monotonic claim for one key', () async {
     final queue = TrackerWriteQueue();
     final ctx = _episode();
-    final key = trackerSeriesCoalesceKey(TrackerService.mal, 42);
-    await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, service: TrackerService.mal, progressClaim: 5));
-    await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, service: TrackerService.mal, progressClaim: 6));
+    final key = trackerItemCoalesceKey(TrackerService.mdblist, ctx, trackerExternalRowIdentity(ctx.external))!;
+    await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, progressClaim: 5));
+    await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, progressClaim: 6));
     expect((await queue.load('user-a')).single.progressClaim, 6);
 
-    await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, service: TrackerService.mal, progressClaim: 5));
+    await queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key, progressClaim: 5));
     final remaining = await queue.load('user-a');
     expect(remaining, hasLength(1));
     expect(remaining.single.progressClaim, 6);
@@ -168,9 +170,8 @@ void main() {
   test('invalidate drops outright or only claims covered by applied progress', () async {
     final queue = TrackerWriteQueue();
     final ctx = _episode();
-    final key = trackerSeriesCoalesceKey(TrackerService.anilist, 42);
-    TrackerWriteQueueItem claim(int progress) =>
-        _item(ctx: ctx, coalesceKey: key, service: TrackerService.anilist, progressClaim: progress);
+    final key = trackerItemCoalesceKey(TrackerService.mdblist, ctx, trackerExternalRowIdentity(ctx.external))!;
+    TrackerWriteQueueItem claim(int progress) => _item(ctx: ctx, coalesceKey: key, progressClaim: progress);
 
     await queue.enqueue('user-a', claim(5));
     await queue.invalidate('user-a', {key: null});
@@ -188,38 +189,29 @@ void main() {
   });
 
   group('batched drain', () {
-    test('groups history rows by service and direction, capped per request, and sends other rows alone', () async {
+    test('groups history rows by direction, capped per request', () async {
       final pauses = <Duration>[];
       final queue = TrackerWriteQueue(pause: (duration) async => pauses.add(duration));
       TrackerWriteQueueItem added(int number) => _item(
-        ctx: _episode(ratingKey: 'simkl-$number', episodeNumber: number),
-        coalesceKey: _historyKey(TrackerService.simkl, _episode(episodeNumber: number)),
-        service: TrackerService.simkl,
+        ctx: _episode(ratingKey: 'episode-$number', episodeNumber: number),
+        coalesceKey: _historyKey(TrackerService.mdblist, _episode(episodeNumber: number)),
       );
       const half = TrackerConstants.historyBatchSize ~/ 2;
       final rows = <TrackerWriteQueueItem>[
         for (var number = 1; number <= half; number++) added(number),
         _item(
-          ctx: _episode(ratingKey: 'simkl-removed', episodeNumber: 500),
-          coalesceKey: _historyKey(TrackerService.simkl, _episode(episodeNumber: 500)),
-          service: TrackerService.simkl,
+          ctx: _episode(ratingKey: 'episode-removed', episodeNumber: 500),
+          coalesceKey: _historyKey(TrackerService.mdblist, _episode(episodeNumber: 500)),
           watched: false,
         ),
         for (var number = half + 1; number <= TrackerConstants.historyBatchSize + 1; number++) added(number),
-        for (final entry in [42, 43])
-          _item(
-            ctx: _episode(ratingKey: 'mal-$entry'),
-            coalesceKey: trackerSeriesCoalesceKey(TrackerService.mal, entry),
-            service: TrackerService.mal,
-            progressClaim: 5,
-          ),
       ];
       await queue.enqueueAll('user-a', rows);
 
       final units = <List<String>>[];
       await queue.flush(
         'user-a',
-        batches: (service) => service == TrackerService.simkl,
+        batches: (service) => service == TrackerService.mdblist,
         send: (unit) async {
           units.add([for (final row in unit) row.ctx.ratingKey]);
           return List.filled(unit.length, TrackerWriteDisposition.done);
@@ -227,12 +219,10 @@ void main() {
       );
 
       expect(units, [
-        [for (var number = 1; number <= TrackerConstants.historyBatchSize; number++) 'simkl-$number'],
-        ['simkl-removed'],
-        ['simkl-${TrackerConstants.historyBatchSize + 1}'],
-        ['mal-42'],
-        ['mal-43'],
-      ], reason: 'additions batch around a removal, overflow starts a new request, other services go alone');
+        [for (var number = 1; number <= TrackerConstants.historyBatchSize; number++) 'episode-$number'],
+        ['episode-removed'],
+        ['episode-${TrackerConstants.historyBatchSize + 1}'],
+      ], reason: 'additions batch around a removal, overflow starts a new request');
       expect(pauses, hasLength(units.length), reason: 'every request is followed by the service spacing');
       expect(await queue.load('user-a'), isEmpty);
     });
@@ -243,7 +233,7 @@ void main() {
         for (var number = 1; number <= 3; number++)
           _item(
             ctx: _episode(ratingKey: 'episode-$number', episodeNumber: number),
-            coalesceKey: _historyKey(TrackerService.trakt, _episode(episodeNumber: number)),
+            coalesceKey: _historyKey(TrackerService.mdblist, _episode(episodeNumber: number)),
             attempts: 1,
           ),
       ];
@@ -270,8 +260,8 @@ void main() {
         for (var number = 1; number <= TrackerConstants.historyBatchSize + 1; number++)
           _item(
             ctx: _episode(ratingKey: 'episode-$number', episodeNumber: number),
-            coalesceKey: _historyKey(TrackerService.simkl, _episode(episodeNumber: number)),
-            service: TrackerService.simkl,
+            coalesceKey: _historyKey(TrackerService.mdblist, _episode(episodeNumber: number)),
+            service: TrackerService.mdblist,
           ),
       ]);
 
@@ -299,23 +289,23 @@ void main() {
     final sameRemoteEpisode = _episode(ratingKey: 'different-local-key', external: const ExternalIds(tvdb: 100));
     final movie = _movie(ratingKey: 'shared-rating-key', external: const ExternalIds(tvdb: 100));
 
-    final firstKey = trackerItemCoalesceKey(TrackerService.trakt, first, trackerExternalRowIdentity(first.external))!;
+    final firstKey = trackerItemCoalesceKey(TrackerService.mdblist, first, trackerExternalRowIdentity(first.external))!;
     final secondKey = trackerItemCoalesceKey(
-      TrackerService.trakt,
+      TrackerService.mdblist,
       second,
       trackerExternalRowIdentity(second.external),
     )!;
     expect(firstKey, isNot(secondKey));
     expect(
       trackerItemCoalesceKey(
-        TrackerService.trakt,
+        TrackerService.mdblist,
         sameRemoteEpisode,
         trackerExternalRowIdentity(sameRemoteEpisode.external),
       ),
       firstKey,
     );
     expect(
-      trackerItemCoalesceKey(TrackerService.trakt, movie, trackerExternalRowIdentity(movie.external)),
+      trackerItemCoalesceKey(TrackerService.mdblist, movie, trackerExternalRowIdentity(movie.external)),
       isNot(firstKey),
     );
 
@@ -332,14 +322,14 @@ void main() {
       'user-a',
       _item(
         ctx: first,
-        coalesceKey: trackerItemCoalesceKey(TrackerService.trakt, first, trackerExternalRowIdentity(first.external))!,
+        coalesceKey: trackerItemCoalesceKey(TrackerService.mdblist, first, trackerExternalRowIdentity(first.external))!,
       ),
     );
     await queue.enqueue(
       'user-b',
       _item(
         ctx: second,
-        coalesceKey: trackerItemCoalesceKey(TrackerService.trakt, second, trackerExternalRowIdentity(second.external))!,
+        coalesceKey: trackerItemCoalesceKey(TrackerService.mdblist, second, trackerExternalRowIdentity(second.external))!,
       ),
     );
 
@@ -356,30 +346,26 @@ void main() {
     expect((await queue.load('user-b')).single.ctx.ratingKey, 'second');
   });
 
-  test('disconnect purge drops one service rows so nothing replays, leaving other services queued', () async {
+  test('disconnect purge drops the service rows so nothing replays', () async {
     final queue = TrackerWriteQueue();
-    final traktCtx = _episode(ratingKey: 'trakt-episode', external: const ExternalIds(tvdb: 100));
-    final traktKey = trackerItemCoalesceKey(
-      TrackerService.trakt,
-      traktCtx,
-      trackerExternalRowIdentity(traktCtx.external),
+    final firstCtx = _episode(ratingKey: 'first-episode', external: const ExternalIds(tvdb: 100));
+    final firstKey = trackerItemCoalesceKey(
+      TrackerService.mdblist,
+      firstCtx,
+      trackerExternalRowIdentity(firstCtx.external),
     )!;
-    final malCtx = _episode(ratingKey: 'mal-episode', external: const ExternalIds(tvdb: 200));
-    await queue.enqueue('user-a', _item(ctx: traktCtx, coalesceKey: traktKey));
-    await queue.enqueue(
-      'user-a',
-      _item(
-        ctx: malCtx,
-        coalesceKey: trackerSeriesCoalesceKey(TrackerService.mal, 42),
-        service: TrackerService.mal,
-        progressClaim: 5,
-      ),
-    );
+    final secondCtx = _episode(ratingKey: 'second-episode', external: const ExternalIds(tvdb: 200));
+    final secondKey = trackerItemCoalesceKey(
+      TrackerService.mdblist,
+      secondCtx,
+      trackerExternalRowIdentity(secondCtx.external),
+    )!;
+    await queue.enqueue('user-a', _item(ctx: firstCtx, coalesceKey: firstKey));
+    await queue.enqueue('user-a', _item(ctx: secondCtx, coalesceKey: secondKey));
 
-    await queue.removeService('user-a', TrackerService.trakt);
+    await queue.removeService('user-a', TrackerService.mdblist);
 
-    final survivors = await queue.load('user-a');
-    expect(survivors.map((item) => item.service), [TrackerService.mal], reason: 'other services keep their rows');
+    expect(await queue.load('user-a'), isEmpty);
 
     final sent = <TrackerWriteQueueItem>[];
     await _flushEach(queue, 'user-a', (item) async {
@@ -387,7 +373,7 @@ void main() {
       return TrackerWriteDisposition.done;
     });
 
-    expect(sent.map((item) => item.service), [TrackerService.mal], reason: 'the purged service must not dispatch');
+    expect(sent, isEmpty, reason: 'the purged service must not dispatch');
   });
 
   test('a persist-failure enqueue racing the disconnect purge cannot resurrect the row', () async {
@@ -397,7 +383,7 @@ void main() {
 
     final queue = TrackerWriteQueue();
     final ctx = _episode();
-    final key = trackerItemCoalesceKey(TrackerService.trakt, ctx, trackerExternalRowIdentity(ctx.external))!;
+    final key = trackerItemCoalesceKey(TrackerService.mdblist, ctx, trackerExternalRowIdentity(ctx.external))!;
 
     // The enqueue claims its lock slot synchronously, then its persist fails
     // and the row can only be buffered in memory. The purge claims the next
@@ -405,7 +391,7 @@ void main() {
     // failing while the user disconnects the service.
     platform.failQueueWrites = true;
     final enqueue = queue.enqueue('user-a', _item(ctx: ctx, coalesceKey: key));
-    final purge = queue.removeService('user-a', TrackerService.trakt);
+    final purge = queue.removeService('user-a', TrackerService.mdblist);
     await enqueue;
     await purge;
     platform.failQueueWrites = false;
@@ -420,92 +406,18 @@ void main() {
     expect(await queue.load('user-a'), isEmpty);
   });
 
-  test('legacy Trakt rows migrate once with their intent and episode metadata intact', () async {
+  test('legacy Trakt rows are inert now that the migration is gone', () async {
     final prefs = await BaseSharedPreferencesService.sharedCache();
     const user = 'legacy-user';
     final legacyKey = profileScopedPrefsKey(user, 'trakt_sync_queue');
-    await prefs.setString(
-      legacyKey,
-      json.encode([
-        {
-          'op': 'add',
-          'ratingKey': 'legacy-episode',
-          'serverId': 'server-1',
-          'libraryGlobalKey': 'server-1:7',
-          'kind': 'episode',
-          'ids': {'tvdb': 123, 'tmdb': 456, 'imdb': 'tt789'},
-          'season': 3,
-          'number': 4,
-          'watchedAtIso': '2026-05-12T00:00:00.000Z',
-          'attempts': 2,
-        },
-        {
-          'op': 'remove',
-          'ratingKey': 'legacy-movie',
-          'serverId': 'server-2',
-          'libraryGlobalKey': 'server-2:8',
-          'kind': 'movie',
-          'ids': {'tmdb': 999},
-          'watchedAtIso': '2026-05-13T00:00:00.000Z',
-          'attempts': 0,
-        },
-      ]),
-    );
+    const legacyPayload = '[{"op":"add","ratingKey":"legacy-episode","serverId":"server-1",'
+        '"libraryGlobalKey":"server-1:7","kind":"episode","ids":{"tvdb":123},'
+        '"season":3,"number":4,"watchedAtIso":"2026-05-12T00:00:00.000Z","attempts":2}]';
+    await prefs.setString(legacyKey, legacyPayload);
 
     final queue = TrackerWriteQueue();
-    final sent = <TrackerWriteQueueItem>[];
-    await _flushEach(queue, user, (item) async {
-      sent.add(item);
-      return TrackerWriteDisposition.done;
-    });
-
-    expect(sent, hasLength(2));
-    expect(sent.map((item) => item.service), everyElement(TrackerService.trakt));
-    expect(sent[0].watched, isTrue);
-    expect(sent[0].ctx.season, 3);
-    expect(sent[0].ctx.episodeNumber, 4);
-    expect(sent[0].watchedAtIso, '2026-05-12T00:00:00.000Z');
-    expect(sent[0].attempts, 2);
-    expect(sent[1].watched, isFalse);
-    expect(sent[1].ctx.isMovie, isTrue);
-    expect(sent[1].watchedAtIso, '2026-05-13T00:00:00.000Z');
-    expect(prefs.getString(legacyKey), isNull);
-    expect(await queue.load(user), isEmpty);
-
-    const malformedUser = 'malformed-legacy-user';
-    final malformedKey = profileScopedPrefsKey(malformedUser, 'trakt_sync_queue');
-    await prefs.setString(malformedKey, '{not valid json');
-    expect(await queue.load(malformedUser), isEmpty);
-    expect(prefs.getString(malformedKey), isNull);
-    expect(await queue.load(malformedUser), isEmpty);
-  });
-
-  test('a legacy queue left behind by an interrupted migration does not duplicate rows', () async {
-    final prefs = await BaseSharedPreferencesService.sharedCache();
-    const user = 'interrupted-user';
-    final legacyRow = {
-      'op': 'add',
-      'ratingKey': 'legacy-episode',
-      'serverId': 'server-1',
-      'libraryGlobalKey': 'server-1:7',
-      'kind': 'episode',
-      'ids': {'tvdb': 123},
-      'season': 3,
-      'number': 4,
-      'watchedAtIso': '2026-05-12T00:00:00.000Z',
-      'attempts': 0,
-    };
-    await prefs.setString(profileScopedPrefsKey(user, 'trakt_sync_queue'), json.encode([legacyRow]));
-
-    // First pass converts the row. A fresh queue instance then finds the legacy
-    // key again, as it would after a crash between the write and the removal.
-    expect(await TrackerWriteQueue().load(user), hasLength(1));
-    await prefs.setString(profileScopedPrefsKey(user, 'trakt_sync_queue'), json.encode([legacyRow]));
-
-    final migrated = await TrackerWriteQueue().load(user);
-
-    expect(migrated, hasLength(1), reason: 'the row is replaced, not appended a second time');
-    expect(migrated.single.ctx.episodeNumber, 4);
+    expect(await queue.load(user), isEmpty, reason: 'the legacy Trakt queue no longer migrates');
+    expect(prefs.getString(legacyKey), legacyPayload, reason: 'the inert key is left alone');
   });
 
   test('corrupt tracker queue payload is archived and discarded without throwing', () async {

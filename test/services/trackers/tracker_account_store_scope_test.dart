@@ -26,23 +26,23 @@ void main() {
     });
 
     test('profileScopedPrefsKey normalizes full profile ids to the uuid scope', () {
-      expect(profileScopedPrefsKey(_fullProfileId, 'trakt_session'), 'user_${_homeUserUuid}_trakt_session');
-      expect(profileScopedPrefsKey(_homeUserUuid, 'trakt_session'), 'user_${_homeUserUuid}_trakt_session');
-      expect(profileScopedPrefsKey('', 'trakt_session'), 'trakt_session');
+      expect(profileScopedPrefsKey(_fullProfileId, 'mdblist_session'), 'user_${_homeUserUuid}_mdblist_session');
+      expect(profileScopedPrefsKey(_homeUserUuid, 'mdblist_session'), 'user_${_homeUserUuid}_mdblist_session');
+      expect(profileScopedPrefsKey('', 'mdblist_session'), 'mdblist_session');
     });
 
     /// Regression: sessions saved under the full profile id were relocated to
     /// the uuid scope by StorageService's launch-time repair, so the next
-    /// hydrate (same full id) missed them — Trakt "unlinked" on every
+    /// hydrate (same full id) missed them — MDBList "unlinked" on every
     /// restart. Save and load must agree on the uuid scope regardless of
     /// which id form the caller passes.
     test('store writes the uuid-scoped key and loads it from either id form', () async {
-      final store = trackerAccountStore(TrackerService.trakt);
+      final store = trackerAccountStore(TrackerService.mdblist);
       await store.save(_fullProfileId, _session());
 
       final prefs = await BaseSharedPreferencesService.sharedCache();
-      expect(prefs.getString('user_${_homeUserUuid}_trakt_session'), isNotNull);
-      expect(prefs.getString('user_${_fullProfileId}_trakt_session'), isNull);
+      expect(prefs.getString('user_${_homeUserUuid}_mdblist_session'), isNotNull);
+      expect(prefs.getString('user_${_fullProfileId}_mdblist_session'), isNull);
 
       expect(await store.load(_fullProfileId), isNotNull);
       expect(await store.load(_homeUserUuid), isNotNull);

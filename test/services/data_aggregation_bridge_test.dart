@@ -337,7 +337,7 @@ void main() {
         multiServer.dispose();
       });
       const item = CatalogItem(
-        source: CatalogSourceId.trakt,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Recovered Movie',
         ids: CatalogItemIds(tmdb: 42),

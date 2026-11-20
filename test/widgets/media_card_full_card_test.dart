@@ -133,7 +133,7 @@ void main() {
     // this line exists to surface. The grid therefore leads with the rating
     // and drops certification, votes and genres; the list keeps them.
     final item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Catalog Movie',
       year: 2024,
@@ -181,7 +181,7 @@ void main() {
 
   testWidgets('seasonal rank badge names its season instead of claiming all-time rank', (tester) async {
     final item = CatalogItem(
-      source: CatalogSourceId.anilist,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Seasonal Show',
       ids: const CatalogItemIds(anilist: 1),
@@ -205,7 +205,7 @@ void main() {
 
   testWidgets('windowed viewers render only when their period is present', (tester) async {
     final withoutPeriod = CatalogItem(
-      source: CatalogSourceId.simkl,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'No Viewer Window',
       ids: const CatalogItemIds(simkl: 1),
@@ -216,7 +216,7 @@ void main() {
     expect(find.textContaining('37'), findsNothing);
 
     final withPeriod = CatalogItem(
-      source: CatalogSourceId.simkl,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Viewer Window',
       ids: const CatalogItemIds(simkl: 1),
@@ -273,7 +273,7 @@ void main() {
 
   testWidgets('catalog item is rehydrated once across rebuilds of the same item identity', (tester) async {
     final catalog = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Cached Catalog Movie',
       ids: const CatalogItemIds(tmdb: 1),
@@ -345,7 +345,7 @@ void main() {
 
   testWidgets('recommendation badge prefers a user count and falls back to viewer percentage', (tester) async {
     final withCount = CatalogItem(
-      source: CatalogSourceId.simkl,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Counted Recommendation',
       ids: const CatalogItemIds(simkl: 1),
@@ -358,7 +358,7 @@ void main() {
     expect(find.text(t.explore.detail.recommendedByPercent(percent: '42%')), findsNothing);
 
     final withPercent = CatalogItem(
-      source: CatalogSourceId.simkl,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Percentage Recommendation',
       ids: const CatalogItemIds(simkl: 2),
@@ -390,7 +390,7 @@ void main() {
     // which is wide enough for the full composition and must not be trimmed
     // by the grid's compact mode.
     final item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Catalog Movie',
       year: 2024,

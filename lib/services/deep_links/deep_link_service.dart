@@ -75,23 +75,6 @@ class DeepLinkService {
   /// Applies a link's profile once startup is over. Installed by the app root.
   DeepLinkProfileHost? host;
 
-  /// Waiting tracker sign-in, set by the connect dialog while it waits for
-  /// the authorization code. Receives `plezy://oauth/<service>?code=...`
-  /// links the browser redirects to.
-  void Function(Uri uri)? onOAuthReturn;
-
-  /// The last OAuth return link that arrived with nobody listening (e.g.
-  /// the app cold-started from the redirect). The next connect dialog
-  /// claims it via [takePendingOAuthReturn].
-  Uri? _pendingOAuthReturn;
-
-  /// Claims the stashed OAuth return link, if any. Null when none arrived.
-  Uri? takePendingOAuthReturn() {
-    final uri = _pendingOAuthReturn;
-    _pendingOAuthReturn = null;
-    return uri;
-  }
-
   _PendingLink? _pending;
   _PendingLink? _startupClaim;
   Profile? _startupProfile;
@@ -138,22 +121,6 @@ class DeepLinkService {
     _sinceLastUrl
       ..reset()
       ..start();
-
-    // OAuth return links never enter the media-link grammar: hand them to
-    // the tracker connect dialog that is waiting for the code (or stash
-    // them for the next connect when the app cold-started from the
-    // redirect and no dialog is up yet). A return consumed live is NOT
-    // stashed — the code is single-use and must not replay into a later
-    // connect.
-    final uri = Uri.tryParse(url);
-    if (uri != null && uri.scheme == DeepLink.scheme && uri.host.toLowerCase() == 'oauth') {
-      if (onOAuthReturn != null) {
-        onOAuthReturn!(uri);
-      } else {
-        _pendingOAuthReturn = uri;
-      }
-      return;
-    }
 
     final link = DeepLink.tryParse(url);
     if (link == null) {

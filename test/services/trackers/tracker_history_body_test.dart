@@ -5,7 +5,6 @@ import 'package:plezy/utils/external_ids.dart';
 
 TrackerContext _episode(int tvdb, int season, int number) => TrackerContext.episode(
   external: ExternalIds(tvdb: tvdb),
-  anime: null,
   ratingKey: 'episode-$tvdb-$season-$number',
   libraryGlobalKey: null,
   season: season,
@@ -14,7 +13,6 @@ TrackerContext _episode(int tvdb, int season, int number) => TrackerContext.epis
 
 TrackerContext _movie(int tmdb) => TrackerContext.movie(
   external: ExternalIds(tmdb: tmdb),
-  anime: null,
   ratingKey: 'movie-$tmdb',
   libraryGlobalKey: null,
 );

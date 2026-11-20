@@ -109,10 +109,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Rotten Tomatoes-critici",
       "rottenTomatoesAudience": "Rotten Tomatoes-publiek",
       "metacritic": "Metacritic",
@@ -392,7 +388,6 @@
     "discordRichPresence": "Discord Rich Presence",
     "discordRichPresenceDescription": "Toon op Discord wat je aan het kijken bent",
     "services": "Diensten",
-    "servicesDescription": "Koppel Trakt, MyAnimeList, Seerr en meer",
     "manageLibrariesDescription": "Bibliotheken herordenen en verbergen",
     "companionRemoteServer": "Companion Remote-server",
     "companionRemoteServerDescription": "Sta mobiele apparaten op je netwerk toe om deze app te bedienen",
@@ -1409,7 +1404,6 @@
     "repairBodyOneCredential": "Eén opgeslagen aanmelding is beschadigd en kan niet worden gelezen. Door te repareren wordt alleen die ene verwijderd; je andere instellingen blijven onaangetast.",
     "repairBodySignInsKept": "Je servers en profielen blijven naar verwachting aangemeld.",
     "repairBodySignInsLost": "De sleutel die je opgeslagen aanmeldingen beschermt, kan niet uit dit bestand worden hersteld. Je moet je daarom opnieuw aanmelden bij elke server en elk profiel. Er wordt niets op je mediaserver gewijzigd.",
-    "repairBodySessionsUncertain": "Trackers (MAL, AniList, Simkl, Trakt) en Seerr worden apart opgeslagen en blijven mogelijk wel of niet bewaard. PlezTV vertelt je precies wat het heeft bewaard.",
     "repairConfirm": "Repareren",
     "repairSucceeded": "Opslag gerepareerd",
     "repairNeedsRestart": "Opslag gerepareerd — herstart vereist",
@@ -1467,7 +1461,6 @@
       "other": "${n} afleveringen"
     },
     "cast": "Acteurs",
-    "characters": "Personages",
     "addToWatchlist": "Toevoegen aan kijklijst",
     "removeFromWatchlist": "Verwijderen uit kijklijst",
     "addedToWatchlist": "Aan kijklijst toegevoegd",
@@ -2383,17 +2376,6 @@
     "failedToLoad": "Taken konden niet worden geladen",
     "noTasks": "Geen actieve taken"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "Verbonden",
-    "connectedAs": "Verbonden als @${username}",
-    "disconnectConfirm": "Trakt-account loskoppelen?",
-    "disconnectConfirmBody": "PlezTV stuurt geen gebeurtenissen meer naar Trakt. Je kunt op elk moment opnieuw verbinding maken.",
-    "scrobble": "Realtime scrobblen",
-    "scrobbleDescription": "Stuur tijdens het afspelen gebeurtenissen voor afspelen, pauzeren en stoppen naar Trakt.",
-    "watchedSync": "Kijkstatus synchroniseren",
-    "watchedSyncDescription": "Wanneer je items in PlezTV als bekeken markeert, worden ze op Trakt ook als bekeken gemarkeerd."
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "Verbinden met Seerr",
@@ -2458,15 +2440,8 @@
     "disconnectConfirmBody": "PlezTV werkt ${service} niet meer bij. Je kunt op elk moment opnieuw verbinding maken.",
     "connectFailed": "Verbinding maken met ${service} is mislukt. Probeer het opnieuw.",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "Simkl opnieuw verbinden",
-      "subtitle": "Simkl stopt met de aanmeldmethode die deze verbinding gebruikt. Bij opnieuw verbinden wordt simkl.com geopend om PlezTV goed te keuren — PlezTV ziet je wachtwoord nooit. Je kijkgeschiedenis blijft op Simkl."
     },
     "deviceCode": {
       "title": "PlezTV activeren op ${service}",

@@ -437,7 +437,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     _focusedEpisodeRatingsRevision,
   ]);
 
-  // Watchlist action (external catalog sources: Trakt, MAL). External ids
+  // Watchlist action (external catalog sources: MDBList, Seerr). External ids
   // resolve once via the owning server, then per capable source; membership
   // comes from each source's session snapshot, so opening details never
   // costs a provider call. Multiple candidates → the toggle opens a chooser.

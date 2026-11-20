@@ -91,7 +91,6 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$metadataEdit$en metadataEdit = Translations$metadataEdit$en.internal(_root);
 	late final Translations$matchScreen$en matchScreen = Translations$matchScreen$en.internal(_root);
 	late final Translations$serverTasks$en serverTasks = Translations$serverTasks$en.internal(_root);
-	late final Translations$trakt$en trakt = Translations$trakt$en.internal(_root);
 	late final Translations$seerr$en seerr = Translations$seerr$en.internal(_root);
 	late final Translations$services$en services = Translations$services$en.internal(_root);
 	late final Translations$addServer$en addServer = Translations$addServer$en.internal(_root);
@@ -1259,8 +1258,8 @@ class Translations$settings$en {
 	/// en: 'Services'
 	String get services => 'Services';
 
-	/// en: 'Connect Trakt, MyAnimeList, Seerr, and more'
-	String get servicesDescription => 'Connect Trakt, MyAnimeList, Seerr, and more';
+	/// en: 'Connect MDBList and Seerr'
+	String get servicesDescription => 'Connect MDBList and Seerr';
 
 	/// en: 'Reorder and hide libraries'
 	String get manageLibrariesDescription => 'Reorder and hide libraries';
@@ -3900,6 +3899,7 @@ class Translations$about$en {
 		'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
 	];
 	List<String> get changelog2326 => [
+		'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 		'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
 		'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
 		'Fixed: opening Downloads no longer starts the same details refresh twice at once',
@@ -4521,8 +4521,8 @@ class Translations$startup$en {
 	/// en: 'The key protecting your saved sign-ins cannot be recovered from this file, so you will have to sign in to every server and profile again. Nothing on your media server is affected.'
 	String get repairBodySignInsLost => 'The key protecting your saved sign-ins cannot be recovered from this file, so you will have to sign in to every server and profile again. Nothing on your media server is affected.';
 
-	/// en: 'Trackers (MAL, AniList, Simkl, Trakt) and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.'
-	String get repairBodySessionsUncertain => 'Trackers (MAL, AniList, Simkl, Trakt) and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.';
+	/// en: 'MDBList and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.'
+	String get repairBodySessionsUncertain => 'MDBList and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.';
 
 	/// en: 'Repair'
 	String get repairConfirm => 'Repair';
@@ -4643,9 +4643,6 @@ class Translations$explore$en {
 
 	/// en: 'Cast'
 	String get cast => 'Cast';
-
-	/// en: 'Characters'
-	String get characters => 'Characters';
 
 	/// en: 'Add to Watchlist'
 	String get addToWatchlist => 'Add to Watchlist';
@@ -6649,42 +6646,6 @@ class Translations$serverTasks$en {
 	String get noTasks => 'No tasks running';
 }
 
-// Path: trakt
-class Translations$trakt$en {
-	Translations$trakt$en.internal(this._root);
-
-	final Translations _root; // ignore: unused_field
-
-	// Translations
-
-	/// en: 'Trakt'
-	String get title => 'Trakt';
-
-	/// en: 'Connected'
-	String get connected => 'Connected';
-
-	/// en: 'Connected as @${username}'
-	String connectedAs({required Object username}) => 'Connected as @${username}';
-
-	/// en: 'Disconnect Trakt account?'
-	String get disconnectConfirm => 'Disconnect Trakt account?';
-
-	/// en: 'PlezTV will stop sending events to Trakt. You can reconnect any time.'
-	String get disconnectConfirmBody => 'PlezTV will stop sending events to Trakt. You can reconnect any time.';
-
-	/// en: 'Real-time scrobbling'
-	String get scrobble => 'Real-time scrobbling';
-
-	/// en: 'Send play, pause, and stop events to Trakt during playback.'
-	String get scrobbleDescription => 'Send play, pause, and stop events to Trakt during playback.';
-
-	/// en: 'Sync watched status'
-	String get watchedSync => 'Sync watched status';
-
-	/// en: 'When you mark items as watched in PlezTV, they are also marked as watched on Trakt.'
-	String get watchedSyncDescription => 'When you mark items as watched in PlezTV, they are also marked as watched on Trakt.';
-}
-
 // Path: seerr
 class Translations$seerr$en {
 	Translations$seerr$en.internal(this._root);
@@ -6867,6 +6828,9 @@ class Translations$services$en {
 	/// en: 'Connected as @${username}'
 	String connectedAs({required Object username}) => 'Connected as @${username}';
 
+	/// en: 'Connected'
+	String get connected => 'Connected';
+
 	/// en: 'Track progress automatically'
 	String get scrobble => 'Track progress automatically';
 
@@ -6883,9 +6847,7 @@ class Translations$services$en {
 	String connectFailed({required Object service}) => 'Couldn\'t connect to ${service}. Try again.';
 
 	late final Translations$services$names$en names = Translations$services$names$en.internal(_root);
-	late final Translations$services$simklReconnect$en simklReconnect = Translations$services$simklReconnect$en.internal(_root);
 	late final Translations$services$deviceCode$en deviceCode = Translations$services$deviceCode$en.internal(_root);
-	late final Translations$services$directOAuth$en directOAuth = Translations$services$directOAuth$en.internal(_root);
 	late final Translations$services$pendingAuth$en pendingAuth = Translations$services$pendingAuth$en.internal(_root);
 	late final Translations$services$libraryFilter$en libraryFilter = Translations$services$libraryFilter$en.internal(_root);
 }
@@ -8318,18 +8280,6 @@ class Translations$common$ratingSource$en {
 
 	/// en: 'Rotten Tomatoes'
 	String get rottenTomatoes => 'Rotten Tomatoes';
-
-	/// en: 'Simkl'
-	String get simkl => 'Simkl';
-
-	/// en: 'MyAnimeList'
-	String get mal => 'MyAnimeList';
-
-	/// en: 'AniList'
-	String get anilist => 'AniList';
-
-	/// en: 'Trakt'
-	String get trakt => 'Trakt';
 
 	/// en: 'Rotten Tomatoes critics'
 	String get rottenTomatoesCritic => 'Rotten Tomatoes critics';
@@ -10026,35 +9976,11 @@ class Translations$services$names$en {
 
 	// Translations
 
-	/// en: 'MyAnimeList'
-	String get mal => 'MyAnimeList';
-
-	/// en: 'AniList'
-	String get anilist => 'AniList';
-
-	/// en: 'Simkl'
-	String get simkl => 'Simkl';
-
 	/// en: 'Seerr'
 	String get seerr => 'Seerr';
 
 	/// en: 'MDBList'
 	String get mdblist => 'MDBList';
-}
-
-// Path: services.simklReconnect
-class Translations$services$simklReconnect$en {
-	Translations$services$simklReconnect$en.internal(this._root);
-
-	final Translations _root; // ignore: unused_field
-
-	// Translations
-
-	/// en: 'Reconnect Simkl'
-	String get title => 'Reconnect Simkl';
-
-	/// en: 'Simkl is retiring the sign-in method this connection uses. Reconnecting opens simkl.com to approve PlezTV — PlezTV never sees your password. Your watch history stays on Simkl.'
-	String get subtitle => 'Simkl is retiring the sign-in method this connection uses. Reconnecting opens simkl.com to approve PlezTV — PlezTV never sees your password. Your watch history stays on Simkl.';
 }
 
 // Path: services.deviceCode
@@ -10082,39 +10008,6 @@ class Translations$services$deviceCode$en {
 
 	/// en: 'Code copied'
 	String get codeCopied => 'Code copied';
-}
-
-// Path: services.directOAuth
-class Translations$services$directOAuth$en {
-	Translations$services$directOAuth$en.internal(this._root);
-
-	final Translations _root; // ignore: unused_field
-
-	// Translations
-
-	/// en: 'Sign in to ${service}'
-	String title({required Object service}) => 'Sign in to ${service}';
-
-	/// en: 'Sign in on the page that opens, then paste the code it shows you into the box below.'
-	String get body => 'Sign in on the page that opens, then paste the code it shows you into the box below.';
-
-	/// en: 'Open ${service} to sign in'
-	String openToSignIn({required Object service}) => 'Open ${service} to sign in';
-
-	/// en: 'Code from ${service}'
-	String codeLabel({required Object service}) => 'Code from ${service}';
-
-	/// en: 'Paste the code, or the full sign-in link'
-	String get codeHint => 'Paste the code, or the full sign-in link';
-
-	/// en: 'Continue'
-	String get submitLabel => 'Continue';
-
-	/// en: 'That code doesn't look right — check it and try again.'
-	String get invalidCode => 'That code doesn\'t look right — check it and try again.';
-
-	/// en: 'Sign-in for ${service} isn't set up in this build yet.'
-	String notConfigured({required Object service}) => 'Sign-in for ${service} isn\'t set up in this build yet.';
 }
 
 // Path: services.pendingAuth
@@ -10316,10 +10209,6 @@ extension on Translations {
 			'common.ratingSource.imdb' => 'IMDb',
 			'common.ratingSource.tmdb' => 'TMDB',
 			'common.ratingSource.rottenTomatoes' => 'Rotten Tomatoes',
-			'common.ratingSource.simkl' => 'Simkl',
-			'common.ratingSource.mal' => 'MyAnimeList',
-			'common.ratingSource.anilist' => 'AniList',
-			'common.ratingSource.trakt' => 'Trakt',
 			'common.ratingSource.rottenTomatoesCritic' => 'Rotten Tomatoes critics',
 			'common.ratingSource.rottenTomatoesAudience' => 'Rotten Tomatoes audience',
 			'common.ratingSource.metacritic' => 'Metacritic',
@@ -10628,7 +10517,7 @@ extension on Translations {
 			'settings.discordRichPresence' => 'Discord Rich Presence',
 			'settings.discordRichPresenceDescription' => 'Show what you\'re watching on Discord',
 			'settings.services' => 'Services',
-			'settings.servicesDescription' => 'Connect Trakt, MyAnimeList, Seerr, and more',
+			'settings.servicesDescription' => 'Connect MDBList and Seerr',
 			'settings.manageLibrariesDescription' => 'Reorder and hide libraries',
 			'settings.companionRemoteServer' => 'Companion Remote Server',
 			'settings.companionRemoteServerDescription' => 'Allow mobile devices on your network to control this app',
@@ -10727,12 +10616,12 @@ extension on Translations {
 			'settings.navigation' => 'Navigation',
 			'settings.window' => 'Window',
 			'settings.liveTv' => 'Live TV',
-			_ => null,
-		} ?? switch (path) {
 			'settings.player' => 'Player',
 			'settings.videoAndDisplay' => 'Video & Display',
 			'settings.audio' => 'Audio',
 			'settings.quality' => 'Quality',
+			_ => null,
+		} ?? switch (path) {
 			'settings.subtitles' => 'Subtitles',
 			'settings.seekAndTiming' => 'Seek & Timing',
 			'settings.behavior' => 'Behavior',
@@ -11241,12 +11130,12 @@ extension on Translations {
 			'profiles.addPlezTVProfile' => 'Add PlezTV profile',
 			'profiles.switchingProfile' => 'Switching profile…',
 			'profiles.deleteThisProfileTitle' => 'Delete this profile?',
-			_ => null,
-		} ?? switch (path) {
 			'profiles.deleteThisProfileMessage' => ({required Object displayName}) => 'Remove ${displayName}. Connections aren\'t affected.',
 			'profiles.active' => 'Active',
 			'profiles.manage' => 'Manage',
 			'profiles.delete' => 'Delete',
+			_ => null,
+		} ?? switch (path) {
 			'profiles.signOut' => 'Sign out',
 			'profiles.signOutPlexTitle' => 'Sign out of Plex?',
 			'profiles.signOutPlexMessage' => ({required Object displayName}) => 'Remove ${displayName} and all Plex Home users? Sign back in anytime.',
@@ -11620,12 +11509,13 @@ extension on Translations {
 			'about.changelog2305.26' => 'Text size on TV is now capped so large-text settings no longer break the guide layout',
 			'about.changelog2305.27' => 'The debug export now says which memory tier your device is on and why, and records memory at each startup step',
 			'about.changelog2305.28' => 'A new \'Benchmark mode\' switch in Settings, Logs records a fixed test run for measuring performance',
-			'about.changelog2326.0' => 'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
-			'about.changelog2326.1' => 'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
-			'about.changelog2326.2' => 'Fixed: opening Downloads no longer starts the same details refresh twice at once',
-			'about.changelog2326.3' => 'New: About → What\'s new now lists every release up to this one instead of stopping at 1.4.5',
-			'about.changelog2326.4' => 'Fixed: looking up a series in a big list is now instant instead of scanning every show each time',
-			'about.changelog2326.5' => 'Cleanup: removed leftover code, unused settings text and outdated comments from the 2.26.0 update',
+			'about.changelog2326.0' => 'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
+			'about.changelog2326.1' => 'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
+			'about.changelog2326.2' => 'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
+			'about.changelog2326.3' => 'Fixed: opening Downloads no longer starts the same details refresh twice at once',
+			'about.changelog2326.4' => 'New: About → What\'s new now lists every release up to this one instead of stopping at 1.4.5',
+			'about.changelog2326.5' => 'Fixed: looking up a series in a big list is now instant instead of scanning every show each time',
+			'about.changelog2326.6' => 'Cleanup: removed leftover code, unused settings text and outdated comments from the 2.26.0 update',
 			'about.changelog2325.0' => 'Fixed: downloaded TV episodes and movies from IPTV now stay listed in Downloads after you restart the app — they used to vanish from the list even though the file was still on your phone',
 			'about.changelog2325.1' => 'Fixed: opening Downloads now fills in any missing episode details once your TV service is connected',
 			'about.changelog2325.2' => 'New: the app now saves each download\'s show, season and episode details together with the download, so the list works even when your TV service can\'t be reached',
@@ -11755,11 +11645,11 @@ extension on Translations {
 			'about.changelog2270.1' => 'The catalog syncs once a week by default (change it in Settings → IPTV → Catalog sync interval) or whenever you tap Sync catalog now — and the app no longer re-downloads the whole catalog every time it starts, it opens from the file on your phone',
 			'about.changelog2270.2' => 'Settings → IPTV shows how big the IPTV cache is, and the search screen shows when the catalog was last synced',
 			'about.changelog2269.0' => 'Live TV, movies and shows now introduce themselves to Trex with the same name as the rest of the app — VLC — instead of showing up nameless, so the provider stops refusing the video while letting the browsing through',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2269.1' => 'Posters and channel logos use that same name too, so Trex sees one app everywhere, not three',
 			'about.changelog2269.2' => 'If Trex still refuses a stream after this update, try a different name in Settings → IPTV → Xtream User-Agent — VLC, IPTVSmartersPro, a browser name, or your own',
 			'about.changelog2268.0' => 'Searching no longer disconnects Trex: a slow or busy provider used to flip the app into offline mode mid-search — a bad connection now just waits instead of disconnecting, and it takes three failures in a row before the app calls a server offline',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2268.1' => 'Search makes far fewer requests to the provider: at most 8 at a time instead of up to 96, and a search that times out — or one you leave — now stops its requests instead of leaving them running in the background',
 			'about.changelog2268.2' => 'If Trex does go offline it now reconnects on its own, and if Trex refuses access while no server is online you will see the refusal message instead of the offline screen',
 			'about.changelog2267.0' => 'Trex was refusing the app while TiviMate worked — the app sent no name with its requests, so the provider saw an unknown player. It now sends VLC, the name most providers accept',
@@ -11978,7 +11868,7 @@ extension on Translations {
 			'startup.repairBodyOneCredential' => 'One saved sign-in is damaged and cannot be read. Repairing removes just that one; your other settings are left alone.',
 			'startup.repairBodySignInsKept' => 'Your servers and profiles should stay signed in.',
 			'startup.repairBodySignInsLost' => 'The key protecting your saved sign-ins cannot be recovered from this file, so you will have to sign in to every server and profile again. Nothing on your media server is affected.',
-			'startup.repairBodySessionsUncertain' => 'Trackers (MAL, AniList, Simkl, Trakt) and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.',
+			'startup.repairBodySessionsUncertain' => 'MDBList and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.',
 			'startup.repairConfirm' => 'Repair',
 			'startup.repairSucceeded' => 'Storage repaired',
 			'startup.repairNeedsRestart' => 'Storage repaired — restart required',
@@ -12026,7 +11916,6 @@ extension on Translations {
 			'explore.status.upcoming' => 'Upcoming',
 			'explore.episodeCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} episode', other: '${n} episodes', ), 
 			'explore.cast' => 'Cast',
-			'explore.characters' => 'Characters',
 			'explore.addToWatchlist' => 'Add to Watchlist',
 			'explore.removeFromWatchlist' => 'Remove from Watchlist',
 			'explore.addedToWatchlist' => 'Added to watchlist',
@@ -12269,12 +12158,12 @@ extension on Translations {
 			'liveTv.failedToBuildStreamUrl' => 'Could not build the stream URL',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Couldn\'t start the channel: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Couldn\'t switch channel: ${reason}',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.source' => 'Source',
 			'liveTv.allSources' => 'All sources',
 			'liveTv.noChannelsFromSource' => ({required Object name}) => 'No channels loaded from ${name}',
 			'liveTv.noChannelsFromSourceHint' => 'The playlist may still be loading, or the provider did not return any channels. Try reloading the guide.',
+			_ => null,
+		} ?? switch (path) {
 			'collections.title' => 'Collections',
 			'collections.collection' => 'Collection',
 			'collections.empty' => 'Collection is empty',
@@ -12783,12 +12672,12 @@ extension on Translations {
 			'performanceOverlay.decoderSoftware' => 'Software',
 			'performanceOverlay.decoderHardware' => 'Hardware',
 			'performanceOverlay.tunnelingActive' => 'Active',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.dvRpuFailed' => ({required Object converted, required Object failures}) => '${converted} (${failures} failed)',
 			'externalPlayer.title' => 'External Player',
 			'externalPlayer.useExternalPlayer' => 'Use External Player',
 			'externalPlayer.useExternalPlayerDescription' => 'Open videos in another app',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.selectPlayer' => 'Select Player',
 			'externalPlayer.customPlayers' => 'Custom Players',
 			'externalPlayer.systemDefault' => 'System Default',
@@ -12892,15 +12781,6 @@ extension on Translations {
 			'serverTasks.title' => 'Server Tasks',
 			'serverTasks.failedToLoad' => 'Failed to load tasks',
 			'serverTasks.noTasks' => 'No tasks running',
-			'trakt.title' => 'Trakt',
-			'trakt.connected' => 'Connected',
-			'trakt.connectedAs' => ({required Object username}) => 'Connected as @${username}',
-			'trakt.disconnectConfirm' => 'Disconnect Trakt account?',
-			'trakt.disconnectConfirmBody' => 'PlezTV will stop sending events to Trakt. You can reconnect any time.',
-			'trakt.scrobble' => 'Real-time scrobbling',
-			'trakt.scrobbleDescription' => 'Send play, pause, and stop events to Trakt during playback.',
-			'trakt.watchedSync' => 'Sync watched status',
-			'trakt.watchedSyncDescription' => 'When you mark items as watched in PlezTV, they are also marked as watched on Trakt.',
 			'seerr.title' => 'Seerr',
 			'seerr.connectTitle' => 'Connect Seerr',
 			'seerr.serverUrl' => 'Server URL',
@@ -12956,32 +12836,20 @@ extension on Translations {
 			'services.integrations' => 'Integrations',
 			'services.notConnected' => 'Not connected',
 			'services.connectedAs' => ({required Object username}) => 'Connected as @${username}',
+			'services.connected' => 'Connected',
 			'services.scrobble' => 'Track progress automatically',
 			'services.scrobbleDescription' => 'Update your list when you finish an episode or movie.',
 			'services.disconnectConfirm' => ({required Object service}) => 'Disconnect ${service}?',
 			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV will stop updating ${service}. Reconnect any time.',
 			'services.connectFailed' => ({required Object service}) => 'Couldn\'t connect to ${service}. Try again.',
-			'services.names.mal' => 'MyAnimeList',
-			'services.names.anilist' => 'AniList',
-			'services.names.simkl' => 'Simkl',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.simklReconnect.title' => 'Reconnect Simkl',
-			'services.simklReconnect.subtitle' => 'Simkl is retiring the sign-in method this connection uses. Reconnecting opens simkl.com to approve PlezTV — PlezTV never sees your password. Your watch history stays on Simkl.',
 			'services.deviceCode.title' => ({required Object service}) => 'Activate PlezTV on ${service}',
 			'services.deviceCode.instructions' => 'Scan the QR code, or visit the address below and enter this code:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => 'Open ${service} to activate',
 			'services.deviceCode.copyCode' => 'Copy activation code',
 			'services.deviceCode.waitingForAuthorization' => 'Waiting for authorization…',
 			'services.deviceCode.codeCopied' => 'Code copied',
-			'services.directOAuth.title' => ({required Object service}) => 'Sign in to ${service}',
-			'services.directOAuth.body' => 'Sign in on the page that opens, then paste the code it shows you into the box below.',
-			'services.directOAuth.openToSignIn' => ({required Object service}) => 'Open ${service} to sign in',
-			'services.directOAuth.codeLabel' => ({required Object service}) => 'Code from ${service}',
-			'services.directOAuth.codeHint' => 'Paste the code, or the full sign-in link',
-			'services.directOAuth.submitLabel' => 'Continue',
-			'services.directOAuth.invalidCode' => 'That code doesn\'t look right — check it and try again.',
-			'services.directOAuth.notConfigured' => ({required Object service}) => 'Sign-in for ${service} isn\'t set up in this build yet.',
 			'services.pendingAuth.copyUrl' => 'Copy sign-in URL',
 			'services.pendingAuth.urlCopied' => 'URL copied',
 			'services.libraryFilter.title' => 'Library filter',
@@ -13297,8 +13165,6 @@ extension on Translations {
 			'iptv.epgNoGuideSearchCount' => ({required Object shown, required Object total}) => '${shown} of ${total} channels',
 			'iptv.epgNoGuideReasonAll' => 'All reasons',
 			'iptv.epgAssignTitle' => 'Assign EPG',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgKeepLooseMatch' => 'Keep this guide for this channel',
 			'iptv.epgAssignSearchHint' => 'Search guide channels',
 			'iptv.epgAssignEmpty' => 'No guide channels match',
@@ -13324,6 +13190,8 @@ extension on Translations {
 			'iptv.epgUpdateTimeDescription' => 'Time of day the guide refreshes',
 			'iptv.epgUpdateTimeOff' => 'Off',
 			'iptv.epgUpdateOnPlaylistChange' => 'Update when the channel list changes',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgUpdateOnPlaylistChangeDescription' => 'Refresh the guide when the provider adds or removes channels',
 			'iptv.epgSourceAdded' => 'EPG source added',
 			'iptv.epgPresetSectionTitle' => 'Suggested guides',

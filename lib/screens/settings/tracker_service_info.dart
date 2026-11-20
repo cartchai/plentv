@@ -1,18 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
-import '../../i18n/strings.g.dart';
 import '../../models/catalog/catalog_item.dart';
 import '../../providers/trackers_provider.dart';
-import '../../services/trackers/anilist/anilist_tracker.dart';
-import '../../services/trackers/mal/mal_tracker.dart';
 import '../../services/trackers/mdblist/mdblist_tracker.dart';
-import '../../services/trackers/simkl/simkl_tracker.dart';
 import '../../services/trackers/tracker.dart';
 import '../../services/trackers/tracker_constants.dart';
-import '../../services/trackers/trakt/trakt_tracker.dart';
 import 'tracker_settings_screen.dart';
-import 'trakt_settings_screen.dart';
 
 /// One watch tracker, described once for every place that lists services: the
 /// services hub, the rating sheet, and the settings summary line.
@@ -59,36 +53,8 @@ class TrackerServiceInfo {
        buildSettingsScreen = (() => TrackerSettingsScreen(config: config));
 
   /// Display order shared by every list. Built per call because [displayName]
-  /// reads the active locale.
+  /// reads the active locale. MDBList is the only tracker left in 1.5.2.
   static List<TrackerServiceInfo> get all => [
-    TrackerServiceInfo(
-      service: TrackerService.trakt,
-      displayName: t.trakt.title,
-      logoSource: CatalogSourceId.trakt,
-      ratingSource: TraktTracker.instance,
-      isConnected: (context) => context.watch<TrackersProvider>().isTraktConnected,
-      username: (context) => context.watch<TrackersProvider>().traktUsername,
-      startConnection: startTraktConnection,
-      buildSettingsScreen: () => const TraktSettingsScreen(),
-    ),
-    TrackerServiceInfo.shared(
-      TrackerConfig.mal(),
-      logoSource: CatalogSourceId.mal,
-      ratingSource: MalTracker.instance,
-      startConnection: startMalConnection,
-    ),
-    TrackerServiceInfo.shared(
-      TrackerConfig.anilist(),
-      logoSource: CatalogSourceId.anilist,
-      ratingSource: AnilistTracker.instance,
-      startConnection: startAnilistConnection,
-    ),
-    TrackerServiceInfo.shared(
-      TrackerConfig.simkl(),
-      logoSource: CatalogSourceId.simkl,
-      ratingSource: SimklTracker.instance,
-      startConnection: startSimklConnection,
-    ),
     TrackerServiceInfo.shared(
       TrackerConfig.mdblist(),
       logoSource: CatalogSourceId.mdblist,

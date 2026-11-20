@@ -18,16 +18,9 @@ abstract class Tracker {
   /// True when a watched/unwatched history write may go out right now — the
   /// service's own toggle is on and a session is bound.
   ///
-  /// Separate from [RealtimeScrobbleTracker.canReportPlayback] because Trakt
-  /// exposes the two as independent user settings; for every other service the
-  /// two answers are the same.
+  /// Separate from [RealtimeScrobbleTracker.canReportPlayback] because the
+  /// two answers can differ per service; for MDBList they are the same.
   bool get canWriteWatched;
-
-  /// True if this tracker's IDs only come from the Fribb anime mapping
-  /// (MAL, AniList). Simkl and Trakt return false because they accept Plex
-  /// tvdb/imdb/tmdb directly; when no active tracker needs Fribb we skip the
-  /// 5.6 MB mapping download entirely.
-  bool get needsFribb;
 
   /// Identity of the account binding this tracker currently writes through,
   /// compared only by [identical]. Deferred work captures it and re-checks
@@ -64,10 +57,10 @@ abstract interface class TrackerRatingSource {
 typedef TrackerHistoryEntry = ({TrackerContext ctx, DateTime? watchedAt});
 
 /// A tracker whose history is a per-item record: every movie and episode is
-/// added or removed on its own row (Simkl, Trakt, MDBList). Its history
+/// added or removed on its own row (MDBList). Its history
 /// endpoint takes arrays, so a container's episodes go out together through
-/// [writeHistory] instead of one request each — Simkl and Trakt allow one write
-/// per second, and one request per episode of a long show is a request storm.
+/// [writeHistory] instead of one request each — one request per episode of a
+/// long show is a request storm.
 abstract interface class EpisodeHistoryTracker implements Tracker {
   /// A stable identifier for the remote row this tracker's history writes target,
   /// or null when it cannot name one — in which case no write could apply either.
@@ -83,24 +76,6 @@ abstract interface class EpisodeHistoryTracker implements Tracker {
   /// cannot address are skipped; nothing is sent when none remain. Removal
   /// ignores [TrackerHistoryEntry.watchedAt].
   Future<void> writeHistory(List<TrackerHistoryEntry> entries, {required bool watched});
-}
-
-/// A tracker that keeps one progress counter per series instead of per-episode
-/// rows (MAL, AniList). The coordinator aggregates a container's episodes into
-/// a single entry update, and unwatching a container resets that one counter.
-abstract interface class SeriesProgressTracker implements Tracker {
-  /// Identity of the series entry this tracker would write for [ctx], or null
-  /// when it cannot map the item. Episodes sharing an entry id collapse into
-  /// one write.
-  Object? seriesEntryId(TrackerContext ctx);
-
-  /// The absolute progress a watched write for [ctx] would claim on that entry.
-  ///
-  /// Because the write is absolute rather than incremental, this is what makes a
-  /// deferred retry safe: a claim is monotonic, so two claims about one entry
-  /// coalesce to the higher, and a claim already covered by a completed write is
-  /// dropped instead of walking the counter backwards.
-  int? seriesProgress(TrackerContext ctx);
 }
 
 /// Playback state reported to trackers that accept real-time progress.
@@ -177,7 +152,7 @@ abstract class TrackerBase implements Tracker {
   bool get hasActiveClient;
 
   /// The service's own scrobble toggle ANDed with a bound session. The default
-  /// answer for both tracker capabilities; Trakt splits them.
+  /// answer for both tracker capabilities.
   bool get isEnabledWithSession => _isEnabled && hasActiveClient;
 
   @override

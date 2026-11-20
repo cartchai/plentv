@@ -153,9 +153,8 @@ abstract interface class CatalogHubSource {
 
 /// Optional capability for catalog providers that publish community scores
 /// for a title: their own, and any other sites' they report (MDBList carries
-/// Rotten Tomatoes, IMDb, TMDB, Metacritic, Letterboxd, Trakt and MyAnimeList;
-/// Simkl carries IMDb and MyAnimeList). The detail screens show them next to
-/// the media server's own scores.
+/// Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd). The detail screens
+/// show them next to the media server's own scores.
 abstract interface class CatalogCommunityRatings {
   /// Every score the provider has for the title [ids] names, each attributed
   /// and on [MediaRatingSource]'s 0-10 scale (see [MediaRatingSource.fromScale]).
@@ -167,8 +166,8 @@ abstract interface class CatalogCommunityRatings {
   Future<List<MediaRatingSource>> fetchCommunityRatings(MediaKind kind, CatalogItemIds ids);
 }
 
-/// A pluggable external catalog provider backing the Explore tab (Trakt
-/// today; Overseerr/Jellyfin or MAL later).
+/// A pluggable external catalog provider backing the Explore tab (MDBList,
+/// Plex or Seerr today).
 ///
 /// Implementations wrap an authenticated API client owned by their account
 /// provider; disposing a source must not dispose that client.

@@ -12,7 +12,7 @@ import 'package:plezy/utils/external_url.dart';
 import 'package:plezy/widgets/catalog_context_menu.dart';
 
 const _item = CatalogItem(
-  source: CatalogSourceId.trakt,
+  source: CatalogSourceId.mdblist,
   kind: MediaKind.movie,
   title: 'Menu Movie',
   ids: CatalogItemIds(tmdb: 61),

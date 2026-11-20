@@ -116,16 +116,11 @@ typedef TrackerWriteSender = Future<List<TrackerWriteDisposition>> Function(List
 /// Ordering here is intent-based, not temporal, because a tracker write is not
 /// an increment:
 ///
-/// * A per-item history write (Simkl, Trakt, MDBList) states "this item is watched" or
+/// * A per-item history write (MDBList) states "this item is watched" or
 ///   "is not". The newest statement about an item replaces any queued one, so a
 ///   failed watched write can never replay on top of a later successful
 ///   un-watch.
-/// * A series-progress write (MAL, AniList) claims "this entry is at least at
-///   progress N". Claims are monotonic: two queued claims for one entry coalesce
-///   to the higher, and [invalidate] drops any claim a completed write already
-///   covers. Without that a queued episode 5 could land after episode 6
-///   succeeded and walk the list backwards.
-///
+
 /// Items carry their own [TrackerWriteQueueItem.service], so one disconnected
 /// tracker never blocks another's replay, and are dropped after [maxAttempts]
 /// tries — matching `OfflineWatchSyncService.maxSyncAttempts`.
@@ -135,21 +130,11 @@ typedef TrackerWriteSender = Future<List<TrackerWriteDisposition>> Function(List
 class TrackerWriteQueue {
   static const String _baseKey = 'tracker_write_queue';
 
-  /// Pre-consolidation key holding Trakt-only items. Converted once per profile
-  /// so pushes queued by an older build are not silently dropped.
-  static const String _legacyTraktKey = 'trakt_sync_queue';
-
   static const int maxAttempts = 5;
 
-  /// Pause after each request during a drain. Trakt takes one authenticated
-  /// POST/PUT/DELETE per second and answers a faster one with a 429, which
-  /// defers the rest of its rows to the next drain. Simkl has the same limit but
-  /// its client spaces every write itself; the other services only need a drain
-  /// not to burst.
-  static Duration _requestSpacing(TrackerService service) => switch (service) {
-    TrackerService.trakt => const Duration(seconds: 1),
-    _ => const Duration(milliseconds: 50),
-  };
+  /// Pause after each request during a drain, so a burst of rows does not
+  /// hit the service all at once.
+  static Duration _requestSpacing(TrackerService service) => const Duration(milliseconds: 50);
 
   final Future<void> Function(Duration) _pause;
 
@@ -162,7 +147,6 @@ class TrackerWriteQueue {
   static const int _maxInMemoryFallback = 100;
 
   final Map<String, Queue<TrackerWriteQueueItem>> _inMemoryFallbackByUser = {};
-  final Set<String> _migratedUsers = {};
 
   /// Coalesce keys known to be queued per profile, so the common "nothing
   /// pending for this item" case costs a set lookup instead of a disk read. A
@@ -185,7 +169,6 @@ class TrackerWriteQueue {
   Future<T> _locked<T>(Future<T> Function() action) => _writeQueue.run(action);
 
   Future<List<TrackerWriteQueueItem>> load(String userUuid) async {
-    await _migrateLegacyTraktQueue(userUuid);
     final prefs = await BaseSharedPreferencesService.sharedCache();
     final key = profileScopedPrefsKey(userUuid, _baseKey);
     final raw = prefs.getString(key);
@@ -195,7 +178,17 @@ class TrackerWriteQueue {
     }
     try {
       final list = json.decode(raw) as List<dynamic>;
-      final items = list.map((e) => TrackerWriteQueueItem.fromJson(e as Map<String, dynamic>)).toList();
+      // Rows for the removed services (Trakt, Simkl, MAL, AniList) no longer
+      // decode — skip them one by one so a mixed batch keeps its MDBList
+      // rows instead of discarding the whole queue.
+      final items = <TrackerWriteQueueItem>[];
+      for (final entry in list) {
+        try {
+          items.add(TrackerWriteQueueItem.fromJson((entry as Map).cast<String, dynamic>()));
+        } catch (e) {
+          appLogger.d('Tracker write queue: skipping unreadable row', error: e);
+        }
+      }
       _trackPending(userUuid, items);
       return items;
     } catch (e, st) {
@@ -529,112 +522,6 @@ class TrackerWriteQueue {
     _inMemoryFallbackByUser.remove(userUuid);
     await enqueueAll(userUuid, snapshot);
   }
-
-  /// Convert the pre-consolidation Trakt-only queue into shared items.
-  ///
-  /// The converted payload is written before the legacy key is dropped, so a
-  /// failed write leaves the pending writes where they are for the next attempt
-  /// rather than losing them. That ordering means a re-run is possible, so the
-  /// merge replaces rows sharing a converted row's coalesce key instead of
-  /// appending duplicates.
-  Future<void> _migrateLegacyTraktQueue(String userUuid) async {
-    if (_migratedUsers.contains(userUuid)) return;
-    final prefs = await BaseSharedPreferencesService.sharedCache();
-    final legacyKey = profileScopedPrefsKey(userUuid, _legacyTraktKey);
-    final raw = prefs.getString(legacyKey);
-    if (raw == null) {
-      _migratedUsers.add(userUuid);
-      return;
-    }
-
-    final List<TrackerWriteQueueItem> converted;
-    try {
-      converted = [
-        for (final entry in json.decode(raw) as List<dynamic>)
-          ?_legacyTraktItem((entry as Map).cast<String, dynamic>()),
-      ];
-    } catch (e, st) {
-      // Unreadable: drop it, or every later load would retry the same failure.
-      appLogger.e('Tracker write queue: legacy Trakt queue unreadable, discarding', error: e, stackTrace: st);
-      await prefs.remove(legacyKey);
-      _migratedUsers.add(userUuid);
-      return;
-    }
-
-    try {
-      if (converted.isNotEmpty) {
-        // A corrupt payload already under the shared key must not sink the
-        // migration: archive it the way [load] would and merge into a clean list.
-        final key = profileScopedPrefsKey(userUuid, _baseKey);
-        final existingRaw = prefs.getString(key);
-        var existing = const <dynamic>[];
-        if (existingRaw != null) {
-          try {
-            existing = json.decode(existingRaw) as List<dynamic>;
-          } catch (e, st) {
-            appLogger.e(
-              'Tracker write queue: unreadable payload during migration, archiving',
-              error: e,
-              stackTrace: st,
-            );
-            await prefs.setString(profileScopedPrefsKey(userUuid, '${_baseKey}_corrupt'), existingRaw);
-          }
-        }
-        final convertedKeys = {for (final item in converted) item.coalesceKey};
-        final merged = [
-          for (final row in existing)
-            if (!(row is Map && convertedKeys.contains(row['coalesceKey']))) row,
-          ...converted.map((e) => e.toJson()),
-        ];
-        await prefs.setString(key, json.encode(merged));
-      }
-      // Only once the converted rows are durable.
-      await prefs.remove(legacyKey);
-      _migratedUsers.add(userUuid);
-      appLogger.i('Tracker write queue: migrated ${converted.length} legacy Trakt writes');
-    } catch (e, st) {
-      appLogger.e(
-        'Tracker write queue: legacy Trakt migration could not be persisted, keeping it for the next attempt',
-        error: e,
-        stackTrace: st,
-      );
-    }
-  }
-
-  /// Null when the row names no remote media — nothing could have been written
-  /// for it, so there is nothing to retry.
-  static TrackerWriteQueueItem? _legacyTraktItem(Map<String, dynamic> json) {
-    final external = ExternalIds.fromJson((json['ids'] as Map).cast<String, Object?>());
-    final ratingKey = json['ratingKey'] as String;
-    final libraryGlobalKey = json['libraryGlobalKey'] as String?;
-    final ctx = json['kind'] == 'movie'
-        ? TrackerContext.movie(
-            external: external,
-            anime: null,
-            ratingKey: ratingKey,
-            libraryGlobalKey: libraryGlobalKey,
-          )
-        : TrackerContext.episode(
-            external: external,
-            anime: null,
-            ratingKey: ratingKey,
-            libraryGlobalKey: libraryGlobalKey,
-            season: (json['season'] as num).toInt(),
-            episodeNumber: (json['number'] as num).toInt(),
-          );
-    // The legacy queue was Trakt-only, and Trakt identifies a row by the media
-    // server's external ids.
-    final coalesceKey = trackerItemCoalesceKey(TrackerService.trakt, ctx, trackerExternalRowIdentity(external));
-    if (coalesceKey == null) return null;
-    return TrackerWriteQueueItem(
-      service: TrackerService.trakt,
-      watched: json['op'] == 'add',
-      ctx: ctx,
-      coalesceKey: coalesceKey,
-      watchedAtIso: json['watchedAtIso'] as String,
-      attempts: (json['attempts'] as num?)?.toInt() ?? 0,
-    );
-  }
 }
 
 /// Coalesce key for a per-item history write: the remote media row it changes, on
@@ -660,10 +547,6 @@ String? trackerExternalRowIdentity(ExternalIds ids) {
   if (ids.tvdb case final tvdb?) return 'tvdb=$tvdb';
   return null;
 }
-
-/// Coalesce key for a series-progress write: the remote list entry on that
-/// service, because every episode of one show restates the same counter.
-String trackerSeriesCoalesceKey(TrackerService service, Object entryId) => '${service.name}|series|$entryId';
 
 /// A direct write whose queued rows have not been cleaned up yet.
 class _AppliedWrite {

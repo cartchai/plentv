@@ -9,14 +9,10 @@ import 'package:plezy/media/media_server_client.dart';
 import 'package:plezy/media/server_capabilities.dart';
 import 'package:plezy/providers/trackers_provider.dart';
 import 'package:plezy/services/base_shared_preferences_service.dart';
-import 'package:plezy/services/trackers/anilist/anilist_tracker.dart';
-import 'package:plezy/services/trackers/mal/mal_tracker.dart';
 import 'package:plezy/services/trackers/mdblist/mdblist_tracker.dart';
-import 'package:plezy/services/trackers/simkl/simkl_tracker.dart';
 import 'package:plezy/services/trackers/tracker_account_store.dart';
 import 'package:plezy/services/trackers/tracker_constants.dart';
 import 'package:plezy/services/trackers/tracker_session.dart';
-import 'package:plezy/services/trackers/trakt/trakt_tracker.dart';
 import 'package:plezy/utils/external_ids.dart';
 import 'package:plezy/utils/platform_detector.dart';
 import 'package:plezy/widgets/overlay_sheet.dart';
@@ -57,7 +53,7 @@ void main() {
     );
 
     // Post-frame resolve has already run and reported every tracker unavailable.
-    expect(find.text(t.rateSheet.notAvailable), findsNWidgets(5));
+    expect(find.text(t.rateSheet.notAvailable), findsNWidgets(1));
     expect(_listContentExtent(tester), _tallListExtent, reason: 'no row may be dropped');
 
     final heightAfterResolve = tester.getSize(_sheetFinder).height;
@@ -81,7 +77,7 @@ void main() {
       item: testMediaItem(id: 'movie-1', kind: MediaKind.movie, serverId: 'server-1', serverName: 'Living Room'),
     );
 
-    expect(find.text(t.errors.failedToRate), findsNWidgets(5));
+    expect(find.text(t.errors.failedToRate), findsNWidgets(1));
     expect(
       find.descendant(of: _sheetFinder, matching: find.byType(CircularProgressIndicator)),
       findsNothing,
@@ -94,8 +90,9 @@ void main() {
 /// `ConstrainedBox`, so its height *is* the clamped sheet height.
 final Finder _sheetFinder = find.byType(RatingBottomSheet);
 
-/// Six 54px rows (48px min-height row + 6px gap) plus the list's 4/12 padding.
-const double _tallListExtent = 6 * 54 + 16;
+/// Two 54px rows (48px min-height row + 6px gap) — the server row and the
+/// one remaining tracker row — plus the list's 4/12 padding.
+const double _tallListExtent = 2 * 54 + 16;
 
 double _listContentExtent(WidgetTester tester) {
   final position = tester
@@ -179,10 +176,6 @@ Future<void> _seedAllTrackerSessions(String uuid) async {
 /// The tracker singletons outlive a test; unbind the seeded sessions so the
 /// next case starts disconnected.
 void _resetTrackerBindings() {
-  MalTracker.instance.rebindSession(null, onSessionInvalidated: () {});
-  AnilistTracker.instance.rebindSession(null, onSessionInvalidated: () {});
-  SimklTracker.instance.rebindSession(null, onSessionInvalidated: () {});
-  TraktTracker.instance.rebindSession(null, onSessionInvalidated: () {});
   MdblistTracker.instance.rebindSession(null, onSessionInvalidated: () {});
 }
 

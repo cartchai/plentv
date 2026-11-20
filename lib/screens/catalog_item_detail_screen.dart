@@ -1212,17 +1212,15 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen> {
   }
 
   /// Horizontal cast strip — the same [CastMemberStrip] cards as the media
-  /// detail screen. Trakt serves actors with their character; MAL serves
-  /// characters with their role, so the section is titled accordingly.
+  /// detail screen. Cast members carry the actor with their character, so the
+  /// section is titled "Cast".
   Widget _buildCastSection(ThemeData theme, List<CatalogCastMember> cast) {
     return Column(
       key: _castSectionKey,
       crossAxisAlignment: .start,
       children: [
         Text(
-          const {CatalogSourceId.mal, CatalogSourceId.anilist}.contains(_item.source)
-              ? t.explore.characters
-              : t.explore.cast,
+          t.explore.cast,
           style: theme.textTheme.titleMedium,
         ),
         const SizedBox(height: 4),

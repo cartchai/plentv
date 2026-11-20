@@ -89,7 +89,6 @@ class TranslationsNl extends Translations with BaseTranslations<AppLocale, Trans
 	@override late final _Translations$metadataEdit$nl metadataEdit = _Translations$metadataEdit$nl._(_root);
 	@override late final _Translations$matchScreen$nl matchScreen = _Translations$matchScreen$nl._(_root);
 	@override late final _Translations$serverTasks$nl serverTasks = _Translations$serverTasks$nl._(_root);
-	@override late final _Translations$trakt$nl trakt = _Translations$trakt$nl._(_root);
 	@override late final _Translations$seerr$nl seerr = _Translations$seerr$nl._(_root);
 	@override late final _Translations$services$nl services = _Translations$services$nl._(_root);
 	@override late final _Translations$addServer$nl addServer = _Translations$addServer$nl._(_root);
@@ -485,7 +484,6 @@ class _Translations$settings$nl extends Translations$settings$en {
 	@override String get discordRichPresence => 'Discord Rich Presence';
 	@override String get discordRichPresenceDescription => 'Toon op Discord wat je aan het kijken bent';
 	@override String get services => 'Diensten';
-	@override String get servicesDescription => 'Koppel Trakt, MyAnimeList, Seerr en meer';
 	@override String get manageLibrariesDescription => 'Bibliotheken herordenen en verbergen';
 	@override String get companionRemoteServer => 'Companion Remote-server';
 	@override String get companionRemoteServerDescription => 'Sta mobiele apparaten op je netwerk toe om deze app te bedienen';
@@ -1502,7 +1500,6 @@ class _Translations$startup$nl extends Translations$startup$en {
 	@override String get repairBodyOneCredential => 'Eén opgeslagen aanmelding is beschadigd en kan niet worden gelezen. Door te repareren wordt alleen die ene verwijderd; je andere instellingen blijven onaangetast.';
 	@override String get repairBodySignInsKept => 'Je servers en profielen blijven naar verwachting aangemeld.';
 	@override String get repairBodySignInsLost => 'De sleutel die je opgeslagen aanmeldingen beschermt, kan niet uit dit bestand worden hersteld. Je moet je daarom opnieuw aanmelden bij elke server en elk profiel. Er wordt niets op je mediaserver gewijzigd.';
-	@override String get repairBodySessionsUncertain => 'Trackers (MAL, AniList, Simkl, Trakt) en Seerr worden apart opgeslagen en blijven mogelijk wel of niet bewaard. PlezTV vertelt je precies wat het heeft bewaard.';
 	@override String get repairConfirm => 'Repareren';
 	@override String get repairSucceeded => 'Opslag gerepareerd';
 	@override String get repairNeedsRestart => 'Opslag gerepareerd — herstart vereist';
@@ -1561,7 +1558,6 @@ class _Translations$explore$nl extends Translations$explore$en {
 		other: '${n} afleveringen',
 	);
 	@override String get cast => 'Acteurs';
-	@override String get characters => 'Personages';
 	@override String get addToWatchlist => 'Toevoegen aan kijklijst';
 	@override String get removeFromWatchlist => 'Verwijderen uit kijklijst';
 	@override String get addedToWatchlist => 'Aan kijklijst toegevoegd';
@@ -2300,24 +2296,6 @@ class _Translations$serverTasks$nl extends Translations$serverTasks$en {
 	@override String get noTasks => 'Geen actieve taken';
 }
 
-// Path: trakt
-class _Translations$trakt$nl extends Translations$trakt$en {
-	_Translations$trakt$nl._(TranslationsNl root) : this._root = root, super.internal(root);
-
-	final TranslationsNl _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Trakt';
-	@override String get connected => 'Verbonden';
-	@override String connectedAs({required Object username}) => 'Verbonden als @${username}';
-	@override String get disconnectConfirm => 'Trakt-account loskoppelen?';
-	@override String get disconnectConfirmBody => 'PlezTV stuurt geen gebeurtenissen meer naar Trakt. Je kunt op elk moment opnieuw verbinding maken.';
-	@override String get scrobble => 'Realtime scrobblen';
-	@override String get scrobbleDescription => 'Stuur tijdens het afspelen gebeurtenissen voor afspelen, pauzeren en stoppen naar Trakt.';
-	@override String get watchedSync => 'Kijkstatus synchroniseren';
-	@override String get watchedSyncDescription => 'Wanneer je items in PlezTV als bekeken markeert, worden ze op Trakt ook als bekeken gemarkeerd.';
-}
-
 // Path: seerr
 class _Translations$seerr$nl extends Translations$seerr$en {
 	_Translations$seerr$nl._(TranslationsNl root) : this._root = root, super.internal(root);
@@ -2395,7 +2373,6 @@ class _Translations$services$nl extends Translations$services$en {
 	@override String disconnectConfirmBody({required Object service}) => 'PlezTV werkt ${service} niet meer bij. Je kunt op elk moment opnieuw verbinding maken.';
 	@override String connectFailed({required Object service}) => 'Verbinding maken met ${service} is mislukt. Probeer het opnieuw.';
 	@override late final _Translations$services$names$nl names = _Translations$services$names$nl._(_root);
-	@override late final _Translations$services$simklReconnect$nl simklReconnect = _Translations$services$simklReconnect$nl._(_root);
 	@override late final _Translations$services$deviceCode$nl deviceCode = _Translations$services$deviceCode$nl._(_root);
 	@override late final _Translations$services$pendingAuth$nl pendingAuth = _Translations$services$pendingAuth$nl._(_root);
 	@override late final _Translations$services$libraryFilter$nl libraryFilter = _Translations$services$libraryFilter$nl._(_root);
@@ -2501,10 +2478,6 @@ class _Translations$common$ratingSource$nl extends Translations$common$ratingSou
 	@override String get imdb => 'IMDb';
 	@override String get tmdb => 'TMDB';
 	@override String get rottenTomatoes => 'Rotten Tomatoes';
-	@override String get simkl => 'Simkl';
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get trakt => 'Trakt';
 	@override String get rottenTomatoesCritic => 'Rotten Tomatoes-critici';
 	@override String get rottenTomatoesAudience => 'Rotten Tomatoes-publiek';
 	@override String get metacritic => 'Metacritic';
@@ -3311,22 +3284,8 @@ class _Translations$services$names$nl extends Translations$services$names$en {
 	final TranslationsNl _root; // ignore: unused_field
 
 	// Translations
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get simkl => 'Simkl';
 	@override String get seerr => 'Seerr';
 	@override String get mdblist => 'MDBList';
-}
-
-// Path: services.simklReconnect
-class _Translations$services$simklReconnect$nl extends Translations$services$simklReconnect$en {
-	_Translations$services$simklReconnect$nl._(TranslationsNl root) : this._root = root, super.internal(root);
-
-	final TranslationsNl _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Simkl opnieuw verbinden';
-	@override String get subtitle => 'Simkl stopt met de aanmeldmethode die deze verbinding gebruikt. Bij opnieuw verbinden wordt simkl.com geopend om PlezTV goed te keuren — PlezTV ziet je wachtwoord nooit. Je kijkgeschiedenis blijft op Simkl.';
 }
 
 // Path: services.deviceCode
@@ -3484,10 +3443,6 @@ extension on TranslationsNl {
 			'common.ratingSource.imdb' => 'IMDb',
 			'common.ratingSource.tmdb' => 'TMDB',
 			'common.ratingSource.rottenTomatoes' => 'Rotten Tomatoes',
-			'common.ratingSource.simkl' => 'Simkl',
-			'common.ratingSource.mal' => 'MyAnimeList',
-			'common.ratingSource.anilist' => 'AniList',
-			'common.ratingSource.trakt' => 'Trakt',
 			'common.ratingSource.rottenTomatoesCritic' => 'Rotten Tomatoes-critici',
 			'common.ratingSource.rottenTomatoesAudience' => 'Rotten Tomatoes-publiek',
 			'common.ratingSource.metacritic' => 'Metacritic',
@@ -3754,7 +3709,6 @@ extension on TranslationsNl {
 			'settings.discordRichPresence' => 'Discord Rich Presence',
 			'settings.discordRichPresenceDescription' => 'Toon op Discord wat je aan het kijken bent',
 			'settings.services' => 'Diensten',
-			'settings.servicesDescription' => 'Koppel Trakt, MyAnimeList, Seerr en meer',
 			'settings.manageLibrariesDescription' => 'Bibliotheken herordenen en verbergen',
 			'settings.companionRemoteServer' => 'Companion Remote-server',
 			'settings.companionRemoteServerDescription' => 'Sta mobiele apparaten op je netwerk toe om deze app te bedienen',
@@ -3896,13 +3850,13 @@ extension on TranslationsNl {
 			'themeEditor.slots.textMuted' => 'Secundaire tekst',
 			'themeEditor.slots.accent' => 'Accent',
 			'themeEditor.opacity' => 'Dekking',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.hexHint' => '#RRGGBB of #AARRGGBB',
 			'themeEditor.fromOtherThemes' => 'Uit andere thema\'s',
 			'themeEditor.swatchLabel' => ({required Object color, required Object theme}) => '${color} van ${theme}',
 			'themeEditor.contrast.textOnBg' => 'Tekst op achtergrond',
 			'themeEditor.contrast.textOnSurface' => 'Tekst op oppervlak',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => 'Secundaire tekst op achtergrond',
 			'themeEditor.contrast.textMutedOnSurface' => 'Secundaire tekst op oppervlak',
 			'themeEditor.contrast.accentOnBg' => 'Accent op achtergrond',
@@ -4410,13 +4364,13 @@ extension on TranslationsNl {
 			'profiles.tokenIdentityMismatch' => 'Het token van het Plex-profiel bleek bij een onverwachte server te horen',
 			'connections.sectionTitle' => 'Verbindingen',
 			'connections.addConnection' => 'Verbinding toevoegen',
-			_ => null,
-		} ?? switch (path) {
 			'connections.addConnectionSubtitleNoProfile' => 'Meld je aan met Plex of verbind een Jellyfin- of Emby-server',
 			'connections.addConnectionSubtitleScoped' => ({required Object displayName}) => 'Toevoegen aan ${displayName}: Plex, Jellyfin, Emby of een andere profielverbinding',
 			'connections.sessionExpiredOne' => ({required Object name}) => 'Sessie verlopen voor ${name}',
 			'connections.sessionExpiredMany' => ({required Object count}) => 'Sessie verlopen voor ${count} servers',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name} weigerde toegang voor dit account',
+			_ => null,
+		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servers weigerden toegang voor dit account',
 			'connections.signInAgain' => 'Opnieuw aanmelden',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product}-verbinding bewerken',
@@ -4670,7 +4624,6 @@ extension on TranslationsNl {
 			'startup.repairBodyOneCredential' => 'Eén opgeslagen aanmelding is beschadigd en kan niet worden gelezen. Door te repareren wordt alleen die ene verwijderd; je andere instellingen blijven onaangetast.',
 			'startup.repairBodySignInsKept' => 'Je servers en profielen blijven naar verwachting aangemeld.',
 			'startup.repairBodySignInsLost' => 'De sleutel die je opgeslagen aanmeldingen beschermt, kan niet uit dit bestand worden hersteld. Je moet je daarom opnieuw aanmelden bij elke server en elk profiel. Er wordt niets op je mediaserver gewijzigd.',
-			'startup.repairBodySessionsUncertain' => 'Trackers (MAL, AniList, Simkl, Trakt) en Seerr worden apart opgeslagen en blijven mogelijk wel of niet bewaard. PlezTV vertelt je precies wat het heeft bewaard.',
 			'startup.repairConfirm' => 'Repareren',
 			'startup.repairSucceeded' => 'Opslag gerepareerd',
 			'startup.repairNeedsRestart' => 'Opslag gerepareerd — herstart vereist',
@@ -4715,7 +4668,6 @@ extension on TranslationsNl {
 			'explore.status.upcoming' => 'Binnenkort',
 			'explore.episodeCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('nl'))(n, one: '${n} aflevering', other: '${n} afleveringen', ), 
 			'explore.cast' => 'Acteurs',
-			'explore.characters' => 'Personages',
 			'explore.addToWatchlist' => 'Toevoegen aan kijklijst',
 			'explore.removeFromWatchlist' => 'Verwijderen uit kijklijst',
 			'explore.addedToWatchlist' => 'Aan kijklijst toegevoegd',
@@ -4924,8 +4876,6 @@ extension on TranslationsNl {
 			'liveTv.recordSettings.skipInLibrary' => 'Afleveringen overslaan die al in de bibliotheek staan',
 			'liveTv.recordSettings.keepUpTo' => 'Te bewaren afleveringen',
 			'liveTv.recordSettings.keepUpToHint' => '0 bewaart alle afleveringen',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => 'Begint over ${minutes} min',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day} om ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => '${product} heeft ongeldige afspeelgegevens voor Live-tv geretourneerd',
@@ -4933,6 +4883,8 @@ extension on TranslationsNl {
 			'liveTv.failedToBuildStreamUrl' => 'Kon de stream-URL niet samenstellen',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => 'Kon het kanaal niet starten: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => 'Kon niet van kanaal wisselen: ${reason}',
+			_ => null,
+		} ?? switch (path) {
 			'collections.title' => 'Collecties',
 			'collections.collection' => 'Collectie',
 			'collections.empty' => 'Collectie is leeg',
@@ -5438,8 +5390,6 @@ extension on TranslationsNl {
 			'performanceOverlay.decoderExynosHw' => 'Exynos HW',
 			'performanceOverlay.decoderSoftware' => 'Software',
 			'performanceOverlay.decoderHardware' => 'Hardware',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.tunnelingActive' => 'Actief',
 			'performanceOverlay.dvRpuFailed' => ({required Object converted, required Object failures}) => '${converted} (${failures} mislukt)',
 			'externalPlayer.title' => 'Externe speler',
@@ -5447,6 +5397,8 @@ extension on TranslationsNl {
 			'externalPlayer.useExternalPlayerDescription' => 'Open video\'s in een andere app',
 			'externalPlayer.selectPlayer' => 'Speler selecteren',
 			'externalPlayer.customPlayers' => 'Aangepaste spelers',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.systemDefault' => 'Systeemstandaard',
 			'externalPlayer.addCustomPlayer' => 'Aangepaste speler toevoegen',
 			'externalPlayer.playerName' => 'Spelernaam',
@@ -5548,15 +5500,6 @@ extension on TranslationsNl {
 			'serverTasks.title' => 'Servertaken',
 			'serverTasks.failedToLoad' => 'Taken konden niet worden geladen',
 			'serverTasks.noTasks' => 'Geen actieve taken',
-			'trakt.title' => 'Trakt',
-			'trakt.connected' => 'Verbonden',
-			'trakt.connectedAs' => ({required Object username}) => 'Verbonden als @${username}',
-			'trakt.disconnectConfirm' => 'Trakt-account loskoppelen?',
-			'trakt.disconnectConfirmBody' => 'PlezTV stuurt geen gebeurtenissen meer naar Trakt. Je kunt op elk moment opnieuw verbinding maken.',
-			'trakt.scrobble' => 'Realtime scrobblen',
-			'trakt.scrobbleDescription' => 'Stuur tijdens het afspelen gebeurtenissen voor afspelen, pauzeren en stoppen naar Trakt.',
-			'trakt.watchedSync' => 'Kijkstatus synchroniseren',
-			'trakt.watchedSyncDescription' => 'Wanneer je items in PlezTV als bekeken markeert, worden ze op Trakt ook als bekeken gemarkeerd.',
 			'seerr.title' => 'Seerr',
 			'seerr.connectTitle' => 'Verbinden met Seerr',
 			'seerr.serverUrl' => 'Server-URL',
@@ -5617,13 +5560,8 @@ extension on TranslationsNl {
 			'services.disconnectConfirm' => ({required Object service}) => '${service} loskoppelen?',
 			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV werkt ${service} niet meer bij. Je kunt op elk moment opnieuw verbinding maken.',
 			'services.connectFailed' => ({required Object service}) => 'Verbinding maken met ${service} is mislukt. Probeer het opnieuw.',
-			'services.names.mal' => 'MyAnimeList',
-			'services.names.anilist' => 'AniList',
-			'services.names.simkl' => 'Simkl',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.simklReconnect.title' => 'Simkl opnieuw verbinden',
-			'services.simklReconnect.subtitle' => 'Simkl stopt met de aanmeldmethode die deze verbinding gebruikt. Bij opnieuw verbinden wordt simkl.com geopend om PlezTV goed te keuren — PlezTV ziet je wachtwoord nooit. Je kijkgeschiedenis blijft op Simkl.',
 			'services.deviceCode.title' => ({required Object service}) => 'PlezTV activeren op ${service}',
 			'services.deviceCode.instructions' => 'Scan de QR-code of ga naar het onderstaande adres en voer deze code in:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => 'Open ${service} om te activeren',

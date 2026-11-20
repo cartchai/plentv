@@ -89,7 +89,6 @@ class TranslationsKo extends Translations with BaseTranslations<AppLocale, Trans
 	@override late final _Translations$metadataEdit$ko metadataEdit = _Translations$metadataEdit$ko._(_root);
 	@override late final _Translations$matchScreen$ko matchScreen = _Translations$matchScreen$ko._(_root);
 	@override late final _Translations$serverTasks$ko serverTasks = _Translations$serverTasks$ko._(_root);
-	@override late final _Translations$trakt$ko trakt = _Translations$trakt$ko._(_root);
 	@override late final _Translations$seerr$ko seerr = _Translations$seerr$ko._(_root);
 	@override late final _Translations$services$ko services = _Translations$services$ko._(_root);
 	@override late final _Translations$addServer$ko addServer = _Translations$addServer$ko._(_root);
@@ -485,7 +484,6 @@ class _Translations$settings$ko extends Translations$settings$en {
 	@override String get discordRichPresence => 'Discord Rich Presence';
 	@override String get discordRichPresenceDescription => 'Discord에서 시청 중인 콘텐츠 표시';
 	@override String get services => '서비스';
-	@override String get servicesDescription => 'Trakt, MyAnimeList, Seerr 등 연결';
 	@override String get manageLibrariesDescription => '라이브러리 순서를 변경하거나 숨깁니다';
 	@override String get companionRemoteServer => '컴패니언 리모트 서버';
 	@override String get companionRemoteServerDescription => '네트워크의 모바일 기기가 이 앱을 제어할 수 있도록 허용';
@@ -1497,7 +1495,6 @@ class _Translations$startup$ko extends Translations$startup$en {
 	@override String get repairBodyOneCredential => '저장된 로그인 정보 하나가 손상되어 읽을 수 없습니다. 복구하면 해당 로그인 정보만 제거되며 다른 설정은 그대로 유지됩니다.';
 	@override String get repairBodySignInsKept => '서버와 프로필은 로그인 상태가 유지됩니다.';
 	@override String get repairBodySignInsLost => '저장된 로그인 정보를 보호하는 키를 이 파일에서 복구할 수 없어 모든 서버와 프로필에 다시 로그인해야 합니다. 미디어 서버의 데이터에는 영향이 없습니다.';
-	@override String get repairBodySessionsUncertain => '트래커(MAL, AniList, Simkl, Trakt)와 Seerr는 별도로 저장되며 유지 여부가 확실하지 않습니다. PlezTV가 유지된 항목을 정확히 알려줄 것입니다.';
 	@override String get repairConfirm => '복구';
 	@override String get repairSucceeded => '저장소가 복구되었습니다';
 	@override String get repairNeedsRestart => '저장소가 복구되었습니다 — 재시작 필요';
@@ -1555,7 +1552,6 @@ class _Translations$explore$ko extends Translations$explore$en {
 		other: '${n}화',
 	);
 	@override String get cast => '출연진';
-	@override String get characters => '캐릭터';
 	@override String get addToWatchlist => '관심 목록에 추가';
 	@override String get removeFromWatchlist => '관심 목록에서 제거';
 	@override String get addedToWatchlist => '관심 목록에 추가했습니다';
@@ -2290,24 +2286,6 @@ class _Translations$serverTasks$ko extends Translations$serverTasks$en {
 	@override String get noTasks => '실행 중인 작업 없음';
 }
 
-// Path: trakt
-class _Translations$trakt$ko extends Translations$trakt$en {
-	_Translations$trakt$ko._(TranslationsKo root) : this._root = root, super.internal(root);
-
-	final TranslationsKo _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Trakt';
-	@override String get connected => '연결됨';
-	@override String connectedAs({required Object username}) => '@${username}(으)로 연결됨';
-	@override String get disconnectConfirm => 'Trakt 계정 연결을 끊으시겠습니까?';
-	@override String get disconnectConfirmBody => 'PlezTV가 Trakt로 이벤트 전송을 중지합니다. 언제든 다시 연결할 수 있습니다.';
-	@override String get scrobble => '실시간 스크로블';
-	@override String get scrobbleDescription => '재생 중 재생, 일시정지, 정지 이벤트를 Trakt로 전송합니다.';
-	@override String get watchedSync => '시청 상태 동기화';
-	@override String get watchedSyncDescription => 'PlezTV에서 시청 완료로 표시한 항목이 Trakt에도 시청 완료로 표시됩니다.';
-}
-
 // Path: seerr
 class _Translations$seerr$ko extends Translations$seerr$en {
 	_Translations$seerr$ko._(TranslationsKo root) : this._root = root, super.internal(root);
@@ -2385,7 +2363,6 @@ class _Translations$services$ko extends Translations$services$en {
 	@override String disconnectConfirmBody({required Object service}) => 'PlezTV가 ${service} 업데이트를 중지합니다. 언제든 다시 연결할 수 있습니다.';
 	@override String connectFailed({required Object service}) => '${service}에 연결할 수 없습니다. 다시 시도하세요.';
 	@override late final _Translations$services$names$ko names = _Translations$services$names$ko._(_root);
-	@override late final _Translations$services$simklReconnect$ko simklReconnect = _Translations$services$simklReconnect$ko._(_root);
 	@override late final _Translations$services$deviceCode$ko deviceCode = _Translations$services$deviceCode$ko._(_root);
 	@override late final _Translations$services$pendingAuth$ko pendingAuth = _Translations$services$pendingAuth$ko._(_root);
 	@override late final _Translations$services$libraryFilter$ko libraryFilter = _Translations$services$libraryFilter$ko._(_root);
@@ -2491,10 +2468,6 @@ class _Translations$common$ratingSource$ko extends Translations$common$ratingSou
 	@override String get imdb => 'IMDb';
 	@override String get tmdb => 'TMDB';
 	@override String get rottenTomatoes => 'Rotten Tomatoes';
-	@override String get simkl => 'Simkl';
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get trakt => 'Trakt';
 	@override String get rottenTomatoesCritic => 'Rotten Tomatoes 평론가';
 	@override String get rottenTomatoesAudience => 'Rotten Tomatoes 관객';
 	@override String get metacritic => 'Metacritic';
@@ -3299,22 +3272,8 @@ class _Translations$services$names$ko extends Translations$services$names$en {
 	final TranslationsKo _root; // ignore: unused_field
 
 	// Translations
-	@override String get mal => 'MyAnimeList';
-	@override String get anilist => 'AniList';
-	@override String get simkl => 'Simkl';
 	@override String get seerr => 'Seerr';
 	@override String get mdblist => 'MDBList';
-}
-
-// Path: services.simklReconnect
-class _Translations$services$simklReconnect$ko extends Translations$services$simklReconnect$en {
-	_Translations$services$simklReconnect$ko._(TranslationsKo root) : this._root = root, super.internal(root);
-
-	final TranslationsKo _root; // ignore: unused_field
-
-	// Translations
-	@override String get title => 'Simkl 다시 연결';
-	@override String get subtitle => 'Simkl이 이 연결에 사용되는 로그인 방식을 종료합니다. 다시 연결하면 simkl.com이 열리고 그곳에서 PlezTV를 승인합니다 — PlezTV는 비밀번호를 볼 수 없습니다. 시청 기록은 Simkl에 그대로 유지됩니다.';
 }
 
 // Path: services.deviceCode
@@ -3472,10 +3431,6 @@ extension on TranslationsKo {
 			'common.ratingSource.imdb' => 'IMDb',
 			'common.ratingSource.tmdb' => 'TMDB',
 			'common.ratingSource.rottenTomatoes' => 'Rotten Tomatoes',
-			'common.ratingSource.simkl' => 'Simkl',
-			'common.ratingSource.mal' => 'MyAnimeList',
-			'common.ratingSource.anilist' => 'AniList',
-			'common.ratingSource.trakt' => 'Trakt',
 			'common.ratingSource.rottenTomatoesCritic' => 'Rotten Tomatoes 평론가',
 			'common.ratingSource.rottenTomatoesAudience' => 'Rotten Tomatoes 관객',
 			'common.ratingSource.metacritic' => 'Metacritic',
@@ -3742,7 +3697,6 @@ extension on TranslationsKo {
 			'settings.discordRichPresence' => 'Discord Rich Presence',
 			'settings.discordRichPresenceDescription' => 'Discord에서 시청 중인 콘텐츠 표시',
 			'settings.services' => '서비스',
-			'settings.servicesDescription' => 'Trakt, MyAnimeList, Seerr 등 연결',
 			'settings.manageLibrariesDescription' => '라이브러리 순서를 변경하거나 숨깁니다',
 			'settings.companionRemoteServer' => '컴패니언 리모트 서버',
 			'settings.companionRemoteServerDescription' => '네트워크의 모바일 기기가 이 앱을 제어할 수 있도록 허용',
@@ -3884,13 +3838,13 @@ extension on TranslationsKo {
 			'themeEditor.slots.textMuted' => '보조 텍스트',
 			'themeEditor.slots.accent' => '강조색',
 			'themeEditor.opacity' => '불투명도',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.hexHint' => '#RRGGBB 또는 #AARRGGBB',
 			'themeEditor.fromOtherThemes' => '다른 테마에서',
 			'themeEditor.swatchLabel' => ({required Object theme, required Object color}) => '${theme} ${color}',
 			'themeEditor.contrast.textOnBg' => '배경 위 텍스트',
 			'themeEditor.contrast.textOnSurface' => '표면 위 텍스트',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.textMutedOnBg' => '배경 위 보조 텍스트',
 			'themeEditor.contrast.textMutedOnSurface' => '표면 위 보조 텍스트',
 			'themeEditor.contrast.accentOnBg' => '배경 위 강조색',
@@ -4398,13 +4352,13 @@ extension on TranslationsKo {
 			'profiles.tokenIdentityMismatch' => 'Plex 프로필 토큰이 예상과 다른 서버로 확인되었습니다',
 			'connections.sectionTitle' => '연결',
 			'connections.addConnection' => '연결 추가',
-			_ => null,
-		} ?? switch (path) {
 			'connections.addConnectionSubtitleNoProfile' => 'Plex로 로그인하거나 Jellyfin 또는 Emby 서버에 연결',
 			'connections.addConnectionSubtitleScoped' => ({required Object displayName}) => '${displayName}에 추가: Plex, Jellyfin, Emby 또는 다른 프로필 연결',
 			'connections.sessionExpiredOne' => ({required Object name}) => '${name}의 세션이 만료되었습니다',
 			'connections.sessionExpiredMany' => ({required Object count}) => '${count}개 서버의 세션이 만료되었습니다',
 			'connections.accessDeniedOne' => ({required Object name}) => '${name}에서 이 계정의 접근을 거부했습니다',
+			_ => null,
+		} ?? switch (path) {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count}개 서버에서 이 계정의 접근을 거부했습니다',
 			'connections.signInAgain' => '다시 로그인',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} 연결 편집',
@@ -4658,7 +4612,6 @@ extension on TranslationsKo {
 			'startup.repairBodyOneCredential' => '저장된 로그인 정보 하나가 손상되어 읽을 수 없습니다. 복구하면 해당 로그인 정보만 제거되며 다른 설정은 그대로 유지됩니다.',
 			'startup.repairBodySignInsKept' => '서버와 프로필은 로그인 상태가 유지됩니다.',
 			'startup.repairBodySignInsLost' => '저장된 로그인 정보를 보호하는 키를 이 파일에서 복구할 수 없어 모든 서버와 프로필에 다시 로그인해야 합니다. 미디어 서버의 데이터에는 영향이 없습니다.',
-			'startup.repairBodySessionsUncertain' => '트래커(MAL, AniList, Simkl, Trakt)와 Seerr는 별도로 저장되며 유지 여부가 확실하지 않습니다. PlezTV가 유지된 항목을 정확히 알려줄 것입니다.',
 			'startup.repairConfirm' => '복구',
 			'startup.repairSucceeded' => '저장소가 복구되었습니다',
 			'startup.repairNeedsRestart' => '저장소가 복구되었습니다 — 재시작 필요',
@@ -4703,7 +4656,6 @@ extension on TranslationsKo {
 			'explore.status.upcoming' => '방영 예정',
 			'explore.episodeCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('ko'))(n, other: '${n}화', ), 
 			'explore.cast' => '출연진',
-			'explore.characters' => '캐릭터',
 			'explore.addToWatchlist' => '관심 목록에 추가',
 			'explore.removeFromWatchlist' => '관심 목록에서 제거',
 			'explore.addedToWatchlist' => '관심 목록에 추가했습니다',
@@ -4912,8 +4864,6 @@ extension on TranslationsKo {
 			'liveTv.recordSettings.skipInLibrary' => '라이브러리에 이미 있는 에피소드 건너뛰기',
 			'liveTv.recordSettings.keepUpTo' => '보관할 에피소드 수',
 			'liveTv.recordSettings.keepUpToHint' => '0이면 모든 에피소드 보관',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => '${minutes}분 후 시작',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day} ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => '${product}에서 잘못된 실시간 TV 재생 데이터를 반환했습니다',
@@ -4921,6 +4871,8 @@ extension on TranslationsKo {
 			'liveTv.failedToBuildStreamUrl' => '스트림 URL을 생성할 수 없습니다',
 			'liveTv.playbackStartFailed' => ({required Object reason}) => '채널을 시작하지 못했습니다: ${reason}',
 			'liveTv.channelSwitchFailed' => ({required Object reason}) => '채널을 전환하지 못했습니다: ${reason}',
+			_ => null,
+		} ?? switch (path) {
 			'collections.title' => '컬렉션',
 			'collections.collection' => '컬렉션',
 			'collections.empty' => '컬렉션이 비어 있습니다',
@@ -5426,8 +5378,6 @@ extension on TranslationsKo {
 			'performanceOverlay.decoderExynosHw' => 'Exynos HW',
 			'performanceOverlay.decoderSoftware' => '소프트웨어',
 			'performanceOverlay.decoderHardware' => '하드웨어',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.tunnelingActive' => '활성',
 			'performanceOverlay.dvRpuFailed' => ({required Object converted, required Object failures}) => '${converted} (${failures}개 실패)',
 			'externalPlayer.title' => '외부 플레이어',
@@ -5435,6 +5385,8 @@ extension on TranslationsKo {
 			'externalPlayer.useExternalPlayerDescription' => '동영상을 다른 앱에서 열기',
 			'externalPlayer.selectPlayer' => '플레이어 선택',
 			'externalPlayer.customPlayers' => '사용자 정의 플레이어',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.systemDefault' => '시스템 기본값',
 			'externalPlayer.addCustomPlayer' => '사용자 정의 플레이어 추가',
 			'externalPlayer.playerName' => '플레이어 이름',
@@ -5536,15 +5488,6 @@ extension on TranslationsKo {
 			'serverTasks.title' => '서버 작업',
 			'serverTasks.failedToLoad' => '작업을 불러올 수 없습니다',
 			'serverTasks.noTasks' => '실행 중인 작업 없음',
-			'trakt.title' => 'Trakt',
-			'trakt.connected' => '연결됨',
-			'trakt.connectedAs' => ({required Object username}) => '@${username}(으)로 연결됨',
-			'trakt.disconnectConfirm' => 'Trakt 계정 연결을 끊으시겠습니까?',
-			'trakt.disconnectConfirmBody' => 'PlezTV가 Trakt로 이벤트 전송을 중지합니다. 언제든 다시 연결할 수 있습니다.',
-			'trakt.scrobble' => '실시간 스크로블',
-			'trakt.scrobbleDescription' => '재생 중 재생, 일시정지, 정지 이벤트를 Trakt로 전송합니다.',
-			'trakt.watchedSync' => '시청 상태 동기화',
-			'trakt.watchedSyncDescription' => 'PlezTV에서 시청 완료로 표시한 항목이 Trakt에도 시청 완료로 표시됩니다.',
 			'seerr.title' => 'Seerr',
 			'seerr.connectTitle' => 'Seerr에 연결',
 			'seerr.serverUrl' => '서버 URL',
@@ -5605,13 +5548,8 @@ extension on TranslationsKo {
 			'services.disconnectConfirm' => ({required Object service}) => '${service} 연결을 해제하시겠습니까?',
 			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV가 ${service} 업데이트를 중지합니다. 언제든 다시 연결할 수 있습니다.',
 			'services.connectFailed' => ({required Object service}) => '${service}에 연결할 수 없습니다. 다시 시도하세요.',
-			'services.names.mal' => 'MyAnimeList',
-			'services.names.anilist' => 'AniList',
-			'services.names.simkl' => 'Simkl',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.simklReconnect.title' => 'Simkl 다시 연결',
-			'services.simklReconnect.subtitle' => 'Simkl이 이 연결에 사용되는 로그인 방식을 종료합니다. 다시 연결하면 simkl.com이 열리고 그곳에서 PlezTV를 승인합니다 — PlezTV는 비밀번호를 볼 수 없습니다. 시청 기록은 Simkl에 그대로 유지됩니다.',
 			'services.deviceCode.title' => ({required Object service}) => '${service}에서 PlezTV 활성화',
 			'services.deviceCode.instructions' => 'QR 코드를 스캔하거나 아래 주소로 이동하여 이 코드를 입력하세요:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => '활성화하려면 ${service} 열기',

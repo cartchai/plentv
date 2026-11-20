@@ -109,10 +109,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Rotten Tomatoes 批評家",
       "rottenTomatoesAudience": "Rotten Tomatoes 観客",
       "metacritic": "Metacritic",
@@ -392,7 +388,6 @@
     "discordRichPresence": "Discord Rich Presence",
     "discordRichPresenceDescription": "Discordで視聴中の内容を表示",
     "services": "サービス",
-    "servicesDescription": "Trakt、MyAnimeList、Seerrなどを接続",
     "manageLibrariesDescription": "ライブラリを並べ替えたり非表示にしたりできます",
     "companionRemoteServer": "コンパニオンリモートサーバー",
     "companionRemoteServerDescription": "ネットワーク上のモバイルデバイスからこのアプリを操作できるようにする",
@@ -1404,7 +1399,6 @@
     "repairBodyOneCredential": "保存済みのサインインの1つが破損しており読み取れません。修復するとその1つだけが削除され、他の設定には影響しません。",
     "repairBodySignInsKept": "サーバーとプロフィールはサインインしたままになります。",
     "repairBodySignInsLost": "保存済みのサインインを保護するキーをこのファイルから復元できないため、すべてのサーバーとプロフィールに再度サインインする必要があります。メディアサーバー上のデータには影響ありません。",
-    "repairBodySessionsUncertain": "トラッカー（MAL、AniList、Simkl、Trakt）とSeerrは別途保存されており、保持されるかどうかは不明です。PlezTVは保持した内容を正確にお知らせします。",
     "repairConfirm": "修復",
     "repairSucceeded": "ストレージを修復しました",
     "repairNeedsRestart": "ストレージを修復しました — 再起動が必要です",
@@ -1461,7 +1455,6 @@
       "other": "${n}話"
     },
     "cast": "キャスト",
-    "characters": "キャラクター",
     "addToWatchlist": "ウォッチリストに追加",
     "removeFromWatchlist": "ウォッチリストから削除",
     "addedToWatchlist": "ウォッチリストに追加しました",
@@ -2371,17 +2364,6 @@
     "failedToLoad": "タスクの読み込みに失敗しました",
     "noTasks": "実行中のタスクはありません"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "接続済み",
-    "connectedAs": "@${username}として接続済み",
-    "disconnectConfirm": "Traktアカウントとの接続を解除しますか？",
-    "disconnectConfirmBody": "PlezTVはTraktへのイベント送信を停止します。いつでも再接続できます。",
-    "scrobble": "リアルタイムのスクロブル",
-    "scrobbleDescription": "再生中に再生・一時停止・停止の各イベントをTraktに送信します。",
-    "watchedSync": "視聴済みステータスを同期",
-    "watchedSyncDescription": "PlezTVで項目を視聴済みにすると、Traktでも視聴済みになります。"
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "Seerrに接続",
@@ -2446,15 +2428,8 @@
     "disconnectConfirmBody": "PlezTVは${service}の更新を停止します。いつでも再接続できます。",
     "connectFailed": "${service} に接続できませんでした。もう一度お試しください。",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "Simklに再接続",
-      "subtitle": "Simklはこの接続で使用しているサインイン方法を廃止します。再接続するとsimkl.comが開き、PlezTVを承認できます。PlezTVがパスワードを知ることはありません。視聴履歴はSimklに残ります。"
     },
     "deviceCode": {
       "title": "${service} で PlezTV を有効化",

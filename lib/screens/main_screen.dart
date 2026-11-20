@@ -1117,7 +1117,7 @@ class _MainScreenState extends State<MainScreen>
     }
 
     // Listen for catalog sources (Explore tab) appearing/disappearing when a
-    // provider like Trakt is connected or disconnected mid-session.
+    // provider like MDBList is connected or disconnected mid-session.
     final catalogSources = context.read<CatalogSourcesProvider>();
     if (catalogSources != _catalogSourcesProvider) {
       _catalogSourcesProvider?.removeListener(_handleCatalogSourcesChanged);

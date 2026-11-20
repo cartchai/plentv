@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../utils/app_logger.dart';
 import '../../../utils/json_utils.dart';
-import '../future_coalescer.dart';
+import '../../future_coalescer.dart';
 import '../tracker.dart';
 import '../tracker_constants.dart';
 import '../tracker_exceptions.dart';
@@ -112,8 +112,8 @@ class MdblistClient implements DisposableTrackerClient {
     }
   }
 
-  /// Best-effort server-side revoke, mirroring Trakt's disconnect. Failure is
-  /// non-fatal: the local session is already gone by the time this runs.
+  /// Best-effort server-side revoke. Failure is non-fatal: the local session
+  /// is already gone by the time this runs.
   Future<void> revoke() async {
     try {
       await _http.sendForm(

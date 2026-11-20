@@ -109,10 +109,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Rotten Tomatoes сыншылары",
       "rottenTomatoesAudience": "Rotten Tomatoes көрермендері",
       "metacritic": "Metacritic",
@@ -392,7 +388,6 @@
     "discordRichPresence": "Discord Rich Presence",
     "discordRichPresenceDescription": "Discord-та не көріп жатқаныңызды көрсету",
     "services": "Қызметтер",
-    "servicesDescription": "Trakt, MyAnimeList, Seerr және т.б. қосыңыз",
     "manageLibrariesDescription": "Кітапханаларды қайта реттеу және жасыру",
     "companionRemoteServer": "Көмекші пульт сервері",
     "companionRemoteServerDescription": "Желідегі мобильді құрылғыларға осы қолданбаны басқаруға рұқсат беру",
@@ -1409,7 +1404,6 @@
     "repairBodyOneCredential": "Бір сақталған кіру деректері зақымдалған және оқылмайды. Қалпына келтіру тек соны өшіреді; қалған баптауларыңызға тиіспейді.",
     "repairBodySignInsKept": "Серверлеріңіз бен профильдеріңіз кірген күйінде қалады.",
     "repairBodySignInsLost": "Сақталған кіру деректерін қорғайтын кілт осы файлдан қалпына келтірілмейді, сондықтан әрбір сервер мен профильге қайта кіруге тура келеді. Медиа серверіңіздегі ештеңеге әсер етілмейді.",
-    "repairBodySessionsUncertain": "Tracker-лар (MAL, AniList, Simkl, Trakt) және Seerr бөлек сақталады және сақталуы да, сақталмауы да мүмкін. PlezTV не сақталғанын нақты айтады.",
     "repairConfirm": "Қалпына келтіру",
     "repairSucceeded": "Сақтау қалпына келтірілді",
     "repairNeedsRestart": "Сақтау қалпына келтірілді — қайта іске қосу қажет",
@@ -1467,7 +1461,6 @@
       "other": "${n} бөлім"
     },
     "cast": "Актерлер",
-    "characters": "Кейіпкерлер",
     "addToWatchlist": "Көру тізіміне қосу",
     "removeFromWatchlist": "Көру тізімінен өшіру",
     "addedToWatchlist": "Көру тізіміне қосылды",
@@ -2383,17 +2376,6 @@
     "failedToLoad": "Тапсырмаларды жүктеу мүмкін болмады",
     "noTasks": "Орындалып жатқан тапсырмалар жоқ"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "Қосылды",
-    "connectedAs": "@${username} ретінде қосылды",
-    "disconnectConfirm": "Trakt ажыратылсын ба?",
-    "disconnectConfirmBody": "PlezTV Trakt-қа деректер жіберуді тоқтатады.",
-    "scrobble": "Нақты уақытта бақылау",
-    "scrobbleDescription": "Ойнату кезінде Trakt-қа деректер жіберу.",
-    "watchedSync": "Көру мәртебесін синхрондау",
-    "watchedSyncDescription": "PlezTV-де белгіленгенде Trakt-та да белгіленеді."
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "Seerr қосу",
@@ -2458,15 +2440,8 @@
     "disconnectConfirmBody": "PlezTV ${service} жаңартуды тоқтатады. Кез келген уақытта қайта қосыла аласыз.",
     "connectFailed": "${service} қосылу мүмкін болмады. Қайтадан байқап көріңіз.",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "Simkl-ге қайта қосылу",
-      "subtitle": "Simkl бұл қосылым пайдаланатын кіру әдісін тоқтатуда. Қайта қосылғанда PlezTV-ді растау үшін simkl.com ашылады — PlezTV құпия сөзіңізді ешқашан көрмейді. Көру тарихыңыз Simkl-де сақталады."
     },
     "deviceCode": {
       "title": "PlezTV-ді ${service} қызметінде белсендіру",

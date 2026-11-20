@@ -763,7 +763,6 @@ class SettingsService extends BaseSharedPreferencesService {
   static const showPerformanceOverlay = BoolPref('show_performance_overlay');
   static const autoHidePerformanceOverlay = BoolPref('auto_hide_performance_overlay', defaultValue: true);
   static const enableDiscordRPC = BoolPref('enable_discord_rpc');
-  static const enableTraktWatchedSync = BoolPref('enable_trakt_watched_sync', defaultValue: true);
   static const matchContentFrameRate = BoolPref('match_content_frame_rate');
   static const matchContentResolution = BoolPref('match_content_resolution');
   // 1.2.19 L-27 trial: RenderMode.surface on TV, opt-in, default off.
@@ -902,7 +901,7 @@ class SettingsService extends BaseSharedPreferencesService {
     defaultValue: NavigationTabId.discover,
   );
 
-  /// Whether the Explore tab (Plex Discover / tracker catalog rows) is shown
+  /// Whether the Explore tab (Plex Discover / connected catalog rows) is shown
   /// at all. UI-only: catalog sources stay connected so watchlist surfaces
   /// keep working while the tab is hidden.
   static const showExploreTab = BoolPref('show_explore_tab', defaultValue: true);
@@ -1258,9 +1257,7 @@ class SettingsService extends BaseSharedPreferencesService {
   /// keeps applying until the user chooses).
   static IntPref dvrTargetSectionPref(ServerId serverId, int type) => IntPref('dvr_target_section_${type}_$serverId');
 
-  /// Per-service "scrobble to this tracker" toggle. Trakt's second toggle
-  /// ([enableTraktWatchedSync]) has no counterpart on the other services and
-  /// stays a standalone constant.
+  /// Per-service "scrobble to this tracker" toggle.
   static BoolPref scrobblePref(TrackerService s) => BoolPref('enable_${s.name}_scrobble', defaultValue: true);
 
   static EnumPref<TrackerLibraryFilterMode> trackerFilterModePref(TrackerService s) => EnumPref(
@@ -1724,7 +1721,6 @@ class SettingsService extends BaseSharedPreferencesService {
     showPerformanceOverlay,
     autoHidePerformanceOverlay,
     enableDiscordRPC,
-    enableTraktWatchedSync,
     // Scrobble toggle, one per tracker service.
     for (final s in TrackerService.values) scrobblePref(s),
     matchContentFrameRate,

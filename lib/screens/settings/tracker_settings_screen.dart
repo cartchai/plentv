@@ -7,88 +7,13 @@ import 'package:provider/provider.dart';
 import '../../i18n/strings.g.dart';
 import '../../models/trackers/device_code.dart';
 import '../../providers/trackers_provider.dart';
-import '../../services/trackers/anilist/anilist_auth_service.dart';
-import '../../services/trackers/direct_oauth_flow.dart';
-import '../../services/trackers/mal/mal_auth_service.dart';
 import '../../services/trackers/tracker_constants.dart';
 import '../../services/settings_service.dart';
 import '../../utils/dialogs.dart';
-import '../../utils/snackbar_helper.dart';
-import '../../widgets/app_icon.dart';
 import '../../widgets/device_code_dialog.dart';
-import '../../widgets/direct_oauth_dialog.dart';
-import '../../widgets/focusable_list_tile.dart';
 import '../../widgets/settings_page.dart';
 import 'tracker_account_settings_body.dart';
 import 'tracker_connect_launcher.dart';
-
-Future<void> startMalConnection(BuildContext context) async {
-  final account = context.read<TrackersProvider>();
-  final name = t.services.names.mal;
-  // No registration baked into this build yet: say so plainly instead of
-  // opening a sign-in that cannot work.
-  if (!MalAuthService.isConfigured) {
-    showAppSnackBar(context, t.services.directOAuth.notConfigured(service: name));
-    return;
-  }
-  return launchTrackerConnect<DirectOAuthStart>(
-    context,
-    isBusyOrConnected: account.isConnecting(TrackerService.mal) || account.isMalConnected,
-    serviceName: name,
-    connect: (cb) => account.connectMal(onCodeReady: cb),
-    onCancel: account.cancelConnect,
-    buildDialog: (p, cancel) => DirectOAuthDialog(start: p, serviceName: name, onCancel: cancel),
-    urlFor: (p) => p.url,
-  );
-}
-
-Future<void> startAnilistConnection(BuildContext context) async {
-  final account = context.read<TrackersProvider>();
-  final name = t.services.names.anilist;
-  if (!AnilistAuthService.isConfigured) {
-    showAppSnackBar(context, t.services.directOAuth.notConfigured(service: name));
-    return;
-  }
-  return launchTrackerConnect<DirectOAuthStart>(
-    context,
-    isBusyOrConnected: account.isConnecting(TrackerService.anilist) || account.isAnilistConnected,
-    serviceName: name,
-    connect: (cb) => account.connectAnilist(onCodeReady: cb),
-    onCancel: account.cancelConnect,
-    buildDialog: (p, cancel) => DirectOAuthDialog(start: p, serviceName: name, onCancel: cancel),
-    urlFor: (p) => p.url,
-  );
-}
-
-Future<void> startSimklConnection(BuildContext context) {
-  final account = context.read<TrackersProvider>();
-  final name = t.services.names.simkl;
-  return launchTrackerConnect<DeviceCode>(
-    context,
-    isBusyOrConnected: account.isConnecting(TrackerService.simkl) || account.isSimklConnected,
-    serviceName: name,
-    connect: (cb) => account.connectSimkl(onCodeReady: cb),
-    onCancel: account.cancelConnect,
-    buildDialog: (p, cancel) => DeviceCodeDialog(code: p, serviceName: name, onCancel: cancel),
-    urlFor: (p) => p.verificationUrlComplete ?? p.verificationUrl,
-  );
-}
-
-/// Move a legacy AUTH V1 Simkl session onto AUTH V2. Same dialog as a first
-/// connect; the current session stays bound until the new one replaces it.
-Future<void> startSimklReconnection(BuildContext context) {
-  final account = context.read<TrackersProvider>();
-  final name = t.services.names.simkl;
-  return launchTrackerConnect<DeviceCode>(
-    context,
-    isBusyOrConnected: account.isConnecting(TrackerService.simkl) || !account.isSimklLegacy,
-    serviceName: name,
-    connect: (cb) => account.reconnectSimkl(onCodeReady: cb),
-    onCancel: account.cancelConnect,
-    buildDialog: (p, cancel) => DeviceCodeDialog(code: p, serviceName: name, onCancel: cancel),
-    urlFor: (p) => p.verificationUrlComplete ?? p.verificationUrl,
-  );
-}
 
 Future<void> startMdblistConnection(BuildContext context) {
   final account = context.read<TrackersProvider>();
@@ -127,38 +52,8 @@ class TrackerConfig {
 
   Pref<bool> get scrobblePref => SettingsService.scrobblePref(service);
 
-  static TrackerConfig mal() => TrackerConfig(
-    service: TrackerService.mal,
-    displayName: t.services.names.mal,
-    isConnected: (a) => a.isMalConnected,
-    username: (a) => a.malUsername,
-    disconnect: (a) => a.disconnectMal(),
-  );
 
-  static TrackerConfig anilist() => TrackerConfig(
-    service: TrackerService.anilist,
-    displayName: t.services.names.anilist,
-    isConnected: (a) => a.isAnilistConnected,
-    username: (a) => a.anilistUsername,
-    disconnect: (a) => a.disconnectAnilist(),
-  );
 
-  static TrackerConfig simkl() => TrackerConfig(
-    service: TrackerService.simkl,
-    displayName: t.services.names.simkl,
-    isConnected: (a) => a.isSimklConnected,
-    username: (a) => a.simklUsername,
-    disconnect: (a) => a.disconnectSimkl(),
-    accountActions: (context, a) => [
-      if (a.isSimklLegacy)
-        FocusableListTile(
-          leading: const AppIcon(Symbols.sync_rounded, fill: 1),
-          title: Text(t.services.simklReconnect.title),
-          subtitle: Text(t.services.simklReconnect.subtitle),
-          onTap: () => unawaited(startSimklReconnection(context)),
-        ),
-    ],
-  );
 
   static TrackerConfig mdblist() => TrackerConfig(
     service: TrackerService.mdblist,
@@ -169,7 +64,7 @@ class TrackerConfig {
   );
 }
 
-/// Shared settings screen for MAL, AniList, Simkl and MDBList. Only reachable
+/// Shared settings screen for MDBList. Only reachable
 /// while connected — if the session drops (refresh failure, back-nav race) we
 /// pop back to the hub.
 class TrackerSettingsScreen extends StatelessWidget {

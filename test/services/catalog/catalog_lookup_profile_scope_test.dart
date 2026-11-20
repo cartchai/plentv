@@ -184,7 +184,7 @@ void main() {
     expect(manager.authErrorServerIds, contains('a-clientless'));
 
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Catalog Movie',
       ids: CatalogItemIds(tmdb: 42),

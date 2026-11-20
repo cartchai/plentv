@@ -4,8 +4,8 @@ import '../data/iso_3166_data.dart';
 /// [LanguageCodes] for the country dimension.
 ///
 /// Catalog providers return production countries as bare codes (Plex
-/// `Country`, Simkl `country`, AniList `countryOfOrigin`, TMDB
-/// `origin_country`). Names are English-only for the same reason the ISO 639
+/// `Country`, TMDB `origin_country`). Names are English-only for the same
+/// reason the ISO 639
 /// catalog is: no localized catalog ships with the app.
 class CountryCodes {
   /// Display name for [code], or the normalized code when it is not a known

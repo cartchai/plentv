@@ -16,24 +16,41 @@ List<(String, double)> _scores(List<MediaRatingSource> ratings) => [for (final r
 
 void main() {
   group('mergeCommunityRatings', () {
-    test('keeps one score per source: its own service, then MDBList, then Simkl, then the rest', () {
+    test('keeps one score per source: MDBList wins over the rest', () {
       final merged = mergeCommunityRatings([
-        (origin: CatalogSourceId.mal, ratings: [_r('mal', 8.6)]),
-        (origin: CatalogSourceId.simkl, ratings: [_r('simkl', 8.4), _r('imdb', 9.0), _r('mal', 8.5)]),
-        (origin: CatalogSourceId.mdblist, ratings: [_r('imdb', 9.3), _r('trakt', 9.1), _r('mal', 8.0)]),
-        (origin: CatalogSourceId.trakt, ratings: [_r('trakt', 8.8)]),
+        (origin: CatalogSourceId.seerr, ratings: [_r('imdb', 8.6), _r('tmdb', 8.0)]),
+        (origin: CatalogSourceId.mdblist, ratings: [_r('imdb', 9.3), _r('tmdb', 8.7)]),
+        (origin: CatalogSourceId.plex, ratings: [_r('tmdb', 8.1), _r('letterboxd', 7.5)]),
       ]);
 
-      expect(_scores(merged), [('imdb', 9.3), ('trakt', 8.8), ('simkl', 8.4), ('mal', 8.6)]);
+      expect(_scores(merged), [('imdb', 9.3), ('tmdb', 8.7), ('letterboxd', 7.5)]);
     });
 
     test('a later answer from a lower-precedence provider does not replace an earlier one', () {
       final merged = mergeCommunityRatings([
         (origin: CatalogSourceId.mdblist, ratings: [_r('imdb', 9.3)]),
-        (origin: CatalogSourceId.simkl, ratings: [_r('imdb', 9.0)]),
+        (origin: CatalogSourceId.seerr, ratings: [_r('imdb', 9.0)]),
       ]);
 
       expect(_scores(merged), [('imdb', 9.3)]);
+    });
+
+    test('a later MDBList answer replaces an earlier one', () {
+      final merged = mergeCommunityRatings([
+        (origin: CatalogSourceId.seerr, ratings: [_r('imdb', 9.0)]),
+        (origin: CatalogSourceId.mdblist, ratings: [_r('imdb', 9.3)]),
+      ]);
+
+      expect(_scores(merged), [('imdb', 9.3)]);
+    });
+
+    test('among equal-precedence providers the first answer wins', () {
+      final merged = mergeCommunityRatings([
+        (origin: CatalogSourceId.seerr, ratings: [_r('imdb', 9.0)]),
+        (origin: CatalogSourceId.plex, ratings: [_r('imdb', 8.5)]),
+      ]);
+
+      expect(_scores(merged), [('imdb', 9.0)]);
     });
 
     test('orders Rotten Tomatoes, IMDb, TMDB, Metacritic, Letterboxd before the trackers', () {
@@ -50,7 +67,7 @@ void main() {
             _r('rottenTomatoesCritic', 8.9),
           ],
         ),
-        (origin: CatalogSourceId.anilist, ratings: [_r('anilist', 8.5)]),
+        (origin: CatalogSourceId.seerr, ratings: [_r('seerr', 8.5)]),
       ]);
 
       expect(merged.map((r) => r.source), [
@@ -61,7 +78,7 @@ void main() {
         'metacritic',
         'letterboxd',
         'trakt',
-        'anilist',
+        'seerr',
       ]);
     });
   });
@@ -91,15 +108,15 @@ void main() {
     const ids = CatalogItemIds(imdb: 'tt0111161');
 
     test('grows the merged list as each provider answers and closes when all have', () async {
-      final trakt = _FakeRatingsSource(CatalogSourceId.trakt, [_r('trakt', 9.1)]);
+      final other = _FakeRatingsSource(CatalogSourceId.seerr, [_r('seerr', 9.1)]);
       final mdblist = _FakeRatingsSource(CatalogSourceId.mdblist, [_r('imdb', 9.3), _r('trakt', 8.0)]);
-      final traktGate = Completer<void>();
-      trakt.gate = traktGate.future;
+      final otherGate = Completer<void>();
+      other.gate = otherGate.future;
       final loader = CommunityRatingsLoader();
 
       final emissions = <List<(String, double)>>[];
       final done = loader
-          .load(MediaKind.movie, [trakt, mdblist], (_) async => ids)
+          .load(MediaKind.movie, [other, mdblist], (_) async => ids)
           .listen((ratings) => emissions.add(_scores(ratings)))
           .asFuture<void>();
       await pumpEventQueue();
@@ -107,16 +124,16 @@ void main() {
         [('imdb', 9.3), ('trakt', 8.0)],
       ]);
 
-      traktGate.complete();
+      otherGate.complete();
       await done;
-      expect(emissions.last, [('imdb', 9.3), ('trakt', 9.1)]);
+      expect(emissions.last, [('imdb', 9.3), ('trakt', 8.0), ('seerr', 9.1)]);
     });
 
     test('leaves out sources without scores, providers that fail and titles outside a provider', () async {
-      final failing = _FakeRatingsSource(CatalogSourceId.simkl, [_r('simkl', 8.0)])..error = Exception('down');
-      final outside = _FakeRatingsSource(CatalogSourceId.mal, [_r('mal', 8.0)]);
-      final empty = _FakeRatingsSource(CatalogSourceId.anilist, const []);
-      final scoring = _FakeRatingsSource(CatalogSourceId.trakt, [_r('trakt', 9.1)]);
+      final failing = _FakeRatingsSource(CatalogSourceId.plex, [_r('plex', 8.0)])..error = Exception('down');
+      final outside = _FakeRatingsSource(CatalogSourceId.plex, [_r('plex', 8.0)]);
+      final empty = _FakeRatingsSource(CatalogSourceId.mdblist, const []);
+      final scoring = _FakeRatingsSource(CatalogSourceId.seerr, [_r('imdb', 9.1)]);
       final loader = CommunityRatingsLoader();
 
       final emissions = await loader.load(MediaKind.movie, [
@@ -128,7 +145,7 @@ void main() {
       ], (source) async => source == outside ? null : ids).toList();
 
       expect(emissions.map(_scores), [
-        [('trakt', 9.1)],
+        [('imdb', 9.1)],
       ]);
       expect(outside.calls, 0);
     });
@@ -140,26 +157,26 @@ void main() {
     });
 
     test('asks a provider again once its answer is older than the TTL', () async {
-      final trakt = _FakeRatingsSource(CatalogSourceId.trakt, [_r('trakt', 9.1)]);
+      final mdblist = _FakeRatingsSource(CatalogSourceId.mdblist, [_r('imdb', 9.1)]);
       final loader = CommunityRatingsLoader();
       var now = DateTime(2026, 10, 14);
 
       Future<void> visit() =>
-          withClock(Clock(() => now), () => loader.load(MediaKind.movie, [trakt], (_) async => ids).drain<void>());
+          withClock(Clock(() => now), () => loader.load(MediaKind.movie, [mdblist], (_) async => ids).drain<void>());
 
       await visit();
       now = now.add(CommunityRatingsLoader.ttl - const Duration(minutes: 1));
       await visit();
-      expect(trakt.calls, 1);
+      expect(mdblist.calls, 1);
 
       now = now.add(const Duration(minutes: 2));
       await visit();
-      expect(trakt.calls, 2);
+      expect(mdblist.calls, 2);
     });
 
     test('keeps a title a provider does not know, but asks again after a failure', () async {
-      final unknown = _FakeRatingsSource(CatalogSourceId.mal, const []);
-      final failing = _FakeRatingsSource(CatalogSourceId.trakt, [_r('trakt', 9.1)])..error = Exception('timeout');
+      final unknown = _FakeRatingsSource(CatalogSourceId.seerr, const []);
+      final failing = _FakeRatingsSource(CatalogSourceId.mdblist, [_r('imdb', 9.1)])..error = Exception('timeout');
       final loader = CommunityRatingsLoader();
 
       await loader.load(MediaKind.movie, [unknown, failing], (_) async => ids).drain<void>();
@@ -168,37 +185,37 @@ void main() {
 
       expect(unknown.calls, 1);
       expect(failing.calls, 2);
-      expect(second.map(_scores).last, [('trakt', 9.1)]);
+      expect(second.map(_scores).last, [('imdb', 9.1)]);
     });
 
     test('keeps titles apart by kind and ids', () async {
-      final trakt = _FakeRatingsSource(CatalogSourceId.trakt, [_r('trakt', 9.1)]);
+      final mdblist = _FakeRatingsSource(CatalogSourceId.mdblist, [_r('imdb', 9.1)]);
       final loader = CommunityRatingsLoader();
 
-      await loader.load(MediaKind.movie, [trakt], (_) async => ids).drain<void>();
-      await loader.load(MediaKind.show, [trakt], (_) async => ids).drain<void>();
-      await loader.load(MediaKind.movie, [trakt], (_) async => const CatalogItemIds(imdb: 'tt0068646')).drain<void>();
+      await loader.load(MediaKind.movie, [mdblist], (_) async => ids).drain<void>();
+      await loader.load(MediaKind.show, [mdblist], (_) async => ids).drain<void>();
+      await loader.load(MediaKind.movie, [mdblist], (_) async => const CatalogItemIds(imdb: 'tt0068646')).drain<void>();
 
-      expect(trakt.calls, 3);
+      expect(mdblist.calls, 3);
     });
 
     test('evicts the least recently used title beyond capacity', () async {
-      final trakt = _FakeRatingsSource(CatalogSourceId.trakt, [_r('trakt', 9.1)]);
+      final mdblist = _FakeRatingsSource(CatalogSourceId.mdblist, [_r('imdb', 9.1)]);
       final loader = CommunityRatingsLoader();
       Future<void> visit(int n) =>
-          loader.load(MediaKind.movie, [trakt], (_) async => CatalogItemIds(tmdb: n)).drain<void>();
+          loader.load(MediaKind.movie, [mdblist], (_) async => CatalogItemIds(tmdb: n)).drain<void>();
 
       for (var n = 0; n < CommunityRatingsLoader.capacity; n++) {
         await visit(n);
       }
       await visit(0); // most recently used again
       await visit(CommunityRatingsLoader.capacity); // evicts 1
-      final calls = trakt.calls;
+      final calls = mdblist.calls;
 
       await visit(0);
-      expect(trakt.calls, calls);
+      expect(mdblist.calls, calls);
       await visit(1);
-      expect(trakt.calls, calls + 1);
+      expect(mdblist.calls, calls + 1);
     });
   });
 }

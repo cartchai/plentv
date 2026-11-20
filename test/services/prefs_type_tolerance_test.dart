@@ -107,7 +107,7 @@ void main() {
       // prompt. `SettingsService.getInstance()` is a fatal gate step.
       final families = {
         'vault key': credentialVaultKeyPref,
-        'tracker session': profileScopedPrefsKey('abc', 'trakt_session'),
+        'tracker session': profileScopedPrefsKey('abc', 'mdblist_session'),
         'seerr session': profileScopedPrefsKey('abc', seerrSessionBaseKey),
       };
 
@@ -122,10 +122,10 @@ void main() {
     });
 
     test('the stores themselves still refuse to guess', () async {
-      final trackerKey = profileScopedPrefsKey('abc', 'trakt_session');
+      final trackerKey = profileScopedPrefsKey('abc', 'mdblist_session');
       resetSharedPreferencesForTest(initialAsync: {trackerKey: 7});
       await expectLater(
-        trackerAccountStore(TrackerService.trakt).load('abc'),
+        trackerAccountStore(TrackerService.mdblist).load('abc'),
         throwsA(isA<UnreadableSensitivePreferenceException>().having((e) => e.key, 'key', trackerKey)),
       );
 

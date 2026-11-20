@@ -68,10 +68,10 @@ class _FakeCatalogSource implements CatalogSource {
   final Completer<CatalogDetail>? detailCompleter;
   int fetchDetailCalls = 0;
   @override
-  CatalogSourceId get id => CatalogSourceId.trakt;
+  CatalogSourceId get id => CatalogSourceId.mdblist;
 
   @override
-  String get displayName => 'Trakt';
+  String get displayName => 'MDBList';
 
   @override
   final bool supportsWatchlist;
@@ -95,7 +95,7 @@ class _FakeCatalogSource implements CatalogSource {
           ],
           related: const [
             CatalogItem(
-              source: CatalogSourceId.trakt,
+              source: CatalogSourceId.mdblist,
               kind: MediaKind.movie,
               title: 'Related Movie',
               ids: CatalogItemIds(tmdb: 2),
@@ -273,13 +273,13 @@ class _ScriptedMatcher extends CatalogLibraryMatcher {
 /// A Plex Discover row whose bare form carries only its own id; the detail
 /// body adds the external ids (#1715), which is what triggers a second pass.
 const _bareRow = CatalogItem(
-  source: CatalogSourceId.trakt,
+  source: CatalogSourceId.mdblist,
   kind: MediaKind.movie,
   title: 'Row-only Movie',
   ids: CatalogItemIds(trakt: 5),
 );
 const _enrichedRow = CatalogItem(
-  source: CatalogSourceId.trakt,
+  source: CatalogSourceId.mdblist,
   kind: MediaKind.movie,
   title: 'Row-only Movie',
   ids: CatalogItemIds(trakt: 5, tmdb: 99),
@@ -302,7 +302,7 @@ MediaItem _libraryCopy({
 );
 
 const _item = CatalogItem(
-  source: CatalogSourceId.trakt,
+  source: CatalogSourceId.mdblist,
   kind: MediaKind.movie,
   title: 'Catalog Movie',
   overview: 'Overview',
@@ -422,7 +422,7 @@ void main() {
     detailCompleter.complete(
       const CatalogDetail(
         item: CatalogItem(
-          source: CatalogSourceId.trakt,
+          source: CatalogSourceId.mdblist,
           kind: MediaKind.movie,
           title: 'Enriched Catalog Movie',
           overview: 'Enriched overview',
@@ -444,13 +444,13 @@ void main() {
     // ids, which must trigger a second lookup instead of leaving the screen
     // on "Not in your library".
     const bare = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Row-only Movie',
       ids: CatalogItemIds(trakt: 5),
     );
     const enriched = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Row-only Movie',
       ids: CatalogItemIds(trakt: 5, tmdb: 99),
@@ -477,13 +477,13 @@ void main() {
     // and a romaji-filed copy is reachable only through it. Same ids, so the
     // id-based trigger alone would not re-ask.
     const bare = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: "Frieren: Beyond Journey's End",
       ids: CatalogItemIds(trakt: 198225, tvdb: 424536),
     );
     const enriched = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: "Frieren: Beyond Journey's End",
       originalTitle: '葬送のフリーレン',
@@ -726,7 +726,7 @@ void main() {
         final bare = nativeTitle ? _item : _bareRow;
         final enriched = nativeTitle
             ? const CatalogItem(
-                source: CatalogSourceId.trakt,
+                source: CatalogSourceId.mdblist,
                 kind: MediaKind.movie,
                 title: 'Catalog Movie',
                 originalTitle: '銀河鉄道の夜',
@@ -908,7 +908,7 @@ void main() {
 
   testWidgets('spoiler tags stay hidden until the focusable reveal action is pressed', (tester) async {
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Tagged Movie',
       ids: CatalogItemIds(tmdb: 10),
@@ -934,7 +934,7 @@ void main() {
 
   testWidgets('ratings row labels every score source without a brand mark', (tester) async {
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Rated Movie',
       ids: CatalogItemIds(tmdb: 11),
@@ -954,7 +954,7 @@ void main() {
 
   testWidgets('scores whose source owns a logo render the mark and that source scale', (tester) async {
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Attributed Movie',
       ids: CatalogItemIds(tmdb: 21),
@@ -963,8 +963,8 @@ void main() {
         MediaRatingSource(source: 'rottenTomatoesAudience', value: 4.1),
         MediaRatingSource(source: 'imdb', value: 7.9, votes: 12),
         MediaRatingSource(source: 'tmdb', value: 7.5),
-        MediaRatingSource(source: 'simkl', value: 8.1, votes: 11),
-        MediaRatingSource(source: 'mal', value: 8.3, votes: 13),
+        MediaRatingSource(source: 'metacritic', value: 8.0),
+        MediaRatingSource(source: 'letterboxd', value: 8.6),
       ],
     );
     final source = _FakeCatalogSource(detail: const CatalogDetail(item: item));
@@ -982,8 +982,8 @@ void main() {
         'assets/rating_icons/rt_spilled.svg',
         'assets/rating_icons/imdb.svg',
         'assets/rating_icons/tmdb.svg',
-        'assets/simkl_mark.svg',
-        'assets/mal_mark.svg',
+        'assets/rating_icons/metacritic.svg',
+        'assets/rating_icons/letterboxd.svg',
       ]),
     );
     // The mark carries the attribution, so the chip keeps only the score, on
@@ -992,14 +992,14 @@ void main() {
     expect(find.text('41%'), findsOneWidget);
     expect(find.text('7.9 (12 votes)'), findsOneWidget);
     expect(find.text('75%'), findsOneWidget);
-    expect(find.text('8.1 (11 votes)'), findsOneWidget);
-    expect(find.text('8.30 (13 votes)'), findsOneWidget);
+    expect(find.text('80'), findsOneWidget);
+    expect(find.text('4.3'), findsOneWidget);
     expect(find.text('${t.common.ratingSource.rottenTomatoesCritic} 8.4'), findsNothing);
   });
 
   testWidgets('seasonal rank keeps its season window instead of claiming all-time rank', (tester) async {
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Seasonal Show',
       ids: CatalogItemIds(tmdb: 12),
@@ -1023,7 +1023,7 @@ void main() {
 
   testWidgets('windowed viewers render only when their period is present', (tester) async {
     const missingPeriod = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Missing Period',
       ids: CatalogItemIds(tmdb: 13),
@@ -1036,7 +1036,7 @@ void main() {
     expect(find.textContaining('42'), findsNothing);
 
     const weekly = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Weekly Viewers',
       ids: CatalogItemIds(tmdb: 14),
@@ -1062,7 +1062,7 @@ void main() {
     detailCompleter.complete(
       const CatalogDetail(
         item: CatalogItem(
-          source: CatalogSourceId.trakt,
+          source: CatalogSourceId.mdblist,
           kind: MediaKind.movie,
           title: 'Catalog Movie',
           trailerUrl: 'https://example.com/trailer',
@@ -1086,7 +1086,7 @@ void main() {
     });
     addTearDown(() => messenger.setMockMethodCallHandler(urlLauncherChannel, null));
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Linked Movie',
       ids: CatalogItemIds(tmdb: 41),
@@ -1111,7 +1111,7 @@ void main() {
     messenger.setMockMethodCallHandler(urlLauncherChannel, (call) async => call.method == 'launch' ? false : null);
     addTearDown(() => messenger.setMockMethodCallHandler(urlLauncherChannel, null));
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Trailer Movie',
       ids: CatalogItemIds(tmdb: 51),
@@ -1132,7 +1132,7 @@ void main() {
   group('tvOS runner', () {
     const handoffChannel = MethodChannel('com.plezy/external_player');
     const trailerItem = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Trailer Movie',
       ids: CatalogItemIds(tmdb: 51),
@@ -1169,7 +1169,7 @@ void main() {
 
     testWidgets('hides outbound links, which have no browser to open in', (tester) async {
       const item = CatalogItem(
-        source: CatalogSourceId.trakt,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Linked Movie',
         ids: CatalogItemIds(tmdb: 41),
@@ -1252,7 +1252,7 @@ void main() {
 
   testWidgets('background prose renders as its own section', (tester) async {
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Production Movie',
       ids: CatalogItemIds(tmdb: 15),
@@ -1273,7 +1273,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Expensive Movie',
       ids: CatalogItemIds(tmdb: 22),
@@ -1298,7 +1298,7 @@ void main() {
 
   testWidgets('all-null metadata renders without an empty optional section header', (tester) async {
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Bare Movie',
       ids: CatalogItemIds(tmdb: 15),
@@ -1322,7 +1322,7 @@ void main() {
 
   testWidgets('single-entry relations share one labelled section instead of a shelf each', (tester) async {
     const sequel = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'The Sequel',
       year: 2019,
@@ -1330,13 +1330,13 @@ void main() {
       ids: CatalogItemIds(tmdb: 17),
     );
     const spinOff = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'The Spin-off',
       ids: CatalogItemIds(tmdb: 20),
     );
     const recommendation = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'A Similar Movie',
       ids: CatalogItemIds(tmdb: 18),
@@ -1373,7 +1373,7 @@ void main() {
 
   testWidgets('a relation row opens the catalog detail screen of that title', (tester) async {
     const sequel = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'The Sequel',
       ids: CatalogItemIds(tmdb: 17),
@@ -1402,13 +1402,13 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     const prequel = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'The Prequel',
       ids: CatalogItemIds(tmdb: 16),
     );
     const sequel = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'The Sequel',
       ids: CatalogItemIds(tmdb: 17),
@@ -1419,7 +1419,7 @@ void main() {
         cast: [CatalogCastMember(name: 'First Actor', secondary: 'Lead')],
         related: [
           CatalogItem(
-            source: CatalogSourceId.trakt,
+            source: CatalogSourceId.mdblist,
             kind: MediaKind.movie,
             title: 'Related Movie',
             ids: CatalogItemIds(tmdb: 2),
@@ -1465,7 +1465,7 @@ void main() {
 
   testWidgets('social recommendation keeps its person, reason, and note', (tester) async {
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Social Movie',
       ids: CatalogItemIds(tmdb: 19),
@@ -1488,7 +1488,7 @@ void main() {
 
   testWidgets('extended facts render in their labelled sections with localized values', (tester) async {
     final item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Fact-rich Show',
       ids: CatalogItemIds(tmdb: 20),
@@ -1557,7 +1557,7 @@ void main() {
 
   testWidgets('D-pad includes spoiler reveal and outbound links after the main action bar', (tester) async {
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Interactive Movie',
       ids: CatalogItemIds(tmdb: 21),
@@ -1687,7 +1687,7 @@ void main() {
     // #2199: down from the action bar used to be thrown straight to the next
     // button, scrolling long prose past unread.
     final item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Wordy Movie',
       overview: '${'A very long establishing sentence about the movie. ' * 30}Closing line of the overview.',

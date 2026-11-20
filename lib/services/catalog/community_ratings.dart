@@ -8,16 +8,15 @@ import '../../media/media_kind.dart';
 import '../../media/media_rating.dart';
 import '../../models/catalog/catalog_item.dart';
 import '../../utils/app_logger.dart';
-import '../trackers/future_coalescer.dart';
+import '../future_coalescer.dart';
 import 'catalog_source.dart';
 
 /// One provider's community scores for a title.
 typedef CommunityRatingsAnswer = ({CatalogSourceId origin, List<MediaRatingSource> ratings});
 
 /// The order scores are shown in: Rotten Tomatoes' two panels, IMDb, TMDB,
-/// Metacritic and Letterboxd, then the trackers' own. Sources outside it
-/// (Plex's and Jellyfin's unattributed `critic`/`audience`) follow in their
-/// own order.
+/// Metacritic and Letterboxd. Sources outside it (Plex's and Jellyfin's
+/// unattributed `critic`/`audience`) follow in their own order.
 const List<String> _displayOrder = [
   'rottenTomatoesCritic',
   'rottenTomatoesAudience',
@@ -25,26 +24,10 @@ const List<String> _displayOrder = [
   'tmdb',
   'metacritic',
   'letterboxd',
-  'trakt',
-  'simkl',
-  'mal',
-  'anilist',
 ];
 
-/// The source key a provider files its own score under; null for MDBList,
-/// which reports only other sites' scores.
-String? communityRatingKeyFor(CatalogSourceId id) => switch (id) {
-  CatalogSourceId.trakt => 'trakt',
-  CatalogSourceId.simkl => 'simkl',
-  CatalogSourceId.mal => 'mal',
-  CatalogSourceId.anilist => 'anilist',
-  _ => null,
-};
-
-/// One score per source from every answer, in display order. The source's own
-/// provider wins (Trakt's score from Trakt, MyAnimeList's from MyAnimeList),
-/// then MDBList — the aggregator, which refreshes every score daily — then
-/// Simkl, then anyone else.
+/// One score per source from every answer, in display order. MDBList — the
+/// aggregator, which refreshes every score daily — wins over anyone else.
 List<MediaRatingSource> mergeCommunityRatings(Iterable<CommunityRatingsAnswer> answers) {
   final best = <String, ({int precedence, MediaRatingSource rating})>{};
   for (final answer in answers) {
@@ -60,11 +43,9 @@ List<MediaRatingSource> mergeCommunityRatings(Iterable<CommunityRatingsAnswer> a
 }
 
 int _precedence(String source, CatalogSourceId origin) {
-  if (communityRatingKeyFor(origin) == source) return 0;
   return switch (origin) {
     CatalogSourceId.mdblist => 1,
-    CatalogSourceId.simkl => 2,
-    _ => 3,
+    _ => 2,
   };
 }
 

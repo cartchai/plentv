@@ -90,7 +90,7 @@ void main() {
 
   group('CatalogItem', () {
     const item = CatalogItem(
-      source: CatalogSourceId.anilist,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'You and I Are Polar Opposites Season 2',
       altTitles: ['Seihantai na Kimi to Boku 2nd Season', '\u6b63\u53cd\u5bfe\u306a\u541b\u3068\u50d5 \u7b2c2\u671f'],
@@ -116,7 +116,7 @@ void main() {
       // Explore's dashboard hubs render through this conversion, so a rating
       // dropped here means the TV spotlight silently falls back to one score.
       const rated = CatalogItem(
-        source: CatalogSourceId.simkl,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Rated',
         ids: CatalogItemIds(tmdb: 603),
@@ -149,7 +149,7 @@ void main() {
 
     test('omits both new fields when absent rather than emitting empties', () {
       const bare = CatalogItem(
-        source: CatalogSourceId.trakt,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Solo Movie',
         ids: CatalogItemIds(imdb: 'tt1'),
@@ -163,18 +163,18 @@ void main() {
     });
 
     test('enrichedWith unions audience counters instead of replacing them', () {
-      // A Simkl trending row supplies windowed viewers and planning; its
+      // An MDBList trending row supplies windowed viewers and planning; its
       // detail body supplies only a drop rate. Replacing the object wholesale
       // silently dropped the row's counters.
       const row = CatalogItem(
-        source: CatalogSourceId.simkl,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.show,
         title: 'House of the Dragon',
         ids: CatalogItemIds(simkl: 1197910),
         audience: CatalogAudience(viewers: 7603, viewersPeriod: CatalogAudiencePeriod.week, planning: 8422),
       );
       const detail = CatalogItem(
-        source: CatalogSourceId.simkl,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.show,
         title: 'House of the Dragon',
         ids: CatalogItemIds(simkl: 1197910),

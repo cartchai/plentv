@@ -8,10 +8,10 @@ class TrackerConstants {
   /// [TrackerCoordinator]); this constant just seeds the field before playback.
   static const double watchedThresholdPercent = 80.0;
 
-  /// Most items one batched history write carries. Simkl and Trakt take one
-  /// write per second and accept arrays, so a container goes out as a handful
-  /// of requests; the cap keeps one body small enough to finish within
-  /// [requestTimeout] on a service that processes it item by item.
+  /// Most items one batched history write carries. MDBList accepts arrays,
+  /// so a container goes out as a handful of requests; the cap keeps one body
+  /// small enough to finish within [requestTimeout] on a service that
+  /// processes it item by item.
   static const int historyBatchSize = 100;
 
   static const Duration requestTimeout = Duration(seconds: 20);
@@ -23,7 +23,11 @@ class TrackerConstants {
 /// Identifier used across the app to disambiguate per-service operations.
 /// The enum's `.name` forms part of the persistence key — do not rename
 /// without a migration.
-enum TrackerService { mal, anilist, simkl, trakt, mdblist }
+///
+/// MDBList is the only tracker left in 1.5.2: Trakt, Simkl, MAL and AniList
+/// were removed, and their stored sessions are purged on first launch after
+/// the update (see [TrackerAccountStore.purgeRemovedServiceSessions]).
+enum TrackerService { mdblist }
 
 /// Blacklist+[] syncs every library (the default); whitelist+[] syncs nothing.
 enum TrackerLibraryFilterMode { blacklist, whitelist }

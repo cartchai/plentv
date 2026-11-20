@@ -3,8 +3,6 @@
 library;
 
 import '../i18n/strings.g.dart';
-import '../models/catalog/catalog_item.dart';
-import '../widgets/catalog_source_logo.dart';
 
 class RatingInfo {
   final String assetPath;
@@ -19,10 +17,9 @@ class RatingInfo {
 }
 
 /// The brand badge for an attributed source key, its value written the way
-/// the source's own site writes it: IMDb and Simkl with one decimal,
-/// MyAnimeList with two, the Metascore whole, Letterboxd as 0-5 stars, and
-/// the scores out of 100 (Rotten Tomatoes, TMDB, Trakt, AniList) as
-/// percentages.
+/// the source's own site writes it: IMDb with one decimal, the Metascore
+/// whole, Letterboxd as 0-5 stars, and the scores out of 100 (Rotten
+/// Tomatoes, TMDB) as percentages.
 ///
 /// Rotten Tomatoes picks fresh/rotten and upright/spilled by the 60% threshold
 /// the tomatometer itself uses — the same state Plex encodes in
@@ -45,11 +42,6 @@ RatingInfo? ratingInfoForSource(String source, double value) => switch (source) 
         : RatingInfo(_rtSpilledAsset, _percent(value), _rtSpilledAspect),
   'metacritic' => RatingInfo(_metacriticAsset, (value * 10).toStringAsFixed(0), _metacriticAspect),
   'letterboxd' => RatingInfo(_letterboxdAsset, (value / 2).toStringAsFixed(1), _letterboxdAspect),
-  // The trackers' marks are their service logos, square viewBoxes.
-  'trakt' => RatingInfo(catalogSourceLogoAsset(CatalogSourceId.trakt), _percent(value), 1),
-  'simkl' => RatingInfo(catalogSourceLogoAsset(CatalogSourceId.simkl), value.toStringAsFixed(1), 1),
-  'mal' => RatingInfo(catalogSourceLogoAsset(CatalogSourceId.mal), value.toStringAsFixed(2), 1),
-  'anilist' => RatingInfo(catalogSourceLogoAsset(CatalogSourceId.anilist), _percent(value), 1),
   _ => null,
 };
 
@@ -67,10 +59,6 @@ String? ratingSourceLabel(String source) => switch (source) {
   'rottenTomatoesAudience' => t.common.ratingSource.rottenTomatoesAudience,
   'metacritic' => t.common.ratingSource.metacritic,
   'letterboxd' => t.common.ratingSource.letterboxd,
-  'simkl' => t.common.ratingSource.simkl,
-  'mal' => t.common.ratingSource.mal,
-  'anilist' => t.common.ratingSource.anilist,
-  'trakt' => t.common.ratingSource.trakt,
   _ => null,
 };
 

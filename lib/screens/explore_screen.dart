@@ -39,7 +39,7 @@ import 'catalog_search_screen.dart';
 import 'libraries/state_messages.dart';
 
 /// The Explore tab: watchlist + discover rows from the active external
-/// catalog source (Trakt). Only mounted when a source is connected (the tab
+/// catalog source (MDBList, Plex or Seerr). Only mounted when a source is connected (the tab
 /// is hidden otherwise, see [NavigationTab.getVisibleTabs]).
 ///
 /// Touch/pointer builds carry an inline search field under the app bar whose

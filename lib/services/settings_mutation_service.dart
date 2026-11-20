@@ -17,13 +17,9 @@ import 'discord_rpc_service.dart';
 import 'companion_remote/companion_remote_host_controller.dart';
 import 'music/music_playback_service.dart';
 import 'settings_service.dart';
-import 'trackers/anilist/anilist_tracker.dart';
-import 'trackers/mal/mal_tracker.dart';
 import 'trackers/mdblist/mdblist_tracker.dart';
-import 'trackers/simkl/simkl_tracker.dart';
 import 'trackers/tracker.dart';
 import 'trackers/tracker_constants.dart';
-import 'trackers/trakt/trakt_tracker.dart';
 
 /// Runtime effect of one stored pref. [checkCurrent] must be called after
 /// every await so a profile switch mid-effect aborts the rest.
@@ -88,11 +84,6 @@ class SettingsMutationService {
         persist: false,
       );
     }),
-    _SettingsEffect(
-      SettingsService.enableTraktWatchedSync,
-      (_, settings, _) =>
-          TraktTracker.instance.setWatchedSyncEnabled(settings.read(SettingsService.enableTraktWatchedSync)),
-    ),
     for (final service in TrackerService.values) _scrobbleEffect(service),
     _SettingsEffect(SettingsService.enableCompanionRemoteServer, _applyCompanionRemoteServer),
     // Home hubs are fetched in the chosen layout, so a switch only shows once
@@ -129,10 +120,6 @@ class SettingsMutationService {
   }
 
   static Tracker _trackerFor(TrackerService service) => switch (service) {
-    TrackerService.mal => MalTracker.instance,
-    TrackerService.anilist => AnilistTracker.instance,
-    TrackerService.simkl => SimklTracker.instance,
-    TrackerService.trakt => TraktTracker.instance,
     TrackerService.mdblist => MdblistTracker.instance,
   };
 

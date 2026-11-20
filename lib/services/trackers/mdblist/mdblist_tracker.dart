@@ -38,10 +38,6 @@ class MdblistTracker extends TrackerBase
   @override
   TrackerService get service => TrackerService.mdblist;
 
-  /// MDBList carries no anime mapping of its own and takes plain external ids.
-  @override
-  bool get needsFribb => false;
-
   /// MDBList counts a `/scrobble/stop` as a watch from this progress upwards.
   static const double _scrobbleWatchedPercent = 80.0;
 

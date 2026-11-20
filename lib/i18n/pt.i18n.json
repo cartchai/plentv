@@ -109,10 +109,6 @@
       "imdb": "IMDb",
       "tmdb": "TMDB",
       "rottenTomatoes": "Rotten Tomatoes",
-      "simkl": "Simkl",
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "trakt": "Trakt",
       "rottenTomatoesCritic": "Críticos do Rotten Tomatoes",
       "rottenTomatoesAudience": "Público do Rotten Tomatoes",
       "metacritic": "Metacritic",
@@ -392,7 +388,6 @@
     "discordRichPresence": "Discord Rich Presence",
     "discordRichPresenceDescription": "Mostrar o que você está assistindo no Discord",
     "services": "Serviços",
-    "servicesDescription": "Conecte Trakt, MyAnimeList, Seerr e mais",
     "manageLibrariesDescription": "Reordene e oculte bibliotecas",
     "companionRemoteServer": "Servidor de controle remoto",
     "companionRemoteServerDescription": "Permitir que dispositivos móveis na sua rede controlem este app",
@@ -1409,7 +1404,6 @@
     "repairBodyOneCredential": "Um login salvo está danificado e não pode ser lido. Reparar remove apenas ele; suas outras configurações permanecem intactas.",
     "repairBodySignInsKept": "Seus servidores e perfis devem permanecer conectados.",
     "repairBodySignInsLost": "A chave que protege seus logins salvos não pode ser recuperada deste arquivo, então você terá que entrar novamente em todos os servidores e perfis. Nada no seu servidor de mídia é afetado.",
-    "repairBodySessionsUncertain": "Os rastreadores (MAL, AniList, Simkl, Trakt) e o Seerr são armazenados separadamente e podem ou não ser preservados. O PlezTV informará exatamente o que foi mantido.",
     "repairConfirm": "Reparar",
     "repairSucceeded": "Armazenamento reparado",
     "repairNeedsRestart": "Armazenamento reparado — reinício necessário",
@@ -1467,7 +1461,6 @@
       "other": "${n} episódios"
     },
     "cast": "Elenco",
-    "characters": "Personagens",
     "addToWatchlist": "Adicionar à lista para assistir",
     "removeFromWatchlist": "Remover da lista para assistir",
     "addedToWatchlist": "Adicionado à lista de interesses",
@@ -2383,17 +2376,6 @@
     "failedToLoad": "Falha ao carregar tarefas",
     "noTasks": "Nenhuma tarefa em execução"
   },
-  "trakt": {
-    "title": "Trakt",
-    "connected": "Conectado",
-    "connectedAs": "Conectado como @${username}",
-    "disconnectConfirm": "Desconectar a conta do Trakt?",
-    "disconnectConfirmBody": "O PlezTV deixará de enviar eventos ao Trakt. Você pode reconectar quando quiser.",
-    "scrobble": "Scrobbling em tempo real",
-    "scrobbleDescription": "Envia eventos de reprodução, pausa e parada ao Trakt durante a exibição.",
-    "watchedSync": "Sincronizar status de assistido",
-    "watchedSyncDescription": "Ao marcar itens como assistidos no PlezTV, eles também serão marcados no Trakt."
-  },
   "seerr": {
     "title": "Seerr",
     "connectTitle": "Conectar ao Seerr",
@@ -2458,15 +2440,8 @@
     "disconnectConfirmBody": "O PlezTV deixará de atualizar ${service}. Reconecte quando quiser.",
     "connectFailed": "Não foi possível conectar ao ${service}. Tente novamente.",
     "names": {
-      "mal": "MyAnimeList",
-      "anilist": "AniList",
-      "simkl": "Simkl",
       "seerr": "Seerr",
       "mdblist": "MDBList"
-    },
-    "simklReconnect": {
-      "title": "Reconectar o Simkl",
-      "subtitle": "O Simkl está desativando o método de acesso usado por esta conexão. Ao reconectar, o simkl.com será aberto para aprovar o PlezTV — o PlezTV nunca vê sua senha. Seu histórico de exibição continua no Simkl."
     },
     "deviceCode": {
       "title": "Ativar o PlezTV no ${service}",

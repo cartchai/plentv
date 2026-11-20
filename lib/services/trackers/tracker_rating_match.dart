@@ -3,10 +3,8 @@ import '../../utils/json_utils.dart';
 import 'tracker.dart';
 import 'tracker_id_resolver.dart';
 
-/// Shared rating helpers for the Trakt/MDBList/Simkl rating sources, which
-/// all scan a list of remote rating entries and match them against local ids.
-/// Trakt and MDBList additionally share the same `/sync/ratings` list names and
-/// request body shape.
+/// Shared rating helpers for the MDBList rating source, which scans a list
+/// of remote rating entries and matches them against local ids.
 
 /// The `/sync/ratings/<type>` list name for [ctx]'s kind, or unavailable for
 /// kinds neither service rates.

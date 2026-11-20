@@ -140,7 +140,7 @@ void main() {
     harness.register(a);
     harness.register(b);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Retained Movie',
       ids: CatalogItemIds(tmdb: 42),
@@ -185,7 +185,7 @@ void main() {
     harness.register(b);
     harness.multiServer.setExpectedVisibleServerIds({'a'});
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Membership Movie',
       ids: CatalogItemIds(tmdb: 42),
@@ -227,7 +227,7 @@ void main() {
     harness.register(b);
     harness.multiServer.setExpectedVisibleServerIds({'a'});
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'In-flight Movie',
       ids: CatalogItemIds(tmdb: 42),
@@ -292,13 +292,13 @@ void main() {
       libraryLookupResult([secondHit]),
     ]);
     const first = CatalogItem(
-      source: CatalogSourceId.mal,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Mushoku Tensei',
       ids: CatalogItemIds(mal: 39535, imdb: 'tt13293588'),
     );
     const second = CatalogItem(
-      source: CatalogSourceId.mal,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Mushoku Tensei II',
       ids: CatalogItemIds(mal: 51179, imdb: 'tt13293588'),
@@ -321,13 +321,13 @@ void main() {
       libraryLookupResult([anilistHit]),
     ]);
     const malItem = CatalogItem(
-      source: CatalogSourceId.mal,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'English Title',
       ids: CatalogItemIds(mal: 100, tmdb: 200),
     );
     const anilistItem = CatalogItem(
-      source: CatalogSourceId.anilist,
+      source: CatalogSourceId.plex,
       kind: MediaKind.show,
       title: 'English Title',
       originalTitle: '日本語タイトル',
@@ -351,7 +351,7 @@ void main() {
       libraryLookupResult([hit]),
     ]);
     const item = CatalogItem(
-      source: CatalogSourceId.anilist,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'New Show',
       ids: CatalogItemIds(anilist: 1, tmdb: 42),
@@ -385,7 +385,7 @@ void main() {
       libraryLookupResult([fastCopy, slowCopy], succeeded: {'fast', 'slow'}),
     ]);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Slow Server Movie',
       ids: CatalogItemIds(trakt: 9, tmdb: 77),
@@ -420,7 +420,7 @@ void main() {
       libraryLookupResult(const [], succeeded: {'a', 'b'}),
     ]);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Flaky Servers Movie',
       ids: CatalogItemIds(trakt: 10, tmdb: 78),
@@ -455,7 +455,7 @@ void main() {
     harness.register(a);
     harness.register(b);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Offline Server Movie',
       ids: CatalogItemIds(trakt: 11, tmdb: 79),
@@ -492,7 +492,7 @@ void main() {
     harness.register(a);
     harness.register(b);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'All Servers Offline Movie',
       ids: CatalogItemIds(trakt: 12, tmdb: 80),
@@ -527,7 +527,7 @@ void main() {
       libraryLookupResult([bCopy], succeeded: {'b'}),
     ]);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Removed Server Movie',
       ids: CatalogItemIds(trakt: 13, tmdb: 81),
@@ -553,7 +553,7 @@ void main() {
       libraryLookupResult([unstamped], succeeded: {'j', 'k'}),
     ]);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Unstamped Retry Movie',
       ids: CatalogItemIds(trakt: 14, tmdb: 82),
@@ -580,7 +580,7 @@ void main() {
       libraryLookupResult([moved], succeeded: {'j', 'k'}),
     ]);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Moved Library Movie',
       ids: CatalogItemIds(trakt: 15, tmdb: 83),
@@ -606,7 +606,7 @@ void main() {
       libraryLookupResult([other], succeeded: {'j', 'k'}),
     ]);
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.movie,
       title: 'Dropped Copy Movie',
       ids: CatalogItemIds(trakt: 16, tmdb: 84),
@@ -622,7 +622,7 @@ void main() {
     addTearDown(harness.dispose);
     harness.aggregation.responses.add(libraryLookupResult(const []));
     const item = CatalogItem(
-      source: CatalogSourceId.trakt,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Severance',
       year: 2022,
@@ -684,7 +684,7 @@ void main() {
         ),
       );
       const row = CatalogItem(
-        source: CatalogSourceId.simkl,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Your Name.',
         originalTitle: 'Kimi no Na wa.',
@@ -692,7 +692,7 @@ void main() {
         ids: CatalogItemIds(simkl: 210, tmdb: 372058),
       );
       const detail = CatalogItem(
-        source: CatalogSourceId.simkl,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Your Name.',
         altTitles: ['君の名は。', '君の名は。'],
@@ -759,7 +759,7 @@ void main() {
       harness.register(client);
       harness.register(other);
       const item = CatalogItem(
-        source: CatalogSourceId.mal,
+        source: CatalogSourceId.mdblist,
         kind: MediaKind.movie,
         title: 'Kimi no Na wa.',
         altTitles: ['君の名は。'],
@@ -815,14 +815,14 @@ void main() {
     expect(harness.aggregation.calls.last.titles.first, '葬送のフリーレン');
   });
 
-  test('drops the year from a sequel title even when Fribb mapped no season', () async {
-    // RC3 entries carry no season, but a strippable suffix says sequel just as
-    // reliably, and the year window around it would exclude the parent show.
+  test('drops the year from a sequel title even when the entry carries no season', () async {
+    // Entries with no season still say sequel through a strippable suffix,
+    // and the year window around it would exclude the parent show.
     final harness = _Harness();
     addTearDown(harness.dispose);
     harness.aggregation.responses.add(libraryLookupResult(const []));
     const item = CatalogItem(
-      source: CatalogSourceId.anilist,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Some Show 2nd Season',
       year: 2026,
@@ -897,7 +897,7 @@ void main() {
     // but that key is not a Discover guid and must never be synthesised into
     // one — the fast path is only sound for items that came from Discover.
     const foreign = CatalogItem(
-      source: CatalogSourceId.mal,
+      source: CatalogSourceId.mdblist,
       kind: MediaKind.show,
       title: 'Not A Discover Item',
       ids: CatalogItemIds(mal: 7, plex: '1234'),

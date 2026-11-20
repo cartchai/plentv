@@ -1,841 +1,340 @@
 import 'dart:convert';
-import 'package:plezy/media/ids.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:plezy/exceptions/media_server_exceptions.dart';
+import 'package:plezy/media/ids.dart';
 import 'package:plezy/media/media_backend.dart';
 import 'package:plezy/media/media_item.dart';
 import 'package:plezy/media/media_kind.dart';
 import 'package:plezy/media/media_server_client.dart';
-import 'package:plezy/models/trackers/anime_lists_mapping.dart';
-import 'package:plezy/models/trackers/fribb_mapping_row.dart';
-import 'package:plezy/services/trackers/anime_lists_index.dart';
-import 'package:plezy/services/trackers/anilist/anilist_tracker.dart';
-import 'package:plezy/services/trackers/fribb_index.dart';
-import 'package:plezy/services/trackers/mal/mal_tracker.dart';
-import 'package:plezy/services/trackers/simkl/simkl_tracker.dart';
+import 'package:plezy/services/trackers/mdblist/mdblist_tracker.dart';
+import 'package:plezy/services/trackers/tracker.dart';
 import 'package:plezy/services/trackers/tracker_coordinator.dart';
-import 'package:plezy/services/trackers/tracker_constants.dart';
 import 'package:plezy/services/trackers/tracker_session.dart';
 import 'package:plezy/utils/external_ids.dart';
-import '../../test_helpers/media_items.dart';
 
+import '../../test_helpers/media_items.dart';
+import '../../test_helpers/prefs.dart';
+
+typedef _Call = ({String path, Map<String, dynamic> body});
+
+class _Recorder {
+  final List<_Call> calls = [];
+  bool failStop = false;
+
+  http.Client client() => MockClient((req) async {
+    if (failStop && req.url.path == '/scrobble/stop') throw http.ClientException('stop failed');
+    calls.add((path: req.url.path, body: json.decode(req.body) as Map<String, dynamic>));
+    return http.Response('{}', 200);
+  });
+
+  List<_Call> get watchedCalls => calls.where((c) => c.path == '/sync/watched').toList();
+  List<_Call> get unwatchedCalls => calls.where((c) => c.path == '/sync/watched/remove').toList();
+  List<_Call> get scrobbleCalls => calls.where((c) => c.path.startsWith('/scrobble/')).toList();
+
+  int watchedEpisodeCountIn(_Call call) =>
+      (call.body['shows'] as List)
+          .expand((show) => (show['seasons'] as List))
+          .expand((season) => (season['episodes'] as List))
+          .length;
+}
+
+/// A media server whose show ids and episode lists are scripted per test.
 class _FakeMediaServerClient implements MediaServerClient {
   @override
-  final ServerId serverId;
+  final ServerId serverId = ServerId('server-1');
   @override
   String? get serverName => null;
+  @override
+  MediaBackend get backend => MediaBackend.plex;
 
   final Map<String, ExternalIds> externalIdsByItem;
   final Map<String, List<MediaItem>> descendantsByParent;
-  final Map<String, List<MediaItem>> childrenByParent;
   final List<String> externalIdCalls = [];
-  final List<String> descendantCalls = [];
+  bool throwOnExternalIds = false;
 
-  /// Thrown by every [fetchExternalIds] call — the server failing, as both
-  /// backends report it, rather than an item with no mapping.
-  final Object? externalIdsError;
+  _FakeMediaServerClient({required this.externalIdsByItem, this.descendantsByParent = const {}});
 
   @override
-  final double watchedThreshold;
-
-  _FakeMediaServerClient({
-    ServerId? serverId,
-    required this.externalIdsByItem,
-    required this.descendantsByParent,
-    this.childrenByParent = const {},
-    this.externalIdsError,
-    this.watchedThreshold = 0.9,
-  }) : serverId = serverId ?? ServerId('server-1');
-
-  @override
-  MediaBackend get backend => MediaBackend.plex;
+  double get watchedThreshold => 0.9;
 
   @override
   Future<ExternalIds> fetchExternalIds(String itemId) async {
     externalIdCalls.add(itemId);
-    if (externalIdsError != null) throw externalIdsError!;
+    if (throwOnExternalIds) throw Exception('server down');
     return externalIdsByItem[itemId] ?? const ExternalIds();
   }
 
   @override
-  Future<List<MediaItem>> fetchPlayableDescendants(String parentId) async {
-    descendantCalls.add(parentId);
-    return descendantsByParent[parentId] ?? const [];
-  }
-
-  @override
-  Future<List<MediaItem>> fetchChildren(String parentId) async => childrenByParent[parentId] ?? const [];
+  Future<List<MediaItem>> fetchPlayableDescendants(String parentId) async =>
+      descendantsByParent[parentId] ?? const [];
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeFribbLookup implements FribbMappingLookup {
-  final List<FribbMappingRow> rows;
+const _showIds = ExternalIds(tvdb: 81797, tmdb: 37854, imdb: 'tt0388629');
+const _movieIds = ExternalIds(imdb: 'tt0372784', tmdb: 272);
 
-  const _FakeFribbLookup(this.rows);
+MediaItem _episode({required int season, required int number, String showId = 'show-1'}) => testMediaItem(
+  id: 'episode-s${season}e$number',
+  backend: MediaBackend.plex,
+  kind: MediaKind.episode,
+  title: 'Episode $number',
+  grandparentId: showId,
+  parentId: 'season-$season',
+  parentIndex: season,
+  index: number,
+  serverId: 'server-1',
+  libraryId: '8',
+  durationMs: 2700000,
+);
 
-  @override
-  Future<List<FribbMappingRow>> lookup({
-    required bool movie,
-    int? anidbId,
-    int? tvdbId,
-    int? tmdbId,
-    String? imdbId,
-  }) async => rows;
-
-  @override
-  Future<FribbMappingRow?> lookupByMal(int malId) async => rows.where((row) => row.malId == malId).firstOrNull;
-}
-
-class _FakeAnimeListsLookup implements AnimeListsMappingLookup {
-  final Map<String, AnimeEpisodeMatch> matches;
-
-  const _FakeAnimeListsLookup({this.matches = const {}});
-
-  @override
-  Future<AnimeEpisodeMatch?> lookupEpisode({int? tvdbId, int? tmdbId, int? season, int? episodeNumber}) async {
-    return matches['$season-$episodeNumber'];
-  }
-
-  @override
-  Future<Set<int>> lookupAnimeIdsForSeason({int? tvdbId, int? tmdbId, required int season}) async => const <int>{};
-
-  @override
-  Future<Set<int>> lookupAnimeIdsForShow({int? tvdbId, int? tmdbId}) async => const <int>{};
-}
-
-MediaItem _season() => testMediaItem(
-  id: 'season-1',
+MediaItem _season({int season = 1, String showId = 'show-1'}) => testMediaItem(
+  id: 'season-$season',
   backend: MediaBackend.plex,
   kind: MediaKind.season,
-  title: 'Season 1',
-  serverId: ServerId('server-1'),
-  libraryId: 'lib-1',
-  index: 1,
-  parentId: 'show-1',
+  title: 'Season $season',
+  parentId: showId,
+  index: season,
+  serverId: 'server-1',
+  libraryId: '8',
 );
 
-MediaItem _episode(int number, {int season = 1}) => testMediaItem(
-  id: 'episode-$season-$number',
-  backend: MediaBackend.plex,
-  kind: MediaKind.episode,
-  title: 'Episode $number',
-  serverId: ServerId('server-1'),
-  libraryId: 'lib-1',
-  parentIndex: season,
-  index: number,
-);
-
-/// An episode that already knows its show, as playback metadata does — the
-/// resolver reads the show's guids through `grandparentId`.
-MediaItem _episodeOfShow(int number, {int season = 1}) => testMediaItem(
-  id: 'episode-$season-$number',
-  backend: MediaBackend.plex,
-  kind: MediaKind.episode,
-  title: 'Episode $number',
-  serverId: ServerId('server-1'),
-  libraryId: 'lib-1',
-  grandparentId: 'show-1',
-  parentIndex: season,
-  index: number,
-);
-
-MediaItem _show() => testMediaItem(
-  id: 'show-1',
+MediaItem _show({String id = 'show-1'}) => testMediaItem(
+  id: id,
   backend: MediaBackend.plex,
   kind: MediaKind.show,
-  title: 'Show 1',
-  serverId: ServerId('server-1'),
-  libraryId: 'lib-1',
+  title: 'Show',
+  serverId: 'server-1',
+  libraryId: '8',
 );
 
 MediaItem _movie() => testMediaItem(
   id: 'movie-1',
   backend: MediaBackend.plex,
   kind: MediaKind.movie,
-  title: 'Movie 1',
-  serverId: ServerId('server-1'),
-  libraryId: 'lib-1',
+  title: 'Movie',
+  serverId: 'server-1',
+  libraryId: '8',
+  durationMs: 7200000,
 );
 
-AnimeEpisodeMatch _match({required int anidbId, required int serverEpisode, required int animeEpisode}) =>
-    AnimeEpisodeMatch(
-      anidbId: anidbId,
-      anidbSeason: 1,
-      anidbEpisode: animeEpisode,
-      provider: AnimeListProvider.tvdb,
-      externalSeason: 1,
-      externalEpisode: serverEpisode,
-      kind: AnimeListMatchKind.range,
-    );
-
-TrackerSession _simklSession() {
-  final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  return TrackerSession(accessToken: 'token', createdAt: now);
-}
-
-TrackerSession _malSession() {
-  final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  return TrackerSession(accessToken: 'token', refreshToken: 'refresh', expiresAt: now + 86400, createdAt: now);
-}
-
-TrackerSession _anilistSession() {
-  final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  return TrackerSession(accessToken: 'token', expiresAt: now + 86400, createdAt: now);
-}
+TrackerSession _session() =>
+    TrackerSession(accessToken: 'at', refreshToken: 'rt', expiresAt: 4000000000, createdAt: 1900000000);
 
 void main() {
+  late _Recorder recorder;
+  late _FakeMediaServerClient client;
+  var now = DateTime(2026, 5, 12, 12);
+
+  DateTime fakeClock() => now;
+
+  setUp(() async {
+    resetSharedPreferencesForTest();
+    recorder = _Recorder();
+    client = _FakeMediaServerClient(
+      externalIdsByItem: {'show-1': _showIds, 'movie-1': _movieIds},
+      descendantsByParent: {
+        'show-1': [for (var n = 1; n <= 3; n++) _episode(season: 1, number: n)],
+        'season-1': [for (var n = 1; n <= 3; n++) _episode(season: 1, number: n)],
+      },
+    );
+    MdblistTracker.instance.rebindSession(_session(), onSessionInvalidated: () {}, httpClient: recorder.client());
+    await MdblistTracker.instance.setEnabled(true);
+    TrackerCoordinator.instance.onActiveProfileChanged('test-profile');
+    TrackerCoordinator.instance.debugUseScrobbleClock(fakeClock);
+  });
+
+  tearDown(() async {
+    await TrackerCoordinator.instance.stopPlayback();
+    TrackerCoordinator.instance.cancelInFlight();
+    TrackerCoordinator.instance.debugUseScrobbleClock(null);
+    MdblistTracker.instance.rebindSession(null, onSessionInvalidated: () {});
+    await MdblistTracker.instance.setEnabled(false);
+  });
+
+  Future<void> advance(Duration by) async {
+    now = now.add(by);
+  }
+
   group('TrackerCoordinator manual watched sync', () {
-    final coordinator = TrackerCoordinator.instance;
-    final simkl = SimklTracker.instance;
-    final mal = MalTracker.instance;
-    final anilist = AnilistTracker.instance;
+    test('writes a manually watched season to MDBList as one request', () async {
+      await TrackerCoordinator.instance.markWatched(_season(), client);
+      await TrackerCoordinator.instance.flushWriteQueue();
 
-    setUp(() async {
-      await mal.setEnabled(false);
-      await anilist.setEnabled(false);
-      await simkl.setEnabled(true);
+      expect(recorder.watchedCalls, hasLength(1));
+      expect(recorder.watchedEpisodeCountIn(recorder.watchedCalls.single), 3);
+      expect(recorder.unwatchedCalls, isEmpty);
     });
 
-    tearDown(() async {
-      coordinator.cancelInFlight();
-      coordinator.debugUseResolverDependencies();
-      mal.rebindSession(null, onSessionInvalidated: () {});
-      anilist.rebindSession(null, onSessionInvalidated: () {});
-      simkl.rebindSession(null, onSessionInvalidated: () {});
-      await mal.setEnabled(false);
-      await anilist.setEnabled(false);
-      await simkl.setEnabled(false);
+    test('a long show goes to MDBList in capped batches, never one request per episode', () async {
+      final many = [for (var n = 1; n <= 250; n++) _episode(season: 1, number: n)];
+      client = _FakeMediaServerClient(
+        externalIdsByItem: {'show-1': _showIds},
+        descendantsByParent: {'show-1': many},
+      );
+
+      await TrackerCoordinator.instance.markWatched(_show(), client);
+      await TrackerCoordinator.instance.flushWriteQueue();
+
+      // historyBatchSize is 100.
+      expect(recorder.watchedCalls, hasLength(3));
+      expect([for (final call in recorder.watchedCalls) recorder.watchedEpisodeCountIn(call)], [100, 100, 50]);
     });
 
-    test('writes a manually watched season to Simkl as one request and fills missing show context', () async {
-      final bodies = <Map<String, dynamic>>[];
-      final httpClient = MockClient((request) async {
-        expect(request.method, 'POST');
-        expect(request.url.path, '/sync/history');
-        bodies.add((json.decode(request.body) as Map).cast<String, dynamic>());
-        return http.Response('{}', 200);
-      });
-      simkl.rebindSession(_simklSession(), onSessionInvalidated: () {}, httpClient: httpClient);
+    test('a manually watched episode is written once, not counted on top of the server rollup', () async {
+      await TrackerCoordinator.instance.markWatched(_episode(season: 1, number: 2), client);
+      await TrackerCoordinator.instance.flushWriteQueue();
 
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: {
-          'season-1': [_episode(1), _episode(2)],
-        },
-      );
-
-      await coordinator.markWatched(_season(), client);
-
-      expect(client.descendantCalls, ['season-1']);
-      expect(client.externalIdCalls, ['show-1']);
-      expect(bodies, [
-        {
-          'shows': [
-            {
-              'ids': {'tvdb': 12345},
-              'seasons': [
-                {
-                  'number': 1,
-                  'episodes': [
-                    {'number': 1},
-                    {'number': 2},
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ]);
+      expect(recorder.watchedCalls, hasLength(1));
+      expect(recorder.watchedEpisodeCountIn(recorder.watchedCalls.single), 1);
     });
 
-    test('a long show goes to Simkl in capped batches, never one request per episode', () async {
-      final episodeCounts = <int>[];
-      final httpClient = MockClient((request) async {
-        final body = json.decode(request.body) as Map<String, dynamic>;
-        var count = 0;
-        for (final show in body['shows'] as List) {
-          for (final season in (show as Map)['seasons'] as List) {
-            count += ((season as Map)['episodes'] as List).length;
-          }
-        }
-        episodeCounts.add(count);
-        return http.Response('{}', 201);
-      });
-      simkl.rebindSession(
-        _simklSession(),
-        onSessionInvalidated: () {},
-        httpClient: httpClient,
-        writeSpacing: Duration.zero,
-      );
-      const episodeCount = TrackerConstants.historyBatchSize * 2 + 5;
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: {
-          'show-1': [
-            for (var number = 1; number <= episodeCount; number++)
-              _episodeOfShow(number, season: (number - 1) ~/ 25 + 1),
-          ],
-        },
-      );
+    test('a manually watched movie is written once', () async {
+      await TrackerCoordinator.instance.markWatched(_movie(), client);
+      await TrackerCoordinator.instance.flushWriteQueue();
 
-      await coordinator.markWatched(_show(), client);
-
-      expect(episodeCounts, [TrackerConstants.historyBatchSize, TrackerConstants.historyBatchSize, 5]);
+      expect(recorder.watchedCalls, hasLength(1));
+      expect(recorder.calls.single.path, '/sync/watched');
+      expect((recorder.calls.single.body['movies'] as List).single['ids'], {'imdb': 'tt0372784', 'tmdb': 272});
     });
 
-    test('groups manually watched split seasons into separate anime entries', () async {
-      await simkl.setEnabled(false);
-      await mal.setEnabled(true);
-      await anilist.setEnabled(true);
-      coordinator.debugUseResolverDependencies(
-        store: const _FakeFribbLookup([
-          FribbMappingRow(tvdbId: 12345, malId: 101, anilistId: 201, tvdbSeason: 1, type: 'TV'),
-          FribbMappingRow(tvdbId: 12345, malId: 102, anilistId: 202, tvdbSeason: 2, type: 'TV'),
-        ]),
-        animeLists: const _FakeAnimeListsLookup(),
-      );
+    test('removes a manually unwatched season from MDBList history in one request', () async {
+      await TrackerCoordinator.instance.markUnwatched(_season(), client);
+      await TrackerCoordinator.instance.flushWriteQueue();
 
-      final malUpdates = <int, Map<String, String>>{};
-      final malHttp = MockClient((request) async {
-        final malId = int.parse(request.url.pathSegments[2]);
-        if (request.method == 'GET') {
-          return http.Response(json.encode({'num_episodes': 2}), 200);
-        }
-        expect(request.method, 'PUT');
-        malUpdates[malId] = Uri.splitQueryString(request.body);
-        return http.Response('{}', 200);
-      });
-      mal.rebindSession(_malSession(), onSessionInvalidated: () {}, httpClient: malHttp);
-
-      final anilistSaves = <Map<String, dynamic>>[];
-      final anilistHttp = MockClient((request) async {
-        final body = json.decode(request.body) as Map<String, dynamic>;
-        final query = body['query'] as String;
-        if (query.contains('Media(id:')) {
-          return http.Response(
-            json.encode({
-              'data': {
-                'Media': {'episodes': 2},
-              },
-            }),
-            200,
-          );
-        }
-        if (query.contains('SaveMediaListEntry')) {
-          anilistSaves.add((body['variables'] as Map).cast<String, dynamic>());
-          return http.Response(
-            json.encode({
-              'data': {
-                'SaveMediaListEntry': {'id': 1},
-              },
-            }),
-            200,
-          );
-        }
-        fail('Unexpected AniList query: $query');
-      });
-      anilist.rebindSession(_anilistSession(), onSessionInvalidated: () {}, httpClient: anilistHttp);
-
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: {
-          'show-1': [_episode(1, season: 1), _episode(2, season: 1), _episode(1, season: 2), _episode(2, season: 2)],
-        },
-      );
-
-      await coordinator.markWatched(_show(), client);
-
-      expect(malUpdates, {
-        101: {'status': 'completed', 'num_watched_episodes': '2'},
-        102: {'status': 'completed', 'num_watched_episodes': '2'},
-      });
-      expect(anilistSaves, contains(equals({'mediaId': 201, 'progress': 2, 'status': 'COMPLETED'})));
-      expect(anilistSaves, contains(equals({'mediaId': 202, 'progress': 2, 'status': 'COMPLETED'})));
+      expect(recorder.unwatchedCalls, hasLength(1));
+      expect(recorder.watchedCalls, isEmpty);
+      final removed =
+          (recorder.unwatchedCalls.single.body['shows'] as List)
+              .expand((show) => (show['seasons'] as List))
+              .expand((season) => (season['episodes'] as List))
+              .length;
+      expect(removed, 3);
     });
 
-    // A HAMA-matched library identifies anime by AniDB id and nothing else, so
-    // every tracker used to be skipped with "no external IDs" (#1788).
-    test('a HAMA show identified only by AniDB still reaches MAL and AniList', () async {
-      await simkl.setEnabled(false);
-      await mal.setEnabled(true);
-      await anilist.setEnabled(true);
-      coordinator.debugUseResolverDependencies(
-        store: const _FakeFribbLookup([FribbMappingRow(anidbId: 11905, malId: 21, anilistId: 30, type: 'TV')]),
-        animeLists: const _FakeAnimeListsLookup(),
-      );
+    test('a manual mark with no external ids writes nothing', () async {
+      final unknown = _FakeMediaServerClient(externalIdsByItem: const {});
+      await TrackerCoordinator.instance.markWatched(_episode(season: 1, number: 1), unknown);
+      await TrackerCoordinator.instance.flushWriteQueue();
 
-      final malUpdates = <int, Map<String, String>>{};
-      final malHttp = MockClient((request) async {
-        final malId = int.parse(request.url.pathSegments[2]);
-        if (request.method == 'GET') return http.Response(json.encode({'num_episodes': 12}), 200);
-        expect(request.method, 'PUT');
-        malUpdates[malId] = Uri.splitQueryString(request.body);
-        return http.Response('{}', 200);
-      });
-      mal.rebindSession(_malSession(), onSessionInvalidated: () {}, httpClient: malHttp);
-
-      final anilistSaves = <Map<String, dynamic>>[];
-      final anilistHttp = MockClient((request) async {
-        final body = json.decode(request.body) as Map<String, dynamic>;
-        final query = body['query'] as String;
-        if (query.contains('Media(id:')) {
-          return http.Response(
-            json.encode({
-              'data': {
-                'Media': {'episodes': 12},
-              },
-            }),
-            200,
-          );
-        }
-        if (query.contains('SaveMediaListEntry')) {
-          anilistSaves.add((body['variables'] as Map).cast<String, dynamic>());
-          return http.Response(
-            json.encode({
-              'data': {
-                'SaveMediaListEntry': {'id': 1},
-              },
-            }),
-            200,
-          );
-        }
-        fail('Unexpected AniList query: $query');
-      });
-      anilist.rebindSession(_anilistSession(), onSessionInvalidated: () {}, httpClient: anilistHttp);
-
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(anidb: 11905)},
-        descendantsByParent: const {},
-      );
-
-      await coordinator.markWatched(_episodeOfShow(4), client);
-
-      expect(client.externalIdCalls, ['show-1']);
-      expect(malUpdates, {
-        21: {'status': 'watching', 'num_watched_episodes': '4'},
-      });
-      expect(anilistSaves, [
-        {'mediaId': 30, 'progress': 4, 'status': 'CURRENT'},
-      ]);
-    });
-
-    test('a manually watched episode is not counted on top of the server rollup', () async {
-      await simkl.setEnabled(false);
-      await mal.setEnabled(true);
-      coordinator.debugUseResolverDependencies(
-        store: const _FakeFribbLookup([FribbMappingRow(tvdbId: 12345, malId: 21, type: 'TV')]),
-        animeLists: const _FakeAnimeListsLookup(),
-      );
-
-      final malUpdates = <int, Map<String, String>>{};
-      final malHttp = MockClient((request) async {
-        final malId = int.parse(request.url.pathSegments[2]);
-        if (request.method == 'GET') return http.Response(json.encode({'num_episodes': 12}), 200);
-        malUpdates[malId] = Uri.splitQueryString(request.body);
-        return http.Response('{}', 200);
-      });
-      mal.rebindSession(_malSession(), onSessionInvalidated: () {}, httpClient: malHttp);
-
-      // The server already counts episode 4 (the mark reached it first), while
-      // the item handed over still carries its pre-mark view count.
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: const {},
-        childrenByParent: {
-          'show-1': [
-            testMediaItem(
-              id: 'season-1',
-              backend: MediaBackend.plex,
-              kind: MediaKind.season,
-              title: 'Season 1',
-              index: 1,
-              leafCount: 12,
-              viewedLeafCount: 4,
-            ),
-          ],
-        },
-      );
-
-      await coordinator.markWatched(_episodeOfShow(4), client);
-
-      expect(malUpdates, {
-        21: {'status': 'watching', 'num_watched_episodes': '4'},
-      });
-    });
-
-    test('groups manually watched same-season split cours by Anime-Lists ranges', () async {
-      await simkl.setEnabled(false);
-      await mal.setEnabled(true);
-      await anilist.setEnabled(true);
-      coordinator.debugUseResolverDependencies(
-        store: const _FakeFribbLookup([
-          FribbMappingRow(anidbId: 111, tvdbId: 12345, malId: 101, anilistId: 201, tvdbSeason: 1, type: 'TV'),
-          FribbMappingRow(anidbId: 222, tvdbId: 12345, malId: 102, anilistId: 202, tvdbSeason: 1, type: 'TV'),
-        ]),
-        animeLists: _FakeAnimeListsLookup(
-          matches: {
-            '1-1': _match(anidbId: 111, serverEpisode: 1, animeEpisode: 1),
-            '1-2': _match(anidbId: 111, serverEpisode: 2, animeEpisode: 2),
-            '1-13': _match(anidbId: 222, serverEpisode: 13, animeEpisode: 1),
-            '1-14': _match(anidbId: 222, serverEpisode: 14, animeEpisode: 2),
-          },
-        ),
-      );
-
-      final malUpdates = <int, Map<String, String>>{};
-      final malHttp = MockClient((request) async {
-        final malId = int.parse(request.url.pathSegments[2]);
-        if (request.method == 'GET') {
-          return http.Response(json.encode({'num_episodes': 2}), 200);
-        }
-        expect(request.method, 'PUT');
-        malUpdates[malId] = Uri.splitQueryString(request.body);
-        return http.Response('{}', 200);
-      });
-      mal.rebindSession(_malSession(), onSessionInvalidated: () {}, httpClient: malHttp);
-
-      final anilistSaves = <Map<String, dynamic>>[];
-      final anilistHttp = MockClient((request) async {
-        final body = json.decode(request.body) as Map<String, dynamic>;
-        final query = body['query'] as String;
-        if (query.contains('Media(id:')) {
-          return http.Response(
-            json.encode({
-              'data': {
-                'Media': {'episodes': 2},
-              },
-            }),
-            200,
-          );
-        }
-        if (query.contains('SaveMediaListEntry')) {
-          anilistSaves.add((body['variables'] as Map).cast<String, dynamic>());
-          return http.Response(
-            json.encode({
-              'data': {
-                'SaveMediaListEntry': {'id': 1},
-              },
-            }),
-            200,
-          );
-        }
-        fail('Unexpected AniList query: $query');
-      });
-      anilist.rebindSession(_anilistSession(), onSessionInvalidated: () {}, httpClient: anilistHttp);
-
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: {
-          'show-1': [_episode(1), _episode(2), _episode(13), _episode(14)],
-        },
-      );
-
-      await coordinator.markWatched(_show(), client);
-
-      expect(malUpdates, {
-        101: {'status': 'completed', 'num_watched_episodes': '2'},
-        102: {'status': 'completed', 'num_watched_episodes': '2'},
-      });
-      expect(anilistSaves, contains(equals({'mediaId': 201, 'progress': 2, 'status': 'COMPLETED'})));
-      expect(anilistSaves, contains(equals({'mediaId': 202, 'progress': 2, 'status': 'COMPLETED'})));
-    });
-
-    test('removes a manually unwatched season from Simkl history in one request', () async {
-      final bodies = <Map<String, dynamic>>[];
-      final httpClient = MockClient((request) async {
-        expect(request.method, 'POST');
-        expect(request.url.path, '/sync/history/remove');
-        bodies.add((json.decode(request.body) as Map).cast<String, dynamic>());
-        return http.Response('{}', 200);
-      });
-      simkl.rebindSession(_simklSession(), onSessionInvalidated: () {}, httpClient: httpClient);
-
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: {
-          'season-1': [_episode(1), _episode(2)],
-        },
-      );
-
-      await coordinator.markUnwatched(_season(), client);
-
-      expect(client.descendantCalls, ['season-1']);
-      expect(bodies, [
-        {
-          'shows': [
-            {
-              'ids': {'tvdb': 12345},
-              'seasons': [
-                {
-                  'number': 1,
-                  'episodes': [
-                    {'number': 1},
-                    {'number': 2},
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ]);
-    });
-
-    test('resets manually unwatched split seasons on MAL and AniList without deleting entries', () async {
-      await simkl.setEnabled(false);
-      await mal.setEnabled(true);
-      await anilist.setEnabled(true);
-      coordinator.debugUseResolverDependencies(
-        store: const _FakeFribbLookup([
-          FribbMappingRow(anidbId: 111, tvdbId: 12345, malId: 101, anilistId: 201, tvdbSeason: 1, type: 'TV'),
-          FribbMappingRow(anidbId: 222, tvdbId: 12345, malId: 102, anilistId: 202, tvdbSeason: 1, type: 'TV'),
-        ]),
-        animeLists: _FakeAnimeListsLookup(
-          matches: {
-            '1-1': _match(anidbId: 111, serverEpisode: 1, animeEpisode: 1),
-            '1-2': _match(anidbId: 111, serverEpisode: 2, animeEpisode: 2),
-            '1-13': _match(anidbId: 222, serverEpisode: 13, animeEpisode: 1),
-            '1-14': _match(anidbId: 222, serverEpisode: 14, animeEpisode: 2),
-          },
-        ),
-      );
-
-      final malWrites = <int, Map<String, String>>{};
-      final malHttp = MockClient((request) async {
-        final malId = int.parse(request.url.pathSegments[2]);
-        if (request.method == 'GET') {
-          return http.Response(
-            json.encode({
-              'num_episodes': 12,
-              'my_list_status': {'status': 'watching', 'num_watched_episodes': 4},
-            }),
-            200,
-          );
-        }
-        expect(request.method, 'PUT', reason: 'a list entry is reset, never deleted');
-        malWrites[malId] = Uri.splitQueryString(request.body);
-        return http.Response('{}', 200);
-      });
-      mal.rebindSession(_malSession(), onSessionInvalidated: () {}, httpClient: malHttp);
-
-      final anilistWrites = <Map<String, dynamic>>[];
-      final anilistHttp = MockClient((request) async {
-        final body = json.decode(request.body) as Map<String, dynamic>;
-        final query = body['query'] as String;
-        final variables = (body['variables'] as Map).cast<String, dynamic>();
-        if (query.contains('Media(id:')) {
-          return http.Response(
-            json.encode({
-              'data': {
-                'Media': {
-                  'episodes': 12,
-                  'mediaListEntry': {'status': 'CURRENT', 'repeat': 0, 'progress': 4},
-                },
-              },
-            }),
-            200,
-          );
-        }
-        if (query.contains('SaveMediaListEntry')) {
-          anilistWrites.add(variables);
-          return http.Response(
-            json.encode({
-              'data': {
-                'SaveMediaListEntry': {'id': 1},
-              },
-            }),
-            200,
-          );
-        }
-        fail('Unexpected AniList query: $query');
-      });
-      anilist.rebindSession(_anilistSession(), onSessionInvalidated: () {}, httpClient: anilistHttp);
-
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: {
-          'show-1': [_episode(1), _episode(2), _episode(13), _episode(14)],
-        },
-      );
-
-      await coordinator.markUnwatched(_show(), client);
-
-      expect(malWrites, {
-        101: {'status': 'watching', 'num_watched_episodes': '0'},
-        102: {'status': 'watching', 'num_watched_episodes': '0'},
-      });
-      expect(
-        anilistWrites,
-        unorderedEquals([
-          {'mediaId': 201, 'progress': 0, 'status': 'CURRENT'},
-          {'mediaId': 202, 'progress': 0, 'status': 'CURRENT'},
-        ]),
-      );
+      expect(recorder.calls, isEmpty);
     });
 
     test('playback resolver is recreated when the server client changes', () async {
-      simkl.rebindSession(
-        _simklSession(),
-        onSessionInvalidated: () {},
-        httpClient: MockClient((_) async => http.Response('{}', 200)),
-        writeSpacing: Duration.zero,
+      final clientA = _FakeMediaServerClient(
+        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 111, tmdb: 1111)},
+      );
+      final clientB = _FakeMediaServerClient(
+        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 222, tmdb: 2222)},
       );
 
-      final firstClient = _FakeMediaServerClient(
-        serverId: ServerId('server-a'),
-        externalIdsByItem: {'show-a': const ExternalIds(tvdb: 111)},
-        descendantsByParent: const {},
-      );
-      final secondClient = _FakeMediaServerClient(
-        serverId: ServerId('server-b'),
-        externalIdsByItem: {'show-b': const ExternalIds(tvdb: 222)},
-        descendantsByParent: const {},
-      );
-      final firstEpisode = _episode(
-        1,
-      ).copyWith(id: 'episode-a', serverId: ServerId('server-a'), grandparentId: 'show-a');
-      final secondEpisode = _episode(
-        1,
-      ).copyWith(id: 'episode-b', serverId: ServerId('server-b'), grandparentId: 'show-b');
+      await TrackerCoordinator.instance.startPlayback(_episode(season: 1, number: 1), clientA);
+      await pumpEventQueue();
+      await TrackerCoordinator.instance.stopPlayback();
+      await pumpEventQueue();
+      await advance(const Duration(seconds: 2));
+      await TrackerCoordinator.instance.startPlayback(_episode(season: 1, number: 2), clientB);
+      await pumpEventQueue();
 
-      await coordinator.startPlayback(firstEpisode, firstClient);
-      await coordinator.startPlayback(secondEpisode, secondClient);
-
-      expect(firstClient.externalIdCalls, ['show-a']);
-      expect(secondClient.externalIdCalls, ['show-b']);
+      expect(clientA.externalIdCalls, ['show-1']);
+      expect(clientB.externalIdCalls, ['show-1']);
+      final starts = recorder.scrobbleCalls.where((c) => c.path == '/scrobble/start').toList();
+      expect(starts, hasLength(2));
+      expect((starts[0].body['show'] as Map)['ids'], {'tmdb': 1111});
+      expect((starts[1].body['show'] as Map)['ids'], {'tmdb': 2222});
     });
   });
 
-  group('TrackerCoordinator playback threshold', () {
-    final coordinator = TrackerCoordinator.instance;
-    final simkl = SimklTracker.instance;
-    final mal = MalTracker.instance;
-    final anilist = AnilistTracker.instance;
-
-    setUp(() async {
-      // MAL is a threshold tracker: the crossing owns its watched write. Simkl
-      // is excluded from that fan-out (it reports playback in real time), so it
-      // stays off here — see simkl_scrobble_test.dart.
-      await simkl.setEnabled(false);
-      await anilist.setEnabled(false);
-      await mal.setEnabled(true);
-    });
-
-    tearDown(() async {
-      coordinator.cancelInFlight();
-      coordinator.debugUseResolverDependencies();
-      mal.rebindSession(null, onSessionInvalidated: () {});
-      await mal.setEnabled(false);
-    });
-
-    test('marks watched at the server threshold, not the tracker default', () async {
-      coordinator.debugUseResolverDependencies(
-        store: const _FakeFribbLookup([FribbMappingRow(tvdbId: 12345, malId: 101, tvdbSeason: 1, type: 'TV')]),
-        animeLists: const _FakeAnimeListsLookup(),
-      );
-
-      final updates = <Map<String, String>>[];
-      final httpClient = MockClient((request) async {
-        if (request.method == 'GET') return http.Response(json.encode({'num_episodes': 1}), 200);
-        expect(request.method, 'PUT');
-        updates.add(Uri.splitQueryString(request.body));
-        return http.Response('{}', 200);
-      });
-      mal.rebindSession(_malSession(), onSessionInvalidated: () {}, httpClient: httpClient);
-
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: const {},
-        watchedThreshold: 0.95,
-      );
-
-      // The player always hands the coordinator an episode carrying its show
-      // link; container paths fill it in from the parent instead.
-      await coordinator.startPlayback(_episode(1).copyWith(grandparentId: 'show-1'), client);
-      coordinator.updateDuration(const Duration(seconds: 100));
-
-      // 90% — past the old hardcoded 80% tracker default but below the server's 95%.
-      coordinator.updatePosition(const Duration(seconds: 90));
+  group('TrackerCoordinator playback', () {
+    test('start sends a scrobble start and stop sends a stop, with the true progress', () async {
+      final episode = _episode(season: 1, number: 1);
+      await TrackerCoordinator.instance.startPlayback(episode, client);
       await pumpEventQueue();
-      expect(updates, isEmpty);
-
-      // 95% — crosses the server threshold; fires exactly once.
-      coordinator.updatePosition(const Duration(seconds: 95));
+      await advance(const Duration(seconds: 2));
+      TrackerCoordinator.instance.updatePosition(const Duration(minutes: 20));
       await pumpEventQueue();
-      expect(updates, hasLength(1));
-      expect(updates.single['num_watched_episodes'], '1');
-    });
-
-    test('leaves real-time trackers out of the threshold watched write', () async {
-      final requests = <String>[];
-      final httpClient = MockClient((request) async {
-        requests.add(request.url.path);
-        return http.Response('{}', 200);
-      });
-      await mal.setEnabled(false);
-      await simkl.setEnabled(true);
-      simkl.rebindSession(_simklSession(), onSessionInvalidated: () {}, httpClient: httpClient);
-      addTearDown(() async {
-        simkl.rebindSession(null, onSessionInvalidated: () {});
-        await simkl.setEnabled(false);
-      });
-
-      final client = _FakeMediaServerClient(
-        externalIdsByItem: {'movie-1': const ExternalIds(tmdb: 603)},
-        descendantsByParent: const {},
-        watchedThreshold: 0.9,
-      );
-
-      await coordinator.startPlayback(_movie(), client);
-      coordinator.updateDuration(const Duration(seconds: 100));
-      coordinator.updatePosition(const Duration(seconds: 95));
+      await advance(const Duration(seconds: 2));
+      await TrackerCoordinator.instance.stopPlayback();
       await pumpEventQueue();
 
-      expect(requests, isNot(contains('/sync/history')));
+      final starts = recorder.scrobbleCalls.where((c) => c.path == '/scrobble/start').toList();
+      final stops = recorder.scrobbleCalls.where((c) => c.path == '/scrobble/stop').toList();
+      expect(starts.length, greaterThanOrEqualTo(1));
+      expect(stops, hasLength(1));
+      // 20 of 45 minutes = ~44%.
+      expect((stops.single.body['progress'] as num).toDouble(), closeTo(44.44, 0.5));
+      expect(recorder.watchedCalls, isEmpty, reason: '44% is below the server watched threshold');
     });
 
-    // Both backends throw here on a server failure. Before the guard the
-    // error escaped `startPlayback` — fired unawaited by the player — and the
-    // previous item's context survived, so the crossing could write for it.
+    test('stop past the server threshold records no second watch: the stop already owns it', () async {
+      final episode = _episode(season: 1, number: 1);
+      await TrackerCoordinator.instance.startPlayback(episode, client);
+      await pumpEventQueue();
+      await advance(const Duration(seconds: 2));
+      // 43 of 45 minutes = ~95%: past the server 90% threshold and past
+      // MDBList's own 80% scrobble-watched rule, so the stop owns the watch.
+      TrackerCoordinator.instance.updatePosition(const Duration(minutes: 43));
+      await pumpEventQueue();
+      await advance(const Duration(seconds: 2));
+      await TrackerCoordinator.instance.stopPlayback();
+      await pumpEventQueue();
+
+      expect(recorder.scrobbleCalls.where((c) => c.path == '/scrobble/stop'), hasLength(1));
+      expect(recorder.watchedCalls, isEmpty);
+    });
+
+    test('a failed stop past the threshold falls back to a history write', () async {
+      recorder.failStop = true;
+      final episode = _episode(season: 1, number: 1);
+      await TrackerCoordinator.instance.startPlayback(episode, client);
+      await pumpEventQueue();
+      await advance(const Duration(seconds: 2));
+      TrackerCoordinator.instance.updatePosition(const Duration(minutes: 43));
+      await pumpEventQueue();
+      await advance(const Duration(seconds: 2));
+      await TrackerCoordinator.instance.stopPlayback();
+      await pumpEventQueue();
+      await TrackerCoordinator.instance.flushWriteQueue();
+
+      expect(recorder.scrobbleCalls.where((c) => c.path == '/scrobble/stop'), isEmpty);
+      expect(recorder.watchedCalls, hasLength(1));
+      expect(recorder.watchedEpisodeCountIn(recorder.watchedCalls.single), 1);
+    });
+
+    test('pause and resume checkpoint through the scrobble endpoints', () async {
+      await TrackerCoordinator.instance.startPlayback(_episode(season: 1, number: 1), client);
+      await pumpEventQueue();
+      await advance(const Duration(seconds: 2));
+      await TrackerCoordinator.instance.pausePlayback();
+      await pumpEventQueue();
+      await advance(const Duration(seconds: 2));
+      await TrackerCoordinator.instance.resumePlayback();
+      await pumpEventQueue();
+
+      expect(recorder.scrobbleCalls.map((c) => c.path), ['/scrobble/start', '/scrobble/pause', '/scrobble/start']);
+    });
+
     test('a failing external-id lookup leaves the coordinator reset instead of escalating', () async {
-      coordinator.debugUseResolverDependencies(
-        store: const _FakeFribbLookup([FribbMappingRow(tvdbId: 12345, malId: 101, tvdbSeason: 1, type: 'TV')]),
-        animeLists: const _FakeAnimeListsLookup(),
-      );
-      final writes = <String>[];
-      final httpClient = MockClient((request) async {
-        if (request.method == 'GET') return http.Response(json.encode({'num_episodes': 1}), 200);
-        writes.add(request.url.path);
-        return http.Response('{}', 200);
-      });
-      mal.rebindSession(_malSession(), onSessionInvalidated: () {}, httpClient: httpClient);
+      client.throwOnExternalIds = true;
 
-      // A resolved playback first, so there is a stale context to clear.
-      final working = _FakeMediaServerClient(
-        externalIdsByItem: {'show-1': const ExternalIds(tvdb: 12345)},
-        descendantsByParent: const {},
-      );
-      await coordinator.startPlayback(_episode(1).copyWith(grandparentId: 'show-1'), working);
-
-      final failing = _FakeMediaServerClient(
-        serverId: ServerId('server-2'),
-        externalIdsByItem: const {},
-        descendantsByParent: const {},
-        externalIdsError: MediaServerHttpException(type: MediaServerHttpErrorType.unknown, statusCode: 500),
-      );
-      final nextEpisode = _episode(2).copyWith(serverId: ServerId('server-2'), grandparentId: 'show-1');
-      await expectLater(coordinator.startPlayback(nextEpisode, failing), completes);
-      expect(failing.externalIdCalls, ['show-1']);
-
-      coordinator.updateDuration(const Duration(seconds: 100));
-      coordinator.updatePosition(const Duration(seconds: 95));
+      await TrackerCoordinator.instance.startPlayback(_episode(season: 1, number: 1), client);
+      await pumpEventQueue();
+      await TrackerCoordinator.instance.stopPlayback();
       await pumpEventQueue();
 
-      expect(writes, isEmpty);
+      expect(recorder.calls, isEmpty);
+    });
+
+    test('live playback never scrobbles', () async {
+      await TrackerCoordinator.instance.startPlayback(_episode(season: 1, number: 1), client, isLive: true);
+      await pumpEventQueue();
+      await TrackerCoordinator.instance.stopPlayback();
+      await pumpEventQueue();
+
+      expect(recorder.calls, isEmpty);
     });
   });
 }
