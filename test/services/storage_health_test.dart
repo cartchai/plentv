@@ -470,7 +470,7 @@ void main() {
 
     test('writeDumpToPicker with <50 MB free never opens the picker', () async {
       StorageHealth.debugFreeBytesOverride = 50;
-      final picker = _FakeFilePicker()..saveResult = '${tempDir.path}/picked/pleztv-autodump.txt';
+      final picker = _FakeFilePicker()..saveResult = '${tempDir.path}/picked/plentv-autodump.txt';
       FilePickerService.setDelegateForTesting(picker);
       addTearDown(() => FilePickerService.setDelegateForTesting(null));
 

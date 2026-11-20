@@ -930,7 +930,7 @@ void main() {
       if (tempDir.existsSync()) await tempDir.delete(recursive: true);
     });
     LastCrashStore.debugDirectoryOverride = tempDir;
-    final picker = _FakeFilePicker()..saveResult = '${tempDir.path}/pleztv-debug-20261114-200000.txt';
+    final picker = _FakeFilePicker()..saveResult = '${tempDir.path}/plentv-debug-20261114-200000.txt';
     FilePickerService.setDelegateForTesting(picker);
     appLogger.i('export focus seed line');
 
@@ -971,7 +971,7 @@ void main() {
     }
 
     expect(picker.saveCalls, 1, reason: 'Enter on the focused Export row never reached the export');
-    expect(picker.lastSaveName, startsWith('pleztv-debug-'));
+    expect(picker.lastSaveName, startsWith('plentv-debug-'));
     expect(picker.lastSaveExtensions, ['txt']);
     expect(find.text(t.messages.debugLogExported), findsOneWidget);
     expect(tester.takeException(), isNull);

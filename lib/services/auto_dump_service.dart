@@ -44,7 +44,7 @@ import 'storage_health.dart';
 /// nothing to find. Downloads is tried first wherever the saver offers
 /// a save; the app folder stays as the fallback.
 abstract final class AutoDumpService {
-  static const String dumpFileName = 'pleztv-autodump.txt';
+  static const String dumpFileName = 'plentv-autodump.txt';
 
   /// Abnormal exits before a dump is written (cumulative — any 3
   /// crashes, ever; the owner said three or four; 3 — an earlier dump is

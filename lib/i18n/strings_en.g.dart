@@ -107,8 +107,8 @@ class Translations$app$en {
 
 	// Translations
 
-	/// en: 'PlezTV'
-	String get title => 'PlezTV';
+	/// en: 'PlenTV'
+	String get title => 'PlenTV';
 }
 
 // Path: appIcon
@@ -137,11 +137,11 @@ class Translations$appIcon$en {
 	/// en: 'Couldn't change the app icon'
 	String get changeFailed => 'Couldn\'t change the app icon';
 
-	/// en: 'The new icon appears on your home screen once you leave PlezTV.'
-	String get launcherHint => 'The new icon appears on your home screen once you leave PlezTV.';
+	/// en: 'The new icon appears on your home screen once you leave PlenTV.'
+	String get launcherHint => 'The new icon appears on your home screen once you leave PlenTV.';
 
-	/// en: 'The new banner appears once you leave PlezTV. Android TV can keep showing the old one until the TV restarts.'
-	String get tvLauncherHint => 'The new banner appears once you leave PlezTV. Android TV can keep showing the old one until the TV restarts.';
+	/// en: 'The new banner appears once you leave PlenTV. Android TV can keep showing the old one until the TV restarts.'
+	String get tvLauncherHint => 'The new banner appears once you leave PlenTV. Android TV can keep showing the old one until the TV restarts.';
 
 	late final Translations$appIcon$names$en names = Translations$appIcon$names$en.internal(_root);
 }
@@ -199,8 +199,8 @@ class Translations$auth$en {
 	/// en: 'Quick Connect expired. Try again.'
 	String get quickConnectExpired => 'Quick Connect expired. Try again.';
 
-	/// en: 'PlezTV could not safely recover local sign-in and pending playback data. Please sign in again.'
-	String get localDataRecoveryRequired => 'PlezTV could not safely recover local sign-in and pending playback data. Please sign in again.';
+	/// en: 'PlenTV could not safely recover local sign-in and pending playback data. Please sign in again.'
+	String get localDataRecoveryRequired => 'PlenTV could not safely recover local sign-in and pending playback data. Please sign in again.';
 
 	/// en: 'The Plex PIN check was rejected'
 	String get pinCheckRejected => 'The Plex PIN check was rejected';
@@ -440,11 +440,11 @@ class Translations$update$en {
 	/// en: 'Install'
 	String get install => 'Install';
 
-	/// en: 'PlezTV downloads the APK itself. When it finishes, tap Install — it installs over the current PlezTV.'
-	String get inAppDownloadHint => 'PlezTV downloads the APK itself. When it finishes, tap Install — it installs over the current PlezTV.';
+	/// en: 'PlenTV downloads the APK itself. When it finishes, tap Install — it installs over the current PlenTV.'
+	String get inAppDownloadHint => 'PlenTV downloads the APK itself. When it finishes, tap Install — it installs over the current PlenTV.';
 
-	/// en: 'Installs over the current PlezTV. You may be asked to allow “Install unknown apps” for PlezTV first.'
-	String get installUpdateHint => 'Installs over the current PlezTV. You may be asked to allow “Install unknown apps” for PlezTV first.';
+	/// en: 'Installs over the current PlenTV. You may be asked to allow “Install unknown apps” for PlenTV first.'
+	String get installUpdateHint => 'Installs over the current PlenTV. You may be asked to allow “Install unknown apps” for PlenTV first.';
 
 	/// en: 'The download failed. Check your connection and try again.'
 	String get downloadFailed => 'The download failed. Check your connection and try again.';
@@ -464,8 +464,8 @@ class Translations$update$en {
 	/// en: 'This update has no build for this device — open the release page to get the right one.'
 	String get noApkForDevice => 'This update has no build for this device — open the release page to get the right one.';
 
-	/// en: 'Your browser will download the APK. Open the download, and allow “Install unknown apps” for your browser if asked — it installs over the current PlezTV.'
-	String get installApkHint => 'Your browser will download the APK. Open the download, and allow “Install unknown apps” for your browser if asked — it installs over the current PlezTV.';
+	/// en: 'Your browser will download the APK. Open the download, and allow “Install unknown apps” for your browser if asked — it installs over the current PlenTV.'
+	String get installApkHint => 'Your browser will download the APK. Open the download, and allow “Install unknown apps” for your browser if asked — it installs over the current PlenTV.';
 
 	/// en: 'What’s new'
 	String get releaseNotes => 'What’s new';
@@ -479,11 +479,11 @@ class Translations$supporter$en {
 
 	// Translations
 
-	/// en: 'PlezTV Supporter'
-	String get title => 'PlezTV Supporter';
+	/// en: 'PlenTV Supporter'
+	String get title => 'PlenTV Supporter';
 
-	/// en: 'A one-time purchase that supports PlezTV's development and unlocks cosmetic extras:'
-	String get intro => 'A one-time purchase that supports PlezTV\'s development and unlocks cosmetic extras:';
+	/// en: 'A one-time purchase that supports PlenTV's development and unlocks cosmetic extras:'
+	String get intro => 'A one-time purchase that supports PlenTV\'s development and unlocks cosmetic extras:';
 
 	/// en: 'Preset themes'
 	String get presetThemes => 'Preset themes';
@@ -500,8 +500,8 @@ class Translations$supporter$en {
 	/// en: 'App icons'
 	String get appIcons => 'App icons';
 
-	/// en: 'Choose an alternate PlezTV icon'
-	String get appIconsDescription => 'Choose an alternate PlezTV icon';
+	/// en: 'Choose an alternate PlenTV icon'
+	String get appIconsDescription => 'Choose an alternate PlenTV icon';
 
 	/// en: 'Buy for ${price}'
 	String buy({required Object price}) => 'Buy for ${price}';
@@ -515,8 +515,8 @@ class Translations$supporter$en {
 	/// en: 'Your purchase is waiting for payment or approval. The extras unlock as soon as the store completes it.'
 	String get pending => 'Your purchase is waiting for payment or approval. The extras unlock as soon as the store completes it.';
 
-	/// en: 'Thank you for supporting PlezTV'
-	String get thankYouTitle => 'Thank you for supporting PlezTV';
+	/// en: 'Thank you for supporting PlenTV'
+	String get thankYouTitle => 'Thank you for supporting PlenTV';
 
 	/// en: 'Your Supporter extras are unlocked.'
 	String get thankYouBody => 'Your Supporter extras are unlocked.';
@@ -544,8 +544,8 @@ class Translations$settings$en {
 	/// en: 'Settings'
 	String get title => 'Settings';
 
-	/// en: 'Support PlezTV'
-	String get supportDeveloper => 'Support PlezTV';
+	/// en: 'Support PlenTV'
+	String get supportDeveloper => 'Support PlenTV';
 
 	/// en: 'Donate via Liberapay to fund development'
 	String get supportDeveloperDescription => 'Donate via Liberapay to fund development';
@@ -1006,8 +1006,8 @@ class Translations$settings$en {
 	/// en: 'Settings imported'
 	String get importSettingsSuccess => 'Settings imported';
 
-	/// en: 'This file isn't a valid PlezTV settings export'
-	String get importSettingsInvalidFile => 'This file isn\'t a valid PlezTV settings export';
+	/// en: 'This file isn't a valid PlenTV settings export'
+	String get importSettingsInvalidFile => 'This file isn\'t a valid PlenTV settings export';
 
 	/// en: 'Sign in before importing settings'
 	String get importSettingsNoUser => 'Sign in before importing settings';
@@ -1036,8 +1036,8 @@ class Translations$settings$en {
 	/// en: 'This will replace your current connections, settings, favourites and guide data with the backup. Continue?'
 	String get importForkBackupConfirm => 'This will replace your current connections, settings, favourites and guide data with the backup. Continue?';
 
-	/// en: 'This file isn't a valid PlezTV backup'
-	String get importForkBackupInvalidFile => 'This file isn\'t a valid PlezTV backup';
+	/// en: 'This file isn't a valid PlenTV backup'
+	String get importForkBackupInvalidFile => 'This file isn\'t a valid PlenTV backup';
 
 	/// en: 'Backup restored'
 	String get importForkBackupSummaryTitle => 'Backup restored';
@@ -1489,8 +1489,8 @@ class Translations$settings$en {
 	/// en: 'Start in fullscreen'
 	String get startInFullscreen => 'Start in fullscreen';
 
-	/// en: 'Open PlezTV in fullscreen mode at launch'
-	String get startInFullscreenDescription => 'Open PlezTV in fullscreen mode at launch';
+	/// en: 'Open PlenTV in fullscreen mode at launch'
+	String get startInFullscreenDescription => 'Open PlenTV in fullscreen mode at launch';
 
 	/// en: 'Exit fullscreen on player close'
 	String get exitFullscreenOnPlayerClose => 'Exit fullscreen on player close';
@@ -1636,8 +1636,8 @@ class Translations$settings$en {
 	/// en: 'Per show or movie'
 	String get playerScopeTitle => 'Per show or movie';
 
-	/// en: 'Export PlezTV settings'
-	String get exportDialogTitle => 'Export PlezTV settings';
+	/// en: 'Export PlenTV settings'
+	String get exportDialogTitle => 'Export PlenTV settings';
 
 	/// en: 'Zoom'
 	String get scopeZoom => 'Zoom';
@@ -2257,11 +2257,11 @@ class Translations$mediaMenu$en {
 		other: '${n} other episodes are stored in the same file and will be deleted too:',
 	);
 
-	/// en: 'PlezTV could not check which files this will remove, so it may delete more than the item named above. Cancel and try again, or delete anyway.'
-	String get deleteScopeUnverifiedProbeFailed => 'PlezTV could not check which files this will remove, so it may delete more than the item named above. Cancel and try again, or delete anyway.';
+	/// en: 'PlenTV could not check which files this will remove, so it may delete more than the item named above. Cancel and try again, or delete anyway.'
+	String get deleteScopeUnverifiedProbeFailed => 'PlenTV could not check which files this will remove, so it may delete more than the item named above. Cancel and try again, or delete anyway.';
 
-	/// en: 'Your server did not provide file details for this item, so PlezTV cannot check which files this will remove. It may delete more than the item named above.'
-	String get deleteScopeUnverifiedNoFileInfo => 'Your server did not provide file details for this item, so PlezTV cannot check which files this will remove. It may delete more than the item named above.';
+	/// en: 'Your server did not provide file details for this item, so PlenTV cannot check which files this will remove. It may delete more than the item named above.'
+	String get deleteScopeUnverifiedNoFileInfo => 'Your server did not provide file details for this item, so PlenTV cannot check which files this will remove. It may delete more than the item named above.';
 
 	/// en: 'Media item deleted successfully'
 	String get mediaDeletedSuccessfully => 'Media item deleted successfully';
@@ -3108,8 +3108,8 @@ class Translations$profiles$en {
 
 	// Translations
 
-	/// en: 'Add PlezTV profile'
-	String get addPlezTVProfile => 'Add PlezTV profile';
+	/// en: 'Add PlenTV profile'
+	String get addPlezTVProfile => 'Add PlenTV profile';
 
 	/// en: 'Switching profile…'
 	String get switchingProfile => 'Switching profile…';
@@ -3351,8 +3351,8 @@ class Translations$connections$en {
 	/// en: 'Edit ${product} connection'
 	String editMediaBrowserTitle({required Object product}) => 'Edit ${product} connection';
 
-	/// en: 'Add or remove URLs for ${serverName}. PlezTV will use the reachable URL with the lowest latency.'
-	String editMediaBrowserIntro({required Object serverName}) => 'Add or remove URLs for ${serverName}. PlezTV will use the reachable URL with the lowest latency.';
+	/// en: 'Add or remove URLs for ${serverName}. PlenTV will use the reachable URL with the lowest latency.'
+	String editMediaBrowserIntro({required Object serverName}) => 'Add or remove URLs for ${serverName}. PlenTV will use the reachable URL with the lowest latency.';
 }
 
 // Path: accountPreferences
@@ -3375,8 +3375,8 @@ class Translations$accountPreferences$en {
 	/// en: 'Every account stores its own preferences. Pick the one to edit.'
 	String get pickAccount => 'Every account stores its own preferences. Pick the one to edit.';
 
-	/// en: 'These options are saved on the account itself, so every app signed in to it uses them — including PlezTV on your other devices.'
-	String get storedOnAccount => 'These options are saved on the account itself, so every app signed in to it uses them — including PlezTV on your other devices.';
+	/// en: 'These options are saved on the account itself, so every app signed in to it uses them — including PlenTV on your other devices.'
+	String get storedOnAccount => 'These options are saved on the account itself, so every app signed in to it uses them — including PlenTV on your other devices.';
 
 	/// en: 'No accounts to configure'
 	String get noAccounts => 'No accounts to configure';
@@ -3563,8 +3563,8 @@ class Translations$emergencyDebugLogSaver$en {
 	/// en: 'Emergency Debug Log Saver'
 	String get title => 'Emergency Debug Log Saver';
 
-	/// en: 'PlezTV has crashed several times. You can save an emergency debug log and send it to us, or continue starting up as usual.'
-	String get body => 'PlezTV has crashed several times. You can save an emergency debug log and send it to us, or continue starting up as usual.';
+	/// en: 'PlenTV has crashed several times. You can save an emergency debug log and send it to us, or continue starting up as usual.'
+	String get body => 'PlenTV has crashed several times. You can save an emergency debug log and send it to us, or continue starting up as usual.';
 
 	/// en: 'Save debug log'
 	String get saveDebugLog => 'Save debug log';
@@ -3584,8 +3584,8 @@ class Translations$emergencyDebugLogSaver$en {
 	/// en: 'Saved to:'
 	String get savedTo => 'Saved to:';
 
-	/// en: 'Restart PlezTV'
-	String get restartPlezTv => 'Restart PlezTV';
+	/// en: 'Restart PlenTV'
+	String get restartPlezTv => 'Restart PlenTV';
 
 	/// en: 'Could not save the debug log — try saving it in the app folder instead.'
 	String get saveFailed => 'Could not save the debug log — try saving it in the app folder instead.';
@@ -3910,6 +3910,14 @@ class Translations$about$en {
 		'New: the preview pictures you see while dragging the seek bar now only download when you actually drag — opening a video no longer downloads them for viewers who never scrub',
 		'Fixed: on low-memory devices the player now caps how far ahead it caches a stream by time as well as size',
 		'Cleanup: removed leftover unused code from the 2.26.0 update',
+	];
+	List<String> get changelog2328 => [
+		'New: PlenTV is the new name — same app, new name and icon',
+		'New: your old PlezTV backups still restore, and old links still open',
+		'New: Quest headsets are now detected, so the controller thumbstick scrolls the right way',
+		'New: bug reports and debug logs now go to our own GitHub issues',
+		'Removed: the app no longer points at the old PlezTV services or funding page',
+		'Cleanup: the unused crash-reporting code is gone',
 	];
 	List<String> get changelog2326 => [
 		'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
@@ -4489,14 +4497,14 @@ class Translations$startup$en {
 
 	// Translations
 
-	/// en: 'PlezTV could not start'
-	String get failedTitle => 'PlezTV could not start';
+	/// en: 'PlenTV could not start'
+	String get failedTitle => 'PlenTV could not start';
 
 	/// en: 'Something went wrong during startup. The details below identify what failed.'
 	String get failedBody => 'Something went wrong during startup. The details below identify what failed.';
 
-	/// en: 'PlezTV's saved settings file is damaged and has to be rebuilt before PlezTV can start. Retrying will not help — choose Repair storage.'
-	String get failedBodyRepairable => 'PlezTV\'s saved settings file is damaged and has to be rebuilt before PlezTV can start. Retrying will not help — choose Repair storage.';
+	/// en: 'PlenTV's saved settings file is damaged and has to be rebuilt before PlenTV can start. Retrying will not help — choose Repair storage.'
+	String get failedBodyRepairable => 'PlenTV\'s saved settings file is damaged and has to be rebuilt before PlenTV can start. Retrying will not help — choose Repair storage.';
 
 	/// en: 'Step'
 	String get phaseLabel => 'Step';
@@ -4522,8 +4530,8 @@ class Translations$startup$en {
 	/// en: 'Repair stored data?'
 	String get repairTitle => 'Repair stored data?';
 
-	/// en: 'PlezTV's settings file is damaged and cannot be read. Repairing resets every setting to its default.'
-	String get repairBodyCommon => 'PlezTV\'s settings file is damaged and cannot be read. Repairing resets every setting to its default.';
+	/// en: 'PlenTV's settings file is damaged and cannot be read. Repairing resets every setting to its default.'
+	String get repairBodyCommon => 'PlenTV\'s settings file is damaged and cannot be read. Repairing resets every setting to its default.';
 
 	/// en: 'One saved sign-in is damaged and cannot be read. Repairing removes just that one; your other settings are left alone.'
 	String get repairBodyOneCredential => 'One saved sign-in is damaged and cannot be read. Repairing removes just that one; your other settings are left alone.';
@@ -4534,8 +4542,8 @@ class Translations$startup$en {
 	/// en: 'The key protecting your saved sign-ins cannot be recovered from this file, so you will have to sign in to every server and profile again. Nothing on your media server is affected.'
 	String get repairBodySignInsLost => 'The key protecting your saved sign-ins cannot be recovered from this file, so you will have to sign in to every server and profile again. Nothing on your media server is affected.';
 
-	/// en: 'MDBList and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.'
-	String get repairBodySessionsUncertain => 'MDBList and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.';
+	/// en: 'MDBList and Seerr are stored separately and may or may not survive. PlenTV will tell you exactly what it kept.'
+	String get repairBodySessionsUncertain => 'MDBList and Seerr are stored separately and may or may not survive. PlenTV will tell you exactly what it kept.';
 
 	/// en: 'Repair'
 	String get repairConfirm => 'Repair';
@@ -4546,11 +4554,11 @@ class Translations$startup$en {
 	/// en: 'Storage repaired — restart required'
 	String get repairNeedsRestart => 'Storage repaired — restart required';
 
-	/// en: 'Your data was repaired, but PlezTV has to start fresh before it can use it. Close PlezTV and open it again.'
-	String get restartRequiredBody => 'Your data was repaired, but PlezTV has to start fresh before it can use it. Close PlezTV and open it again.';
+	/// en: 'Your data was repaired, but PlenTV has to start fresh before it can use it. Close PlenTV and open it again.'
+	String get restartRequiredBody => 'Your data was repaired, but PlenTV has to start fresh before it can use it. Close PlenTV and open it again.';
 
-	/// en: 'Quit PlezTV'
-	String get quitPlezTV => 'Quit PlezTV';
+	/// en: 'Quit PlenTV'
+	String get quitPlezTV => 'Quit PlenTV';
 
 	/// en: 'Repair failed'
 	String get repairFailed => 'Repair failed';
@@ -4576,8 +4584,8 @@ class Translations$startup$en {
 	/// en: 'Copy deleted.'
 	String get backupDeleted => 'Copy deleted.';
 
-	/// en: 'PlezTV failed to start last time'
-	String get previousFailureTitle => 'PlezTV failed to start last time';
+	/// en: 'PlenTV failed to start last time'
+	String get previousFailureTitle => 'PlenTV failed to start last time';
 
 	/// en: 'Survival mode — only live TV, search, favourites and playback load at startup.'
 	String get survivalModeBanner => 'Survival mode — only live TV, search, favourites and playback load at startup.';
@@ -5406,8 +5414,8 @@ class Translations$watchTogether$en {
 	/// en: 'Invite copied. Paste it into a message.'
 	String get inviteCopied => 'Invite copied. Paste it into a message.';
 
-	/// en: 'Join my Watch Together room in PlezTV: open Watch Together, choose Join Room and enter ${code}.'
-	String inviteMessage({required Object code}) => 'Join my Watch Together room in PlezTV: open Watch Together, choose Join Room and enter ${code}.';
+	/// en: 'Join my Watch Together room in PlenTV: open Watch Together, choose Join Room and enter ${code}.'
+	String inviteMessage({required Object code}) => 'Join my Watch Together room in PlenTV: open Watch Together, choose Join Room and enter ${code}.';
 
 	/// en: 'Open Watch Together session controls'
 	String get openSessionControls => 'Open Watch Together session controls';
@@ -5484,8 +5492,8 @@ class Translations$watchTogether$en {
 	/// en: 'You don't have this video'
 	String get unavailableTitle => 'You don\'t have this video';
 
-	/// en: 'PlezTV couldn't find it in your libraries. Pick a copy yourself or search again.'
-	String get unavailableDescription => 'PlezTV couldn\'t find it in your libraries. Pick a copy yourself or search again.';
+	/// en: 'PlenTV couldn't find it in your libraries. Pick a copy yourself or search again.'
+	String get unavailableDescription => 'PlenTV couldn\'t find it in your libraries. Pick a copy yourself or search again.';
 
 	/// en: 'Choose a Copy'
 	String get chooseCopy => 'Choose a Copy';
@@ -6694,8 +6702,8 @@ class Translations$seerr$en {
 	/// en: 'Email'
 	String get email => 'Email';
 
-	/// en: 'This Seerr instance offers no sign-in method PlezTV supports.'
-	String get noSignInMethods => 'This Seerr instance offers no sign-in method PlezTV supports.';
+	/// en: 'This Seerr instance offers no sign-in method PlenTV supports.'
+	String get noSignInMethods => 'This Seerr instance offers no sign-in method PlenTV supports.';
 
 	/// en: 'Instance'
 	String get instance => 'Instance';
@@ -6703,8 +6711,8 @@ class Translations$seerr$en {
 	/// en: 'Disconnect Seerr?'
 	String get disconnectConfirm => 'Disconnect Seerr?';
 
-	/// en: 'PlezTV will forget this Seerr instance. Reconnect any time.'
-	String get disconnectConfirmBody => 'PlezTV will forget this Seerr instance. Reconnect any time.';
+	/// en: 'PlenTV will forget this Seerr instance. Reconnect any time.'
+	String get disconnectConfirmBody => 'PlenTV will forget this Seerr instance. Reconnect any time.';
 
 	/// en: 'Request'
 	String get request => 'Request';
@@ -6778,8 +6786,8 @@ class Translations$seerr$en {
 	/// en: 'No Seerr instance at ${url} (HTTP ${status})'
 	String noInstanceAtUrl({required Object url, required Object status}) => 'No Seerr instance at ${url} (HTTP ${status})';
 
-	/// en: 'An authenticating reverse proxy (SSO or HTTP auth) answered instead of Seerr. PlezTV cannot sign in through it: let Seerr's /api/v1 path bypass the proxy for this app, or use an address that reaches Seerr directly.'
-	String get behindAuthProxy => 'An authenticating reverse proxy (SSO or HTTP auth) answered instead of Seerr. PlezTV cannot sign in through it: let Seerr\'s /api/v1 path bypass the proxy for this app, or use an address that reaches Seerr directly.';
+	/// en: 'An authenticating reverse proxy (SSO or HTTP auth) answered instead of Seerr. PlenTV cannot sign in through it: let Seerr's /api/v1 path bypass the proxy for this app, or use an address that reaches Seerr directly.'
+	String get behindAuthProxy => 'An authenticating reverse proxy (SSO or HTTP auth) answered instead of Seerr. PlenTV cannot sign in through it: let Seerr\'s /api/v1 path bypass the proxy for this app, or use an address that reaches Seerr directly.';
 
 	/// en: 'Enter a server address like https://seerr.example.com'
 	String get invalidUrl => 'Enter a server address like https://seerr.example.com';
@@ -6853,8 +6861,8 @@ class Translations$services$en {
 	/// en: 'Disconnect ${service}?'
 	String disconnectConfirm({required Object service}) => 'Disconnect ${service}?';
 
-	/// en: 'PlezTV will stop updating ${service}. Reconnect any time.'
-	String disconnectConfirmBody({required Object service}) => 'PlezTV will stop updating ${service}. Reconnect any time.';
+	/// en: 'PlenTV will stop updating ${service}. Reconnect any time.'
+	String disconnectConfirmBody({required Object service}) => 'PlenTV will stop updating ${service}. Reconnect any time.';
 
 	/// en: 'Couldn't connect to ${service}. Try again.'
 	String connectFailed({required Object service}) => 'Couldn\'t connect to ${service}. Try again.';
@@ -7071,8 +7079,8 @@ class Translations$deepLinks$en {
 
 	// Translations
 
-	/// en: 'This PlezTV link isn't valid.'
-	String get invalid => 'This PlezTV link isn\'t valid.';
+	/// en: 'This PlenTV link isn't valid.'
+	String get invalid => 'This PlenTV link isn\'t valid.';
 
 	/// en: 'No profile matches "${profile}".'
 	String profileNotFound({required Object profile}) => 'No profile matches "${profile}".';
@@ -9635,8 +9643,8 @@ class Translations$watchTogether$errors$en {
 	/// en: 'Too many attempts. Wait a moment and try again.'
 	String get rateLimited => 'Too many attempts. Wait a moment and try again.';
 
-	/// en: 'This version of PlezTV can't use the relay. Update the app.'
-	String get clientBlocked => 'This version of PlezTV can\'t use the relay. Update the app.';
+	/// en: 'This version of PlenTV can't use the relay. Update the app.'
+	String get clientBlocked => 'This version of PlenTV can\'t use the relay. Update the app.';
 
 	/// en: 'Only the host can do that.'
 	String get forbidden => 'Only the host can do that.';
@@ -9680,17 +9688,17 @@ class Translations$downloads$backgroundWarning$en {
 	/// en: 'Background downloads may be limited'
 	String get sheetTitleDegraded => 'Background downloads may be limited';
 
-	/// en: 'Android is preventing PlezTV from downloading reliably in the background.'
-	String get sheetIntro => 'Android is preventing PlezTV from downloading reliably in the background.';
+	/// en: 'Android is preventing PlenTV from downloading reliably in the background.'
+	String get sheetIntro => 'Android is preventing PlenTV from downloading reliably in the background.';
 
-	/// en: 'Your device is limiting when PlezTV can download in the background.'
-	String get sheetIntroDegraded => 'Your device is limiting when PlezTV can download in the background.';
+	/// en: 'Your device is limiting when PlenTV can download in the background.'
+	String get sheetIntroDegraded => 'Your device is limiting when PlenTV can download in the background.';
 
-	/// en: 'PlezTV's background usage is restricted. Set its battery or background usage to "Unrestricted".'
-	String get reasonBackgroundRestricted => 'PlezTV\'s background usage is restricted. Set its battery or background usage to "Unrestricted".';
+	/// en: 'PlenTV's background usage is restricted. Set its battery or background usage to "Unrestricted".'
+	String get reasonBackgroundRestricted => 'PlenTV\'s background usage is restricted. Set its battery or background usage to "Unrestricted".';
 
-	/// en: 'Android has put PlezTV in a restricted standby state. Set its battery usage to "Unrestricted".'
-	String get reasonStandbyRestricted => 'Android has put PlezTV in a restricted standby state. Set its battery usage to "Unrestricted".';
+	/// en: 'Android has put PlenTV in a restricted standby state. Set its battery usage to "Unrestricted".'
+	String get reasonStandbyRestricted => 'Android has put PlenTV in a restricted standby state. Set its battery usage to "Unrestricted".';
 
 	/// en: 'Download notifications are turned off, so progress and controls may be unavailable.'
 	String get reasonDownloadChannelBlocked => 'Download notifications are turned off, so progress and controls may be unavailable.';
@@ -9701,8 +9709,8 @@ class Translations$downloads$backgroundWarning$en {
 	/// en: 'Data Saver is on, which blocks background downloads on mobile data. Downloads should still run on Wi-Fi.'
 	String get reasonDataSaver => 'Data Saver is on, which blocks background downloads on mobile data. Downloads should still run on Wi-Fi.';
 
-	/// en: 'Downloads repeatedly stopped while PlezTV was in the background. Check PlezTV's battery or background usage settings.'
-	String get reasonOemUnknown => 'Downloads repeatedly stopped while PlezTV was in the background. Check PlezTV\'s battery or background usage settings.';
+	/// en: 'Downloads repeatedly stopped while PlenTV was in the background. Check PlenTV's battery or background usage settings.'
+	String get reasonOemUnknown => 'Downloads repeatedly stopped while PlenTV was in the background. Check PlenTV\'s battery or background usage settings.';
 
 	/// en: 'Open settings'
 	String get openSettings => 'Open settings';
@@ -9812,8 +9820,8 @@ class Translations$companionRemote$pairing$en {
 
 	// Translations
 
-	/// en: 'PlezTV devices with the same Plex account appear here'
-	String get discoveryDescription => 'PlezTV devices with the same Plex account appear here';
+	/// en: 'PlenTV devices with the same Plex account appear here'
+	String get discoveryDescription => 'PlenTV devices with the same Plex account appear here';
 
 	/// en: '192.168.1.100:48632'
 	String get hostAddressHint => '192.168.1.100:48632';
@@ -9827,8 +9835,8 @@ class Translations$companionRemote$pairing$en {
 	/// en: 'No devices found on your network'
 	String get noDevicesFound => 'No devices found on your network';
 
-	/// en: 'Open PlezTV on desktop and use the same Wi-Fi'
-	String get noDevicesHint => 'Open PlezTV on desktop and use the same Wi-Fi';
+	/// en: 'Open PlenTV on desktop and use the same Wi-Fi'
+	String get noDevicesHint => 'Open PlenTV on desktop and use the same Wi-Fi';
 
 	/// en: 'Available Devices'
 	String get availableDevices => 'Available Devices';
@@ -9848,8 +9856,8 @@ class Translations$companionRemote$pairing$en {
 	/// en: 'Connection timed out. Use the same network on both devices.'
 	String get connectionTimedOut => 'Connection timed out. Use the same network on both devices.';
 
-	/// en: 'Device not found. Make sure PlezTV is running on the host.'
-	String get sessionNotFound => 'Device not found. Make sure PlezTV is running on the host.';
+	/// en: 'Device not found. Make sure PlenTV is running on the host.'
+	String get sessionNotFound => 'Device not found. Make sure PlenTV is running on the host.';
 
 	/// en: 'Authentication failed. Both devices need the same Plex account.'
 	String get authFailed => 'Authentication failed. Both devices need the same Plex account.';
@@ -10004,8 +10012,8 @@ class Translations$services$deviceCode$en {
 
 	// Translations
 
-	/// en: 'Activate PlezTV on ${service}'
-	String title({required Object service}) => 'Activate PlezTV on ${service}';
+	/// en: 'Activate PlenTV on ${service}'
+	String title({required Object service}) => 'Activate PlenTV on ${service}';
 
 	/// en: 'Scan the QR code, or visit the address below and enter this code:'
 	String get instructions => 'Scan the QR code, or visit the address below and enter this code:';
@@ -10121,15 +10129,15 @@ class Translations$iptv$favorites$en {
 extension on Translations {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
-			'app.title' => 'PlezTV',
+			'app.title' => 'PlenTV',
 			'appIcon.title' => 'App icon',
 			'appIcon.defaultIcon' => 'Default',
 			'appIcon.current' => 'Current icon',
 			'appIcon.locked' => 'Supporter perk',
 			'appIcon.lockedHint' => 'Alternate icons are a Supporter perk.',
 			'appIcon.changeFailed' => 'Couldn\'t change the app icon',
-			'appIcon.launcherHint' => 'The new icon appears on your home screen once you leave PlezTV.',
-			'appIcon.tvLauncherHint' => 'The new banner appears once you leave PlezTV. Android TV can keep showing the old one until the TV restarts.',
+			'appIcon.launcherHint' => 'The new icon appears on your home screen once you leave PlenTV.',
+			'appIcon.tvLauncherHint' => 'The new banner appears once you leave PlenTV. Android TV can keep showing the old one until the TV restarts.',
 			'appIcon.names.midnight' => 'Midnight',
 			'appIcon.names.ember' => 'Ember',
 			'appIcon.names.paper' => 'Paper',
@@ -10168,7 +10176,7 @@ extension on Translations {
 			'auth.quickConnectWaiting' => 'Waiting for approval…',
 			'auth.quickConnectCancel' => 'Cancel',
 			'auth.quickConnectExpired' => 'Quick Connect expired. Try again.',
-			'auth.localDataRecoveryRequired' => 'PlezTV could not safely recover local sign-in and pending playback data. Please sign in again.',
+			'auth.localDataRecoveryRequired' => 'PlenTV could not safely recover local sign-in and pending playback data. Please sign in again.',
 			'auth.pinCheckRejected' => 'The Plex PIN check was rejected',
 			'common.cancel' => 'Cancel',
 			'common.save' => 'Save',
@@ -10259,29 +10267,29 @@ extension on Translations {
 			'update.downloadProgress' => ({required Object downloaded, required Object total}) => '${downloaded} of ${total}',
 			'update.downloadComplete' => 'Download complete',
 			'update.install' => 'Install',
-			'update.inAppDownloadHint' => 'PlezTV downloads the APK itself. When it finishes, tap Install — it installs over the current PlezTV.',
-			'update.installUpdateHint' => 'Installs over the current PlezTV. You may be asked to allow “Install unknown apps” for PlezTV first.',
+			'update.inAppDownloadHint' => 'PlenTV downloads the APK itself. When it finishes, tap Install — it installs over the current PlenTV.',
+			'update.installUpdateHint' => 'Installs over the current PlenTV. You may be asked to allow “Install unknown apps” for PlenTV first.',
 			'update.downloadFailed' => 'The download failed. Check your connection and try again.',
 			'update.downloadSizeMismatch' => 'The download didn\'t finish completely. Try again.',
 			'update.downloadCancelled' => 'Download cancelled.',
 			'update.installUnavailable' => 'This device couldn\'t open the installer. Open the release page to download the APK instead.',
 			'update.noApkAttached' => 'This release has no APK attached yet — open the release page for details.',
 			'update.noApkForDevice' => 'This update has no build for this device — open the release page to get the right one.',
-			'update.installApkHint' => 'Your browser will download the APK. Open the download, and allow “Install unknown apps” for your browser if asked — it installs over the current PlezTV.',
+			'update.installApkHint' => 'Your browser will download the APK. Open the download, and allow “Install unknown apps” for your browser if asked — it installs over the current PlenTV.',
 			'update.releaseNotes' => 'What’s new',
-			'supporter.title' => 'PlezTV Supporter',
-			'supporter.intro' => 'A one-time purchase that supports PlezTV\'s development and unlocks cosmetic extras:',
+			'supporter.title' => 'PlenTV Supporter',
+			'supporter.intro' => 'A one-time purchase that supports PlenTV\'s development and unlocks cosmetic extras:',
 			'supporter.presetThemes' => 'Preset themes',
 			'supporter.presetThemesDescription' => 'Ember, Glacier, Forest, Plum and Paper',
 			'supporter.customTheme' => 'Custom theme',
 			'supporter.customThemeDescription' => 'Pick every color yourself',
 			'supporter.appIcons' => 'App icons',
-			'supporter.appIconsDescription' => 'Choose an alternate PlezTV icon',
+			'supporter.appIconsDescription' => 'Choose an alternate PlenTV icon',
 			'supporter.buy' => ({required Object price}) => 'Buy for ${price}',
 			'supporter.loadingPrice' => 'Loading price...',
 			'supporter.restore' => 'Restore Purchases',
 			'supporter.pending' => 'Your purchase is waiting for payment or approval. The extras unlock as soon as the store completes it.',
-			'supporter.thankYouTitle' => 'Thank you for supporting PlezTV',
+			'supporter.thankYouTitle' => 'Thank you for supporting PlenTV',
 			'supporter.thankYouBody' => 'Your Supporter extras are unlocked.',
 			'supporter.tileSubtitle' => 'Unlock themes and app icons with a one-time purchase',
 			'supporter.tileSubtitleThemesOnly' => 'Unlock themes with a one-time purchase',
@@ -10293,7 +10301,7 @@ extension on Translations {
 			'supporter.errors.restoreFailed' => 'Couldn\'t reach the store to restore your purchase. Try again.',
 			'supporter.errors.nothingToRestore' => 'No Supporter purchase was found for this store account.',
 			'settings.title' => 'Settings',
-			'settings.supportDeveloper' => 'Support PlezTV',
+			'settings.supportDeveloper' => 'Support PlenTV',
 			'settings.supportDeveloperDescription' => 'Donate via Liberapay to fund development',
 			'settings.language' => 'Language',
 			'settings.theme' => 'Theme',
@@ -10447,7 +10455,7 @@ extension on Translations {
 			'settings.importSettingsDescription' => 'Restore preferences from a file',
 			'settings.importSettingsConfirm' => 'This will replace your current settings. Continue?',
 			'settings.importSettingsSuccess' => 'Settings imported',
-			'settings.importSettingsInvalidFile' => 'This file isn\'t a valid PlezTV settings export',
+			'settings.importSettingsInvalidFile' => 'This file isn\'t a valid PlenTV settings export',
 			'settings.importSettingsNoUser' => 'Sign in before importing settings',
 			'settings.exportForkBackup' => 'Back up everything',
 			'settings.exportForkBackupDescription' => 'Save all settings, connections, favourites and guide data to one file',
@@ -10457,7 +10465,7 @@ extension on Translations {
 			'settings.importForkBackup' => 'Restore a backup',
 			'settings.importForkBackupDescription' => 'Restore everything from a backup file',
 			'settings.importForkBackupConfirm' => 'This will replace your current connections, settings, favourites and guide data with the backup. Continue?',
-			'settings.importForkBackupInvalidFile' => 'This file isn\'t a valid PlezTV backup',
+			'settings.importForkBackupInvalidFile' => 'This file isn\'t a valid PlenTV backup',
 			'settings.importForkBackupSummaryTitle' => 'Backup restored',
 			'settings.importForkBackupSummary' => ({required Object connections, required Object profiles, required Object settings, required Object guideSettings, required Object guideStores, required Object favourites, required Object resume}) => '${connections} connections · ${profiles} profiles · ${settings} settings · ${guideSettings} guide settings · ${guideStores} guide stores · ${favourites} favourites · ${resume} watch positions',
 			'settings.importForkBackupSkipped' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 item could not be restored', other: '${count} items could not be restored', ), 
@@ -10607,7 +10615,7 @@ extension on Translations {
 			'settings.forceTvMode' => 'Force TV mode',
 			'settings.forceTvModeDescription' => 'Force TV layout. For devices that don\'t auto-detect. Requires restart.',
 			'settings.startInFullscreen' => 'Start in fullscreen',
-			'settings.startInFullscreenDescription' => 'Open PlezTV in fullscreen mode at launch',
+			'settings.startInFullscreenDescription' => 'Open PlenTV in fullscreen mode at launch',
 			'settings.exitFullscreenOnPlayerClose' => 'Exit fullscreen on player close',
 			'settings.exitFullscreenOnPlayerCloseDescription' => 'Automatically exit fullscreen when closing the video player',
 			'settings.autoHidePerformanceOverlay' => 'Auto-Hide Performance Overlay',
@@ -10658,7 +10666,7 @@ extension on Translations {
 			'settings.playerScopeGlobal' => 'Everywhere',
 			'settings.playerScopeLibrary' => 'Per library',
 			'settings.playerScopeTitle' => 'Per show or movie',
-			'settings.exportDialogTitle' => 'Export PlezTV settings',
+			'settings.exportDialogTitle' => 'Export PlenTV settings',
 			'settings.scopeZoom' => 'Zoom',
 			'themeEditor.builtIn' => 'Built-in',
 			'themeEditor.presets' => 'Presets',
@@ -10880,8 +10888,8 @@ extension on Translations {
 			'mediaMenu.deleteEpisodeCountWarning' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'This deletes all ${n} episode in it, and its file.', other: 'This deletes all ${n} episodes in it, and their files.', ), 
 			'mediaMenu.deleteMultiPartWarning' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'This item is stored as ${n} file, which will be deleted.', other: 'This item is stored across ${n} files, and all of them will be deleted.', ), 
 			'mediaMenu.deleteSharedFileHeading' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} other episode is stored in the same file and will be deleted too:', other: '${n} other episodes are stored in the same file and will be deleted too:', ), 
-			'mediaMenu.deleteScopeUnverifiedProbeFailed' => 'PlezTV could not check which files this will remove, so it may delete more than the item named above. Cancel and try again, or delete anyway.',
-			'mediaMenu.deleteScopeUnverifiedNoFileInfo' => 'Your server did not provide file details for this item, so PlezTV cannot check which files this will remove. It may delete more than the item named above.',
+			'mediaMenu.deleteScopeUnverifiedProbeFailed' => 'PlenTV could not check which files this will remove, so it may delete more than the item named above. Cancel and try again, or delete anyway.',
+			'mediaMenu.deleteScopeUnverifiedNoFileInfo' => 'Your server did not provide file details for this item, so PlenTV cannot check which files this will remove. It may delete more than the item named above.',
 			'mediaMenu.mediaDeletedSuccessfully' => 'Media item deleted successfully',
 			'mediaMenu.mediaFailedToDelete' => 'Failed to delete media item',
 			'mediaMenu.rate' => 'Rate',
@@ -11140,7 +11148,7 @@ extension on Translations {
 			'mpvConfig.removeLine' => 'Remove line',
 			'mpvConfig.embeddedVoHint' => 'vo, gpu-context and gpu-api are ignored on Linux: embedded video always renders through vo=libmpv on the video plane, and gpu-next (which compute shaders like ArtCNN need) cannot run embedded.',
 			'dialog.confirmAction' => 'Confirm Action',
-			'profiles.addPlezTVProfile' => 'Add PlezTV profile',
+			'profiles.addPlezTVProfile' => 'Add PlenTV profile',
 			'profiles.switchingProfile' => 'Switching profile…',
 			'profiles.deleteThisProfileTitle' => 'Delete this profile?',
 			'profiles.deleteThisProfileMessage' => ({required Object displayName}) => 'Remove ${displayName}. Connections aren\'t affected.',
@@ -11220,12 +11228,12 @@ extension on Translations {
 			'connections.accessDeniedHint' => 'The panel refused this account on this network. It works on mobile data — check Connection refusals in Settings to see what it said.',
 			'connections.signInAgain' => 'Sign in again',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Edit ${product} connection',
-			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Add or remove URLs for ${serverName}. PlezTV will use the reachable URL with the lowest latency.',
+			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Add or remove URLs for ${serverName}. PlenTV will use the reachable URL with the lowest latency.',
 			'accountPreferences.sectionTitle' => 'Account preferences',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Audio, subtitle and library options saved on ${account}',
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Audio, subtitle and library options saved on ${count} accounts',
 			'accountPreferences.pickAccount' => 'Every account stores its own preferences. Pick the one to edit.',
-			'accountPreferences.storedOnAccount' => 'These options are saved on the account itself, so every app signed in to it uses them — including PlezTV on your other devices.',
+			'accountPreferences.storedOnAccount' => 'These options are saved on the account itself, so every app signed in to it uses them — including PlenTV on your other devices.',
 			'accountPreferences.noAccounts' => 'No accounts to configure',
 			'accountPreferences.noAccountsHint' => 'Sign in to Plex, or connect a Jellyfin or Emby server, and the preferences stored on that account show up here.',
 			'accountPreferences.unavailable' => 'Can\'t reach this account',
@@ -11310,14 +11318,14 @@ extension on Translations {
 			'discover.person.dateWithAge' => ({required Object date, required Object age}) => '${date} (age ${age})',
 			'discover.person.dateWithAgeAtDeath' => ({required Object date, required Object age}) => '${date} (aged ${age})',
 			'emergencyDebugLogSaver.title' => 'Emergency Debug Log Saver',
-			'emergencyDebugLogSaver.body' => 'PlezTV has crashed several times. You can save an emergency debug log and send it to us, or continue starting up as usual.',
+			'emergencyDebugLogSaver.body' => 'PlenTV has crashed several times. You can save an emergency debug log and send it to us, or continue starting up as usual.',
 			'emergencyDebugLogSaver.saveDebugLog' => 'Save debug log',
 			'emergencyDebugLogSaver.continueStartup' => 'Continue startup',
 			'emergencyDebugLogSaver.continueWithoutIptv' => 'Continue without IPTV',
 			'emergencyDebugLogSaver.saveInAppFolder' => 'Save in the app folder',
 			'emergencyDebugLogSaver.noPermissionNeeded' => 'No special permission is needed — choose where to save the file, or save it in the app folder.',
 			'emergencyDebugLogSaver.savedTo' => 'Saved to:',
-			'emergencyDebugLogSaver.restartPlezTv' => 'Restart PlezTV',
+			'emergencyDebugLogSaver.restartPlezTv' => 'Restart PlenTV',
 			'emergencyDebugLogSaver.saveFailed' => 'Could not save the debug log — try saving it in the app folder instead.',
 			'errors.searchFailed' => ({required Object error}) => 'Search failed: ${error}',
 			'errors.searchUnavailable' => 'Search could not reach any media server.',
@@ -11533,6 +11541,12 @@ extension on Translations {
 			'about.changelog2327.8' => 'New: the preview pictures you see while dragging the seek bar now only download when you actually drag — opening a video no longer downloads them for viewers who never scrub',
 			'about.changelog2327.9' => 'Fixed: on low-memory devices the player now caps how far ahead it caches a stream by time as well as size',
 			'about.changelog2327.10' => 'Cleanup: removed leftover unused code from the 2.26.0 update',
+			'about.changelog2328.0' => 'New: PlenTV is the new name — same app, new name and icon',
+			'about.changelog2328.1' => 'New: your old PlezTV backups still restore, and old links still open',
+			'about.changelog2328.2' => 'New: Quest headsets are now detected, so the controller thumbstick scrolls the right way',
+			'about.changelog2328.3' => 'New: bug reports and debug logs now go to our own GitHub issues',
+			'about.changelog2328.4' => 'Removed: the app no longer points at the old PlezTV services or funding page',
+			'about.changelog2328.5' => 'Cleanup: the unused crash-reporting code is gone',
 			'about.changelog2326.0' => 'Removed: Trakt, Simkl, MyAnimeList and AniList are gone — PlezTV no longer signs in to them or sends them your watch progress. MDBList stays, so Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores still show',
 			'about.changelog2326.1' => 'Removed: the anime title mappings are gone — the app no longer downloads anything from the creator\'s servers, and AniList and MyAnimeList entries no longer get extra IDs from that file',
 			'about.changelog2326.2' => 'Fixed: Downloads now loads its details in one place instead of two, so fixes to the list can\'t drift apart again',
@@ -11655,14 +11669,14 @@ extension on Translations {
 			'about.changelog2296.0' => 'Refreshing the catalog now uses less memory: each list is downloaded straight to a file and read once, instead of being held in memory and read three times',
 			'about.changelog2296.1' => 'The refresh still keeps the same safety checks — a partial or empty list keeps your old channels and movies instead of wiping them',
 			'about.changelog2296.2' => 'Hidden categories still stay out of search and the saved catalog, and showing one again still needs a refresh',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2296.3' => 'The scheduled background refresh uses the same lighter path',
 			'about.title' => 'About',
 			'about.openSourceLicenses' => 'Open Source Licenses',
 			'about.versionLabel' => ({required Object version}) => 'Version ${version}',
 			'about.appDescription' => 'A beautiful Plex, Jellyfin, and Emby client for Flutter',
 			'about.viewLicensesDescription' => 'View licenses of third-party libraries',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelogTitle' => 'What\'s new',
 			'about.changelog2271.0' => 'A dead channel no longer holds the spinner for 30 seconds — live TV gives up after 10 seconds and tells you, while movies and shows keep the 30 second wait',
 			'about.changelog2271.1' => 'Changing channels is faster: the next and previous channels are tuned in the background while the current one plays, so a zap skips the wait — and a channel whose guide already said no fails straight away instead of opening a dead stream',
@@ -11877,9 +11891,9 @@ extension on Translations {
 			'logs.clearLogsDescription' => 'Clears the on-screen log buffer',
 			'logs.shareAutoDump' => 'Share',
 			'logs.autoDumpTapToShare' => 'Tap to share the saved file',
-			'startup.failedTitle' => 'PlezTV could not start',
+			'startup.failedTitle' => 'PlenTV could not start',
 			'startup.failedBody' => 'Something went wrong during startup. The details below identify what failed.',
-			'startup.failedBodyRepairable' => 'PlezTV\'s saved settings file is damaged and has to be rebuilt before PlezTV can start. Retrying will not help — choose Repair storage.',
+			'startup.failedBodyRepairable' => 'PlenTV\'s saved settings file is damaged and has to be rebuilt before PlenTV can start. Retrying will not help — choose Repair storage.',
 			'startup.phaseLabel' => 'Step',
 			'startup.showDetails' => 'Show details',
 			'startup.hideDetails' => 'Hide details',
@@ -11888,16 +11902,16 @@ extension on Translations {
 			'startup.uploadDetails' => 'Submit details to GitHub',
 			'startup.repairStorage' => 'Repair storage',
 			'startup.repairTitle' => 'Repair stored data?',
-			'startup.repairBodyCommon' => 'PlezTV\'s settings file is damaged and cannot be read. Repairing resets every setting to its default.',
+			'startup.repairBodyCommon' => 'PlenTV\'s settings file is damaged and cannot be read. Repairing resets every setting to its default.',
 			'startup.repairBodyOneCredential' => 'One saved sign-in is damaged and cannot be read. Repairing removes just that one; your other settings are left alone.',
 			'startup.repairBodySignInsKept' => 'Your servers and profiles should stay signed in.',
 			'startup.repairBodySignInsLost' => 'The key protecting your saved sign-ins cannot be recovered from this file, so you will have to sign in to every server and profile again. Nothing on your media server is affected.',
-			'startup.repairBodySessionsUncertain' => 'MDBList and Seerr are stored separately and may or may not survive. PlezTV will tell you exactly what it kept.',
+			'startup.repairBodySessionsUncertain' => 'MDBList and Seerr are stored separately and may or may not survive. PlenTV will tell you exactly what it kept.',
 			'startup.repairConfirm' => 'Repair',
 			'startup.repairSucceeded' => 'Storage repaired',
 			'startup.repairNeedsRestart' => 'Storage repaired — restart required',
-			'startup.restartRequiredBody' => 'Your data was repaired, but PlezTV has to start fresh before it can use it. Close PlezTV and open it again.',
-			'startup.quitPlezTV' => 'Quit PlezTV',
+			'startup.restartRequiredBody' => 'Your data was repaired, but PlenTV has to start fresh before it can use it. Close PlenTV and open it again.',
+			'startup.quitPlezTV' => 'Quit PlenTV',
 			'startup.repairFailed' => 'Repair failed',
 			'startup.repairKeptSignIns' => 'Your servers and profiles are still signed in.',
 			'startup.repairLostSignIns' => 'The key protecting your saved sign-ins could not be recovered. You will have to sign in to every server and profile again.',
@@ -11906,7 +11920,7 @@ extension on Translations {
 			'startup.backupWarning' => 'It contains your sign-in credentials. Do not upload or share it.',
 			'startup.deleteBackup' => 'Delete copy',
 			'startup.backupDeleted' => 'Copy deleted.',
-			'startup.previousFailureTitle' => 'PlezTV failed to start last time',
+			'startup.previousFailureTitle' => 'PlenTV failed to start last time',
 			'startup.survivalModeBanner' => 'Survival mode — only live TV, search, favourites and playback load at startup.',
 			'startup.survivalModeLoadMore' => 'Load more',
 			'licenses.relatedPackages' => 'Related Packages',
@@ -12169,14 +12183,14 @@ extension on Translations {
 			'liveTv.recordShow' => 'Record show',
 			'liveTv.recordSettings.startEarly' => 'Start early (seconds)',
 			'liveTv.recordSettings.endLate' => 'End late (seconds)',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.recordSettings.newOnly' => 'Only new episodes',
 			'liveTv.recordSettings.anyChannel' => 'Record on any channel',
 			'liveTv.recordSettings.anyTime' => 'Record at any time',
 			'liveTv.recordSettings.skipInLibrary' => 'Skip episodes already in the library',
 			'liveTv.recordSettings.keepUpTo' => 'Episodes to keep',
 			'liveTv.recordSettings.keepUpToHint' => '0 keeps every episode',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.startingInMinutes' => ({required Object minutes}) => 'Starting in ${minutes} min',
 			'liveTv.dayAtTime' => ({required Object day, required Object time}) => '${day} at ${time}',
 			'liveTv.invalidPlaybackData' => ({required Object product}) => '${product} returned invalid Live TV playback data',
@@ -12284,7 +12298,7 @@ extension on Translations {
 			'watchTogether.codeCopied' => 'Room code copied',
 			'watchTogether.shareInvite' => 'Share Invite',
 			'watchTogether.inviteCopied' => 'Invite copied. Paste it into a message.',
-			'watchTogether.inviteMessage' => ({required Object code}) => 'Join my Watch Together room in PlezTV: open Watch Together, choose Join Room and enter ${code}.',
+			'watchTogether.inviteMessage' => ({required Object code}) => 'Join my Watch Together room in PlenTV: open Watch Together, choose Join Room and enter ${code}.',
 			'watchTogether.openSessionControls' => 'Open Watch Together session controls',
 			'watchTogether.reconnecting' => 'Reconnecting...',
 			'watchTogether.reconnectingDescription' => 'The connection dropped. You rejoin the room automatically.',
@@ -12310,7 +12324,7 @@ extension on Translations {
 			'watchTogether.chooseAnotherCopy' => 'Choose Another Copy',
 			'watchTogether.dontPlay' => 'Don\'t Play',
 			'watchTogether.unavailableTitle' => 'You don\'t have this video',
-			'watchTogether.unavailableDescription' => 'PlezTV couldn\'t find it in your libraries. Pick a copy yourself or search again.',
+			'watchTogether.unavailableDescription' => 'PlenTV couldn\'t find it in your libraries. Pick a copy yourself or search again.',
 			'watchTogether.chooseCopy' => 'Choose a Copy',
 			'watchTogether.searchAgain' => 'Search Again',
 			'watchTogether.noCandidates' => 'No copies found in your libraries.',
@@ -12402,7 +12416,7 @@ extension on Translations {
 			'watchTogether.errors.relayFull' => 'Watch Together is busy right now. Try again later.',
 			'watchTogether.errors.unreachable' => 'Couldn\'t reach the Watch Together relay. Check your connection.',
 			'watchTogether.errors.rateLimited' => 'Too many attempts. Wait a moment and try again.',
-			'watchTogether.errors.clientBlocked' => 'This version of PlezTV can\'t use the relay. Update the app.',
+			'watchTogether.errors.clientBlocked' => 'This version of PlenTV can\'t use the relay. Update the app.',
 			'watchTogether.errors.forbidden' => 'Only the host can do that.',
 			'watchTogether.errors.notInRoom' => 'You\'re not in a room.',
 			'watchTogether.errors.alreadyInRoom' => 'You\'re already in a room.',
@@ -12496,14 +12510,14 @@ extension on Translations {
 			'downloads.backgroundWarning.bannerAction' => 'Details',
 			'downloads.backgroundWarning.sheetTitle' => 'Background downloads are blocked',
 			'downloads.backgroundWarning.sheetTitleDegraded' => 'Background downloads may be limited',
-			'downloads.backgroundWarning.sheetIntro' => 'Android is preventing PlezTV from downloading reliably in the background.',
-			'downloads.backgroundWarning.sheetIntroDegraded' => 'Your device is limiting when PlezTV can download in the background.',
-			'downloads.backgroundWarning.reasonBackgroundRestricted' => 'PlezTV\'s background usage is restricted. Set its battery or background usage to "Unrestricted".',
-			'downloads.backgroundWarning.reasonStandbyRestricted' => 'Android has put PlezTV in a restricted standby state. Set its battery usage to "Unrestricted".',
+			'downloads.backgroundWarning.sheetIntro' => 'Android is preventing PlenTV from downloading reliably in the background.',
+			'downloads.backgroundWarning.sheetIntroDegraded' => 'Your device is limiting when PlenTV can download in the background.',
+			'downloads.backgroundWarning.reasonBackgroundRestricted' => 'PlenTV\'s background usage is restricted. Set its battery or background usage to "Unrestricted".',
+			'downloads.backgroundWarning.reasonStandbyRestricted' => 'Android has put PlenTV in a restricted standby state. Set its battery usage to "Unrestricted".',
 			'downloads.backgroundWarning.reasonDownloadChannelBlocked' => 'Download notifications are turned off, so progress and controls may be unavailable.',
 			'downloads.backgroundWarning.reasonNotificationsDisabled' => 'Notifications are turned off. On Android 13 or newer, they are required for long background downloads.',
 			'downloads.backgroundWarning.reasonDataSaver' => 'Data Saver is on, which blocks background downloads on mobile data. Downloads should still run on Wi-Fi.',
-			'downloads.backgroundWarning.reasonOemUnknown' => 'Downloads repeatedly stopped while PlezTV was in the background. Check PlezTV\'s battery or background usage settings.',
+			'downloads.backgroundWarning.reasonOemUnknown' => 'Downloads repeatedly stopped while PlenTV was in the background. Check PlenTV\'s battery or background usage settings.',
 			'downloads.backgroundWarning.openSettings' => 'Open settings',
 			'downloads.backgroundWarning.stillNotWorking' => 'Device-specific help',
 			'downloads.backgroundWarning.stillNotWorkingDescription' => 'See steps for your device, or send a log from Settings › View Logs if the issue continues.',
@@ -12568,19 +12582,19 @@ extension on Translations {
 			'companionRemote.session.stopServer' => 'Stop Server',
 			'companionRemote.session.minimize' => 'Minimize',
 			'companionRemote.session.manualAddressHint' => 'Manual connection address:',
-			'companionRemote.pairing.discoveryDescription' => 'PlezTV devices with the same Plex account appear here',
+			'companionRemote.pairing.discoveryDescription' => 'PlenTV devices with the same Plex account appear here',
 			'companionRemote.pairing.hostAddressHint' => '192.168.1.100:48632',
 			'companionRemote.pairing.connecting' => 'Connecting...',
 			'companionRemote.pairing.searchingForDevices' => 'Looking for devices...',
 			'companionRemote.pairing.noDevicesFound' => 'No devices found on your network',
-			'companionRemote.pairing.noDevicesHint' => 'Open PlezTV on desktop and use the same Wi-Fi',
+			'companionRemote.pairing.noDevicesHint' => 'Open PlenTV on desktop and use the same Wi-Fi',
 			'companionRemote.pairing.availableDevices' => 'Available Devices',
 			'companionRemote.pairing.manualConnection' => 'Manual Connection',
 			'companionRemote.pairing.cryptoInitFailed' => 'Couldn\'t start secure connection. Sign in to Plex first.',
 			'companionRemote.pairing.validationHostRequired' => 'Please enter host address',
 			'companionRemote.pairing.validationHostFormat' => 'Format must be IP:port (e.g., 192.168.1.100:48632)',
 			'companionRemote.pairing.connectionTimedOut' => 'Connection timed out. Use the same network on both devices.',
-			'companionRemote.pairing.sessionNotFound' => 'Device not found. Make sure PlezTV is running on the host.',
+			'companionRemote.pairing.sessionNotFound' => 'Device not found. Make sure PlenTV is running on the host.',
 			'companionRemote.pairing.authFailed' => 'Authentication failed. Both devices need the same Plex account.',
 			'companionRemote.pairing.failedToConnect' => ({required Object error}) => 'Failed to connect: ${error}',
 			'companionRemote.remote.disconnectConfirm' => 'Do you want to disconnect from the remote session?',
@@ -12683,14 +12697,14 @@ extension on Translations {
 			'performanceOverlay.cacheUsed' => 'Cache Used',
 			'performanceOverlay.cacheLimit' => 'Cache Limit',
 			'performanceOverlay.speed' => 'Speed',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.player' => 'Player',
 			'performanceOverlay.playMethod' => 'Play Method',
 			'performanceOverlay.memory' => 'Memory',
 			'performanceOverlay.uiFps' => 'UI FPS',
 			'performanceOverlay.fps' => 'FPS',
 			'performanceOverlay.decoderAndroidHw' => 'Android HW',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.decoderNvidiaHw' => 'NVIDIA HW',
 			'performanceOverlay.decoderQualcommHw' => 'Qualcomm HW',
 			'performanceOverlay.decoderMediatekHw' => 'MediaTek HW',
@@ -12814,10 +12828,10 @@ extension on Translations {
 			'seerr.signInWithEmby' => 'Sign in with Emby',
 			'seerr.signInWithLocal' => 'Use a local account',
 			'seerr.email' => 'Email',
-			'seerr.noSignInMethods' => 'This Seerr instance offers no sign-in method PlezTV supports.',
+			'seerr.noSignInMethods' => 'This Seerr instance offers no sign-in method PlenTV supports.',
 			'seerr.instance' => 'Instance',
 			'seerr.disconnectConfirm' => 'Disconnect Seerr?',
-			'seerr.disconnectConfirmBody' => 'PlezTV will forget this Seerr instance. Reconnect any time.',
+			'seerr.disconnectConfirmBody' => 'PlenTV will forget this Seerr instance. Reconnect any time.',
 			'seerr.request' => 'Request',
 			'seerr.request4k' => 'Request in 4K',
 			'seerr.seasons' => 'Seasons',
@@ -12842,7 +12856,7 @@ extension on Translations {
 			'seerr.statusBlocklisted' => 'Blocklisted',
 			'seerr.couldNotReach' => ({required Object url, required Object error}) => 'Could not reach ${url}: ${error}',
 			'seerr.noInstanceAtUrl' => ({required Object url, required Object status}) => 'No Seerr instance at ${url} (HTTP ${status})',
-			'seerr.behindAuthProxy' => 'An authenticating reverse proxy (SSO or HTTP auth) answered instead of Seerr. PlezTV cannot sign in through it: let Seerr\'s /api/v1 path bypass the proxy for this app, or use an address that reaches Seerr directly.',
+			'seerr.behindAuthProxy' => 'An authenticating reverse proxy (SSO or HTTP auth) answered instead of Seerr. PlenTV cannot sign in through it: let Seerr\'s /api/v1 path bypass the proxy for this app, or use an address that reaches Seerr directly.',
 			'seerr.invalidUrl' => 'Enter a server address like https://seerr.example.com',
 			'seerr.quickConnectUnsupported' => 'This Seerr instance does not support Quick Connect. It needs Seerr 3.4 or newer.',
 			'seerr.notInitialized' => 'This Seerr instance has not completed first-run setup',
@@ -12864,11 +12878,11 @@ extension on Translations {
 			'services.scrobble' => 'Track progress automatically',
 			'services.scrobbleDescription' => 'Update your list when you finish an episode or movie.',
 			'services.disconnectConfirm' => ({required Object service}) => 'Disconnect ${service}?',
-			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV will stop updating ${service}. Reconnect any time.',
+			'services.disconnectConfirmBody' => ({required Object service}) => 'PlenTV will stop updating ${service}. Reconnect any time.',
 			'services.connectFailed' => ({required Object service}) => 'Couldn\'t connect to ${service}. Try again.',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.deviceCode.title' => ({required Object service}) => 'Activate PlezTV on ${service}',
+			'services.deviceCode.title' => ({required Object service}) => 'Activate PlenTV on ${service}',
 			'services.deviceCode.instructions' => 'Scan the QR code, or visit the address below and enter this code:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => 'Open ${service} to activate',
 			'services.deviceCode.copyCode' => 'Copy activation code',
@@ -12951,7 +12965,7 @@ extension on Translations {
 			'addServer.m3uInvalidUrl' => 'Enter a valid playlist URL starting with http:// or https://.',
 			'addServer.xtreamProbeFailed' => 'Could not sign in to that Xtream server. Check the server URL, username, and password.',
 			'addServer.addIptv' => 'Add',
-			'deepLinks.invalid' => 'This PlezTV link isn\'t valid.',
+			'deepLinks.invalid' => 'This PlenTV link isn\'t valid.',
 			'deepLinks.profileNotFound' => ({required Object profile}) => 'No profile matches "${profile}".',
 			'deepLinks.serverUnavailable' => 'Couldn\'t reach the server for this link.',
 			'deepLinks.notFound' => 'Couldn\'t find this title in your libraries.',
@@ -13197,14 +13211,14 @@ extension on Translations {
 			'iptv.epgDetailsSource' => 'Guide source',
 			'iptv.epgDetailsGuideSource' => 'Guide data from',
 			'iptv.epgDetailsMatchedId' => 'Matched guide channel',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgDetailsMatchMethod' => 'Matched by',
 			'iptv.epgDetailsPrograms' => 'Programmes',
 			'iptv.epgDetailsProgramsCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} programme', other: '${n} programmes', ), 
 			'iptv.epgDetailsLastFetch' => 'Last fetched',
 			'iptv.epgDetailsNextFetch' => 'Next refresh',
 			'iptv.epgDetailsWhyNoMatch' => 'Why no guide',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgDetailsRefresh' => 'Refresh this channel',
 			'iptv.epgMatchMethodTvgId' => 'Channel ID',
 			'iptv.epgMatchMethodName' => 'Channel name',

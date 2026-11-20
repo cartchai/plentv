@@ -89,10 +89,10 @@ void main() {
       expect(section, contains('theme: dark (string)'));
     });
 
-    test('debugFileName has the pleztv-debug-YYYYMMDD-HHMMSS.txt shape', () {
+    test('debugFileName has the plentv-debug-YYYYMMDD-HHMMSS.txt shape', () {
       expect(
         DebugLogExportService.debugFileName(DateTime(2026, 11, 13, 20, 45, 30)),
-        'pleztv-debug-20261113-204530.txt',
+        'plentv-debug-20261113-204530.txt',
       );
     });
 
@@ -209,12 +209,12 @@ void main() {
       DebugLogExportService.debugUseDownloadsOverride = true;
       DownloadsMediaStore.debugWriteOverride =
           ({required fileName, required bytes, required mimeType}) async {
-            expect(fileName, startsWith('pleztv-debug-'));
+            expect(fileName, startsWith('plentv-debug-'));
             expect(fileName, endsWith('.txt'));
             return '/storage/emulated/0/Download/$fileName';
           };
       final path = await DebugLogExportService.exportToFile(baseLogsText: 'some log\n');
-      expect(path, startsWith('/storage/emulated/0/Download/pleztv-debug-'));
+      expect(path, startsWith('/storage/emulated/0/Download/plentv-debug-'));
       expect(path, endsWith('.txt'));
     });
 

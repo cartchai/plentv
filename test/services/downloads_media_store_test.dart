@@ -45,15 +45,15 @@ void main() {
       // The staged file must exist with the exact bytes while the
       // channel call runs.
       expect(await File(seenSourcePath!).readAsBytes(), [1, 2, 3, 4]);
-      return '/storage/emulated/0/Download/pleztv-autodump.txt';
+      return '/storage/emulated/0/Download/plentv-autodump.txt';
     });
 
     final path = await DownloadsMediaStore.writeFile(
-      fileName: 'pleztv-autodump.txt',
+      fileName: 'plentv-autodump.txt',
       bytes: Uint8List.fromList([1, 2, 3, 4]),
     );
-    expect(path, '/storage/emulated/0/Download/pleztv-autodump.txt');
-    expect(seenFileName, 'pleztv-autodump.txt');
+    expect(path, '/storage/emulated/0/Download/plentv-autodump.txt');
+    expect(seenFileName, 'plentv-autodump.txt');
     expect(seenMimeType, 'text/plain');
     // The staging file is deleted after the write.
     expect(await File(seenSourcePath!).exists(), isFalse);
@@ -62,7 +62,7 @@ void main() {
   test('a null channel result reads as no file, never a throw', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (_) async => null);
     expect(
-      await DownloadsMediaStore.writeFile(fileName: 'pleztv-autodump.txt', bytes: Uint8List.fromList([1])),
+      await DownloadsMediaStore.writeFile(fileName: 'plentv-autodump.txt', bytes: Uint8List.fromList([1])),
       isNull,
     );
   });
@@ -72,7 +72,7 @@ void main() {
       throw PlatformException(code: 'unavailable');
     });
     expect(
-      await DownloadsMediaStore.writeFile(fileName: 'pleztv-autodump.txt', bytes: Uint8List.fromList([1])),
+      await DownloadsMediaStore.writeFile(fileName: 'plentv-autodump.txt', bytes: Uint8List.fromList([1])),
       isNull,
     );
   });
@@ -87,10 +87,10 @@ void main() {
         ({required fileName, required bytes, required mimeType}) async =>
             '/storage/emulated/0/Download/$fileName';
     final path = await DownloadsMediaStore.writeFile(
-      fileName: 'pleztv-autodump.txt',
+      fileName: 'plentv-autodump.txt',
       bytes: Uint8List.fromList([9]),
     );
-    expect(path, '/storage/emulated/0/Download/pleztv-autodump.txt');
+    expect(path, '/storage/emulated/0/Download/plentv-autodump.txt');
     expect(channelCalled, isFalse);
   });
 
@@ -98,7 +98,7 @@ void main() {
     DownloadsMediaStore.debugWriteOverride =
         ({required fileName, required bytes, required mimeType}) async => null;
     expect(
-      await DownloadsMediaStore.writeFile(fileName: 'pleztv-autodump.txt', bytes: Uint8List.fromList([1])),
+      await DownloadsMediaStore.writeFile(fileName: 'plentv-autodump.txt', bytes: Uint8List.fromList([1])),
       isNull,
     );
   });

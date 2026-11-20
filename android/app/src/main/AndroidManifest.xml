@@ -41,7 +41,7 @@
     libraries on disk, less install-time storage on 1.5–2 GB
     devices. The parent owns the split-per-abi setting in the workflow. -->
     <application
-        android:label="PlezTV"
+        android:label="PlenTV"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/tv_banner"

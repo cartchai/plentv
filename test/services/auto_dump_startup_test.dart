@@ -162,7 +162,7 @@ void main() {
       await driveCounterToThreshold();
 
       final picker = _FakeFilePicker()
-        ..saveResult = '${tempDir.path}/picked/pleztv-autodump.txt';
+        ..saveResult = '${tempDir.path}/picked/plentv-autodump.txt';
       FilePickerService.setDelegateForTesting(picker);
 
       final result = await AutoDumpService.writeDumpToPicker(failedStarts: 3);
@@ -299,7 +299,7 @@ void main() {
       // logger would start its periodic flush timer, which never lets
       // pumpAndSettle settle.
       File('${tempDir.path}/${FileLogOutput.fileName}').writeAsStringSync('w2 seed line\n');
-      final pickedPath = '${tempDir.path}/picked/pleztv-autodump.txt';
+      final pickedPath = '${tempDir.path}/picked/plentv-autodump.txt';
       final picker = _FakeFilePicker()..saveResult = pickedPath;
       FilePickerService.setDelegateForTesting(picker);
       final fakeShare = _FakeSharePlatform();
@@ -331,9 +331,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('W3: "Save in the app folder" writes pleztv-autodump.txt and the Logs row sees it', (tester) async {
+    testWidgets('W3: "Save in the app folder" writes plentv-autodump.txt and the Logs row sees it', (tester) async {
       await tester.runAsync(driveCounterToThreshold);
-      final picker = _FakeFilePicker()..saveResult = '${tempDir.path}/picked/pleztv-autodump.txt';
+      final picker = _FakeFilePicker()..saveResult = '${tempDir.path}/picked/plentv-autodump.txt';
       FilePickerService.setDelegateForTesting(picker);
 
       await pumpSaver(tester);
@@ -388,14 +388,14 @@ void main() {
     testWidgets('W6 (1.2.21): TV mode (no picker) — the app-folder button is hidden and "Save debug log" saves to Downloads first',
         (tester) async {
       await tester.runAsync(driveCounterToThreshold);
-      final picker = _FakeFilePicker()..saveResult = '${tempDir.path}/picked/pleztv-autodump.txt';
+      final picker = _FakeFilePicker()..saveResult = '${tempDir.path}/picked/plentv-autodump.txt';
       FilePickerService.setDelegateForTesting(picker);
       // 1.2.21: on TV the picker is absent, so the primary save goes to
       // the shared Downloads collection — the app folder is only the
       // fallback (covered in auto_dump_safe_mode_screen_test.dart).
       DownloadsMediaStore.debugWriteOverride =
           ({required fileName, required bytes, required mimeType}) async =>
-              '/storage/emulated/0/Download/pleztv-autodump.txt';
+              '/storage/emulated/0/Download/plentv-autodump.txt';
 
       await pumpSaver(tester, showSavePicker: false);
       expect(find.text('Save in the app folder'), findsNothing);
@@ -405,7 +405,7 @@ void main() {
 
       expect(picker.saveCalls, 0);
       expect(dumpExists(), isFalse);
-      expect(find.text('/storage/emulated/0/Download/pleztv-autodump.txt'), findsOneWidget);
+      expect(find.text('/storage/emulated/0/Download/plentv-autodump.txt'), findsOneWidget);
       expect(await readCounter(tester), 0);
       expect(find.text('Saved to:'), findsOneWidget);
       expect(tester.takeException(), isNull);

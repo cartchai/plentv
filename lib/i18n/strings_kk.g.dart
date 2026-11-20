@@ -101,7 +101,7 @@ class _Translations$app$kk extends Translations$app$en {
 	final TranslationsKk _root; // ignore: unused_field
 
 	// Translations
-	@override String get title => 'PlezTV';
+	@override String get title => 'PlenTV';
 }
 
 // Path: appIcon
@@ -117,8 +117,8 @@ class _Translations$appIcon$kk extends Translations$appIcon$en {
 	@override String get locked => 'Supporter артықшылығы';
 	@override String get lockedHint => 'Балама белгішелер — Supporter артықшылығы.';
 	@override String get changeFailed => 'Қолданба белгішесін өзгерту мүмкін болмады';
-	@override String get launcherHint => 'PlezTV-ден шыққаннан кейін жаңа белгіше басты экранда пайда болады.';
-	@override String get tvLauncherHint => 'PlezTV-ден шыққаннан кейін жаңа баннер пайда болады. Android TV теледидар қайта іске қосылғанша ескісін көрсете беруі мүмкін.';
+	@override String get launcherHint => 'PlenTV-ден шыққаннан кейін жаңа белгіше басты экранда пайда болады.';
+	@override String get tvLauncherHint => 'PlenTV-ден шыққаннан кейін жаңа баннер пайда болады. Android TV теледидар қайта іске қосылғанша ескісін көрсете беруі мүмкін.';
 	@override late final _Translations$appIcon$names$kk names = _Translations$appIcon$names$kk._(_root);
 }
 
@@ -144,7 +144,7 @@ class _Translations$auth$kk extends Translations$auth$en {
 	@override String get quickConnectWaiting => 'Растау күтілуде…';
 	@override String get quickConnectCancel => 'Бас тарту';
 	@override String get quickConnectExpired => 'Жылдам қосылу мерзімі өтті. Қайтадан байқап көріңіз.';
-	@override String get localDataRecoveryRequired => 'PlezTV жергілікті кіру мәліметтерін қалпына келтіре алмады. Қайтадан кіріңіз.';
+	@override String get localDataRecoveryRequired => 'PlenTV жергілікті кіру мәліметтерін қалпына келтіре алмады. Қайтадан кіріңіз.';
 	@override String get pinCheckRejected => 'Plex PIN кодын тексеру қабылданбады';
 }
 
@@ -245,19 +245,19 @@ class _Translations$supporter$kk extends Translations$supporter$en {
 	final TranslationsKk _root; // ignore: unused_field
 
 	// Translations
-	@override String get title => 'PlezTV Supporter';
-	@override String get intro => 'PlezTV-дің дамуына қолдау көрсетіп, безендіру мүмкіндіктерін ашатын бір реттік сатып алу:';
+	@override String get title => 'PlenTV Supporter';
+	@override String get intro => 'PlenTV-дің дамуына қолдау көрсетіп, безендіру мүмкіндіктерін ашатын бір реттік сатып алу:';
 	@override String get presetThemes => 'Дайын тақырыптар';
 	@override String get presetThemesDescription => 'Шоқ, Мұздық, Орман, Алхоры және Қағаз';
 	@override String get customTheme => 'Жеке тақырып';
 	@override String get customThemeDescription => 'Әр түсті өзіңіз таңдаңыз';
 	@override String get appIcons => 'Қолданба белгішелері';
-	@override String get appIconsDescription => 'PlezTV-дің балама белгішесін таңдаңыз';
+	@override String get appIconsDescription => 'PlenTV-дің балама белгішесін таңдаңыз';
 	@override String buy({required Object price}) => '${price} бағасына сатып алу';
 	@override String get loadingPrice => 'Баға жүктелуде...';
 	@override String get restore => 'Сатып алуларды қалпына келтіру';
 	@override String get pending => 'Сатып алуыңыз төлемді немесе растауды күтуде. Дүкен оны аяқтаған бойда қосымша мүмкіндіктер ашылады.';
-	@override String get thankYouTitle => 'PlezTV-ді қолдағаныңыз үшін рахмет';
+	@override String get thankYouTitle => 'PlenTV-ді қолдағаныңыз үшін рахмет';
 	@override String get thankYouBody => 'Supporter мүмкіндіктеріңіз ашылды.';
 	@override String get tileSubtitle => 'Тақырыптар мен қолданба белгішелерін бір реттік сатып алумен ашыңыз';
 	@override String get tileSubtitleThemesOnly => 'Тақырыптарды бір реттік сатып алумен ашыңыз';
@@ -273,7 +273,7 @@ class _Translations$settings$kk extends Translations$settings$en {
 
 	// Translations
 	@override String get title => 'Баптаулар';
-	@override String get supportDeveloper => 'PlezTV жобасын қолдау';
+	@override String get supportDeveloper => 'PlenTV жобасын қолдау';
 	@override String get supportDeveloperDescription => 'Дамытуды қаржыландыру үшін Liberapay арқылы демеушілік жасаңыз';
 	@override String get language => 'Тіл';
 	@override String get theme => 'Тақырып';
@@ -418,7 +418,7 @@ class _Translations$settings$kk extends Translations$settings$en {
 	@override String get importSettingsDescription => 'Параметрлерді файлдан қалпына келтіріңіз';
 	@override String get importSettingsConfirm => 'Бұл ағымдағы баптауларыңыздың үстінен жазады. Жалғастырасыз ба?';
 	@override String get importSettingsSuccess => 'Баптаулар импортталды';
-	@override String get importSettingsInvalidFile => 'Бұл файл дұрыс PlezTV баптаулар файлы емес';
+	@override String get importSettingsInvalidFile => 'Бұл файл дұрыс PlenTV баптаулар файлы емес';
 	@override String get importSettingsNoUser => 'Баптауларды импорттау алдында жүйеге кіріңіз';
 	@override String get shortcutsReset => 'Пернелер тіркесі әдепкі күйге қайтарылды';
 	@override String get resetShortcutsConfirm => 'Бұл таңдамалы пернелер тіркесін әдепкі мәндермен ауыстырады. Жалғастырасыз ба?';
@@ -554,7 +554,7 @@ class _Translations$settings$kk extends Translations$settings$en {
 	@override String get forceTvMode => 'TV режимін мәжбүрлеу';
 	@override String get forceTvModeDescription => 'TV интерфейсін мәжбүрлеу. Автоматты түрде анықталмайтын құрылғылар үшін. Қайта іске қосу қажет.';
 	@override String get startInFullscreen => 'Толық экранда бастау';
-	@override String get startInFullscreenDescription => 'PlezTV-ді ашқанда толық экран режимінде ашу';
+	@override String get startInFullscreenDescription => 'PlenTV-ді ашқанда толық экран режимінде ашу';
 	@override String get exitFullscreenOnPlayerClose => 'Ойнатқыш жабылғанда толық экраннан шығу';
 	@override String get exitFullscreenOnPlayerCloseDescription => 'Видео ойнатқышты жапқанда автоматты түрде толық экраннан шығу';
 	@override String get autoHidePerformanceOverlay => 'Өнімділік панелін авто-жасыру';
@@ -603,7 +603,7 @@ class _Translations$settings$kk extends Translations$settings$en {
 	@override String get playerScopeGlobal => 'Барлық жерде';
 	@override String get playerScopeLibrary => 'Кітапхана бойынша';
 	@override String get playerScopeTitle => 'Сериал немесе фильм бойынша';
-	@override String get exportDialogTitle => 'PlezTV параметрлерін экспорттау';
+	@override String get exportDialogTitle => 'PlenTV параметрлерін экспорттау';
 	@override String get scopeZoom => 'Масштаб';
 }
 
@@ -839,8 +839,8 @@ class _Translations$mediaMenu$kk extends Translations$mediaMenu$en {
 		one: 'Сол файлда тағы ${n} бөлім сақталған, ол да өшіріледі:',
 		other: 'Сол файлда тағы ${n} бөлім сақталған, олар да өшіріледі:',
 	);
-	@override String get deleteScopeUnverifiedProbeFailed => 'PlezTV қандай файлдар өшірілетінін тексере алмады, сондықтан ол жоғарыда аталған элементтен артық өшіруі мүмкін. Бас тартып, қайталап көріңіз немесе бәрібір өшіріңіз.';
-	@override String get deleteScopeUnverifiedNoFileInfo => 'Серверіңіз бұл элемент үшін файл мәліметтерін ұсынбады, сондықтан PlezTV қандай файлдар өшірілетінін тексере алмайды. Ол жоғарыда аталған элементтен артық өшіруі мүмкін.';
+	@override String get deleteScopeUnverifiedProbeFailed => 'PlenTV қандай файлдар өшірілетінін тексере алмады, сондықтан ол жоғарыда аталған элементтен артық өшіруі мүмкін. Бас тартып, қайталап көріңіз немесе бәрібір өшіріңіз.';
+	@override String get deleteScopeUnverifiedNoFileInfo => 'Серверіңіз бұл элемент үшін файл мәліметтерін ұсынбады, сондықтан PlenTV қандай файлдар өшірілетінін тексере алмайды. Ол жоғарыда аталған элементтен артық өшіруі мүмкін.';
 	@override String get mediaDeletedSuccessfully => 'Медиа элементі сәтті өшірілді';
 	@override String get mediaFailedToDelete => 'Медиа элементін өшіру мүмкін болмады';
 	@override String get rate => 'Бағалау';
@@ -1175,7 +1175,7 @@ class _Translations$profiles$kk extends Translations$profiles$en {
 	final TranslationsKk _root; // ignore: unused_field
 
 	// Translations
-	@override String get addPlezTVProfile => 'PlezTV профилін қосу';
+	@override String get addPlezTVProfile => 'PlenTV профилін қосу';
 	@override String get switchingProfile => 'Профильді ауыстыру…';
 	@override String get deleteThisProfileTitle => 'Осы профиль өшірілсін бе?';
 	@override String deleteThisProfileMessage({required Object displayName}) => '${displayName} өшіріледі. Қосылымдарға әсер етпейді.';
@@ -1259,7 +1259,7 @@ class _Translations$connections$kk extends Translations$connections$en {
 	@override String accessDeniedMany({required Object count}) => '${count} сервер бұл тіркелгіге кіруден бас тартты';
 	@override String get signInAgain => 'Қайтадан кіру';
 	@override String editMediaBrowserTitle({required Object product}) => '${product} қосылымын өңдеу';
-	@override String editMediaBrowserIntro({required Object serverName}) => '${serverName} үшін URL мекенжайларды қосыңыз немесе өшіріңіз. PlezTV ең төмен кідірісі бар қолжетімді URL мекенжайды пайдаланады.';
+	@override String editMediaBrowserIntro({required Object serverName}) => '${serverName} үшін URL мекенжайларды қосыңыз немесе өшіріңіз. PlenTV ең төмен кідірісі бар қолжетімді URL мекенжайды пайдаланады.';
 }
 
 // Path: accountPreferences
@@ -1273,7 +1273,7 @@ class _Translations$accountPreferences$kk extends Translations$accountPreference
 	@override String hubSubtitleSingle({required Object account}) => '${account} тіркелгісінде сақталған аудио, субтитр және кітапхана баптаулары';
 	@override String hubSubtitleMultiple({required Object count}) => '${count} тіркелгіде сақталған аудио, субтитр және кітапхана баптаулары';
 	@override String get pickAccount => 'Әр тіркелгі өз баптауларын сақтайды. Өңдеу үшін біреуін таңдаңыз.';
-	@override String get storedOnAccount => 'Бұл баптаулар тіркелгінің өзінде сақталады, сондықтан оған кірген әрбір қолданба оларды пайдаланады — басқа құрылғыларыңыздағы PlezTV қоса.';
+	@override String get storedOnAccount => 'Бұл баптаулар тіркелгінің өзінде сақталады, сондықтан оған кірген әрбір қолданба оларды пайдаланады — басқа құрылғыларыңыздағы PlenTV қоса.';
 	@override String get noAccounts => 'Баптауға тіркелгілер жоқ';
 	@override String get noAccountsHint => 'Plex-ке кіріңіз немесе Jellyfin не Emby серверін қосыңыз, сонда сол тіркелгіде сақталған баптаулар осында көрсетіледі.';
 	@override String get unavailable => 'Бұл тіркелгіге қол жеткізу мүмкін емес';
@@ -1485,9 +1485,9 @@ class _Translations$startup$kk extends Translations$startup$en {
 	final TranslationsKk _root; // ignore: unused_field
 
 	// Translations
-	@override String get failedTitle => 'PlezTV іске қосылмады';
+	@override String get failedTitle => 'PlenTV іске қосылмады';
 	@override String get failedBody => 'Іске қосу кезінде қате орын алды. Төмендегі мәліметтер ненің сәтсіз аяқталғанын көрсетеді.';
-	@override String get failedBodyRepairable => 'PlezTV сақталған баптаулар файлы зақымдалған және PlezTV іске қосылмас бұрын оны қайта құру қажет. Қайталау көмектеспейді — «Сақтауды қалпына келтіру» тармағын таңдаңыз.';
+	@override String get failedBodyRepairable => 'PlenTV сақталған баптаулар файлы зақымдалған және PlenTV іске қосылмас бұрын оны қайта құру қажет. Қайталау көмектеспейді — «Сақтауды қалпына келтіру» тармағын таңдаңыз.';
 	@override String get phaseLabel => 'Қадам';
 	@override String get showDetails => 'Мәліметтерді көрсету';
 	@override String get hideDetails => 'Мәліметтерді жасыру';
@@ -1496,15 +1496,15 @@ class _Translations$startup$kk extends Translations$startup$en {
 	@override String get uploadDetails => 'Мәліметтерді жүктеп жіберу';
 	@override String get repairStorage => 'Сақтауды қалпына келтіру';
 	@override String get repairTitle => 'Сақталған деректер қалпына келтірілсін бе?';
-	@override String get repairBodyCommon => 'PlezTV баптаулар файлы зақымдалған және оқылмайды. Қалпына келтіру барлық баптауды әдепкі мәнге қайтарады.';
+	@override String get repairBodyCommon => 'PlenTV баптаулар файлы зақымдалған және оқылмайды. Қалпына келтіру барлық баптауды әдепкі мәнге қайтарады.';
 	@override String get repairBodyOneCredential => 'Бір сақталған кіру деректері зақымдалған және оқылмайды. Қалпына келтіру тек соны өшіреді; қалған баптауларыңызға тиіспейді.';
 	@override String get repairBodySignInsKept => 'Серверлеріңіз бен профильдеріңіз кірген күйінде қалады.';
 	@override String get repairBodySignInsLost => 'Сақталған кіру деректерін қорғайтын кілт осы файлдан қалпына келтірілмейді, сондықтан әрбір сервер мен профильге қайта кіруге тура келеді. Медиа серверіңіздегі ештеңеге әсер етілмейді.';
 	@override String get repairConfirm => 'Қалпына келтіру';
 	@override String get repairSucceeded => 'Сақтау қалпына келтірілді';
 	@override String get repairNeedsRestart => 'Сақтау қалпына келтірілді — қайта іске қосу қажет';
-	@override String get restartRequiredBody => 'Деректеріңіз қалпына келтірілді, бірақ PlezTV оларды пайдаланар алдында жаңадан іске қосылуы керек. PlezTV жабыңыз да, қайта ашыңыз.';
-	@override String get quitPlezTV => 'PlezTV бағдарламасынан шығу';
+	@override String get restartRequiredBody => 'Деректеріңіз қалпына келтірілді, бірақ PlenTV оларды пайдаланар алдында жаңадан іске қосылуы керек. PlenTV жабыңыз да, қайта ашыңыз.';
+	@override String get quitPlezTV => 'PlenTV бағдарламасынан шығу';
 	@override String get repairFailed => 'Қалпына келтіру сәтсіз аяқталды';
 	@override String get repairKeptSignIns => 'Серверлеріңіз бен профильдеріңіз әлі кірген күйде.';
 	@override String get repairLostSignIns => 'Сақталған кіру деректерін қорғайтын кілт қалпына келтірілмеді. Әрбір сервер мен профильге қайта кіруге тура келеді.';
@@ -1513,7 +1513,7 @@ class _Translations$startup$kk extends Translations$startup$en {
 	@override String get backupWarning => 'Онда сіздің кіру деректеріңіз бар. Оны жүктеп жібермеңіз немесе бөліспеңіз.';
 	@override String get deleteBackup => 'Көшірмені өшіру';
 	@override String get backupDeleted => 'Көшірме өшірілді.';
-	@override String get previousFailureTitle => 'PlezTV соңғы рет іске қосыла алмады';
+	@override String get previousFailureTitle => 'PlenTV соңғы рет іске қосыла алмады';
 }
 
 // Path: licenses
@@ -1818,7 +1818,7 @@ class _Translations$watchTogether$kk extends Translations$watchTogether$en {
 	@override String get codeCopied => 'Бөлме коды көшірілді';
 	@override String get shareInvite => 'Шақыру жіберу';
 	@override String get inviteCopied => 'Шақыру көшірілді. Оны хабарламаға қойыңыз.';
-	@override String inviteMessage({required Object code}) => 'PlezTV-дегі «Бірге көру» бөлмеме қосылыңыз: «Бірге көру» бөлімін ашып, «Бөлмеге қосылу» түймесін таңдаңыз да, ${code} кодын енгізіңіз.';
+	@override String inviteMessage({required Object code}) => 'PlenTV-дегі «Бірге көру» бөлмеме қосылыңыз: «Бірге көру» бөлімін ашып, «Бөлмеге қосылу» түймесін таңдаңыз да, ${code} кодын енгізіңіз.';
 	@override String get openSessionControls => 'Басқару элементтерін ашу';
 	@override String get reconnecting => 'Қайта қосылуда...';
 	@override String get reconnectingDescription => 'Байланыс үзілді. Бөлмеге автоматты түрде қайта қосыласыз.';
@@ -1844,7 +1844,7 @@ class _Translations$watchTogether$kk extends Translations$watchTogether$en {
 	@override String get chooseAnotherCopy => 'Басқа көшірмені таңдау';
 	@override String get dontPlay => 'Ойнатпау';
 	@override String get unavailableTitle => 'Сізде бұл видео жоқ';
-	@override String get unavailableDescription => 'PlezTV оны кітапханаларыңыздан таба алмады. Көшірмені өзіңіз таңдаңыз немесе қайта іздеңіз.';
+	@override String get unavailableDescription => 'PlenTV оны кітапханаларыңыздан таба алмады. Көшірмені өзіңіз таңдаңыз немесе қайта іздеңіз.';
 	@override String get chooseCopy => 'Көшірмені таңдау';
 	@override String get searchAgain => 'Қайта іздеу';
 	@override String get noCandidates => 'Кітапханаларыңыздан көшірмелер табылмады.';
@@ -2315,7 +2315,7 @@ class _Translations$seerr$kk extends Translations$seerr$en {
 	@override String get noSignInMethods => 'Бұл Seerr қолдау көрсетілетін кіру әдісін ұсынбайды.';
 	@override String get instance => 'Инстанция';
 	@override String get disconnectConfirm => 'Seerr ажыратылсын ба?';
-	@override String get disconnectConfirmBody => 'PlezTV бұл Seerr серверін ұмытады. Кез келген уақытта қайта қосыла аласыз.';
+	@override String get disconnectConfirmBody => 'PlenTV бұл Seerr серверін ұмытады. Кез келген уақытта қайта қосыла аласыз.';
 	@override String get request => 'Сұрау салу';
 	@override String get request4k => '4K сұрау салу';
 	@override String get seasons => 'Маусымдар';
@@ -2340,7 +2340,7 @@ class _Translations$seerr$kk extends Translations$seerr$en {
 	@override String get statusBlocklisted => 'Бұғаттау тізімінде';
 	@override String couldNotReach({required Object url, required Object error}) => '${url} мекенжайына қосылу мүмкін болмады: ${error}';
 	@override String noInstanceAtUrl({required Object url, required Object status}) => '${url} мекенжайында Seerr данасы жоқ (HTTP ${status})';
-	@override String get behindAuthProxy => 'Seerr орнына аутентификация жасайтын кері прокси (SSO немесе HTTP auth) жауап берді. PlezTV оның арқылы кіре алмайды: осы қолданба үшін Seerr-дің /api/v1 жолы проксиді айналып өтуіне рұқсат етіңіз немесе Seerr-ге тікелей жететін мекенжайды пайдаланыңыз.';
+	@override String get behindAuthProxy => 'Seerr орнына аутентификация жасайтын кері прокси (SSO немесе HTTP auth) жауап берді. PlenTV оның арқылы кіре алмайды: осы қолданба үшін Seerr-дің /api/v1 жолы проксиді айналып өтуіне рұқсат етіңіз немесе Seerr-ге тікелей жететін мекенжайды пайдаланыңыз.';
 	@override String get invalidUrl => 'Сервер мекенжайын енгізіңіз, мысалы: https://seerr.example.com';
 	@override String get quickConnectUnsupported => 'Бұл Seerr данасы Жылдам қосылуды қолдамайды. Оған Seerr 3.4 немесе одан жаңарақ нұсқа қажет.';
 	@override String get notInitialized => 'Бұл Seerr данасының бастапқы баптауы аяқталмаған';
@@ -2370,7 +2370,7 @@ class _Translations$services$kk extends Translations$services$en {
 	@override String get scrobble => 'Барысты автоматты бақылау';
 	@override String get scrobbleDescription => 'Эпизодты немесе фильмді көріп болғанда тізіміңізді жаңарту.';
 	@override String disconnectConfirm({required Object service}) => '${service} ажыратылсын ба?';
-	@override String disconnectConfirmBody({required Object service}) => 'PlezTV ${service} жаңартуды тоқтатады. Кез келген уақытта қайта қосыла аласыз.';
+	@override String disconnectConfirmBody({required Object service}) => 'PlenTV ${service} жаңартуды тоқтатады. Кез келген уақытта қайта қосыла аласыз.';
 	@override String connectFailed({required Object service}) => '${service} қосылу мүмкін болмады. Қайтадан байқап көріңіз.';
 	@override late final _Translations$services$names$kk names = _Translations$services$names$kk._(_root);
 	@override late final _Translations$services$deviceCode$kk deviceCode = _Translations$services$deviceCode$kk._(_root);
@@ -3124,7 +3124,7 @@ class _Translations$watchTogether$errors$kk extends Translations$watchTogether$e
 	@override String get relayFull => 'Бірге көру қызметі қазір шамадан тыс жүктелген. Кейінірек қайталап көріңіз.';
 	@override String get unreachable => 'Бірге көру релесіне қосылу мүмкін болмады. Қосылымды тексеріңіз.';
 	@override String get rateLimited => 'Әрекеттер тым көп. Біраз күтіп, қайтадан байқап көріңіз.';
-	@override String get clientBlocked => 'PlezTV-дің бұл нұсқасы релені пайдалана алмайды. Қолданбаны жаңартыңыз.';
+	@override String get clientBlocked => 'PlenTV-дің бұл нұсқасы релені пайдалана алмайды. Қолданбаны жаңартыңыз.';
 	@override String get forbidden => 'Мұны тек ұйымдастырушы жасай алады.';
 	@override String get notInRoom => 'Сіз бөлмеде емессіз.';
 	@override String get alreadyInRoom => 'Сіз бұрыннан бөлмедесіз.';
@@ -3145,14 +3145,14 @@ class _Translations$downloads$backgroundWarning$kk extends Translations$download
 	@override String get bannerAction => 'Толығырақ';
 	@override String get sheetTitle => 'Фондық жүктеулер бұғатталған';
 	@override String get sheetTitleDegraded => 'Фондық жүктеулер шектелуі мүмкін';
-	@override String get sheetIntro => 'Android PlezTV-дің фонда сенімді жүктеуіне кедергі келтіруде.';
-	@override String get sheetIntroDegraded => 'Құрылғыңыз PlezTV-дің фонда қашан жүктей алатынын шектеп отыр.';
-	@override String get reasonBackgroundRestricted => 'PlezTV-дің фондық жұмысы шектелген. Батарея немесе фондық пайдалануды "Шектеусіз" етіп қойыңыз.';
-	@override String get reasonStandbyRestricted => 'Android PlezTV-ді шектеулі күту режиміне ауыстырды. Батарея пайдалануын "Шектеусіз" етіп қойыңыз.';
+	@override String get sheetIntro => 'Android PlenTV-дің фонда сенімді жүктеуіне кедергі келтіруде.';
+	@override String get sheetIntroDegraded => 'Құрылғыңыз PlenTV-дің фонда қашан жүктей алатынын шектеп отыр.';
+	@override String get reasonBackgroundRestricted => 'PlenTV-дің фондық жұмысы шектелген. Батарея немесе фондық пайдалануды "Шектеусіз" етіп қойыңыз.';
+	@override String get reasonStandbyRestricted => 'Android PlenTV-ді шектеулі күту режиміне ауыстырды. Батарея пайдалануын "Шектеусіз" етіп қойыңыз.';
 	@override String get reasonDownloadChannelBlocked => 'Жүктеу хабарландырулары өшірілген, сондықтан жүктеу барысы мен басқару элементтері қолжетімсіз болуы мүмкін.';
 	@override String get reasonNotificationsDisabled => 'Хабарландырулар өшірілген. Android 13 және одан жаңа нұсқаларда ұзақ фондық жүктеулер үшін олар қажет.';
 	@override String get reasonDataSaver => 'Трафикті үнемдеу қосулы, бұл мобильді деректер арқылы фондық жүктеулерді бұғаттайды. Wi-Fi арқылы жүктеулер жұмыс істеуі тиіс.';
-	@override String get reasonOemUnknown => 'PlezTV фонда тұрғанда жүктеулер бірнеше рет тоқтады. PlezTV-дің батарея немесе фондық пайдалану баптауларын тексеріңіз.';
+	@override String get reasonOemUnknown => 'PlenTV фонда тұрғанда жүктеулер бірнеше рет тоқтады. PlenTV-дің батарея немесе фондық пайдалану баптауларын тексеріңіз.';
 	@override String get openSettings => 'Баптауларды ашу';
 	@override String get stillNotWorking => 'Құрылғыға арналған көмек';
 	@override String get stillNotWorkingDescription => 'Құрылғыңызға арналған қадамдарды қараңыз немесе мәселе жалғасса Баптаулар › Журналдарды көру бөлімінен журнал жіберіңіз.';
@@ -3207,12 +3207,12 @@ class _Translations$companionRemote$pairing$kk extends Translations$companionRem
 	final TranslationsKk _root; // ignore: unused_field
 
 	// Translations
-	@override String get discoveryDescription => 'Бірдей Plex тіркелгісіндегі PlezTV құрылғылары мұнда көрінеді';
+	@override String get discoveryDescription => 'Бірдей Plex тіркелгісіндегі PlenTV құрылғылары мұнда көрінеді';
 	@override String get hostAddressHint => '192.168.1.100:48632';
 	@override String get connecting => 'Қосылуда...';
 	@override String get searchingForDevices => 'Құрылғылар ізделуде...';
 	@override String get noDevicesFound => 'Желіде құрылғылар табылмады';
-	@override String get noDevicesHint => 'ПК-де PlezTV-ді ашып, бір Wi-Fi-ға қосылыңыз';
+	@override String get noDevicesHint => 'ПК-де PlenTV-ді ашып, бір Wi-Fi-ға қосылыңыз';
 	@override String get availableDevices => 'Қолжетімді құрылғылар';
 	@override String get manualConnection => 'Қолмен қосылу';
 	@override String get cryptoInitFailed => 'Қауіпсіз қосылым қатесі. Алдымен Plex-ке кіріңіз.';
@@ -3295,7 +3295,7 @@ class _Translations$services$deviceCode$kk extends Translations$services$deviceC
 	final TranslationsKk _root; // ignore: unused_field
 
 	// Translations
-	@override String title({required Object service}) => 'PlezTV-ді ${service} қызметінде белсендіру';
+	@override String title({required Object service}) => 'PlenTV-ді ${service} қызметінде белсендіру';
 	@override String get instructions => 'QR кодын сканерлеңіз немесе төмендегі мекенжайға өтіп, мына кодты енгізіңіз:';
 	@override String openToActivate({required Object service}) => 'Белсендіру үшін ${service} ашу';
 	@override String get copyCode => 'Белсендіру кодын көшіру';
@@ -3343,15 +3343,15 @@ class _Translations$services$libraryFilter$kk extends Translations$services$libr
 extension on TranslationsKk {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
-			'app.title' => 'PlezTV',
+			'app.title' => 'PlenTV',
 			'appIcon.title' => 'Қолданба белгішесі',
 			'appIcon.defaultIcon' => 'Әдепкі',
 			'appIcon.current' => 'Ағымдағы белгіше',
 			'appIcon.locked' => 'Supporter артықшылығы',
 			'appIcon.lockedHint' => 'Балама белгішелер — Supporter артықшылығы.',
 			'appIcon.changeFailed' => 'Қолданба белгішесін өзгерту мүмкін болмады',
-			'appIcon.launcherHint' => 'PlezTV-ден шыққаннан кейін жаңа белгіше басты экранда пайда болады.',
-			'appIcon.tvLauncherHint' => 'PlezTV-ден шыққаннан кейін жаңа баннер пайда болады. Android TV теледидар қайта іске қосылғанша ескісін көрсете беруі мүмкін.',
+			'appIcon.launcherHint' => 'PlenTV-ден шыққаннан кейін жаңа белгіше басты экранда пайда болады.',
+			'appIcon.tvLauncherHint' => 'PlenTV-ден шыққаннан кейін жаңа баннер пайда болады. Android TV теледидар қайта іске қосылғанша ескісін көрсете беруі мүмкін.',
 			'appIcon.names.midnight' => 'Түн ортасы',
 			'appIcon.names.ember' => 'Шоқ',
 			'appIcon.names.paper' => 'Қағаз',
@@ -3390,7 +3390,7 @@ extension on TranslationsKk {
 			'auth.quickConnectWaiting' => 'Растау күтілуде…',
 			'auth.quickConnectCancel' => 'Бас тарту',
 			'auth.quickConnectExpired' => 'Жылдам қосылу мерзімі өтті. Қайтадан байқап көріңіз.',
-			'auth.localDataRecoveryRequired' => 'PlezTV жергілікті кіру мәліметтерін қалпына келтіре алмады. Қайтадан кіріңіз.',
+			'auth.localDataRecoveryRequired' => 'PlenTV жергілікті кіру мәліметтерін қалпына келтіре алмады. Қайтадан кіріңіз.',
 			'auth.pinCheckRejected' => 'Plex PIN кодын тексеру қабылданбады',
 			'common.cancel' => 'Бас тарту',
 			'common.save' => 'Сақтау',
@@ -3474,19 +3474,19 @@ extension on TranslationsKk {
 			'update.viewRelease' => 'Релизді көру',
 			'update.latestVersion' => 'Сізде ең соңғы нұсқа орнатылған',
 			'update.checkFailed' => 'Жаңартуларды тексеру мүмкін болмады',
-			'supporter.title' => 'PlezTV Supporter',
-			'supporter.intro' => 'PlezTV-дің дамуына қолдау көрсетіп, безендіру мүмкіндіктерін ашатын бір реттік сатып алу:',
+			'supporter.title' => 'PlenTV Supporter',
+			'supporter.intro' => 'PlenTV-дің дамуына қолдау көрсетіп, безендіру мүмкіндіктерін ашатын бір реттік сатып алу:',
 			'supporter.presetThemes' => 'Дайын тақырыптар',
 			'supporter.presetThemesDescription' => 'Шоқ, Мұздық, Орман, Алхоры және Қағаз',
 			'supporter.customTheme' => 'Жеке тақырып',
 			'supporter.customThemeDescription' => 'Әр түсті өзіңіз таңдаңыз',
 			'supporter.appIcons' => 'Қолданба белгішелері',
-			'supporter.appIconsDescription' => 'PlezTV-дің балама белгішесін таңдаңыз',
+			'supporter.appIconsDescription' => 'PlenTV-дің балама белгішесін таңдаңыз',
 			'supporter.buy' => ({required Object price}) => '${price} бағасына сатып алу',
 			'supporter.loadingPrice' => 'Баға жүктелуде...',
 			'supporter.restore' => 'Сатып алуларды қалпына келтіру',
 			'supporter.pending' => 'Сатып алуыңыз төлемді немесе растауды күтуде. Дүкен оны аяқтаған бойда қосымша мүмкіндіктер ашылады.',
-			'supporter.thankYouTitle' => 'PlezTV-ді қолдағаныңыз үшін рахмет',
+			'supporter.thankYouTitle' => 'PlenTV-ді қолдағаныңыз үшін рахмет',
 			'supporter.thankYouBody' => 'Supporter мүмкіндіктеріңіз ашылды.',
 			'supporter.tileSubtitle' => 'Тақырыптар мен қолданба белгішелерін бір реттік сатып алумен ашыңыз',
 			'supporter.tileSubtitleThemesOnly' => 'Тақырыптарды бір реттік сатып алумен ашыңыз',
@@ -3498,7 +3498,7 @@ extension on TranslationsKk {
 			'supporter.errors.restoreFailed' => 'Сатып алуды қалпына келтіру үшін дүкенге қосылу мүмкін болмады. Қайтадан байқап көріңіз.',
 			'supporter.errors.nothingToRestore' => 'Осы дүкен тіркелгісінде Supporter сатып алуы табылмады.',
 			'settings.title' => 'Баптаулар',
-			'settings.supportDeveloper' => 'PlezTV жобасын қолдау',
+			'settings.supportDeveloper' => 'PlenTV жобасын қолдау',
 			'settings.supportDeveloperDescription' => 'Дамытуды қаржыландыру үшін Liberapay арқылы демеушілік жасаңыз',
 			'settings.language' => 'Тіл',
 			'settings.theme' => 'Тақырып',
@@ -3643,7 +3643,7 @@ extension on TranslationsKk {
 			'settings.importSettingsDescription' => 'Параметрлерді файлдан қалпына келтіріңіз',
 			'settings.importSettingsConfirm' => 'Бұл ағымдағы баптауларыңыздың үстінен жазады. Жалғастырасыз ба?',
 			'settings.importSettingsSuccess' => 'Баптаулар импортталды',
-			'settings.importSettingsInvalidFile' => 'Бұл файл дұрыс PlezTV баптаулар файлы емес',
+			'settings.importSettingsInvalidFile' => 'Бұл файл дұрыс PlenTV баптаулар файлы емес',
 			'settings.importSettingsNoUser' => 'Баптауларды импорттау алдында жүйеге кіріңіз',
 			'settings.shortcutsReset' => 'Пернелер тіркесі әдепкі күйге қайтарылды',
 			'settings.resetShortcutsConfirm' => 'Бұл таңдамалы пернелер тіркесін әдепкі мәндермен ауыстырады. Жалғастырасыз ба?',
@@ -3779,7 +3779,7 @@ extension on TranslationsKk {
 			'settings.forceTvMode' => 'TV режимін мәжбүрлеу',
 			'settings.forceTvModeDescription' => 'TV интерфейсін мәжбүрлеу. Автоматты түрде анықталмайтын құрылғылар үшін. Қайта іске қосу қажет.',
 			'settings.startInFullscreen' => 'Толық экранда бастау',
-			'settings.startInFullscreenDescription' => 'PlezTV-ді ашқанда толық экран режимінде ашу',
+			'settings.startInFullscreenDescription' => 'PlenTV-ді ашқанда толық экран режимінде ашу',
 			'settings.exitFullscreenOnPlayerClose' => 'Ойнатқыш жабылғанда толық экраннан шығу',
 			'settings.exitFullscreenOnPlayerCloseDescription' => 'Видео ойнатқышты жапқанда автоматты түрде толық экраннан шығу',
 			'settings.autoHidePerformanceOverlay' => 'Өнімділік панелін авто-жасыру',
@@ -3828,7 +3828,7 @@ extension on TranslationsKk {
 			'settings.playerScopeGlobal' => 'Барлық жерде',
 			'settings.playerScopeLibrary' => 'Кітапхана бойынша',
 			'settings.playerScopeTitle' => 'Сериал немесе фильм бойынша',
-			'settings.exportDialogTitle' => 'PlezTV параметрлерін экспорттау',
+			'settings.exportDialogTitle' => 'PlenTV параметрлерін экспорттау',
 			'settings.scopeZoom' => 'Масштаб',
 			'themeEditor.builtIn' => 'Кірістірілген',
 			'themeEditor.presets' => 'Дайын тақырыптар',
@@ -4047,8 +4047,8 @@ extension on TranslationsKk {
 			'mediaMenu.deleteEpisodeCountWarning' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('kk'))(n, one: 'Бұл ондағы ${n} бөлімді және оның файлын өшіреді.', other: 'Бұл ондағы барлық ${n} бөлімді және олардың файлдарын өшіреді.', ), 
 			'mediaMenu.deleteMultiPartWarning' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('kk'))(n, one: 'Бұл элемент ${n} файл ретінде сақталған, ол өшіріледі.', other: 'Бұл элемент ${n} файлда сақталған, олардың барлығы өшіріледі.', ), 
 			'mediaMenu.deleteSharedFileHeading' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('kk'))(n, one: 'Сол файлда тағы ${n} бөлім сақталған, ол да өшіріледі:', other: 'Сол файлда тағы ${n} бөлім сақталған, олар да өшіріледі:', ), 
-			'mediaMenu.deleteScopeUnverifiedProbeFailed' => 'PlezTV қандай файлдар өшірілетінін тексере алмады, сондықтан ол жоғарыда аталған элементтен артық өшіруі мүмкін. Бас тартып, қайталап көріңіз немесе бәрібір өшіріңіз.',
-			'mediaMenu.deleteScopeUnverifiedNoFileInfo' => 'Серверіңіз бұл элемент үшін файл мәліметтерін ұсынбады, сондықтан PlezTV қандай файлдар өшірілетінін тексере алмайды. Ол жоғарыда аталған элементтен артық өшіруі мүмкін.',
+			'mediaMenu.deleteScopeUnverifiedProbeFailed' => 'PlenTV қандай файлдар өшірілетінін тексере алмады, сондықтан ол жоғарыда аталған элементтен артық өшіруі мүмкін. Бас тартып, қайталап көріңіз немесе бәрібір өшіріңіз.',
+			'mediaMenu.deleteScopeUnverifiedNoFileInfo' => 'Серверіңіз бұл элемент үшін файл мәліметтерін ұсынбады, сондықтан PlenTV қандай файлдар өшірілетінін тексере алмайды. Ол жоғарыда аталған элементтен артық өшіруі мүмкін.',
 			'mediaMenu.mediaDeletedSuccessfully' => 'Медиа элементі сәтті өшірілді',
 			'mediaMenu.mediaFailedToDelete' => 'Медиа элементін өшіру мүмкін болмады',
 			'mediaMenu.rate' => 'Бағалау',
@@ -4297,7 +4297,7 @@ extension on TranslationsKk {
 			'mpvConfig.removeLine' => 'Жолды өшіру',
 			'mpvConfig.embeddedVoHint' => 'vo, gpu-context және gpu-api Linux-те еленбейді: ендірілген бейне әрқашан бейне жазықтығында vo=libmpv арқылы көрсетіледі, ал gpu-next (ArtCNN сияқты compute шейдерлеріне қажет) ендірілген режимде жұмыс істей алмайды.',
 			'dialog.confirmAction' => 'Әрекетті растау',
-			'profiles.addPlezTVProfile' => 'PlezTV профилін қосу',
+			'profiles.addPlezTVProfile' => 'PlenTV профилін қосу',
 			'profiles.switchingProfile' => 'Профильді ауыстыру…',
 			'profiles.deleteThisProfileTitle' => 'Осы профиль өшірілсін бе?',
 			'profiles.deleteThisProfileMessage' => ({required Object displayName}) => '${displayName} өшіріледі. Қосылымдарға әсер етпейді.',
@@ -4374,12 +4374,12 @@ extension on TranslationsKk {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} сервер бұл тіркелгіге кіруден бас тартты',
 			'connections.signInAgain' => 'Қайтадан кіру',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} қосылымын өңдеу',
-			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} үшін URL мекенжайларды қосыңыз немесе өшіріңіз. PlezTV ең төмен кідірісі бар қолжетімді URL мекенжайды пайдаланады.',
+			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} үшін URL мекенжайларды қосыңыз немесе өшіріңіз. PlenTV ең төмен кідірісі бар қолжетімді URL мекенжайды пайдаланады.',
 			'accountPreferences.sectionTitle' => 'Тіркелгі баптаулары',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} тіркелгісінде сақталған аудио, субтитр және кітапхана баптаулары',
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count} тіркелгіде сақталған аудио, субтитр және кітапхана баптаулары',
 			'accountPreferences.pickAccount' => 'Әр тіркелгі өз баптауларын сақтайды. Өңдеу үшін біреуін таңдаңыз.',
-			'accountPreferences.storedOnAccount' => 'Бұл баптаулар тіркелгінің өзінде сақталады, сондықтан оған кірген әрбір қолданба оларды пайдаланады — басқа құрылғыларыңыздағы PlezTV қоса.',
+			'accountPreferences.storedOnAccount' => 'Бұл баптаулар тіркелгінің өзінде сақталады, сондықтан оған кірген әрбір қолданба оларды пайдаланады — басқа құрылғыларыңыздағы PlenTV қоса.',
 			'accountPreferences.noAccounts' => 'Баптауға тіркелгілер жоқ',
 			'accountPreferences.noAccountsHint' => 'Plex-ке кіріңіз немесе Jellyfin не Emby серверін қосыңыз, сонда сол тіркелгіде сақталған баптаулар осында көрсетіледі.',
 			'accountPreferences.unavailable' => 'Бұл тіркелгіге қол жеткізу мүмкін емес',
@@ -4609,9 +4609,9 @@ extension on TranslationsKk {
 			'logs.clearLogs' => 'Журналдарды тазалау',
 			'logs.copyLogs' => 'Журналдарды көшіру',
 			'logs.uploadLogs' => 'Журналдарды жүктеу',
-			'startup.failedTitle' => 'PlezTV іске қосылмады',
+			'startup.failedTitle' => 'PlenTV іске қосылмады',
 			'startup.failedBody' => 'Іске қосу кезінде қате орын алды. Төмендегі мәліметтер ненің сәтсіз аяқталғанын көрсетеді.',
-			'startup.failedBodyRepairable' => 'PlezTV сақталған баптаулар файлы зақымдалған және PlezTV іске қосылмас бұрын оны қайта құру қажет. Қайталау көмектеспейді — «Сақтауды қалпына келтіру» тармағын таңдаңыз.',
+			'startup.failedBodyRepairable' => 'PlenTV сақталған баптаулар файлы зақымдалған және PlenTV іске қосылмас бұрын оны қайта құру қажет. Қайталау көмектеспейді — «Сақтауды қалпына келтіру» тармағын таңдаңыз.',
 			'startup.phaseLabel' => 'Қадам',
 			'startup.showDetails' => 'Мәліметтерді көрсету',
 			'startup.hideDetails' => 'Мәліметтерді жасыру',
@@ -4620,15 +4620,15 @@ extension on TranslationsKk {
 			'startup.uploadDetails' => 'Мәліметтерді жүктеп жіберу',
 			'startup.repairStorage' => 'Сақтауды қалпына келтіру',
 			'startup.repairTitle' => 'Сақталған деректер қалпына келтірілсін бе?',
-			'startup.repairBodyCommon' => 'PlezTV баптаулар файлы зақымдалған және оқылмайды. Қалпына келтіру барлық баптауды әдепкі мәнге қайтарады.',
+			'startup.repairBodyCommon' => 'PlenTV баптаулар файлы зақымдалған және оқылмайды. Қалпына келтіру барлық баптауды әдепкі мәнге қайтарады.',
 			'startup.repairBodyOneCredential' => 'Бір сақталған кіру деректері зақымдалған және оқылмайды. Қалпына келтіру тек соны өшіреді; қалған баптауларыңызға тиіспейді.',
 			'startup.repairBodySignInsKept' => 'Серверлеріңіз бен профильдеріңіз кірген күйінде қалады.',
 			'startup.repairBodySignInsLost' => 'Сақталған кіру деректерін қорғайтын кілт осы файлдан қалпына келтірілмейді, сондықтан әрбір сервер мен профильге қайта кіруге тура келеді. Медиа серверіңіздегі ештеңеге әсер етілмейді.',
 			'startup.repairConfirm' => 'Қалпына келтіру',
 			'startup.repairSucceeded' => 'Сақтау қалпына келтірілді',
 			'startup.repairNeedsRestart' => 'Сақтау қалпына келтірілді — қайта іске қосу қажет',
-			'startup.restartRequiredBody' => 'Деректеріңіз қалпына келтірілді, бірақ PlezTV оларды пайдаланар алдында жаңадан іске қосылуы керек. PlezTV жабыңыз да, қайта ашыңыз.',
-			'startup.quitPlezTV' => 'PlezTV бағдарламасынан шығу',
+			'startup.restartRequiredBody' => 'Деректеріңіз қалпына келтірілді, бірақ PlenTV оларды пайдаланар алдында жаңадан іске қосылуы керек. PlenTV жабыңыз да, қайта ашыңыз.',
+			'startup.quitPlezTV' => 'PlenTV бағдарламасынан шығу',
 			'startup.repairFailed' => 'Қалпына келтіру сәтсіз аяқталды',
 			'startup.repairKeptSignIns' => 'Серверлеріңіз бен профильдеріңіз әлі кірген күйде.',
 			'startup.repairLostSignIns' => 'Сақталған кіру деректерін қорғайтын кілт қалпына келтірілмеді. Әрбір сервер мен профильге қайта кіруге тура келеді.',
@@ -4637,7 +4637,7 @@ extension on TranslationsKk {
 			'startup.backupWarning' => 'Онда сіздің кіру деректеріңіз бар. Оны жүктеп жібермеңіз немесе бөліспеңіз.',
 			'startup.deleteBackup' => 'Көшірмені өшіру',
 			'startup.backupDeleted' => 'Көшірме өшірілді.',
-			'startup.previousFailureTitle' => 'PlezTV соңғы рет іске қосыла алмады',
+			'startup.previousFailureTitle' => 'PlenTV соңғы рет іске қосыла алмады',
 			'licenses.relatedPackages' => 'Байланысты пакеттер',
 			'licenses.license' => 'Лицензия',
 			'licenses.licenseNumber' => ({required Object number}) => 'Лицензия ${number}',
@@ -4981,7 +4981,7 @@ extension on TranslationsKk {
 			'watchTogether.codeCopied' => 'Бөлме коды көшірілді',
 			'watchTogether.shareInvite' => 'Шақыру жіберу',
 			'watchTogether.inviteCopied' => 'Шақыру көшірілді. Оны хабарламаға қойыңыз.',
-			'watchTogether.inviteMessage' => ({required Object code}) => 'PlezTV-дегі «Бірге көру» бөлмеме қосылыңыз: «Бірге көру» бөлімін ашып, «Бөлмеге қосылу» түймесін таңдаңыз да, ${code} кодын енгізіңіз.',
+			'watchTogether.inviteMessage' => ({required Object code}) => 'PlenTV-дегі «Бірге көру» бөлмеме қосылыңыз: «Бірге көру» бөлімін ашып, «Бөлмеге қосылу» түймесін таңдаңыз да, ${code} кодын енгізіңіз.',
 			'watchTogether.openSessionControls' => 'Басқару элементтерін ашу',
 			'watchTogether.reconnecting' => 'Қайта қосылуда...',
 			'watchTogether.reconnectingDescription' => 'Байланыс үзілді. Бөлмеге автоматты түрде қайта қосыласыз.',
@@ -5007,7 +5007,7 @@ extension on TranslationsKk {
 			'watchTogether.chooseAnotherCopy' => 'Басқа көшірмені таңдау',
 			'watchTogether.dontPlay' => 'Ойнатпау',
 			'watchTogether.unavailableTitle' => 'Сізде бұл видео жоқ',
-			'watchTogether.unavailableDescription' => 'PlezTV оны кітапханаларыңыздан таба алмады. Көшірмені өзіңіз таңдаңыз немесе қайта іздеңіз.',
+			'watchTogether.unavailableDescription' => 'PlenTV оны кітапханаларыңыздан таба алмады. Көшірмені өзіңіз таңдаңыз немесе қайта іздеңіз.',
 			'watchTogether.chooseCopy' => 'Көшірмені таңдау',
 			'watchTogether.searchAgain' => 'Қайта іздеу',
 			'watchTogether.noCandidates' => 'Кітапханаларыңыздан көшірмелер табылмады.',
@@ -5099,7 +5099,7 @@ extension on TranslationsKk {
 			'watchTogether.errors.relayFull' => 'Бірге көру қызметі қазір шамадан тыс жүктелген. Кейінірек қайталап көріңіз.',
 			'watchTogether.errors.unreachable' => 'Бірге көру релесіне қосылу мүмкін болмады. Қосылымды тексеріңіз.',
 			'watchTogether.errors.rateLimited' => 'Әрекеттер тым көп. Біраз күтіп, қайтадан байқап көріңіз.',
-			'watchTogether.errors.clientBlocked' => 'PlezTV-дің бұл нұсқасы релені пайдалана алмайды. Қолданбаны жаңартыңыз.',
+			'watchTogether.errors.clientBlocked' => 'PlenTV-дің бұл нұсқасы релені пайдалана алмайды. Қолданбаны жаңартыңыз.',
 			'watchTogether.errors.forbidden' => 'Мұны тек ұйымдастырушы жасай алады.',
 			'watchTogether.errors.notInRoom' => 'Сіз бөлмеде емессіз.',
 			'watchTogether.errors.alreadyInRoom' => 'Сіз бұрыннан бөлмедесіз.',
@@ -5193,14 +5193,14 @@ extension on TranslationsKk {
 			'downloads.backgroundWarning.bannerAction' => 'Толығырақ',
 			'downloads.backgroundWarning.sheetTitle' => 'Фондық жүктеулер бұғатталған',
 			'downloads.backgroundWarning.sheetTitleDegraded' => 'Фондық жүктеулер шектелуі мүмкін',
-			'downloads.backgroundWarning.sheetIntro' => 'Android PlezTV-дің фонда сенімді жүктеуіне кедергі келтіруде.',
-			'downloads.backgroundWarning.sheetIntroDegraded' => 'Құрылғыңыз PlezTV-дің фонда қашан жүктей алатынын шектеп отыр.',
-			'downloads.backgroundWarning.reasonBackgroundRestricted' => 'PlezTV-дің фондық жұмысы шектелген. Батарея немесе фондық пайдалануды "Шектеусіз" етіп қойыңыз.',
-			'downloads.backgroundWarning.reasonStandbyRestricted' => 'Android PlezTV-ді шектеулі күту режиміне ауыстырды. Батарея пайдалануын "Шектеусіз" етіп қойыңыз.',
+			'downloads.backgroundWarning.sheetIntro' => 'Android PlenTV-дің фонда сенімді жүктеуіне кедергі келтіруде.',
+			'downloads.backgroundWarning.sheetIntroDegraded' => 'Құрылғыңыз PlenTV-дің фонда қашан жүктей алатынын шектеп отыр.',
+			'downloads.backgroundWarning.reasonBackgroundRestricted' => 'PlenTV-дің фондық жұмысы шектелген. Батарея немесе фондық пайдалануды "Шектеусіз" етіп қойыңыз.',
+			'downloads.backgroundWarning.reasonStandbyRestricted' => 'Android PlenTV-ді шектеулі күту режиміне ауыстырды. Батарея пайдалануын "Шектеусіз" етіп қойыңыз.',
 			'downloads.backgroundWarning.reasonDownloadChannelBlocked' => 'Жүктеу хабарландырулары өшірілген, сондықтан жүктеу барысы мен басқару элементтері қолжетімсіз болуы мүмкін.',
 			'downloads.backgroundWarning.reasonNotificationsDisabled' => 'Хабарландырулар өшірілген. Android 13 және одан жаңа нұсқаларда ұзақ фондық жүктеулер үшін олар қажет.',
 			'downloads.backgroundWarning.reasonDataSaver' => 'Трафикті үнемдеу қосулы, бұл мобильді деректер арқылы фондық жүктеулерді бұғаттайды. Wi-Fi арқылы жүктеулер жұмыс істеуі тиіс.',
-			'downloads.backgroundWarning.reasonOemUnknown' => 'PlezTV фонда тұрғанда жүктеулер бірнеше рет тоқтады. PlezTV-дің батарея немесе фондық пайдалану баптауларын тексеріңіз.',
+			'downloads.backgroundWarning.reasonOemUnknown' => 'PlenTV фонда тұрғанда жүктеулер бірнеше рет тоқтады. PlenTV-дің батарея немесе фондық пайдалану баптауларын тексеріңіз.',
 			'downloads.backgroundWarning.openSettings' => 'Баптауларды ашу',
 			'downloads.backgroundWarning.stillNotWorking' => 'Құрылғыға арналған көмек',
 			'downloads.backgroundWarning.stillNotWorkingDescription' => 'Құрылғыңызға арналған қадамдарды қараңыз немесе мәселе жалғасса Баптаулар › Журналдарды көру бөлімінен журнал жіберіңіз.',
@@ -5264,12 +5264,12 @@ extension on TranslationsKk {
 			'companionRemote.session.stopServer' => 'Серверді тоқтату',
 			'companionRemote.session.minimize' => 'Жию',
 			'companionRemote.session.manualAddressHint' => 'Қолмен қосылу мекенжайы:',
-			'companionRemote.pairing.discoveryDescription' => 'Бірдей Plex тіркелгісіндегі PlezTV құрылғылары мұнда көрінеді',
+			'companionRemote.pairing.discoveryDescription' => 'Бірдей Plex тіркелгісіндегі PlenTV құрылғылары мұнда көрінеді',
 			'companionRemote.pairing.hostAddressHint' => '192.168.1.100:48632',
 			'companionRemote.pairing.connecting' => 'Қосылуда...',
 			'companionRemote.pairing.searchingForDevices' => 'Құрылғылар ізделуде...',
 			'companionRemote.pairing.noDevicesFound' => 'Желіде құрылғылар табылмады',
-			'companionRemote.pairing.noDevicesHint' => 'ПК-де PlezTV-ді ашып, бір Wi-Fi-ға қосылыңыз',
+			'companionRemote.pairing.noDevicesHint' => 'ПК-де PlenTV-ді ашып, бір Wi-Fi-ға қосылыңыз',
 			'companionRemote.pairing.availableDevices' => 'Қолжетімді құрылғылар',
 			'companionRemote.pairing.manualConnection' => 'Қолмен қосылу',
 			'companionRemote.pairing.cryptoInitFailed' => 'Қауіпсіз қосылым қатесі. Алдымен Plex-ке кіріңіз.',
@@ -5512,7 +5512,7 @@ extension on TranslationsKk {
 			'seerr.noSignInMethods' => 'Бұл Seerr қолдау көрсетілетін кіру әдісін ұсынбайды.',
 			'seerr.instance' => 'Инстанция',
 			'seerr.disconnectConfirm' => 'Seerr ажыратылсын ба?',
-			'seerr.disconnectConfirmBody' => 'PlezTV бұл Seerr серверін ұмытады. Кез келген уақытта қайта қосыла аласыз.',
+			'seerr.disconnectConfirmBody' => 'PlenTV бұл Seerr серверін ұмытады. Кез келген уақытта қайта қосыла аласыз.',
 			'seerr.request' => 'Сұрау салу',
 			'seerr.request4k' => '4K сұрау салу',
 			'seerr.seasons' => 'Маусымдар',
@@ -5537,7 +5537,7 @@ extension on TranslationsKk {
 			'seerr.statusBlocklisted' => 'Бұғаттау тізімінде',
 			'seerr.couldNotReach' => ({required Object url, required Object error}) => '${url} мекенжайына қосылу мүмкін болмады: ${error}',
 			'seerr.noInstanceAtUrl' => ({required Object url, required Object status}) => '${url} мекенжайында Seerr данасы жоқ (HTTP ${status})',
-			'seerr.behindAuthProxy' => 'Seerr орнына аутентификация жасайтын кері прокси (SSO немесе HTTP auth) жауап берді. PlezTV оның арқылы кіре алмайды: осы қолданба үшін Seerr-дің /api/v1 жолы проксиді айналып өтуіне рұқсат етіңіз немесе Seerr-ге тікелей жететін мекенжайды пайдаланыңыз.',
+			'seerr.behindAuthProxy' => 'Seerr орнына аутентификация жасайтын кері прокси (SSO немесе HTTP auth) жауап берді. PlenTV оның арқылы кіре алмайды: осы қолданба үшін Seerr-дің /api/v1 жолы проксиді айналып өтуіне рұқсат етіңіз немесе Seerr-ге тікелей жететін мекенжайды пайдаланыңыз.',
 			'seerr.invalidUrl' => 'Сервер мекенжайын енгізіңіз, мысалы: https://seerr.example.com',
 			'seerr.quickConnectUnsupported' => 'Бұл Seerr данасы Жылдам қосылуды қолдамайды. Оған Seerr 3.4 немесе одан жаңарақ нұсқа қажет.',
 			'seerr.notInitialized' => 'Бұл Seerr данасының бастапқы баптауы аяқталмаған',
@@ -5558,11 +5558,11 @@ extension on TranslationsKk {
 			'services.scrobble' => 'Барысты автоматты бақылау',
 			'services.scrobbleDescription' => 'Эпизодты немесе фильмді көріп болғанда тізіміңізді жаңарту.',
 			'services.disconnectConfirm' => ({required Object service}) => '${service} ажыратылсын ба?',
-			'services.disconnectConfirmBody' => ({required Object service}) => 'PlezTV ${service} жаңартуды тоқтатады. Кез келген уақытта қайта қосыла аласыз.',
+			'services.disconnectConfirmBody' => ({required Object service}) => 'PlenTV ${service} жаңартуды тоқтатады. Кез келген уақытта қайта қосыла аласыз.',
 			'services.connectFailed' => ({required Object service}) => '${service} қосылу мүмкін болмады. Қайтадан байқап көріңіз.',
 			'services.names.seerr' => 'Seerr',
 			'services.names.mdblist' => 'MDBList',
-			'services.deviceCode.title' => ({required Object service}) => 'PlezTV-ді ${service} қызметінде белсендіру',
+			'services.deviceCode.title' => ({required Object service}) => 'PlenTV-ді ${service} қызметінде белсендіру',
 			'services.deviceCode.instructions' => 'QR кодын сканерлеңіз немесе төмендегі мекенжайға өтіп, мына кодты енгізіңіз:',
 			'services.deviceCode.openToActivate' => ({required Object service}) => 'Белсендіру үшін ${service} ашу',
 			'services.deviceCode.copyCode' => 'Белсендіру кодын көшіру',

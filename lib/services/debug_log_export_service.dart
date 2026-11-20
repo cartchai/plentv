@@ -45,12 +45,12 @@ import 'storage_service.dart';
 /// the whole file goes through [LogRedactionManager.redact] before it
 /// is written.
 class DebugLogExportService {
-  /// File name for the export, e.g. `pleztv-debug-20261113-204500.txt`.
+  /// File name for the export, e.g. `plentv-debug-20261113-204500.txt`.
   @visibleForTesting
   static String debugFileName([DateTime? now]) {
     final t = now ?? DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
-    return 'pleztv-debug-${t.year}${two(t.month)}${two(t.day)}-${two(t.hour)}${two(t.minute)}${two(t.second)}.txt';
+    return 'plentv-debug-${t.year}${two(t.month)}${two(t.day)}-${two(t.hour)}${two(t.minute)}${two(t.second)}.txt';
   }
 
   /// Render the settings export map as `key: value` lines, sorted by

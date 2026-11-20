@@ -411,7 +411,7 @@ void main() {
       final before = await LastCrashStore.readFailedStartCount();
       expect(before, greaterThan(0));
       final result = await AutoDumpService.writeDumpToDownloads(failedStarts: 3);
-      expect(result.path, '/storage/emulated/0/Download/pleztv-autodump.txt');
+      expect(result.path, '/storage/emulated/0/Download/plentv-autodump.txt');
       expect(result.storageFullMessage, isNull);
       expect(await LastCrashStore.readFailedStartCount(), 0);
     });
@@ -436,7 +436,7 @@ void main() {
       DownloadsMediaStore.debugWriteOverride =
           ({required fileName, required bytes, required mimeType}) async {
             called = true;
-            return '/storage/emulated/0/Download/pleztv-autodump.txt';
+            return '/storage/emulated/0/Download/plentv-autodump.txt';
           };
       final result = await AutoDumpService.writeDumpToDownloads(failedStarts: 3);
       expect(result.path, isNull);

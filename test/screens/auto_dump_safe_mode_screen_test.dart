@@ -109,11 +109,11 @@ void main() {
   testWidgets('TV: the save button writes to Downloads and shows the path', (tester) async {
     DownloadsMediaStore.debugWriteOverride =
         ({required fileName, required bytes, required mimeType}) async =>
-            '/storage/emulated/0/Download/pleztv-autodump.txt';
+            '/storage/emulated/0/Download/plentv-autodump.txt';
     await pumpSaver(tester, showSavePicker: false);
     await tapSave(tester);
 
-    expect(find.text('/storage/emulated/0/Download/pleztv-autodump.txt'), findsOneWidget);
+    expect(find.text('/storage/emulated/0/Download/plentv-autodump.txt'), findsOneWidget);
     expect(find.text(t.logs.shareAutoDump), findsOneWidget);
   });
 
@@ -123,7 +123,7 @@ void main() {
     await pumpSaver(tester, showSavePicker: false);
     await tapSave(tester);
 
-    expect(find.text('${externalDir.path}/pleztv-autodump.txt'), findsOneWidget);
+    expect(find.text('${externalDir.path}/plentv-autodump.txt'), findsOneWidget);
     expect(find.text(t.logs.shareAutoDump), findsOneWidget);
   });
 
@@ -131,11 +131,11 @@ void main() {
     FilePickerService.setDelegateForTesting(_ThrowingFilePickerDelegate());
     DownloadsMediaStore.debugWriteOverride =
         ({required fileName, required bytes, required mimeType}) async =>
-            '/storage/emulated/0/Download/pleztv-autodump.txt';
+            '/storage/emulated/0/Download/plentv-autodump.txt';
     await pumpSaver(tester, showSavePicker: true);
     await tapSave(tester);
 
-    expect(find.text('/storage/emulated/0/Download/pleztv-autodump.txt'), findsOneWidget);
+    expect(find.text('/storage/emulated/0/Download/plentv-autodump.txt'), findsOneWidget);
     expect(find.text(t.emergencyDebugLogSaver.saveFailed), findsNothing);
   });
 }
