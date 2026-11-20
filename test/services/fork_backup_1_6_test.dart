@@ -51,7 +51,7 @@ void main() {
 
   setUp(() {
     resetSharedPreferencesForTest();
-    _setMockPackage('com.example.plentv', '1.6-2.26.0', '235');
+    _setMockPackage('com.example.plentv', '1.6.0-2.26.0', '235');
   });
 
   tearDown(() async {
