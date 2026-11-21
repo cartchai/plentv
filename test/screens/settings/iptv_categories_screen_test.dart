@@ -222,6 +222,13 @@ void main() {
     final stored = await h.registry.list();
     final storedTrex = stored.singleWhere((c) => c.id == 'trex') as XtreamConnection;
     expect(storedTrex.hiddenCategoryInitials, isEmpty);
+
+    // 1.6.12: the toggle's rebind re-derives the catalog in the
+    // background, and the cold VOD/series crawl spaces its batches with
+    // a 200ms gap — drain the fake clock or a gap timer is still pending
+    // when the test ends (binding invariant failure). The fake answers
+    // every per-category call with [], so the crawl finishes inside 1s.
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('CONTROL: Show all also clears initials with no toggle on screen', (tester) async {

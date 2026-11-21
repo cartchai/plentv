@@ -3,7 +3,8 @@
 // The builder did not write a widget test for the new Settings → IPTV →
 // Xtream User-Agent group, so this one is the tester's own: it pumps the
 // REAL IptvSettingsScreen and proves the group renders, the default
-// subtitle is VLC, picking Custom reveals the custom text row, and a stored
+// subtitle is the player default (1.6.12 — was VLC), picking Custom
+// reveals the custom text row, and a stored
 // custom value shows in the subtitle. No live panel: fakes only.
 import 'dart:io';
 
@@ -122,14 +123,14 @@ void main() {
   });
 
   group('Tester probe #20 — Xtream User-Agent settings group', () {
-    testWidgets('group renders with the VLC default subtitle', (tester) async {
+    testWidgets('group renders with the player default subtitle', (tester) async {
       await _pumpScreen(tester);
 
       await tester.scrollUntilVisible(find.text(t.iptv.xtreamUserAgent), 200);
       expect(find.text(t.iptv.xtreamSection), findsOneWidget);
       expect(find.text(t.iptv.xtreamUserAgent), findsOneWidget);
       // The subtitle is the resolved UA that will be sent.
-      expect(find.text('VLC'), findsOneWidget);
+      expect(find.text(XtreamUserAgent.player), findsOneWidget);
       // The custom text row is hidden until Custom is picked.
       expect(find.text(t.iptv.xtreamUserAgentCustomTitle), findsNothing);
     });
@@ -149,8 +150,8 @@ void main() {
       await tester.tap(find.text(t.iptv.xtreamUserAgent));
       await tester.pumpAndSettle();
 
-      // The selection dialog offers all four choices. 'VLC' is also the
-      // tile subtitle behind the dialog, so it is expected twice.
+      // The selection dialog offers all five choices (the player default
+      // is the tile subtitle behind the dialog).
       expect(find.text(t.iptv.xtreamUserAgentVlc), findsWidgets);
       expect(find.text(t.iptv.xtreamUserAgentSmarters), findsOneWidget);
       expect(find.text(t.iptv.xtreamUserAgentBrowser), findsOneWidget);
@@ -165,7 +166,7 @@ void main() {
       expect(find.text(t.iptv.xtreamUserAgentCustomTitle), findsOneWidget);
       expect(find.text(t.iptv.xtreamUserAgentCustomHint), findsOneWidget);
       // Blank custom text: the subtitle shows the fallback.
-      expect(find.text('Custom · VLC'), findsOneWidget);
+      expect(find.text('Custom · ${XtreamUserAgent.player}'), findsOneWidget);
     });
 
     testWidgets('a stored custom value shows in the subtitle', (tester) async {
