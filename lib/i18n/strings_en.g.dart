@@ -3948,6 +3948,11 @@ class Translations$about$en {
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 	];
+	List<String> get changelog2332 => [
+		'Fixed: with Super Spoof on (Settings → Advanced), the app\'s provider requests now ride Chrome\'s network stack instead of Dart\'s own — the same fingerprint a normal Android player sends — so the Wi-Fi block that kept refusing them should lift',
+		'Fixed: the app now says in the log which network stack its provider requests use, so you can see whether Chrome\'s stack or Dart\'s is in use',
+		'Fixed: if Chrome\'s stack can\'t start on a device, the app falls back to today\'s requests instead of failing',
+	];
 	List<String> get changelog2331 => [
 		'Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it',
 		'New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi',
@@ -11574,6 +11579,9 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2332.0' => 'Fixed: with Super Spoof on (Settings → Advanced), the app\'s provider requests now ride Chrome\'s network stack instead of Dart\'s own — the same fingerprint a normal Android player sends — so the Wi-Fi block that kept refusing them should lift',
+			'about.changelog2332.1' => 'Fixed: the app now says in the log which network stack its provider requests use, so you can see whether Chrome\'s stack or Dart\'s is in use',
+			'about.changelog2332.2' => 'Fixed: if Chrome\'s stack can\'t start on a device, the app falls back to today\'s requests instead of failing',
 			'about.changelog2331.0' => 'Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it',
 			'about.changelog2331.1' => 'New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi',
 			'about.changelog2331.2' => 'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
@@ -11680,11 +11688,11 @@ extension on Translations {
 			'about.changelog2308.2' => 'Fixed: some videos showed a black or frozen picture on the first play because the phone\'s video hardware rejected the picture format — the app now remembers and starts those videos the way that works',
 			'about.changelog2308.3' => 'Fixed: the channel-list check could show a confusing technical message when the connection timed out — it now says plainly that the connection timed out',
 			'about.changelog2308.4' => 'The emergency debug log now records what the app was doing when it freezes, and which exit ended the last session, so the next log actually answers those questions',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2308.5' => 'The TV guide now fills in channels it used to leave blank — including UK Sky Sports channels, which were being blocked by mistake',
 			'about.changelog2308.6' => 'The guide now tries more than one place for each channel\'s programmes, so if one source fails the next one picks it up instead of leaving the row empty',
 			'about.changelog2308.7' => 'You can now see, for any channel, which source its guide data came from',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2308.8' => 'The app now checks whether the other kind of playlist (M3U) carries guide IDs the main login doesn\'t, and uses them if it does',
 			'about.changelog2308.9' => 'You can now back up everything — all settings, connections, favourites and guide data — to one file, and restore it on a fresh install',
 			'about.changelog2308.10' => 'Sending a debug log now goes to our GitHub repo as an issue, instead of the app maker\'s server. Your log is cleaned of names, addresses and passwords on your device before it is sent.',
@@ -12194,11 +12202,11 @@ extension on Translations {
 			'liveTv.recordEpisode' => 'Record Episode',
 			'liveTv.recordSeries' => 'Record Series',
 			'liveTv.recordOptions' => 'Record Options',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.saveTo' => 'Save to',
 			'liveTv.recordings' => 'Recordings',
 			'liveTv.scheduledRecordings' => 'Scheduled',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.recordingRules' => 'Recording Rules',
 			'liveTv.noScheduledRecordings' => 'Nothing scheduled to record',
 			'liveTv.manageRecording' => 'Manage recording',
@@ -12708,11 +12716,11 @@ extension on Translations {
 			'performanceOverlay.decoder' => 'Decoder',
 			'performanceOverlay.rawDecoder' => 'Raw Decoder',
 			'performanceOverlay.tunneling' => 'Tunneling',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.passthrough' => 'Passthrough',
 			'performanceOverlay.aspect' => 'Aspect',
 			'performanceOverlay.rotation' => 'Rotation',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.dvSource' => 'DV Source',
 			'performanceOverlay.dvPath' => 'DV Path',
 			'performanceOverlay.dvRouteDecoder' => 'Dolby Vision decoder',
@@ -13222,11 +13230,11 @@ extension on Translations {
 			'iptv.epgNoGuideEmpty' => 'Every channel has guide data',
 			'iptv.epgNoGuideLoadFailed' => ({required Object reason}) => 'Could not load the channels without guide — ${reason}',
 			'iptv.epgNoGuideReasonNoSource' => 'No guide source',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgNoGuideReasonNoMatch' => 'No matching guide',
 			'iptv.epgNoGuideReasonNoTvgId' => 'No channel ID',
 			'iptv.epgNoGuideReasonTvgIdNotInFeed' => 'Channel ID not in the guide',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgNoGuideReasonSourceFailed' => 'Guide source failed',
 			'iptv.epgNoGuideReasonNotLoaded' => 'Guide not loaded yet',
 			'iptv.epgNoGuideReasonAmbiguous' => 'Name matches more than one guide channel',

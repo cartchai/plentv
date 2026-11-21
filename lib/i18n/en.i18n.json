@@ -1576,6 +1576,11 @@
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
     ],
+    "changelog2332": [
+      "Fixed: with Super Spoof on (Settings → Advanced), the app's provider requests now ride Chrome's network stack instead of Dart's own — the same fingerprint a normal Android player sends — so the Wi-Fi block that kept refusing them should lift",
+      "Fixed: the app now says in the log which network stack its provider requests use, so you can see whether Chrome's stack or Dart's is in use",
+      "Fixed: if Chrome's stack can't start on a device, the app falls back to today's requests instead of failing"
+    ],
     "changelog2331": [
       "Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it",
       "New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi",
