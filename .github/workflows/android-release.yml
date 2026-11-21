@@ -63,8 +63,16 @@ jobs:
       - name: Get Flutter packages
         run: flutter pub get
 
+      # 1.6.13 (R1: Cronet behind Super Spoof): cronetHttpNoPlay=true
+      # switches the cronet_http Gradle dep to org.chromium.net
+      # :cronet-embedded, so Chrome's network stack works WITHOUT Google
+      # Play Services (Fire TV, Quest, Hisense). Dropping this define
+      # silently reverts to the Play Services provider, on which the
+      # engine build fails on those devices and the transport falls back
+      # to Dart — the toggle would stop doing anything there, with only
+      # a log line to say so. Keep the define.
       - name: Build release APK
-        run: flutter build apk --release --split-per-abi --split-debug-info=build/app/outputs/symbols --dart-define=ENABLE_UPDATE_CHECK=true --dart-define=PLENTV_LOG_SUBMIT_URL=${{ vars.PLENTV_LOG_WORKER_URL }}
+        run: flutter build apk --release --split-per-abi --split-debug-info=build/app/outputs/symbols --dart-define=ENABLE_UPDATE_CHECK=true --dart-define=PLENTV_LOG_SUBMIT_URL=${{ vars.PLENTV_LOG_WORKER_URL }} --dart-define=cronetHttpNoPlay=true
 
       - name: Name the APKs for the release
         run: |

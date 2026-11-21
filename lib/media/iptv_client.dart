@@ -51,6 +51,7 @@ import '../services/iptv/catalog_sync_foreground_service.dart';
 import '../services/iptv/iptv_playback_activity.dart';
 import '../services/iptv/iptv_heavy_work_gate.dart';
 import '../services/iptv/iptv_search_index.dart';
+import '../services/iptv/xtream_transport.dart';
 import '../services/iptv/metered_network.dart';
 import '../services/settings_service.dart';
 import '../services/storage_health.dart';
@@ -335,6 +336,13 @@ class IptvClient implements MediaServerClient {
     serverUrl: _xtream.serverUrl,
     username: _xtream.username,
     password: _xtream.password,
+    // 1.6.13 (R1: Cronet behind Super Spoof): the transport reads the
+    // master toggle per request — flipping Settings → Advanced →
+    // Super Spoof switches the Xtream requests between Dart's client
+    // and Chrome's network stack without rebuilding the client (or
+    // restarting the app). The background isolate has no SettingsService,
+    // so its provider reads OFF and the sync keeps Dart's client.
+    httpClient: XtreamTransportClient(superSpoofOn: _superSpoofOn),
     // Build #20: the User-Agent is re-read from Settings on every request,
     // so changing Settings → IPTV → Xtream User-Agent applies to the next
     // request without rebuilding the client (or restarting the app).
@@ -420,6 +428,16 @@ class IptvClient implements MediaServerClient {
       settings.read(SettingsService.iptvXtreamUserAgent),
       settings.read(SettingsService.iptvXtreamUserAgentCustom),
     );
+  }
+
+  /// Super Spoof (1.6.13 R1): the master toggle is on — the transport
+  /// reads it per request, so flipping it switches the Xtream requests
+  /// between Dart's client and Cronet. False when Settings is not
+  /// initialized (tests, background isolate) — the requests stay on Dart.
+  static bool _superSpoofOn() {
+    final settings = SettingsService.instanceOrNull;
+    if (settings == null) return false;
+    return settings.read(SettingsService.iptvSuperSpoof);
   }
 
   /// Super Spoof (1.6.11): the headers piece is active — master toggle
