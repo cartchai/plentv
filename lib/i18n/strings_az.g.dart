@@ -398,8 +398,6 @@ class _Translations$settings$az extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Öz relenizi təyin etməsəniz, ictimai Open Watch Party releləri istifadə olunur';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => 'Düzgün HTTP və ya HTTPS rele ünvanı daxil edin.';
-	@override String get debugLogging => 'Xəta saxlama jurnalı';
-	@override String get debugLoggingDescription => 'Problemləri həll etmək üçün ətraflı jurnal qeydiyyatını aktivləşdirin';
 	@override String get viewLogs => 'Jurnallara bax';
 	@override String get viewLogsDescription => 'Tətbiq jurnallarına baxın';
 	@override String get clearImageCache => 'Şəkil keşini təmizlə';
@@ -1083,7 +1081,6 @@ class _Translations$messages$az extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Server bu elementi yayımlamaqdan imtina etdi (HTTP 403). Hesabınızın onu oynatmaq icazəsi olmaya bilər, yaxud server oynatmaya yalnız öz yerli şəbəkəsində icazə verə bilər.';
 	@override String get logsUploaded => 'Jurnallar yükləndi';
 	@override String get logsUploadFailed => 'Jurnallar yüklənə bilmədi';
-	@override String get logId => 'Jurnal ID-si';
 	@override String get burnedSubtitlesUseMenu => 'Altyazılar bu yayıma həkk edilib. Onları altyazı menyusundan dəyişin.';
 	@override String get noVideoUrl => 'Video URL-i mövcud deyil';
 	@override String get playbackNoMediaSources => 'Server oynadıla bilən media mənbəyi qaytarmadı';
@@ -3620,8 +3617,6 @@ extension on TranslationsAz {
 			'settings.watchTogetherRelayDescription' => 'Öz relenizi təyin etməsəniz, ictimai Open Watch Party releləri istifadə olunur',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => 'Düzgün HTTP və ya HTTPS rele ünvanı daxil edin.',
-			'settings.debugLogging' => 'Xəta saxlama jurnalı',
-			'settings.debugLoggingDescription' => 'Problemləri həll etmək üçün ətraflı jurnal qeydiyyatını aktivləşdirin',
 			'settings.viewLogs' => 'Jurnallara bax',
 			'settings.viewLogsDescription' => 'Tətbiq jurnallarına baxın',
 			'settings.clearImageCache' => 'Şəkil keşini təmizlə',
@@ -3852,10 +3847,10 @@ extension on TranslationsAz {
 			'themeEditor.contrast.textOnSurface' => 'Səthdə mətn',
 			'themeEditor.contrast.textMutedOnBg' => 'Arxa fonda köməkçi mətn',
 			'themeEditor.contrast.textMutedOnSurface' => 'Səthdə köməkçi mətn',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Arxa fonda vurğu',
 			'themeEditor.contrast.accentOnSurface' => 'Səthdə vurğu',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Vurğu üzərində düymə mətni',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, tövsiyə olunan ${minimum}:1-dən aşağı',
 			'themeEditor.discardTitle' => 'Dəyişikliklərdən imtina edilsin?',
@@ -4238,7 +4233,6 @@ extension on TranslationsAz {
 			'messages.playbackNotAllowedBody' => 'Server bu elementi yayımlamaqdan imtina etdi (HTTP 403). Hesabınızın onu oynatmaq icazəsi olmaya bilər, yaxud server oynatmaya yalnız öz yerli şəbəkəsində icazə verə bilər.',
 			'messages.logsUploaded' => 'Jurnallar yükləndi',
 			'messages.logsUploadFailed' => 'Jurnallar yüklənə bilmədi',
-			'messages.logId' => 'Jurnal ID-si',
 			'messages.burnedSubtitlesUseMenu' => 'Altyazılar bu yayıma həkk edilib. Onları altyazı menyusundan dəyişin.',
 			'messages.noVideoUrl' => 'Video URL-i mövcud deyil',
 			'messages.playbackNoMediaSources' => 'Server oynadıla bilən media mənbəyi qaytarmadı',
@@ -4366,11 +4360,11 @@ extension on TranslationsAz {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} server bu hesaba girişi rədd etdi',
 			'connections.signInAgain' => 'Yenidən daxil ol',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} qoşulmasını düzəliş et',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} üçün URL-lər əlavə edin və ya silin. PlenTV əlçatan olan ən aşağı gecikməli URL-i istifadə edəcək.',
 			'accountPreferences.sectionTitle' => 'Hesab tərcihləri',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} hesabında saxlanılan səs, altyazı və kitabxana seçimləri',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count} hesabda saxlanılan səs, altyazı və kitabxana seçimləri',
 			'accountPreferences.pickAccount' => 'Hər hesab öz tərcihlərini saxlayır. Düzəliş etmək üçün birini seçin.',
 			'accountPreferences.storedOnAccount' => 'Bu seçimlər hesabın özündə saxlanılır, ona görə də ona daxil olan hər tətbiq onlardan istifadə edir — digər cihazlarınızdakı PlenTV də daxil olmaqla.',
@@ -4880,11 +4874,11 @@ extension on TranslationsAz {
 			'collections.title' => 'Kolleksiyalar',
 			'collections.collection' => 'Kolleksiya',
 			'collections.empty' => 'Kolleksiya boşdur',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Kolleksiyanı sil',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" silinsin? Bu əməliyyat geri qaytarıla bilməz.',
 			'collections.deleted' => 'Kolleksiya silindi',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Kolleksiya silinə bilmədi',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Kolleksiya silinə bilmədi: ${error}',
 			'collections.selectCollection' => 'Kolleksiya seç',
@@ -5394,11 +5388,11 @@ extension on TranslationsAz {
 			'externalPlayer.systemDefault' => 'Sistem defoltu',
 			'externalPlayer.addCustomPlayer' => 'Xüsusi oynadıcı əlavə et',
 			'externalPlayer.playerName' => 'Oynadıcı adı',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mənim oynadıcım',
 			'externalPlayer.playerCommand' => 'Əmr',
 			'externalPlayer.playerPackage' => 'Paket adı',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL sxemi',
 			'externalPlayer.off' => 'Söndürülüb',
 			'externalPlayer.launchFailed' => 'Xarici oynadıcı açıla bilmədi',

@@ -398,8 +398,6 @@ class _Translations$settings$sv extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Offentliga Open Watch Party-reläservrar om du inte anger en egen';
 	@override String get watchTogetherRelayHint => 'https://mitt-rela.exempel.se';
 	@override String get watchTogetherRelayInvalid => 'Ange en giltig HTTP- eller HTTPS-bas-URL för reläservern.';
-	@override String get debugLogging => 'Felsökningsloggning';
-	@override String get debugLoggingDescription => 'Aktivera detaljerad loggning för felsökning';
 	@override String get viewLogs => 'Visa loggar';
 	@override String get viewLogsDescription => 'Visa appens loggar';
 	@override String get clearImageCache => 'Rensa bildcache';
@@ -1083,7 +1081,6 @@ class _Translations$messages$sv extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Servern vägrade att strömma det här objektet (HTTP 403). Ditt konto kanske inte har behörighet att spela upp det, eller så tillåter servern kanske bara uppspelning i sitt lokala nätverk.';
 	@override String get logsUploaded => 'Loggarna har laddats upp';
 	@override String get logsUploadFailed => 'Det gick inte att ladda upp loggarna';
-	@override String get logId => 'Logg-ID';
 	@override String get burnedSubtitlesUseMenu => 'Undertexterna är inbrända i den här strömmen. Ändra dem via undertextmenyn.';
 	@override String get noVideoUrl => 'Ingen video-URL är tillgänglig';
 	@override String get playbackNoMediaSources => 'Servern returnerade inga spelbara mediekällor';
@@ -3620,8 +3617,6 @@ extension on TranslationsSv {
 			'settings.watchTogetherRelayDescription' => 'Offentliga Open Watch Party-reläservrar om du inte anger en egen',
 			'settings.watchTogetherRelayHint' => 'https://mitt-rela.exempel.se',
 			'settings.watchTogetherRelayInvalid' => 'Ange en giltig HTTP- eller HTTPS-bas-URL för reläservern.',
-			'settings.debugLogging' => 'Felsökningsloggning',
-			'settings.debugLoggingDescription' => 'Aktivera detaljerad loggning för felsökning',
 			'settings.viewLogs' => 'Visa loggar',
 			'settings.viewLogsDescription' => 'Visa appens loggar',
 			'settings.clearImageCache' => 'Rensa bildcache',
@@ -3852,10 +3847,10 @@ extension on TranslationsSv {
 			'themeEditor.contrast.textOnSurface' => 'Text på yta',
 			'themeEditor.contrast.textMutedOnBg' => 'Sekundär text på bakgrund',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundär text på yta',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Accentfärg på bakgrund',
 			'themeEditor.contrast.accentOnSurface' => 'Accentfärg på yta',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Knapptext på accentfärg',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, under det rekommenderade ${minimum}:1',
 			'themeEditor.discardTitle' => 'Släng ändringarna?',
@@ -4238,7 +4233,6 @@ extension on TranslationsSv {
 			'messages.playbackNotAllowedBody' => 'Servern vägrade att strömma det här objektet (HTTP 403). Ditt konto kanske inte har behörighet att spela upp det, eller så tillåter servern kanske bara uppspelning i sitt lokala nätverk.',
 			'messages.logsUploaded' => 'Loggarna har laddats upp',
 			'messages.logsUploadFailed' => 'Det gick inte att ladda upp loggarna',
-			'messages.logId' => 'Logg-ID',
 			'messages.burnedSubtitlesUseMenu' => 'Undertexterna är inbrända i den här strömmen. Ändra dem via undertextmenyn.',
 			'messages.noVideoUrl' => 'Ingen video-URL är tillgänglig',
 			'messages.playbackNoMediaSources' => 'Servern returnerade inga spelbara mediekällor',
@@ -4366,11 +4360,11 @@ extension on TranslationsSv {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servrar nekade åtkomst för det här kontot',
 			'connections.signInAgain' => 'Logga in igen',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Redigera ${product}-anslutning',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Lägg till eller ta bort URL:er för ${serverName}. PlenTV använder den nåbara URL:en med lägst latens.',
 			'accountPreferences.sectionTitle' => 'Kontoinställningar',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Ljud-, undertext- och biblioteksalternativ sparade på ${account}',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Ljud-, undertext- och biblioteksalternativ sparade på ${count} konton',
 			'accountPreferences.pickAccount' => 'Varje konto lagrar sina egna inställningar. Välj det du vill redigera.',
 			'accountPreferences.storedOnAccount' => 'Dessa alternativ sparas på själva kontot, så alla appar som är inloggade på det använder dem — inklusive PlenTV på dina andra enheter.',
@@ -4880,11 +4874,11 @@ extension on TranslationsSv {
 			'collections.title' => 'Samlingar',
 			'collections.collection' => 'Samling',
 			'collections.empty' => 'Samlingen är tom',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Ta bort samling',
 			'collections.deleteConfirm' => ({required Object title}) => 'Ta bort "${title}"? Detta kan inte ångras.',
 			'collections.deleted' => 'Samling borttagen',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Det gick inte att ta bort samlingen',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Det gick inte att ta bort samlingen: ${error}',
 			'collections.selectCollection' => 'Välj samling',
@@ -5394,11 +5388,11 @@ extension on TranslationsSv {
 			'externalPlayer.systemDefault' => 'Systemstandard',
 			'externalPlayer.addCustomPlayer' => 'Lägg till anpassad spelare',
 			'externalPlayer.playerName' => 'Spelarnamn',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Min spelare',
 			'externalPlayer.playerCommand' => 'Kommando',
 			'externalPlayer.playerPackage' => 'Paketnamn',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-schema',
 			'externalPlayer.off' => 'Av',
 			'externalPlayer.launchFailed' => 'Kunde inte öppna extern spelare',

@@ -398,8 +398,6 @@ class _Translations$settings$ko extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => '직접 설정하지 않으면 공개 Open Watch Party 릴레이를 사용합니다';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => '올바른 HTTP 또는 HTTPS 릴레이 기본 URL을 입력하세요.';
-	@override String get debugLogging => '디버그 로깅';
-	@override String get debugLoggingDescription => '문제 해결을 위해 상세 로깅 활성화';
 	@override String get viewLogs => '로그 보기';
 	@override String get viewLogsDescription => '애플리케이션 로그 확인';
 	@override String get clearImageCache => '이미지 캐시 지우기';
@@ -1079,7 +1077,6 @@ class _Translations$messages$ko extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => '서버에서 이 항목의 스트리밍을 거부했습니다(HTTP 403). 계정에 재생 권한이 없거나 서버가 로컬 네트워크에서만 재생을 허용할 수 있습니다.';
 	@override String get logsUploaded => '로그 업로드 완료';
 	@override String get logsUploadFailed => '로그 업로드 실패';
-	@override String get logId => '로그 ID';
 	@override String get burnedSubtitlesUseMenu => '자막이 이 스트림에 입혀져 있습니다. 자막 메뉴에서 변경하세요.';
 	@override String get noVideoUrl => '사용 가능한 비디오 URL이 없습니다';
 	@override String get playbackNoMediaSources => '서버에서 재생 가능한 미디어 소스를 반환하지 않았습니다';
@@ -3608,8 +3605,6 @@ extension on TranslationsKo {
 			'settings.watchTogetherRelayDescription' => '직접 설정하지 않으면 공개 Open Watch Party 릴레이를 사용합니다',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => '올바른 HTTP 또는 HTTPS 릴레이 기본 URL을 입력하세요.',
-			'settings.debugLogging' => '디버그 로깅',
-			'settings.debugLoggingDescription' => '문제 해결을 위해 상세 로깅 활성화',
 			'settings.viewLogs' => '로그 보기',
 			'settings.viewLogsDescription' => '애플리케이션 로그 확인',
 			'settings.clearImageCache' => '이미지 캐시 지우기',
@@ -3840,10 +3835,10 @@ extension on TranslationsKo {
 			'themeEditor.contrast.textOnSurface' => '표면 위 텍스트',
 			'themeEditor.contrast.textMutedOnBg' => '배경 위 보조 텍스트',
 			'themeEditor.contrast.textMutedOnSurface' => '표면 위 보조 텍스트',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => '배경 위 강조색',
 			'themeEditor.contrast.accentOnSurface' => '표면 위 강조색',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => '강조색 위 버튼 라벨',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, 권장 기준 ${minimum}:1 미만',
 			'themeEditor.discardTitle' => '변경 사항을 버리시겠습니까?',
@@ -4226,7 +4221,6 @@ extension on TranslationsKo {
 			'messages.playbackNotAllowedBody' => '서버에서 이 항목의 스트리밍을 거부했습니다(HTTP 403). 계정에 재생 권한이 없거나 서버가 로컬 네트워크에서만 재생을 허용할 수 있습니다.',
 			'messages.logsUploaded' => '로그 업로드 완료',
 			'messages.logsUploadFailed' => '로그 업로드 실패',
-			'messages.logId' => '로그 ID',
 			'messages.burnedSubtitlesUseMenu' => '자막이 이 스트림에 입혀져 있습니다. 자막 메뉴에서 변경하세요.',
 			'messages.noVideoUrl' => '사용 가능한 비디오 URL이 없습니다',
 			'messages.playbackNoMediaSources' => '서버에서 재생 가능한 미디어 소스를 반환하지 않았습니다',
@@ -4354,11 +4348,11 @@ extension on TranslationsKo {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count}개 서버에서 이 계정의 접근을 거부했습니다',
 			'connections.signInAgain' => '다시 로그인',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} 연결 편집',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName}의 URL을 추가하거나 제거하세요. PlenTV는 연결 가능한 URL 중 지연 시간이 가장 낮은 URL을 사용합니다.',
 			'accountPreferences.sectionTitle' => '계정 기본 설정',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account}에 저장된 오디오, 자막 및 라이브러리 옵션',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count}개 계정에 저장된 오디오, 자막 및 라이브러리 옵션',
 			'accountPreferences.pickAccount' => '각 계정은 고유한 기본 설정을 저장합니다. 편집할 계정을 선택하세요.',
 			'accountPreferences.storedOnAccount' => '이 옵션은 계정 자체에 저장되므로 해당 계정으로 로그인한 모든 앱에서 사용됩니다 — 다른 기기의 PlenTV를 포함합니다.',
@@ -4868,11 +4862,11 @@ extension on TranslationsKo {
 			'collections.title' => '컬렉션',
 			'collections.collection' => '컬렉션',
 			'collections.empty' => '컬렉션이 비어 있습니다',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => '컬렉션 삭제',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}"을(를) 삭제할까요? 되돌릴 수 없습니다.',
 			'collections.deleted' => '컬렉션 삭제됨',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => '컬렉션 삭제 실패',
 			'collections.deleteFailedWithError' => ({required Object error}) => '컬렉션 삭제 실패: ${error}',
 			'collections.selectCollection' => '컬렉션 선택',
@@ -5382,11 +5376,11 @@ extension on TranslationsKo {
 			'externalPlayer.systemDefault' => '시스템 기본값',
 			'externalPlayer.addCustomPlayer' => '사용자 정의 플레이어 추가',
 			'externalPlayer.playerName' => '플레이어 이름',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => '내 플레이어',
 			'externalPlayer.playerCommand' => '명령어',
 			'externalPlayer.playerPackage' => '패키지 이름',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL 스킴',
 			'externalPlayer.off' => '꺼짐',
 			'externalPlayer.launchFailed' => '외부 플레이어를 열 수 없습니다',

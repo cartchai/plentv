@@ -346,9 +346,15 @@ class IptvClient implements MediaServerClient {
     // IPv4-preference per request — flipping Settings → Advanced →
     // Prefer IPv4 switches the Xtream requests to the IPv4-only Dart
     // client. IPv4 wins over Cronet when both are on.
+    // 1.6.14 (unified spoof): the transport is a Super Spoof
+    // sub-setting of its own (Dart / IPv4-only / Cronet / Platform
+    // (Android)) — the master no longer bundles Cronet in with the UA
+    // mimic. The transport choice is re-read per request like the
+    // toggles, so flipping it applies to the next request.
     httpClient: XtreamTransportClient(
       superSpoofOn: _superSpoofOn,
       preferIpv4On: _preferIpv4On,
+      transportChoice: _superSpoofTransport,
     ),
     // Build #20: the User-Agent is re-read from Settings on every request,
     // so changing Settings → IPTV → Xtream User-Agent applies to the next
@@ -413,9 +419,12 @@ class IptvClient implements MediaServerClient {
   /// The configured Xtream User-Agent for this client's requests (build
   /// #20), with Super Spoof applied (1.6.11): when the master toggle is
   /// on and the UA piece picks a name, the mimic value wins over the
-  /// normal choice — one toggle, whole disguise. Falls back to the player
-  /// default when Settings is not initialized yet (tests) or the stored
-  /// choice is unknown — a request must never go out with no User-Agent.
+  /// normal choice — one toggle, whole disguise. 1.6.14: the mimic list
+  /// is the same list as the base choice, Custom included, and the
+  /// custom text is one shared pref — picking Custom in either list
+  /// sends the same text. Falls back to the player default when
+  /// Settings is not initialized yet (tests) or the stored choice is
+  /// unknown — a request must never go out with no User-Agent.
   static String _xtreamUserAgent() {
     final fallback = _normalXtreamUserAgent();
     final settings = SettingsService.instanceOrNull;
@@ -423,6 +432,7 @@ class IptvClient implements MediaServerClient {
     return XtreamSuperSpoof.resolveUserAgent(
       masterOn: settings.read(SettingsService.iptvSuperSpoof),
       userAgentChoice: settings.read(SettingsService.iptvSuperSpoofUserAgent),
+      customUserAgent: settings.read(SettingsService.iptvXtreamUserAgentCustom),
       fallbackUserAgent: fallback,
     );
   }
@@ -445,6 +455,18 @@ class IptvClient implements MediaServerClient {
     final settings = SettingsService.instanceOrNull;
     if (settings == null) return false;
     return settings.read(SettingsService.iptvSuperSpoof);
+  }
+
+  /// Super Spoof (1.6.14): the transport sub-setting — which network
+  /// stack the Xtream requests ride while the master is on. False when
+  /// Settings is not initialized (tests) — the requests stay on Dart.
+  /// The stored choice itself (default 'cronet', the master rode
+  /// Cronet since 1.6.13); the transport applies the master gate and
+  /// the Prefer IPv4 win per request.
+  static String _superSpoofTransport() {
+    final settings = SettingsService.instanceOrNull;
+    if (settings == null) return SettingsService.iptvSuperSpoofTransport.defaultValue;
+    return settings.read(SettingsService.iptvSuperSpoofTransport);
   }
 
   /// Prefer IPv4 (1.6.13 H1): the IPv4-preference is on — the transport
@@ -498,11 +520,14 @@ class IptvClient implements MediaServerClient {
   /// Headers for a direct (non-API) fetch from this panel — stream opens
   /// and artwork — under the Super Spoof pieces (1.6.11): the mimic UA
   /// when the UA piece picks one (and the streams piece is on), plus the
-  /// generic Accept when the headers piece is on too.
+  /// generic Accept and the keep-alive line when the headers piece is
+  /// on too (1.6.14: the keep-alive line is the exactly-one-header gap
+  /// between Dart and the platform stack).
   static Map<String, String> _directFetchHeaders() {
     final headers = <String, String>{'User-Agent': _streamUserAgent()};
     if (_superSpoofStreams() && _superSpoofHeaders()) {
       headers['Accept'] = XtreamSuperSpoof.acceptHeader;
+      headers['Connection'] = XtreamSuperSpoof.connectionHeaderValue;
     }
     return headers;
   }

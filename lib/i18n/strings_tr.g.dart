@@ -398,8 +398,6 @@ class _Translations$settings$tr extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Kendi aktarıcınızı ayarlamadığınız sürece herkese açık Open Watch Party aktarıcıları kullanılır';
 	@override String get watchTogetherRelayHint => 'https://ornek-aktarici.com';
 	@override String get watchTogetherRelayInvalid => 'Geçerli bir HTTP veya HTTPS aktarıcı adresi girin.';
-	@override String get debugLogging => 'Hata Ayıklama Günlüğü';
-	@override String get debugLoggingDescription => 'Sorun giderme için ayrıntılı günlük kaydını etkinleştir';
 	@override String get viewLogs => 'Günlükleri Görüntüle';
 	@override String get viewLogsDescription => 'Uygulama günlüklerini görüntüle';
 	@override String get clearImageCache => 'Görsel Önbelleğini Temizle';
@@ -1083,7 +1081,6 @@ class _Translations$messages$tr extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Sunucu bu ögeyi yayınlamayı reddetti (HTTP 403). Hesabınızın bunu oynatma izni olmayabilir veya sunucu oynatmaya yalnızca kendi yerel ağında izin veriyor olabilir.';
 	@override String get logsUploaded => 'Günlükler yüklendi';
 	@override String get logsUploadFailed => 'Günlükler yüklenemedi';
-	@override String get logId => 'Günlük Kimliği (ID)';
 	@override String get burnedSubtitlesUseMenu => 'Altyazılar bu akışın görüntüsüne gömülü. Bunları altyazı menüsünden değiştirin.';
 	@override String get noVideoUrl => 'Kullanılabilir video URL\'si yok';
 	@override String get playbackNoMediaSources => 'Sunucu oynatılabilir medya kaynağı döndürmedi';
@@ -3620,8 +3617,6 @@ extension on TranslationsTr {
 			'settings.watchTogetherRelayDescription' => 'Kendi aktarıcınızı ayarlamadığınız sürece herkese açık Open Watch Party aktarıcıları kullanılır',
 			'settings.watchTogetherRelayHint' => 'https://ornek-aktarici.com',
 			'settings.watchTogetherRelayInvalid' => 'Geçerli bir HTTP veya HTTPS aktarıcı adresi girin.',
-			'settings.debugLogging' => 'Hata Ayıklama Günlüğü',
-			'settings.debugLoggingDescription' => 'Sorun giderme için ayrıntılı günlük kaydını etkinleştir',
 			'settings.viewLogs' => 'Günlükleri Görüntüle',
 			'settings.viewLogsDescription' => 'Uygulama günlüklerini görüntüle',
 			'settings.clearImageCache' => 'Görsel Önbelleğini Temizle',
@@ -3852,10 +3847,10 @@ extension on TranslationsTr {
 			'themeEditor.contrast.textOnSurface' => 'Yüzey üzerinde metin',
 			'themeEditor.contrast.textMutedOnBg' => 'Arka plan üzerinde ikincil metin',
 			'themeEditor.contrast.textMutedOnSurface' => 'Yüzey üzerinde ikincil metin',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Arka plan üzerinde vurgu',
 			'themeEditor.contrast.accentOnSurface' => 'Yüzey üzerinde vurgu',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Vurgu üzerinde düğme etiketi',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, önerilen ${minimum}:1 değerinin altında',
 			'themeEditor.discardTitle' => 'Değişiklikler atılsın mı?',
@@ -4238,7 +4233,6 @@ extension on TranslationsTr {
 			'messages.playbackNotAllowedBody' => 'Sunucu bu ögeyi yayınlamayı reddetti (HTTP 403). Hesabınızın bunu oynatma izni olmayabilir veya sunucu oynatmaya yalnızca kendi yerel ağında izin veriyor olabilir.',
 			'messages.logsUploaded' => 'Günlükler yüklendi',
 			'messages.logsUploadFailed' => 'Günlükler yüklenemedi',
-			'messages.logId' => 'Günlük Kimliği (ID)',
 			'messages.burnedSubtitlesUseMenu' => 'Altyazılar bu akışın görüntüsüne gömülü. Bunları altyazı menüsünden değiştirin.',
 			'messages.noVideoUrl' => 'Kullanılabilir video URL\'si yok',
 			'messages.playbackNoMediaSources' => 'Sunucu oynatılabilir medya kaynağı döndürmedi',
@@ -4366,11 +4360,11 @@ extension on TranslationsTr {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} sunucu bu hesabın erişimini reddetti',
 			'connections.signInAgain' => 'Tekrar giriş yap',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} bağlantısını düzenle',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} için URL ekleyin veya kaldırın. PlenTV, erişilebilir olan en düşük gecikmeli URL\'yi kullanacak.',
 			'accountPreferences.sectionTitle' => 'Hesap tercihleri',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Ses, altyazı ve kitaplık seçenekleri ${account} hesabına kaydedildi',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Ses, altyazı ve kitaplık seçenekleri ${count} hesaba kaydedildi',
 			'accountPreferences.pickAccount' => 'Her hesap kendi tercihlerini saklar. Düzenlemek için birini seçin.',
 			'accountPreferences.storedOnAccount' => 'Bu seçenekler hesabın kendisine kaydedilir; böylece hesaba giriş yapan her uygulama bunları kullanır — diğer cihazlarınızdaki PlenTV dahil.',
@@ -4880,11 +4874,11 @@ extension on TranslationsTr {
 			'collections.title' => 'Koleksiyonlar',
 			'collections.collection' => 'Koleksiyon',
 			'collections.empty' => 'Koleksiyon boş',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Koleksiyonu Sil',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" silinsin mi? Bu işlem geri alınamaz.',
 			'collections.deleted' => 'Koleksiyon silindi',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Koleksiyon silinemedi',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Koleksiyon silinemedi: ${error}',
 			'collections.selectCollection' => 'Koleksiyon Seç',
@@ -5394,11 +5388,11 @@ extension on TranslationsTr {
 			'externalPlayer.systemDefault' => 'Sistem Varsayılanı',
 			'externalPlayer.addCustomPlayer' => 'Özel Oynatıcı Ekle',
 			'externalPlayer.playerName' => 'Oynatıcı Adı',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Oynatıcım',
 			'externalPlayer.playerCommand' => 'Komut',
 			'externalPlayer.playerPackage' => 'Paket Adı',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL Şeması',
 			'externalPlayer.off' => 'Kapalı',
 			'externalPlayer.launchFailed' => 'Harici oynatıcı açılamadı',

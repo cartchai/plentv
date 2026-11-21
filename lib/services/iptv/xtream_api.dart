@@ -87,6 +87,19 @@ class XtreamUserAgent {
 /// Accept header. No TiviMate traffic was captured; this is a generic mimic,
 /// not a copy of any one player.
 ///
+/// 1.6.14 (unified spoof): ALL spoofing lives under this master toggle —
+/// the UA mimic, the transport choice and the headers piece are separate
+/// sub-settings here, and the transport no longer rides the master
+/// toggle directly (see XtreamTransportChoice). The UA mimic list is the
+/// SAME list as the base Xtream User-Agent choice, Custom included, and
+/// the custom text is ONE shared pref
+/// ([SettingsService.iptvXtreamUserAgentCustom]) — picking Custom in
+/// either list sends the same text, so nothing is lost whichever list
+/// the user typed it in. Precedence (unchanged): master ON + a mimic
+/// name (incl. Custom) wins over the base choice; master OFF leaves the
+/// base choice alone; a blank custom text falls back to the base choice
+/// (which itself falls back to the player default).
+///
 /// Pure functions over stored values (no SettingsService here — the
 /// class must stay usable from the background isolate, which reads raw
 /// prefs, and from tests). The Settings-backed accessors live in
@@ -103,41 +116,65 @@ class XtreamSuperSpoof {
   static const String userAgentSmarters = 'smarters';
   static const String userAgentBrowser = 'browser';
 
+  /// 1.6.14: the mimic list is the same list as the base Xtream
+  /// User-Agent choice — Custom joins it, resolved from the shared
+  /// custom text ([userAgentForChoice]'s [custom] argument). A blank
+  /// custom text falls back to the normal UA, exactly like the base
+  /// choice does.
+  static const String userAgentCustom = 'custom';
+
   static const String defaultUserAgentChoice = userAgentVlc;
 
   /// The generic Accept header the headers piece adds.
   static const String acceptHeader = '*/*';
 
+  /// The keep-alive line the headers piece adds (1.6.14): Dart and the
+  /// platform stack differ by exactly this one header — the platform
+  /// sends `Connection: Keep-Alive` and Dart does not. No rule is
+  /// known to key on it; this closes the gap for completeness, and is
+  /// never presented as a block fix.
+  static const String connectionHeaderValue = 'Keep-Alive';
+
   /// The mimic User-Agent for a stored piece choice, or null when the
   /// piece is off ('off') or the choice is unknown — the caller then
-  /// keeps its normal UA.
-  static String? userAgentForChoice(String choice) => switch (choice) {
+  /// keeps its normal UA. 'custom' resolves from [custom] (the shared
+  /// custom text); a blank custom text also returns null, so the
+  /// caller falls back to the normal UA.
+  static String? userAgentForChoice(String choice, [String custom = '']) => switch (choice) {
     userAgentPlayer => XtreamUserAgent.player,
     userAgentSmarters => XtreamUserAgent.smarters,
     userAgentBrowser => XtreamUserAgent.browser,
     userAgentVlc => XtreamUserAgent.vlc,
+    userAgentCustom => custom.trim().isEmpty ? null : custom.trim(),
     _ => null,
   };
 
   /// The User-Agent a request should carry: the mimic value wins when
   /// the master toggle is on and the UA piece picks a name; otherwise
   /// [fallbackUserAgent] (the normal Settings choice) stands.
+  /// [customUserAgent] is the shared custom text, used only when the
+  /// piece choice is 'custom'.
   static String resolveUserAgent({
     required bool masterOn,
     required String userAgentChoice,
     required String fallbackUserAgent,
+    String customUserAgent = '',
   }) {
     if (!masterOn) return fallbackUserAgent;
-    return userAgentForChoice(userAgentChoice) ?? fallbackUserAgent;
+    return userAgentForChoice(userAgentChoice, customUserAgent) ?? fallbackUserAgent;
   }
 
   /// Extra headers the mimic set adds to a request: a generic Accept
-  /// when the master toggle and the headers piece are both on, nothing
-  /// otherwise.
+  /// plus the keep-alive line when the master toggle and the headers
+  /// piece are both on, nothing otherwise. The keep-alive line (1.6.14)
+  /// is the exactly-one-header gap between Dart and the platform stack
+  /// — a completeness fix for the headers piece, never a block fix.
   static Map<String, String> extraHeaders({
     required bool masterOn,
     required bool headersPiece,
-  }) => (masterOn && headersPiece) ? const {'Accept': acceptHeader} : const {};
+  }) => (masterOn && headersPiece)
+      ? const {'Accept': acceptHeader, 'Connection': connectionHeaderValue}
+      : const {};
 }
 
 /// Thrown when an unfiltered catalog response exceeds the 300 MB cap
@@ -420,11 +457,14 @@ class XtreamApi {
 
   /// Apply the Super Spoof headers piece to a request one of the
   /// fetchers below just built (1.6.11): the User-Agent is already set by
-  /// the caller; the headers piece adds the generic Accept. A null
+  /// the caller; the headers piece adds the generic Accept, and since
+  /// 1.6.14 also `Connection: Keep-Alive` — the one header Dart omits
+  /// that the platform stack sends (spoof-more paper §3). A null
   /// provider means the piece is off.
   void _applyMimicHeaders(http.BaseRequest request) {
     if (_mimicHeadersProvider?.call() == true) {
       request.headers['Accept'] = XtreamSuperSpoof.acceptHeader;
+      request.headers['Connection'] = XtreamSuperSpoof.connectionHeaderValue;
     }
   }
 

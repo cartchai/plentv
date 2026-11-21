@@ -398,8 +398,6 @@ class _Translations$settings$da extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Offentlige Open Watch Party-relayservere, medmindre du angiver din egen';
 	@override String get watchTogetherRelayHint => 'https://min-relay.eksempel.dk';
 	@override String get watchTogetherRelayInvalid => 'Angiv en gyldig basis-URL til en HTTP- eller HTTPS-relayserver.';
-	@override String get debugLogging => 'Fejlfindingslogning';
-	@override String get debugLoggingDescription => 'Aktiver detaljeret logning til fejlfinding';
 	@override String get viewLogs => 'Vis logfiler';
 	@override String get viewLogsDescription => 'Vis programmets logfiler';
 	@override String get clearImageCache => 'Ryd billedcache';
@@ -1083,7 +1081,6 @@ class _Translations$messages$da extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Serveren afviste at streame dette emne (HTTP 403). Din konto har muligvis ikke tilladelse til at afspille det, eller serveren tillader muligvis kun afspilning på sit lokale netværk.';
 	@override String get logsUploaded => 'Logfilerne blev uploadet';
 	@override String get logsUploadFailed => 'Logfilerne kunne ikke uploades';
-	@override String get logId => 'Log-ID';
 	@override String get burnedSubtitlesUseMenu => 'Underteksterne er indbrændt i denne stream. Skift dem i undertekstmenuen.';
 	@override String get noVideoUrl => 'Ingen video-URL er tilgængelig';
 	@override String get playbackNoMediaSources => 'Serveren returnerede ingen mediekilder, der kan afspilles';
@@ -3620,8 +3617,6 @@ extension on TranslationsDa {
 			'settings.watchTogetherRelayDescription' => 'Offentlige Open Watch Party-relayservere, medmindre du angiver din egen',
 			'settings.watchTogetherRelayHint' => 'https://min-relay.eksempel.dk',
 			'settings.watchTogetherRelayInvalid' => 'Angiv en gyldig basis-URL til en HTTP- eller HTTPS-relayserver.',
-			'settings.debugLogging' => 'Fejlfindingslogning',
-			'settings.debugLoggingDescription' => 'Aktiver detaljeret logning til fejlfinding',
 			'settings.viewLogs' => 'Vis logfiler',
 			'settings.viewLogsDescription' => 'Vis programmets logfiler',
 			'settings.clearImageCache' => 'Ryd billedcache',
@@ -3852,10 +3847,10 @@ extension on TranslationsDa {
 			'themeEditor.contrast.textOnSurface' => 'Tekst på overflade',
 			'themeEditor.contrast.textMutedOnBg' => 'Sekundær tekst på baggrund',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundær tekst på overflade',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Accentfarve på baggrund',
 			'themeEditor.contrast.accentOnSurface' => 'Accentfarve på overflade',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Knaptekst på accentfarve',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, under de anbefalede ${minimum}:1',
 			'themeEditor.discardTitle' => 'Kassér ændringer?',
@@ -4238,7 +4233,6 @@ extension on TranslationsDa {
 			'messages.playbackNotAllowedBody' => 'Serveren afviste at streame dette emne (HTTP 403). Din konto har muligvis ikke tilladelse til at afspille det, eller serveren tillader muligvis kun afspilning på sit lokale netværk.',
 			'messages.logsUploaded' => 'Logfilerne blev uploadet',
 			'messages.logsUploadFailed' => 'Logfilerne kunne ikke uploades',
-			'messages.logId' => 'Log-ID',
 			'messages.burnedSubtitlesUseMenu' => 'Underteksterne er indbrændt i denne stream. Skift dem i undertekstmenuen.',
 			'messages.noVideoUrl' => 'Ingen video-URL er tilgængelig',
 			'messages.playbackNoMediaSources' => 'Serveren returnerede ingen mediekilder, der kan afspilles',
@@ -4366,11 +4360,11 @@ extension on TranslationsDa {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servere nægtede adgang for denne konto',
 			'connections.signInAgain' => 'Log ind igen',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Rediger ${product}-forbindelse',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Tilføj eller fjern URL\'er for ${serverName}. PlenTV bruger den tilgængelige URL med laveste latenstid.',
 			'accountPreferences.sectionTitle' => 'Kontopræferencer',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Lyd-, undertekst- og biblioteksindstillinger gemt på ${account}',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Lyd-, undertekst- og biblioteksindstillinger gemt på ${count} konti',
 			'accountPreferences.pickAccount' => 'Hver konto gemmer sine egne præferencer. Vælg den, du vil redigere.',
 			'accountPreferences.storedOnAccount' => 'Disse indstillinger gemmes på selve kontoen, så alle apps, der er logget ind på den, bruger dem — inklusive PlenTV på dine andre enheder.',
@@ -4880,11 +4874,11 @@ extension on TranslationsDa {
 			'collections.title' => 'Samlinger',
 			'collections.collection' => 'Samling',
 			'collections.empty' => 'Samlingen er tom',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Slet samling',
 			'collections.deleteConfirm' => ({required Object title}) => 'Slet "${title}"? Dette kan ikke fortrydes.',
 			'collections.deleted' => 'Samling slettet',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Kunne ikke slette samling',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Kunne ikke slette samling: ${error}',
 			'collections.selectCollection' => 'Vælg samling',
@@ -5394,11 +5388,11 @@ extension on TranslationsDa {
 			'externalPlayer.systemDefault' => 'Systemstandard',
 			'externalPlayer.addCustomPlayer' => 'Tilføj brugerdefineret afspiller',
 			'externalPlayer.playerName' => 'Afspillernavn',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Min afspiller',
 			'externalPlayer.playerCommand' => 'Kommando',
 			'externalPlayer.playerPackage' => 'Pakkenavn',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-skema',
 			'externalPlayer.off' => 'Fra',
 			'externalPlayer.launchFailed' => 'Kunne ikke åbne ekstern afspiller',

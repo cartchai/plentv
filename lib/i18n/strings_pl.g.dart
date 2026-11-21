@@ -398,8 +398,6 @@ class _Translations$settings$pl extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Publiczne serwery pośredniczące Open Watch Party, chyba że ustawisz własny';
 	@override String get watchTogetherRelayHint => 'https://moj-relay.przyklad.pl';
 	@override String get watchTogetherRelayInvalid => 'Wprowadź prawidłowy bazowy adres URL serwera pośredniczącego HTTP lub HTTPS.';
-	@override String get debugLogging => 'Rejestrowanie diagnostyczne';
-	@override String get debugLoggingDescription => 'Włącz szczegółowe rejestrowanie, aby ułatwić rozwiązywanie problemów';
 	@override String get viewLogs => 'Pokaż logi';
 	@override String get viewLogsDescription => 'Pokaż logi aplikacji';
 	@override String get clearImageCache => 'Wyczyść pamięć podręczną obrazów';
@@ -1091,7 +1089,6 @@ class _Translations$messages$pl extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Serwer odmówił strumieniowania tego elementu (HTTP 403). Twoje konto może nie mieć uprawnień do jego odtwarzania albo serwer może zezwalać na odtwarzanie tylko w swojej sieci lokalnej.';
 	@override String get logsUploaded => 'Logi przesłane';
 	@override String get logsUploadFailed => 'Nie udało się przesłać logów';
-	@override String get logId => 'ID logu';
 	@override String get burnedSubtitlesUseMenu => 'Napisy są wtopione w ten strumień. Zmień je w menu napisów.';
 	@override String get noVideoUrl => 'Brak dostępnego adresu URL wideo';
 	@override String get playbackNoMediaSources => 'Serwer nie zwrócił żadnych możliwych do odtworzenia źródeł multimediów';
@@ -3644,8 +3641,6 @@ extension on TranslationsPl {
 			'settings.watchTogetherRelayDescription' => 'Publiczne serwery pośredniczące Open Watch Party, chyba że ustawisz własny',
 			'settings.watchTogetherRelayHint' => 'https://moj-relay.przyklad.pl',
 			'settings.watchTogetherRelayInvalid' => 'Wprowadź prawidłowy bazowy adres URL serwera pośredniczącego HTTP lub HTTPS.',
-			'settings.debugLogging' => 'Rejestrowanie diagnostyczne',
-			'settings.debugLoggingDescription' => 'Włącz szczegółowe rejestrowanie, aby ułatwić rozwiązywanie problemów',
 			'settings.viewLogs' => 'Pokaż logi',
 			'settings.viewLogsDescription' => 'Pokaż logi aplikacji',
 			'settings.clearImageCache' => 'Wyczyść pamięć podręczną obrazów',
@@ -3876,10 +3871,10 @@ extension on TranslationsPl {
 			'themeEditor.contrast.textOnSurface' => 'Tekst na powierzchni',
 			'themeEditor.contrast.textMutedOnBg' => 'Tekst drugorzędny na tle',
 			'themeEditor.contrast.textMutedOnSurface' => 'Tekst drugorzędny na powierzchni',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Akcent na tle',
 			'themeEditor.contrast.accentOnSurface' => 'Akcent na powierzchni',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Etykieta przycisku na akcencie',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, poniżej zalecanego ${minimum}:1',
 			'themeEditor.discardTitle' => 'Odrzucić zmiany?',
@@ -4262,7 +4257,6 @@ extension on TranslationsPl {
 			'messages.playbackNotAllowedBody' => 'Serwer odmówił strumieniowania tego elementu (HTTP 403). Twoje konto może nie mieć uprawnień do jego odtwarzania albo serwer może zezwalać na odtwarzanie tylko w swojej sieci lokalnej.',
 			'messages.logsUploaded' => 'Logi przesłane',
 			'messages.logsUploadFailed' => 'Nie udało się przesłać logów',
-			'messages.logId' => 'ID logu',
 			'messages.burnedSubtitlesUseMenu' => 'Napisy są wtopione w ten strumień. Zmień je w menu napisów.',
 			'messages.noVideoUrl' => 'Brak dostępnego adresu URL wideo',
 			'messages.playbackNoMediaSources' => 'Serwer nie zwrócił żadnych możliwych do odtworzenia źródeł multimediów',
@@ -4390,11 +4384,11 @@ extension on TranslationsPl {
 			'connections.accessDeniedMany' => ({required Object count}) => 'Odmowa dostępu dla tego konta na ${count} serwerach',
 			'connections.signInAgain' => 'Zaloguj się ponownie',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Edytuj połączenie z ${product}',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Dodaj lub usuń adresy URL dla ${serverName}. PlenTV będzie używać osiągalnego adresu URL o najniższym opóźnieniu.',
 			'accountPreferences.sectionTitle' => 'Preferencje konta',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Opcje audio, napisów i biblioteki zapisane na koncie ${account}',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Opcje audio, napisów i biblioteki zapisane na ${count} kontach',
 			'accountPreferences.pickAccount' => 'Każde konto przechowuje własne preferencje. Wybierz to, które chcesz edytować.',
 			'accountPreferences.storedOnAccount' => 'Te opcje są zapisywane na samym koncie, więc używa ich każda aplikacja zalogowana na to konto — w tym PlenTV na Twoich innych urządzeniach.',
@@ -4904,11 +4898,11 @@ extension on TranslationsPl {
 			'collections.title' => 'Kolekcje',
 			'collections.collection' => 'Kolekcja',
 			'collections.empty' => 'Kolekcja jest pusta',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Usuń kolekcję',
 			'collections.deleteConfirm' => ({required Object title}) => 'Usunąć "${title}"? Tego nie można cofnąć.',
 			'collections.deleted' => 'Kolekcja usunięta',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Nie udało się usunąć kolekcji',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Nie udało się usunąć kolekcji: ${error}',
 			'collections.selectCollection' => 'Wybierz kolekcję',
@@ -5418,11 +5412,11 @@ extension on TranslationsPl {
 			'externalPlayer.systemDefault' => 'Domyślny systemowy',
 			'externalPlayer.addCustomPlayer' => 'Dodaj niestandardowy odtwarzacz',
 			'externalPlayer.playerName' => 'Nazwa odtwarzacza',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mój odtwarzacz',
 			'externalPlayer.playerCommand' => 'Polecenie',
 			'externalPlayer.playerPackage' => 'Nazwa pakietu',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'Schemat URL',
 			'externalPlayer.off' => 'Wyłączony',
 			'externalPlayer.launchFailed' => 'Nie udało się otworzyć zewnętrznego odtwarzacza',

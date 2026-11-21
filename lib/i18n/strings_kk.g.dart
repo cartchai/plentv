@@ -398,8 +398,6 @@ class _Translations$settings$kk extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Өз релеңізді көрсетпесеңіз, жалпыға ортақ Open Watch Party релелері пайдаланылады';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => 'Дұрыс HTTP немесе HTTPS реле мекенжайын енгізіңіз.';
-	@override String get debugLogging => 'Жөндеу журналы';
-	@override String get debugLoggingDescription => 'Мәселелерді шешу үшін толық журнал жүргізуді қосу';
 	@override String get viewLogs => 'Журналдарды көру';
 	@override String get viewLogsDescription => 'Қолданба журналдарын көру';
 	@override String get clearImageCache => 'Сурет кэшін тазалау';
@@ -1083,7 +1081,6 @@ class _Translations$messages$kk extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Сервер бұл элементті ағынмен жіберуден бас тартты (HTTP 403). Тіркелгіңізде оны ойнатуға рұқсат болмауы мүмкін немесе сервер ойнатуға тек өзінің жергілікті желісінде рұқсат беруі мүмкін.';
 	@override String get logsUploaded => 'Журналдар жүктелді';
 	@override String get logsUploadFailed => 'Журналдарды жүктеу мүмкін болмады';
-	@override String get logId => 'Журнал ID-сі';
 	@override String get burnedSubtitlesUseMenu => 'Субтитрлер бұл ағынға кіріктірілген. Оларды субтитр мәзірінен өзгертіңіз.';
 	@override String get noVideoUrl => 'Бейне URL-і қолжетімді емес';
 	@override String get playbackNoMediaSources => 'Сервер ойнатуға болатын медиа көздерін қайтармады';
@@ -3620,8 +3617,6 @@ extension on TranslationsKk {
 			'settings.watchTogetherRelayDescription' => 'Өз релеңізді көрсетпесеңіз, жалпыға ортақ Open Watch Party релелері пайдаланылады',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => 'Дұрыс HTTP немесе HTTPS реле мекенжайын енгізіңіз.',
-			'settings.debugLogging' => 'Жөндеу журналы',
-			'settings.debugLoggingDescription' => 'Мәселелерді шешу үшін толық журнал жүргізуді қосу',
 			'settings.viewLogs' => 'Журналдарды көру',
 			'settings.viewLogsDescription' => 'Қолданба журналдарын көру',
 			'settings.clearImageCache' => 'Сурет кэшін тазалау',
@@ -3852,10 +3847,10 @@ extension on TranslationsKk {
 			'themeEditor.contrast.textOnSurface' => 'Беткі қабаттағы мәтін',
 			'themeEditor.contrast.textMutedOnBg' => 'Фондағы қосалқы мәтін',
 			'themeEditor.contrast.textMutedOnSurface' => 'Беткі қабаттағы қосалқы мәтін',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Фондағы акцент',
 			'themeEditor.contrast.accentOnSurface' => 'Беткі қабаттағы акцент',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Акценттегі түйме мәтіні',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, ұсынылған ${minimum}:1 мәнінен төмен',
 			'themeEditor.discardTitle' => 'Өзгерістер жойылсын ба?',
@@ -4238,7 +4233,6 @@ extension on TranslationsKk {
 			'messages.playbackNotAllowedBody' => 'Сервер бұл элементті ағынмен жіберуден бас тартты (HTTP 403). Тіркелгіңізде оны ойнатуға рұқсат болмауы мүмкін немесе сервер ойнатуға тек өзінің жергілікті желісінде рұқсат беруі мүмкін.',
 			'messages.logsUploaded' => 'Журналдар жүктелді',
 			'messages.logsUploadFailed' => 'Журналдарды жүктеу мүмкін болмады',
-			'messages.logId' => 'Журнал ID-сі',
 			'messages.burnedSubtitlesUseMenu' => 'Субтитрлер бұл ағынға кіріктірілген. Оларды субтитр мәзірінен өзгертіңіз.',
 			'messages.noVideoUrl' => 'Бейне URL-і қолжетімді емес',
 			'messages.playbackNoMediaSources' => 'Сервер ойнатуға болатын медиа көздерін қайтармады',
@@ -4366,11 +4360,11 @@ extension on TranslationsKk {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} сервер бұл тіркелгіге кіруден бас тартты',
 			'connections.signInAgain' => 'Қайтадан кіру',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} қосылымын өңдеу',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} үшін URL мекенжайларды қосыңыз немесе өшіріңіз. PlenTV ең төмен кідірісі бар қолжетімді URL мекенжайды пайдаланады.',
 			'accountPreferences.sectionTitle' => 'Тіркелгі баптаулары',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} тіркелгісінде сақталған аудио, субтитр және кітапхана баптаулары',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count} тіркелгіде сақталған аудио, субтитр және кітапхана баптаулары',
 			'accountPreferences.pickAccount' => 'Әр тіркелгі өз баптауларын сақтайды. Өңдеу үшін біреуін таңдаңыз.',
 			'accountPreferences.storedOnAccount' => 'Бұл баптаулар тіркелгінің өзінде сақталады, сондықтан оған кірген әрбір қолданба оларды пайдаланады — басқа құрылғыларыңыздағы PlenTV қоса.',
@@ -4880,11 +4874,11 @@ extension on TranslationsKk {
 			'collections.title' => 'Топтамалар',
 			'collections.collection' => 'Топтама',
 			'collections.empty' => 'Топтама бос',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Топтаманы өшіру',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" өшірілсін бе?',
 			'collections.deleted' => 'Топтама өшірілді',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Топтаманы өшіру мүмкін болмады',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Топтаманы өшіру қатесі: ${error}',
 			'collections.selectCollection' => 'Топтаманы таңдау',
@@ -5394,11 +5388,11 @@ extension on TranslationsKk {
 			'externalPlayer.systemDefault' => 'Жүйелік әдепкі',
 			'externalPlayer.addCustomPlayer' => 'Арнайы ойнатқыш қосу',
 			'externalPlayer.playerName' => 'Ойнатқыш атауы',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Менің ойнатқышым',
 			'externalPlayer.playerCommand' => 'Пәрмен',
 			'externalPlayer.playerPackage' => 'Пакет атауы',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL схемасы',
 			'externalPlayer.off' => 'Өшірулі',
 			'externalPlayer.launchFailed' => 'Сыртқы ойнатқышты іске қосу мүмкін болмады',

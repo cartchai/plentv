@@ -398,8 +398,6 @@ class Translations$settings$zh extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => '除非自行设置，否则使用公共 Open Watch Party 中继服务器';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => '请输入有效的 HTTP 或 HTTPS 中继服务器基础 URL。';
-	@override String get debugLogging => '调试日志';
-	@override String get debugLoggingDescription => '启用详细日志记录以便故障排除';
 	@override String get viewLogs => '查看日志';
 	@override String get viewLogsDescription => '查看应用日志';
 	@override String get clearImageCache => '清除图片缓存';
@@ -1079,7 +1077,6 @@ class Translations$messages$zh extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => '服务器拒绝传输此项目（HTTP 403）。此账户可能没有播放权限，或服务器可能仅允许在其局域网内播放。';
 	@override String get logsUploaded => '日志已上传';
 	@override String get logsUploadFailed => '上传日志失败';
-	@override String get logId => '日志 ID';
 	@override String get burnedSubtitlesUseMenu => '字幕已烧录到此视频流中。请从字幕菜单中更改。';
 	@override String get noVideoUrl => '没有可用的视频 URL';
 	@override String get playbackNoMediaSources => '服务器未返回可播放的媒体源';
@@ -3608,8 +3605,6 @@ extension on TranslationsZh {
 			'settings.watchTogetherRelayDescription' => '除非自行设置，否则使用公共 Open Watch Party 中继服务器',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => '请输入有效的 HTTP 或 HTTPS 中继服务器基础 URL。',
-			'settings.debugLogging' => '调试日志',
-			'settings.debugLoggingDescription' => '启用详细日志记录以便故障排除',
 			'settings.viewLogs' => '查看日志',
 			'settings.viewLogsDescription' => '查看应用日志',
 			'settings.clearImageCache' => '清除图片缓存',
@@ -3840,10 +3835,10 @@ extension on TranslationsZh {
 			'themeEditor.contrast.textOnSurface' => '表面上的文字',
 			'themeEditor.contrast.textMutedOnBg' => '背景上的次要文字',
 			'themeEditor.contrast.textMutedOnSurface' => '表面上的次要文字',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => '背景上的强调色',
 			'themeEditor.contrast.accentOnSurface' => '表面上的强调色',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => '强调色上的按钮文字',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}：${ratio}:1，低于建议的 ${minimum}:1',
 			'themeEditor.discardTitle' => '放弃更改？',
@@ -4226,7 +4221,6 @@ extension on TranslationsZh {
 			'messages.playbackNotAllowedBody' => '服务器拒绝传输此项目（HTTP 403）。此账户可能没有播放权限，或服务器可能仅允许在其局域网内播放。',
 			'messages.logsUploaded' => '日志已上传',
 			'messages.logsUploadFailed' => '上传日志失败',
-			'messages.logId' => '日志 ID',
 			'messages.burnedSubtitlesUseMenu' => '字幕已烧录到此视频流中。请从字幕菜单中更改。',
 			'messages.noVideoUrl' => '没有可用的视频 URL',
 			'messages.playbackNoMediaSources' => '服务器未返回可播放的媒体源',
@@ -4354,11 +4348,11 @@ extension on TranslationsZh {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} 台服务器拒绝此账户访问',
 			'connections.signInAgain' => '重新登录',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '编辑 ${product} 连接',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '为 ${serverName} 添加或移除 URL。PlenTV 会使用延迟最低且可访问的 URL。',
 			'accountPreferences.sectionTitle' => '账户偏好',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '音频、字幕和媒体库选项已保存在 ${account} 上',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '音频、字幕和媒体库选项已保存在 ${count} 个账户上',
 			'accountPreferences.pickAccount' => '每个账户都保存自己的偏好设置。选择要编辑的账户。',
 			'accountPreferences.storedOnAccount' => '这些选项保存在账户本身，因此所有登录该账户的应用都会使用它们——包括你其他设备上的 PlenTV。',
@@ -4868,11 +4862,11 @@ extension on TranslationsZh {
 			'collections.title' => '合集',
 			'collections.collection' => '合集',
 			'collections.empty' => '合集为空',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => '删除合集',
 			'collections.deleteConfirm' => ({required Object title}) => '要删除“${title}”吗？此操作无法撤销。',
 			'collections.deleted' => '已删除合集',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => '删除合集失败',
 			'collections.deleteFailedWithError' => ({required Object error}) => '删除合集失败：${error}',
 			'collections.selectCollection' => '选择合集',
@@ -5382,11 +5376,11 @@ extension on TranslationsZh {
 			'externalPlayer.systemDefault' => '系统默认',
 			'externalPlayer.addCustomPlayer' => '添加自定义播放器',
 			'externalPlayer.playerName' => '播放器名称',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => '我的播放器',
 			'externalPlayer.playerCommand' => '命令',
 			'externalPlayer.playerPackage' => '包名',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL 方案',
 			'externalPlayer.off' => '关闭',
 			'externalPlayer.launchFailed' => '无法打开外部播放器',

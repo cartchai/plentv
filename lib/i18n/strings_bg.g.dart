@@ -398,8 +398,6 @@ class _Translations$settings$bg extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Публичните релейни сървъри на Open Watch Party, освен ако не зададете свой';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => 'Въведете валиден основен HTTP или HTTPS URL адрес на релейния сървър.';
-	@override String get debugLogging => 'Логове за отстраняване на грешки';
-	@override String get debugLoggingDescription => 'Включи подробни логове за диагностика';
 	@override String get viewLogs => 'Виж логовете';
 	@override String get viewLogsDescription => 'Преглед на логовете на приложението';
 	@override String get clearImageCache => 'Изчисти кеша на изображенията';
@@ -1083,7 +1081,6 @@ class _Translations$messages$bg extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Сървърът отказа да предава този елемент поточно (HTTP 403). Възможно е профилът ви да няма разрешение да го възпроизвежда или сървърът да позволява възпроизвеждане само в локалната си мрежа.';
 	@override String get logsUploaded => 'Логовете са качени';
 	@override String get logsUploadFailed => 'Неуспешно качване на логовете';
-	@override String get logId => 'ID на лога';
 	@override String get burnedSubtitlesUseMenu => 'Субтитрите са вградени в този поток. Променете ги от менюто за субтитри.';
 	@override String get noVideoUrl => 'Няма наличен URL за видеото';
 	@override String get playbackNoMediaSources => 'Сървърът не върна медийни източници, годни за възпроизвеждане';
@@ -3620,8 +3617,6 @@ extension on TranslationsBg {
 			'settings.watchTogetherRelayDescription' => 'Публичните релейни сървъри на Open Watch Party, освен ако не зададете свой',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => 'Въведете валиден основен HTTP или HTTPS URL адрес на релейния сървър.',
-			'settings.debugLogging' => 'Логове за отстраняване на грешки',
-			'settings.debugLoggingDescription' => 'Включи подробни логове за диагностика',
 			'settings.viewLogs' => 'Виж логовете',
 			'settings.viewLogsDescription' => 'Преглед на логовете на приложението',
 			'settings.clearImageCache' => 'Изчисти кеша на изображенията',
@@ -3852,10 +3847,10 @@ extension on TranslationsBg {
 			'themeEditor.contrast.textOnSurface' => 'Текст върху повърхността',
 			'themeEditor.contrast.textMutedOnBg' => 'Вторичен текст върху фона',
 			'themeEditor.contrast.textMutedOnSurface' => 'Вторичен текст върху повърхността',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Акцент върху фона',
 			'themeEditor.contrast.accentOnSurface' => 'Акцент върху повърхността',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Надпис на бутон върху акцента',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, под препоръчителното ${minimum}:1',
 			'themeEditor.discardTitle' => 'Да се отхвърлят ли промените?',
@@ -4238,7 +4233,6 @@ extension on TranslationsBg {
 			'messages.playbackNotAllowedBody' => 'Сървърът отказа да предава този елемент поточно (HTTP 403). Възможно е профилът ви да няма разрешение да го възпроизвежда или сървърът да позволява възпроизвеждане само в локалната си мрежа.',
 			'messages.logsUploaded' => 'Логовете са качени',
 			'messages.logsUploadFailed' => 'Неуспешно качване на логовете',
-			'messages.logId' => 'ID на лога',
 			'messages.burnedSubtitlesUseMenu' => 'Субтитрите са вградени в този поток. Променете ги от менюто за субтитри.',
 			'messages.noVideoUrl' => 'Няма наличен URL за видеото',
 			'messages.playbackNoMediaSources' => 'Сървърът не върна медийни източници, годни за възпроизвеждане',
@@ -4366,11 +4360,11 @@ extension on TranslationsBg {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} сървъра отказаха достъп за този профил',
 			'connections.signInAgain' => 'Влез отново',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Редактирай връзката с ${product}',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Добавете или премахнете URL адреси за ${serverName}. PlenTV ще използва достъпния URL адрес с най-ниска латентност.',
 			'accountPreferences.sectionTitle' => 'Предпочитания на акаунта',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Опции за аудио, субтитри и библиотека, запазени на ${account}',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Опции за аудио, субтитри и библиотека, запазени на ${count} акаунта',
 			'accountPreferences.pickAccount' => 'Всеки акаунт съхранява собствени предпочитания. Изберете кой да редактирате.',
 			'accountPreferences.storedOnAccount' => 'Тези опции се запазват на самия акаунт, така че всяко приложение, вписано в него, ги използва — включително PlenTV на другите ви устройства.',
@@ -4880,11 +4874,11 @@ extension on TranslationsBg {
 			'collections.title' => 'Колекции',
 			'collections.collection' => 'Колекция',
 			'collections.empty' => 'Колекцията е празна',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Изтрий колекция',
 			'collections.deleteConfirm' => ({required Object title}) => 'Да се изтрие ли "${title}"? Това не може да бъде отменено.',
 			'collections.deleted' => 'Колекцията е изтрита',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Неуспешно изтриване на колекция',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Неуспешно изтриване на колекция: ${error}',
 			'collections.selectCollection' => 'Избери колекция',
@@ -5394,11 +5388,11 @@ extension on TranslationsBg {
 			'externalPlayer.systemDefault' => 'Системен по подразбиране',
 			'externalPlayer.addCustomPlayer' => 'Добави потребителски плейър',
 			'externalPlayer.playerName' => 'Име на плейъра',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Моят плеър',
 			'externalPlayer.playerCommand' => 'Команда',
 			'externalPlayer.playerPackage' => 'Име на пакет',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL схема',
 			'externalPlayer.off' => 'Изключено',
 			'externalPlayer.launchFailed' => 'Неуспешно отваряне на външен плеър',

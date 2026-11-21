@@ -398,8 +398,6 @@ class _Translations$settings$hu extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Nyilvános Open Watch Party-relék, hacsak nem adsz meg sajátot';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => 'Adj meg egy érvényes HTTP- vagy HTTPS-alapú relészerver-URL-t.';
-	@override String get debugLogging => 'Hibakeresési naplózás';
-	@override String get debugLoggingDescription => 'Részletes naplózás engedélyezése a hibaelhárításhoz';
 	@override String get viewLogs => 'Naplók megtekintése';
 	@override String get viewLogsDescription => 'Alkalmazásnaplók megtekintése';
 	@override String get clearImageCache => 'Képgyorsítótár törlése';
@@ -1083,7 +1081,6 @@ class _Translations$messages$hu extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'A szerver megtagadta ennek az elemnek a streamelését (HTTP 403). Lehet, hogy a fiókodnak nincs engedélye a lejátszására, vagy a szerver csak a helyi hálózatán engedélyezi a lejátszást.';
 	@override String get logsUploaded => 'Naplók feltöltve';
 	@override String get logsUploadFailed => 'Nem sikerült a naplók feltöltése';
-	@override String get logId => 'Naplóazonosító';
 	@override String get burnedSubtitlesUseMenu => 'A feliratok bele vannak égetve ebbe a streambe. A feliratmenüben módosíthatod őket.';
 	@override String get noVideoUrl => 'Nem érhető el videó-URL';
 	@override String get playbackNoMediaSources => 'A szerver nem adott vissza lejátszható médiaforrást';
@@ -3620,8 +3617,6 @@ extension on TranslationsHu {
 			'settings.watchTogetherRelayDescription' => 'Nyilvános Open Watch Party-relék, hacsak nem adsz meg sajátot',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => 'Adj meg egy érvényes HTTP- vagy HTTPS-alapú relészerver-URL-t.',
-			'settings.debugLogging' => 'Hibakeresési naplózás',
-			'settings.debugLoggingDescription' => 'Részletes naplózás engedélyezése a hibaelhárításhoz',
 			'settings.viewLogs' => 'Naplók megtekintése',
 			'settings.viewLogsDescription' => 'Alkalmazásnaplók megtekintése',
 			'settings.clearImageCache' => 'Képgyorsítótár törlése',
@@ -3852,10 +3847,10 @@ extension on TranslationsHu {
 			'themeEditor.contrast.textOnSurface' => 'Szöveg a felületen',
 			'themeEditor.contrast.textMutedOnBg' => 'Másodlagos szöveg a háttéren',
 			'themeEditor.contrast.textMutedOnSurface' => 'Másodlagos szöveg a felületen',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Kiemelőszín a háttéren',
 			'themeEditor.contrast.accentOnSurface' => 'Kiemelőszín a felületen',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Gombfelirat a kiemelőszínen',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, az ajánlott ${minimum}:1 alatt',
 			'themeEditor.discardTitle' => 'Elveted a módosításokat?',
@@ -4238,7 +4233,6 @@ extension on TranslationsHu {
 			'messages.playbackNotAllowedBody' => 'A szerver megtagadta ennek az elemnek a streamelését (HTTP 403). Lehet, hogy a fiókodnak nincs engedélye a lejátszására, vagy a szerver csak a helyi hálózatán engedélyezi a lejátszást.',
 			'messages.logsUploaded' => 'Naplók feltöltve',
 			'messages.logsUploadFailed' => 'Nem sikerült a naplók feltöltése',
-			'messages.logId' => 'Naplóazonosító',
 			'messages.burnedSubtitlesUseMenu' => 'A feliratok bele vannak égetve ebbe a streambe. A feliratmenüben módosíthatod őket.',
 			'messages.noVideoUrl' => 'Nem érhető el videó-URL',
 			'messages.playbackNoMediaSources' => 'A szerver nem adott vissza lejátszható médiaforrást',
@@ -4366,11 +4360,11 @@ extension on TranslationsHu {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} szerver megtagadta a hozzáférést ettől a fióktól',
 			'connections.signInAgain' => 'Bejelentkezés újra',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'A(z) ${product} kapcsolat szerkesztése',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Adjon hozzá vagy távolítson el URL-eket a(z) ${serverName} esetén. A PlenTV a legkisebb késleltetésű, elérhető URL-t fogja használni.',
 			'accountPreferences.sectionTitle' => 'Fiókbeállítások',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Hang-, felirat- és könyvtárbeállítások mentve a(z) ${account} fiókra',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Hang-, felirat- és könyvtárbeállítások mentve ${count} fiókra',
 			'accountPreferences.pickAccount' => 'Minden fiók a saját beállításait tárolja. Válaszd ki a szerkesztendőt.',
 			'accountPreferences.storedOnAccount' => 'Ezek a beállítások magán a fiókon tárolódnak, így minden bejelentkezett alkalmazás használja őket — beleértve a PlenTVt a többi eszközödön.',
@@ -4880,11 +4874,11 @@ extension on TranslationsHu {
 			'collections.title' => 'Gyűjtemények',
 			'collections.collection' => 'Gyűjtemény',
 			'collections.empty' => 'A gyűjtemény üres',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Gyűjtemény törlése',
 			'collections.deleteConfirm' => ({required Object title}) => 'Törlöd a következőt: "${title}"? Ez nem vonható vissza.',
 			'collections.deleted' => 'Gyűjtemény törölve',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Nem sikerült a gyűjtemény törlése',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Nem sikerült a gyűjtemény törlése: ${error}',
 			'collections.selectCollection' => 'Gyűjtemény kiválasztása',
@@ -5394,11 +5388,11 @@ extension on TranslationsHu {
 			'externalPlayer.systemDefault' => 'Rendszer alapértelmezése',
 			'externalPlayer.addCustomPlayer' => 'Egyéni lejátszó hozzáadása',
 			'externalPlayer.playerName' => 'Lejátszó neve',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Saját lejátszó',
 			'externalPlayer.playerCommand' => 'Parancs',
 			'externalPlayer.playerPackage' => 'Csomagnév',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-séma',
 			'externalPlayer.off' => 'Ki',
 			'externalPlayer.launchFailed' => 'Nem sikerült megnyitni a külső lejátszót',

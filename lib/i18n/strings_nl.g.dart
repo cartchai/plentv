@@ -398,8 +398,6 @@ class _Translations$settings$nl extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Openbare Open Watch Party-relays, tenzij je een eigen relay instelt';
 	@override String get watchTogetherRelayHint => 'https://mijn-relay.voorbeeld.nl';
 	@override String get watchTogetherRelayInvalid => 'Voer een geldige HTTP- of HTTPS-basis-URL voor de relay in.';
-	@override String get debugLogging => 'Debuglogboek';
-	@override String get debugLoggingDescription => 'Schakel gedetailleerde logboekregistratie in om problemen op te lossen';
 	@override String get viewLogs => 'Logbestanden bekijken';
 	@override String get viewLogsDescription => 'Logbestanden van de app bekijken';
 	@override String get clearImageCache => 'Afbeeldingscache wissen';
@@ -1083,7 +1081,6 @@ class _Translations$messages$nl extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'De server weigerde dit item te streamen (HTTP 403). Je account heeft mogelijk geen toestemming om het af te spelen, of de server staat afspelen alleen toe op het eigen lokale netwerk.';
 	@override String get logsUploaded => 'Logbestanden geüpload';
 	@override String get logsUploadFailed => 'Uploaden van logbestanden mislukt';
-	@override String get logId => 'Logboek-ID';
 	@override String get burnedSubtitlesUseMenu => 'De ondertitels zijn in deze stream ingebrand. Wijzig ze via het ondertitelmenu.';
 	@override String get noVideoUrl => 'Geen video-URL beschikbaar';
 	@override String get playbackNoMediaSources => 'De server heeft geen afspeelbare mediabronnen geretourneerd';
@@ -3620,8 +3617,6 @@ extension on TranslationsNl {
 			'settings.watchTogetherRelayDescription' => 'Openbare Open Watch Party-relays, tenzij je een eigen relay instelt',
 			'settings.watchTogetherRelayHint' => 'https://mijn-relay.voorbeeld.nl',
 			'settings.watchTogetherRelayInvalid' => 'Voer een geldige HTTP- of HTTPS-basis-URL voor de relay in.',
-			'settings.debugLogging' => 'Debuglogboek',
-			'settings.debugLoggingDescription' => 'Schakel gedetailleerde logboekregistratie in om problemen op te lossen',
 			'settings.viewLogs' => 'Logbestanden bekijken',
 			'settings.viewLogsDescription' => 'Logbestanden van de app bekijken',
 			'settings.clearImageCache' => 'Afbeeldingscache wissen',
@@ -3852,10 +3847,10 @@ extension on TranslationsNl {
 			'themeEditor.contrast.textOnSurface' => 'Tekst op oppervlak',
 			'themeEditor.contrast.textMutedOnBg' => 'Secundaire tekst op achtergrond',
 			'themeEditor.contrast.textMutedOnSurface' => 'Secundaire tekst op oppervlak',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Accent op achtergrond',
 			'themeEditor.contrast.accentOnSurface' => 'Accent op oppervlak',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Knoptekst op accent',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, onder de aanbevolen ${minimum}:1',
 			'themeEditor.discardTitle' => 'Wijzigingen negeren?',
@@ -4238,7 +4233,6 @@ extension on TranslationsNl {
 			'messages.playbackNotAllowedBody' => 'De server weigerde dit item te streamen (HTTP 403). Je account heeft mogelijk geen toestemming om het af te spelen, of de server staat afspelen alleen toe op het eigen lokale netwerk.',
 			'messages.logsUploaded' => 'Logbestanden geüpload',
 			'messages.logsUploadFailed' => 'Uploaden van logbestanden mislukt',
-			'messages.logId' => 'Logboek-ID',
 			'messages.burnedSubtitlesUseMenu' => 'De ondertitels zijn in deze stream ingebrand. Wijzig ze via het ondertitelmenu.',
 			'messages.noVideoUrl' => 'Geen video-URL beschikbaar',
 			'messages.playbackNoMediaSources' => 'De server heeft geen afspeelbare mediabronnen geretourneerd',
@@ -4366,11 +4360,11 @@ extension on TranslationsNl {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servers weigerden toegang voor dit account',
 			'connections.signInAgain' => 'Opnieuw aanmelden',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product}-verbinding bewerken',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Voeg URL\'s toe aan ${serverName} of verwijder ze. PlenTV gebruikt de bereikbare URL met de laagste latentie.',
 			'accountPreferences.sectionTitle' => 'Accountvoorkeuren',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Audio-, ondertitel- en bibliotheekopties opgeslagen op ${account}',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Audio-, ondertitel- en bibliotheekopties opgeslagen op ${count} accounts',
 			'accountPreferences.pickAccount' => 'Elk account slaat zijn eigen voorkeuren op. Kies het account dat je wilt bewerken.',
 			'accountPreferences.storedOnAccount' => 'Deze opties worden op het account zelf opgeslagen, zodat elke app die ermee is aangemeld ze gebruikt — ook PlenTV op je andere apparaten.',
@@ -4880,11 +4874,11 @@ extension on TranslationsNl {
 			'collections.title' => 'Collecties',
 			'collections.collection' => 'Collectie',
 			'collections.empty' => 'Collectie is leeg',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Collectie verwijderen',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" verwijderen? Dit kan niet ongedaan worden gemaakt.',
 			'collections.deleted' => 'Collectie verwijderd',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Collectie verwijderen mislukt',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Collectie verwijderen mislukt: ${error}',
 			'collections.selectCollection' => 'Collectie selecteren',
@@ -5394,11 +5388,11 @@ extension on TranslationsNl {
 			'externalPlayer.systemDefault' => 'Systeemstandaard',
 			'externalPlayer.addCustomPlayer' => 'Aangepaste speler toevoegen',
 			'externalPlayer.playerName' => 'Spelernaam',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mijn speler',
 			'externalPlayer.playerCommand' => 'Commando',
 			'externalPlayer.playerPackage' => 'Pakketnaam',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-schema',
 			'externalPlayer.off' => 'Uit',
 			'externalPlayer.launchFailed' => 'Kan externe speler niet openen',

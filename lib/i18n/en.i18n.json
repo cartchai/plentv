@@ -213,10 +213,15 @@
     "superSpoofHeadersDescription": "Send generic-player request headers along with the disguised User-Agent.",
     "superSpoofStreams": "Spoof streams and artwork too",
     "superSpoofStreamsDescription": "Use the same disguise for video streams and poster art, not just catalog and guide requests.",
+    "superSpoofTransport": "Spoof transport",
+    "superSpoofTransportDart": "Dart (the app's own)",
+    "superSpoofTransportIpv4": "IPv4-only",
+    "superSpoofTransportCronet": "Chrome (Cronet)",
+    "superSpoofTransportPlatform": "Platform (Android)",
     "iptvLiveTs": "Request live TV as MPEG-TS",
     "iptvLiveTsDescription": "Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.",
     "preferIpv4": "Prefer IPv4",
-    "preferIpv4Description": "Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone's IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi.",
+    "preferIpv4Description": "Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone's IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi. When it's on, it wins over the Super Spoof transport choice.",
     "secondsLabel": "Seconds",
     "minutesLabel": "Minutes",
     "secondsShort": "s",
@@ -1577,6 +1582,12 @@
       "Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime",
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
+    ],
+    "changelog2333": [
+      "New: all the spoofing now lives in one place — Settings → Advanced → Super Spoof. The name, the network stack and the extra headers are separate switches under it, so you can change one without touching the others",
+      "Fixed: the Super Spoof name list now has Custom too, like the main User-Agent list — the custom name you type is the same one in both places, so nothing gets lost",
+      "New: Super Spoof has a “Platform (Android)” transport choice — the provider requests go out over Android's own built-in connection, the same one other TV players use, instead of the app's own or Chrome's. It only runs while Super Spoof is on, and it falls back to today's requests if it can't start",
+      "Fixed: the spoof headers now also send the same keep-alive line other players send, so the requests match them header for header"
     ],
     "changelog2332": [
       "Fixed: with Super Spoof on (Settings → Advanced), the app's provider requests now ride Chrome's network stack instead of Dart's own — the same fingerprint a normal Android player sends",

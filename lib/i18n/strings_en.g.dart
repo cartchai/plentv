@@ -601,6 +601,21 @@ class Translations$settings$en {
 	/// en: 'Use the same disguise for video streams and poster art, not just catalog and guide requests.'
 	String get superSpoofStreamsDescription => 'Use the same disguise for video streams and poster art, not just catalog and guide requests.';
 
+	/// en: 'Spoof transport'
+	String get superSpoofTransport => 'Spoof transport';
+
+	/// en: 'Dart (the app's own)'
+	String get superSpoofTransportDart => 'Dart (the app\'s own)';
+
+	/// en: 'IPv4-only'
+	String get superSpoofTransportIpv4 => 'IPv4-only';
+
+	/// en: 'Chrome (Cronet)'
+	String get superSpoofTransportCronet => 'Chrome (Cronet)';
+
+	/// en: 'Platform (Android)'
+	String get superSpoofTransportPlatform => 'Platform (Android)';
+
 	/// en: 'Request live TV as MPEG-TS'
 	String get iptvLiveTs => 'Request live TV as MPEG-TS';
 
@@ -610,8 +625,8 @@ class Translations$settings$en {
 	/// en: 'Prefer IPv4'
 	String get preferIpv4 => 'Prefer IPv4';
 
-	/// en: 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone's IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi.'
-	String get preferIpv4Description => 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone\'s IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi.';
+	/// en: 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone's IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi. When it's on, it wins over the Super Spoof transport choice.'
+	String get preferIpv4Description => 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone\'s IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi. When it\'s on, it wins over the Super Spoof transport choice.';
 
 	/// en: 'Seconds'
 	String get secondsLabel => 'Seconds';
@@ -3953,6 +3968,12 @@ class Translations$about$en {
 		'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+	];
+	List<String> get changelog2333 => [
+		'New: all the spoofing now lives in one place — Settings → Advanced → Super Spoof. The name, the network stack and the extra headers are separate switches under it, so you can change one without touching the others',
+		'Fixed: the Super Spoof name list now has Custom too, like the main User-Agent list — the custom name you type is the same one in both places, so nothing gets lost',
+		'New: Super Spoof has a “Platform (Android)” transport choice — the provider requests go out over Android\'s own built-in connection, the same one other TV players use, instead of the app\'s own or Chrome\'s. It only runs while Super Spoof is on, and it falls back to today\'s requests if it can\'t start',
+		'Fixed: the spoof headers now also send the same keep-alive line other players send, so the requests match them header for header',
 	];
 	List<String> get changelog2332 => [
 		'Fixed: with Super Spoof on (Settings → Advanced), the app\'s provider requests now ride Chrome\'s network stack instead of Dart\'s own — the same fingerprint a normal Android player sends',
@@ -10359,10 +10380,15 @@ extension on Translations {
 			'settings.superSpoofHeadersDescription' => 'Send generic-player request headers along with the disguised User-Agent.',
 			'settings.superSpoofStreams' => 'Spoof streams and artwork too',
 			'settings.superSpoofStreamsDescription' => 'Use the same disguise for video streams and poster art, not just catalog and guide requests.',
+			'settings.superSpoofTransport' => 'Spoof transport',
+			'settings.superSpoofTransportDart' => 'Dart (the app\'s own)',
+			'settings.superSpoofTransportIpv4' => 'IPv4-only',
+			'settings.superSpoofTransportCronet' => 'Chrome (Cronet)',
+			'settings.superSpoofTransportPlatform' => 'Platform (Android)',
 			'settings.iptvLiveTs' => 'Request live TV as MPEG-TS',
 			'settings.iptvLiveTsDescription' => 'Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.',
 			'settings.preferIpv4' => 'Prefer IPv4',
-			'settings.preferIpv4Description' => 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone\'s IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi.',
+			'settings.preferIpv4Description' => 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone\'s IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi. When it\'s on, it wins over the Super Spoof transport choice.',
 			'settings.secondsLabel' => 'Seconds',
 			'settings.minutesLabel' => 'Minutes',
 			'settings.secondsShort' => 's',
@@ -10675,13 +10701,13 @@ extension on Translations {
 			'settings.showExploreTab' => 'Show Explore Tab',
 			'settings.showExploreTabDescription' => 'Display the Explore tab with content from Plex Discover and connected trackers',
 			'settings.liveTvDefaultFavorites' => 'Default to Favorite Channels',
+			_ => null,
+		} ?? switch (path) {
 			'settings.liveTvDefaultFavoritesDescription' => 'Show only favorite channels when opening Live TV',
 			'settings.general' => 'General',
 			'settings.generalDescription' => 'Language, startup, and window behavior',
 			'settings.languageAndRegion' => 'Language & Region',
 			'settings.startup' => 'Startup',
-			_ => null,
-		} ?? switch (path) {
 			'settings.display' => 'Display',
 			'settings.libraryAndCards' => 'Library & Cards',
 			'settings.homeScreen' => 'Home Screen',
@@ -11189,13 +11215,13 @@ extension on Translations {
 			'mpvConfig.presetSaved' => 'Preset saved',
 			'mpvConfig.presetLoaded' => 'Preset loaded',
 			'mpvConfig.presetDeleted' => 'Preset deleted',
+			_ => null,
+		} ?? switch (path) {
 			'mpvConfig.confirmDeletePreset' => 'Are you sure you want to delete this preset?',
 			'mpvConfig.configPlaceholder' => 'gpu-api=vulkan\nhwdec=auto\n# comment',
 			'mpvConfig.lineHint' => 'option=value',
 			'mpvConfig.addLine' => 'Add line',
 			'mpvConfig.removeLine' => 'Remove line',
-			_ => null,
-		} ?? switch (path) {
 			'mpvConfig.embeddedVoHint' => 'vo, gpu-context and gpu-api are ignored on Linux: embedded video always renders through vo=libmpv on the video plane, and gpu-next (which compute shaders like ArtCNN need) cannot run embedded.',
 			'dialog.confirmAction' => 'Confirm Action',
 			'profiles.addPlezTVProfile' => 'Add PlenTV profile',
@@ -11601,6 +11627,10 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2333.0' => 'New: all the spoofing now lives in one place — Settings → Advanced → Super Spoof. The name, the network stack and the extra headers are separate switches under it, so you can change one without touching the others',
+			'about.changelog2333.1' => 'Fixed: the Super Spoof name list now has Custom too, like the main User-Agent list — the custom name you type is the same one in both places, so nothing gets lost',
+			'about.changelog2333.2' => 'New: Super Spoof has a “Platform (Android)” transport choice — the provider requests go out over Android\'s own built-in connection, the same one other TV players use, instead of the app\'s own or Chrome\'s. It only runs while Super Spoof is on, and it falls back to today\'s requests if it can\'t start',
+			'about.changelog2333.3' => 'Fixed: the spoof headers now also send the same keep-alive line other players send, so the requests match them header for header',
 			'about.changelog2332.0' => 'Fixed: with Super Spoof on (Settings → Advanced), the app\'s provider requests now ride Chrome\'s network stack instead of Dart\'s own — the same fingerprint a normal Android player sends',
 			'about.changelog2332.1' => 'Fixed: the app now says in the log which network stack its provider requests use, so you can see whether Chrome\'s stack or Dart\'s is in use',
 			'about.changelog2332.2' => 'Fixed: if Chrome\'s stack can\'t start on a device, the app falls back to today\'s requests instead of failing',
@@ -11699,6 +11729,8 @@ extension on Translations {
 			'about.changelog2311.1' => 'Fixed: Log out now says it deletes everything in the app before you confirm — and you can sign out of just one Plex account instead',
 			'about.changelog2311.2' => 'Fixed: a Plex profile that asks for a PIN no longer blanks your libraries when the app checks it in the background',
 			'about.changelog2311.3' => 'Fixed: after restoring a backup, the app now picks up the restored profile straight away, and its channels load on their own',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2310.0' => 'Fixed: after a Reload, the guide could download its big guide file three times — it now downloads it once',
 			'about.changelog2310.1' => 'Fixed: rows left blank because you switched apps while they were loading now refill when you come back, without downloading again',
 			'about.changelog2310.2' => 'Fixed: switching away and back no longer drops the guide you just loaded, on phones and tablets with plenty of memory',
@@ -11708,8 +11740,6 @@ extension on Translations {
 			'about.changelog2309.1' => 'Signing in to MyAnimeList and AniList now goes straight to each service, instead of through the app maker\'s server',
 			'about.changelog2309.2' => 'The TV app and the Linux app now show the app\'s name everywhere',
 			'about.changelog2308.0' => 'Fixed: the TV guide could lose its saved copy when the app cleared its guide data at the same moment it was saving it — the guide now saves reliably and doesn\'t need to download again',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2308.1' => 'Fixed: the guide stopped asking the TV service for the same channel\'s listings over and over when you scroll — one request per channel, with a short pause after an interrupted one',
 			'about.changelog2308.2' => 'Fixed: some videos showed a black or frozen picture on the first play because the phone\'s video hardware rejected the picture format — the app now remembers and starts those videos the way that works',
 			'about.changelog2308.3' => 'Fixed: the channel-list check could show a confusing technical message when the connection timed out — it now says plainly that the connection timed out',
@@ -12213,6 +12243,8 @@ extension on Translations {
 			'liveTv.showCategory' => 'Show category',
 			'liveTv.unhide' => 'Unhide',
 			'liveTv.allChannelsHidden' => 'All channels hidden',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.allChannelsHiddenHint' => 'You hid every channel in this guide. Unhide them to see the guide again.',
 			'liveTv.unhideAllChannels' => 'Unhide all',
 			'liveTv.favoritesLoadFailed' => 'Could not load favorites. Check your connection and try again.',
@@ -12222,8 +12254,6 @@ extension on Translations {
 			'liveTv.startFromBeginning' => 'Start from beginning',
 			'liveTv.watchLive' => 'Watch Live',
 			'liveTv.goToLive' => 'Go to Live',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.record' => 'Record',
 			'liveTv.recordEpisode' => 'Record Episode',
 			'liveTv.recordSeries' => 'Record Series',
@@ -12727,6 +12757,8 @@ extension on Translations {
 			'videoSettings.audioOutput' => 'Audio Output',
 			'videoSettings.performanceOverlay' => 'Performance Overlay',
 			'videoSettings.audioOutputDolbyAtmos' => 'Dolby Atmos',
+			_ => null,
+		} ?? switch (path) {
 			'videoSettings.audioOutputDolbyAudio' => 'Dolby Audio',
 			'videoSettings.audioOutputSurround' => 'Surround',
 			'videoSettings.audioOutputSpatial' => 'Spatial Audio',
@@ -12736,8 +12768,6 @@ extension on Translations {
 			'performanceOverlay.color' => 'Color',
 			'performanceOverlay.performance' => 'Performance',
 			'performanceOverlay.buffer' => 'Buffer',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.app' => 'App',
 			'performanceOverlay.decoder' => 'Decoder',
 			'performanceOverlay.rawDecoder' => 'Raw Decoder',
@@ -13241,6 +13271,8 @@ extension on Translations {
 			'iptv.epgFeedOutcomeNotAnswering' => ({required Object source}) => '${source}: the panel is not answering (timed out)',
 			'iptv.epgFeedDeniedReason' => 'the panel denied access (HTTP 403)',
 			'iptv.epgFeedNotAnsweringReason' => 'the panel is not answering (timed out)',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgFeedOutcomeDeferred' => ({required Object source}) => '${source}: waiting — will load when playback stops',
 			'iptv.epgFeedOutcomeFailed' => ({required Object source, required Object reason}) => '${source}: ${reason}',
 			'iptv.epgGuideDenied' => 'The panel denied access — the guide couldn\'t load',
@@ -13250,8 +13282,6 @@ extension on Translations {
 			'iptv.seasonsFromDownloads' => 'Showing downloaded seasons — the panel refused access on this network',
 			'iptv.refusedOnThisNetwork' => 'The panel refused access on this network — see Connection refusals in Settings',
 			'iptv.epgNoGuideTitle' => 'Channels without guide',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgNoGuideDescription' => 'Channels with no guide data. Tap Assign to pick a guide for a channel by hand.',
 			'iptv.epgNoGuideEmpty' => 'Every channel has guide data',
 			'iptv.epgNoGuideLoadFailed' => ({required Object reason}) => 'Could not load the channels without guide — ${reason}',

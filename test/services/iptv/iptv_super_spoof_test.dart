@@ -125,10 +125,10 @@ void main() {
       );
     });
 
-    test('headers piece adds a generic Accept only when master and piece are on', () {
+    test('headers piece adds a generic Accept and Keep-Alive only when master and piece are on', () {
       expect(
         XtreamSuperSpoof.extraHeaders(masterOn: true, headersPiece: true),
-        {'Accept': '*/*'},
+        {'Accept': '*/*', 'Connection': 'Keep-Alive'},
       );
       expect(XtreamSuperSpoof.extraHeaders(masterOn: true, headersPiece: false), isEmpty);
       expect(XtreamSuperSpoof.extraHeaders(masterOn: false, headersPiece: true), isEmpty);
@@ -166,6 +166,7 @@ void main() {
       for (final request in capturing.captured) {
         expect(_headerOf(request, 'User-Agent'), 'VLC', reason: '${request.url}');
         expect(_headerOf(request, 'Accept'), '*/*', reason: '${request.url}');
+        expect(_headerOf(request, 'Connection'), 'Keep-Alive', reason: '${request.url}');
       }
     });
 
@@ -189,6 +190,7 @@ void main() {
       for (final request in capturing.captured) {
         expect(_headerOf(request, 'User-Agent'), 'VLC', reason: '${request.url}');
         expect(_headerOf(request, 'Accept'), isNull, reason: '${request.url}');
+        expect(_headerOf(request, 'Connection'), isNull, reason: '${request.url}');
       }
     });
 
@@ -210,6 +212,7 @@ void main() {
       for (final request in capturing.captured) {
         expect(_headerOf(request, 'User-Agent'), XtreamUserAgent.player, reason: '${request.url}');
         expect(_headerOf(request, 'Accept'), isNull, reason: '${request.url}');
+        expect(_headerOf(request, 'Connection'), isNull, reason: '${request.url}');
       }
     });
   });
@@ -232,8 +235,16 @@ void main() {
       final client = IptvClient.xtream(xtreamConnection: _trexConnection());
       await settings.write(SettingsService.iptvSuperSpoof, true);
 
-      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.vlc, 'Accept': '*/*'});
-      expect(client.artworkHeaders, {'User-Agent': XtreamUserAgent.vlc, 'Accept': '*/*'});
+      expect(client.streamHeaders, {
+        'User-Agent': XtreamUserAgent.vlc,
+        'Accept': '*/*',
+        'Connection': 'Keep-Alive',
+      });
+      expect(client.artworkHeaders, {
+        'User-Agent': XtreamUserAgent.vlc,
+        'Accept': '*/*',
+        'Connection': 'Keep-Alive',
+      });
       expect(client.xtreamApi.effectiveUserAgent, XtreamUserAgent.vlc);
     });
 
@@ -243,13 +254,18 @@ void main() {
       await settings.write(SettingsService.iptvSuperSpoof, true);
 
       await settings.write(SettingsService.iptvSuperSpoofUserAgent, 'smarters');
-      expect(client.streamHeaders, {'User-Agent': 'IPTVSmartersPro', 'Accept': '*/*'});
+      expect(client.streamHeaders, {
+        'User-Agent': 'IPTVSmartersPro',
+        'Accept': '*/*',
+        'Connection': 'Keep-Alive',
+      });
       expect(client.xtreamApi.effectiveUserAgent, 'IPTVSmartersPro');
 
       await settings.write(SettingsService.iptvSuperSpoofUserAgent, 'browser');
       expect(client.streamHeaders, {
         'User-Agent': XtreamUserAgent.browser,
         'Accept': '*/*',
+        'Connection': 'Keep-Alive',
       });
     });
 
@@ -263,6 +279,7 @@ void main() {
       expect(client.streamHeaders, {
         'User-Agent': XtreamUserAgent.browser,
         'Accept': '*/*',
+        'Connection': 'Keep-Alive',
       });
       expect(client.xtreamApi.effectiveUserAgent, XtreamUserAgent.browser);
     });
@@ -294,7 +311,11 @@ void main() {
       final client = IptvClient.m3u(m3uConnection: _m3uConnection());
       await settings.write(SettingsService.iptvSuperSpoof, true);
 
-      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.vlc, 'Accept': '*/*'});
+      expect(client.streamHeaders, {
+        'User-Agent': XtreamUserAgent.vlc,
+        'Accept': '*/*',
+        'Connection': 'Keep-Alive',
+      });
     });
   });
 }

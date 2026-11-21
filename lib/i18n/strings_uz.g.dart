@@ -398,8 +398,6 @@ class _Translations$settings$uz extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Oʻz relengizni belgilamasangiz, ommaviy Open Watch Party relelari ishlatiladi';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => 'Toʻgʻri HTTP yoki HTTPS rele manzilini kiriting.';
-	@override String get debugLogging => 'Nosozliklarni aniqlash jurnali';
-	@override String get debugLoggingDescription => 'Muammolarni hal qilish uchun batafsil jurnal yuritishni yoqing';
 	@override String get viewLogs => 'Jurnallarni koʻrish';
 	@override String get viewLogsDescription => 'Ilova jurnallarini koʻrish';
 	@override String get clearImageCache => 'Rasm keshini tozalash';
@@ -1083,7 +1081,6 @@ class _Translations$messages$uz extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Server bu elementni uzatishni rad etdi (HTTP 403). Hisobingizda uni ijro etishga ruxsat boʻlmasligi yoki server ijroga faqat oʻzining mahalliy tarmogʻida ruxsat berishi mumkin.';
 	@override String get logsUploaded => 'Jurnallar yuklandi';
 	@override String get logsUploadFailed => 'Jurnallarni yuklab boʻlmadi';
-	@override String get logId => 'Jurnal ID-si';
 	@override String get burnedSubtitlesUseMenu => 'Subtitrlar bu oqim tasviriga singdirilgan. Ularni subtitr menyusidan oʻzgartiring.';
 	@override String get noVideoUrl => 'Video URL mavjud emas';
 	@override String get playbackNoMediaSources => 'Server ijro etiladigan media manbalarini qaytarmadi';
@@ -3620,8 +3617,6 @@ extension on TranslationsUz {
 			'settings.watchTogetherRelayDescription' => 'Oʻz relengizni belgilamasangiz, ommaviy Open Watch Party relelari ishlatiladi',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => 'Toʻgʻri HTTP yoki HTTPS rele manzilini kiriting.',
-			'settings.debugLogging' => 'Nosozliklarni aniqlash jurnali',
-			'settings.debugLoggingDescription' => 'Muammolarni hal qilish uchun batafsil jurnal yuritishni yoqing',
 			'settings.viewLogs' => 'Jurnallarni koʻrish',
 			'settings.viewLogsDescription' => 'Ilova jurnallarini koʻrish',
 			'settings.clearImageCache' => 'Rasm keshini tozalash',
@@ -3852,10 +3847,10 @@ extension on TranslationsUz {
 			'themeEditor.contrast.textOnSurface' => 'Sirtdagi matn',
 			'themeEditor.contrast.textMutedOnBg' => 'Fondagi ikkilamchi matn',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sirtdagi ikkilamchi matn',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Fondagi urgʻu rangi',
 			'themeEditor.contrast.accentOnSurface' => 'Sirtdagi urgʻu rangi',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Urgʻu rangidagi tugma matni',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, tavsiya etilgan ${minimum}:1 dan past',
 			'themeEditor.discardTitle' => 'Oʻzgarishlardan voz kechilsinmi?',
@@ -4238,7 +4233,6 @@ extension on TranslationsUz {
 			'messages.playbackNotAllowedBody' => 'Server bu elementni uzatishni rad etdi (HTTP 403). Hisobingizda uni ijro etishga ruxsat boʻlmasligi yoki server ijroga faqat oʻzining mahalliy tarmogʻida ruxsat berishi mumkin.',
 			'messages.logsUploaded' => 'Jurnallar yuklandi',
 			'messages.logsUploadFailed' => 'Jurnallarni yuklab boʻlmadi',
-			'messages.logId' => 'Jurnal ID-si',
 			'messages.burnedSubtitlesUseMenu' => 'Subtitrlar bu oqim tasviriga singdirilgan. Ularni subtitr menyusidan oʻzgartiring.',
 			'messages.noVideoUrl' => 'Video URL mavjud emas',
 			'messages.playbackNoMediaSources' => 'Server ijro etiladigan media manbalarini qaytarmadi',
@@ -4366,11 +4360,11 @@ extension on TranslationsUz {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} ta server ushbu hisobga kirishni rad etdi',
 			'connections.signInAgain' => 'Qaytadan kirish',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product} ulanishini tahrirlash',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} uchun URL-larni qoʻshing yoki olib tashlang. PlenTV eng kam kechikishga ega boʻlgan mavjud URL-dan foydalanadi.',
 			'accountPreferences.sectionTitle' => 'Hisob sozlamalari',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} hisobida saqlangan audio, subtitr va kutubxona parametrlari',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count} ta hisobda saqlangan audio, subtitr va kutubxona parametrlari',
 			'accountPreferences.pickAccount' => 'Har bir hisob oʻz sozlamalarini saqlaydi. Tahrirlash uchun birini tanlang.',
 			'accountPreferences.storedOnAccount' => 'Bu parametrlar hisobning oʻzida saqlanadi — unga kirilgan har bir ilova ulardan foydalanadi, jumladan boshqa qurilmalaringizdagi PlenTV ham.',
@@ -4880,11 +4874,11 @@ extension on TranslationsUz {
 			'collections.title' => 'Toʻplamlar',
 			'collections.collection' => 'Toʻplam',
 			'collections.empty' => 'Toʻplam boʻsh',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Toʻplamni oʻchirish',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" oʻchirilsinmi?',
 			'collections.deleted' => 'Toʻplam oʻchirildi',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Toʻplamni oʻchirib boʻlmadi',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Toʻplamni oʻchirish xatoligi: ${error}',
 			'collections.selectCollection' => 'Toʻplamni tanlash',
@@ -5394,11 +5388,11 @@ extension on TranslationsUz {
 			'externalPlayer.systemDefault' => 'Tizim standarti',
 			'externalPlayer.addCustomPlayer' => 'Maxsus pleyer qoʻshish',
 			'externalPlayer.playerName' => 'Pleyer nomi',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mening pleyerim',
 			'externalPlayer.playerCommand' => 'Buyruq',
 			'externalPlayer.playerPackage' => 'Paket nomi',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL sxemasi',
 			'externalPlayer.off' => 'Oʻchirilgan',
 			'externalPlayer.launchFailed' => 'Tashqi pleyerni ishga tushirib boʻlmadi',

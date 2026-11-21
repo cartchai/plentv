@@ -1051,6 +1051,20 @@ class SettingsService extends BaseSharedPreferencesService {
   /// alone). Resolved by XtreamSuperSpoof.userAgentForChoice.
   static const iptvSuperSpoofUserAgent = StringPref('iptv_super_spoof_user_agent', defaultValue: 'vlc');
 
+  /// Super Spoof sub-setting — the transport piece (1.6.14): which
+  /// network stack the Xtream API requests ride while the master is on.
+  /// 'cronet' (default — the master rode Cronet since 1.6.13, so the
+  /// default keeps existing users' working setup unchanged), 'dart'
+  /// (the app's own client), 'ipv4' (the IPv4-only Dart client), or
+  /// 'platform' (Android's own HttpURLConnection + platform default
+  /// SSLContext — TiviMate's exact stack). Resolved by
+  /// XtreamTransportChoice.resolve: the master gates it (off means
+  /// Dart), Prefer IPv4 still wins over it. The literal default is
+  /// duplicated here (settings_service cannot import the transport
+  /// without an import cycle) — it must stay equal to
+  /// XtreamTransportChoice.defaultChoice; a test asserts they agree.
+  static const iptvSuperSpoofTransport = StringPref('iptv_super_spoof_transport', defaultValue: 'cronet');
+
   /// Super Spoof sub-setting — the headers piece (1.6.11): send the
   /// generic Accept header with the mimic User-Agent. Default true.
   static const iptvSuperSpoofHeaders = BoolPref('iptv_super_spoof_headers', defaultValue: true);
@@ -1871,6 +1885,7 @@ class SettingsService extends BaseSharedPreferencesService {
     iptvXtreamUserAgentCustom,
     iptvSuperSpoof,
     iptvSuperSpoofUserAgent,
+    iptvSuperSpoofTransport,
     iptvSuperSpoofHeaders,
     iptvSuperSpoofStreams,
     iptvLiveTs,

@@ -296,6 +296,7 @@ class IptvBackgroundSync {
       userAgentChoice:
           prefs.getString(SettingsService.iptvSuperSpoofUserAgent.key) ??
           XtreamSuperSpoof.defaultUserAgentChoice,
+      customUserAgent: prefs.getString(SettingsService.iptvXtreamUserAgentCustom.key) ?? '',
       fallbackUserAgent: XtreamUserAgent.resolve(
         prefs.getString(SettingsService.iptvXtreamUserAgent.key) ?? XtreamUserAgent.defaultChoice,
         prefs.getString(SettingsService.iptvXtreamUserAgentCustom.key) ?? '',

@@ -398,8 +398,6 @@ class _Translations$settings$de extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Öffentliche Relays von Open Watch Party, sofern du kein eigenes festlegst';
 	@override String get watchTogetherRelayHint => 'https://mein-relay.beispiel.de';
 	@override String get watchTogetherRelayInvalid => 'Gib eine gültige HTTP- oder HTTPS-Basis-URL für das Relay ein.';
-	@override String get debugLogging => 'Debug-Protokollierung';
-	@override String get debugLoggingDescription => 'Detaillierte Protokolle zur Fehleranalyse aktivieren';
 	@override String get viewLogs => 'Protokolle anzeigen';
 	@override String get viewLogsDescription => 'App-Protokolle anzeigen';
 	@override String get clearImageCache => 'Bildercache leeren';
@@ -1083,7 +1081,6 @@ class _Translations$messages$de extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Der Server hat das Streamen dieses Elements abgelehnt (HTTP 403). Dein Konto hat möglicherweise keine Berechtigung, es abzuspielen, oder der Server erlaubt die Wiedergabe nur in seinem lokalen Netzwerk.';
 	@override String get logsUploaded => 'Protokolle hochgeladen';
 	@override String get logsUploadFailed => 'Protokolle konnten nicht hochgeladen werden';
-	@override String get logId => 'Protokoll-ID';
 	@override String get burnedSubtitlesUseMenu => 'Die Untertitel sind in diesen Stream eingebrannt. Ändere sie über das Untertitelmenü.';
 	@override String get noVideoUrl => 'Keine Video-URL verfügbar';
 	@override String get playbackNoMediaSources => 'Der Server hat keine abspielbaren Medienquellen zurückgegeben';
@@ -3620,8 +3617,6 @@ extension on TranslationsDe {
 			'settings.watchTogetherRelayDescription' => 'Öffentliche Relays von Open Watch Party, sofern du kein eigenes festlegst',
 			'settings.watchTogetherRelayHint' => 'https://mein-relay.beispiel.de',
 			'settings.watchTogetherRelayInvalid' => 'Gib eine gültige HTTP- oder HTTPS-Basis-URL für das Relay ein.',
-			'settings.debugLogging' => 'Debug-Protokollierung',
-			'settings.debugLoggingDescription' => 'Detaillierte Protokolle zur Fehleranalyse aktivieren',
 			'settings.viewLogs' => 'Protokolle anzeigen',
 			'settings.viewLogsDescription' => 'App-Protokolle anzeigen',
 			'settings.clearImageCache' => 'Bildercache leeren',
@@ -3852,10 +3847,10 @@ extension on TranslationsDe {
 			'themeEditor.contrast.textOnSurface' => 'Text auf Oberfläche',
 			'themeEditor.contrast.textMutedOnBg' => 'Sekundärtext auf Hintergrund',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundärtext auf Oberfläche',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Akzent auf Hintergrund',
 			'themeEditor.contrast.accentOnSurface' => 'Akzent auf Oberfläche',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Schaltflächentext auf Akzent',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, unter den empfohlenen ${minimum}:1',
 			'themeEditor.discardTitle' => 'Änderungen verwerfen?',
@@ -4238,7 +4233,6 @@ extension on TranslationsDe {
 			'messages.playbackNotAllowedBody' => 'Der Server hat das Streamen dieses Elements abgelehnt (HTTP 403). Dein Konto hat möglicherweise keine Berechtigung, es abzuspielen, oder der Server erlaubt die Wiedergabe nur in seinem lokalen Netzwerk.',
 			'messages.logsUploaded' => 'Protokolle hochgeladen',
 			'messages.logsUploadFailed' => 'Protokolle konnten nicht hochgeladen werden',
-			'messages.logId' => 'Protokoll-ID',
 			'messages.burnedSubtitlesUseMenu' => 'Die Untertitel sind in diesen Stream eingebrannt. Ändere sie über das Untertitelmenü.',
 			'messages.noVideoUrl' => 'Keine Video-URL verfügbar',
 			'messages.playbackNoMediaSources' => 'Der Server hat keine abspielbaren Medienquellen zurückgegeben',
@@ -4366,11 +4360,11 @@ extension on TranslationsDe {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} Server verweigern diesem Konto den Zugriff',
 			'connections.signInAgain' => 'Erneut anmelden',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Verbindung zu ${product} bearbeiten',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'URLs für ${serverName} hinzufügen oder entfernen. PlenTV verwendet die erreichbare URL mit der geringsten Latenz.',
 			'accountPreferences.sectionTitle' => 'Kontoeinstellungen',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Audio-, Untertitel- und Mediathek-Optionen werden auf ${account} gespeichert',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Audio-, Untertitel- und Mediathek-Optionen werden auf ${count} Konten gespeichert',
 			'accountPreferences.pickAccount' => 'Jedes Konto speichert seine eigenen Einstellungen. Wähle das Konto, das du bearbeiten möchtest.',
 			'accountPreferences.storedOnAccount' => 'Diese Optionen werden auf dem Konto selbst gespeichert, sodass jede damit angemeldete App sie verwendet — auch PlenTV auf deinen anderen Geräten.',
@@ -4880,11 +4874,11 @@ extension on TranslationsDe {
 			'collections.title' => 'Sammlungen',
 			'collections.collection' => 'Sammlung',
 			'collections.empty' => 'Sammlung ist leer',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Sammlung löschen',
 			'collections.deleteConfirm' => ({required Object title}) => '„${title}“ löschen? Dies kann nicht rückgängig gemacht werden.',
 			'collections.deleted' => 'Sammlung gelöscht',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Sammlung konnte nicht gelöscht werden',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Sammlung konnte nicht gelöscht werden: ${error}',
 			'collections.selectCollection' => 'Sammlung auswählen',
@@ -5394,11 +5388,11 @@ extension on TranslationsDe {
 			'externalPlayer.systemDefault' => 'Systemstandard',
 			'externalPlayer.addCustomPlayer' => 'Benutzerdefinierten Player hinzufügen',
 			'externalPlayer.playerName' => 'Playername',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mein Player',
 			'externalPlayer.playerCommand' => 'Befehl',
 			'externalPlayer.playerPackage' => 'Paketname',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-Schema',
 			'externalPlayer.off' => 'Aus',
 			'externalPlayer.launchFailed' => 'Externer Player konnte nicht geöffnet werden',

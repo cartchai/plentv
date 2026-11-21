@@ -398,8 +398,6 @@ class _Translations$settings$nb extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Offentlige Open Watch Party-reléservere, med mindre du angir din egen';
 	@override String get watchTogetherRelayHint => 'https://min-relay.eksempel.no';
 	@override String get watchTogetherRelayInvalid => 'Angi en gyldig HTTP- eller HTTPS-adresse til reléserveren.';
-	@override String get debugLogging => 'Feilsøkingslogging';
-	@override String get debugLoggingDescription => 'Aktiver detaljert logging for feilsøking';
 	@override String get viewLogs => 'Vis logger';
 	@override String get viewLogsDescription => 'Vis applikasjonslogger';
 	@override String get clearImageCache => 'Tøm bildebufferen';
@@ -1083,7 +1081,6 @@ class _Translations$messages$nb extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Serveren nektet å strømme dette elementet (HTTP 403). Kontoen din har kanskje ikke tillatelse til å spille det av, eller serveren tillater kanskje bare avspilling på sitt lokale nettverk.';
 	@override String get logsUploaded => 'Logger lastet opp';
 	@override String get logsUploadFailed => 'Kunne ikke laste opp logger';
-	@override String get logId => 'Logg-ID';
 	@override String get burnedSubtitlesUseMenu => 'Undertekstene er brent inn i denne strømmen. Endre dem fra undertekstmenyen.';
 	@override String get noVideoUrl => 'Ingen video-URL er tilgjengelig';
 	@override String get playbackNoMediaSources => 'Serveren returnerte ingen avspillbare mediekilder';
@@ -3620,8 +3617,6 @@ extension on TranslationsNb {
 			'settings.watchTogetherRelayDescription' => 'Offentlige Open Watch Party-reléservere, med mindre du angir din egen',
 			'settings.watchTogetherRelayHint' => 'https://min-relay.eksempel.no',
 			'settings.watchTogetherRelayInvalid' => 'Angi en gyldig HTTP- eller HTTPS-adresse til reléserveren.',
-			'settings.debugLogging' => 'Feilsøkingslogging',
-			'settings.debugLoggingDescription' => 'Aktiver detaljert logging for feilsøking',
 			'settings.viewLogs' => 'Vis logger',
 			'settings.viewLogsDescription' => 'Vis applikasjonslogger',
 			'settings.clearImageCache' => 'Tøm bildebufferen',
@@ -3852,10 +3847,10 @@ extension on TranslationsNb {
 			'themeEditor.contrast.textOnSurface' => 'Tekst på overflate',
 			'themeEditor.contrast.textMutedOnBg' => 'Sekundærtekst på bakgrunn',
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundærtekst på overflate',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Aksent på bakgrunn',
 			'themeEditor.contrast.accentOnSurface' => 'Aksent på overflate',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Knappetekst på aksent',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, under anbefalt minimum på ${minimum}:1',
 			'themeEditor.discardTitle' => 'Forkaste endringene?',
@@ -4238,7 +4233,6 @@ extension on TranslationsNb {
 			'messages.playbackNotAllowedBody' => 'Serveren nektet å strømme dette elementet (HTTP 403). Kontoen din har kanskje ikke tillatelse til å spille det av, eller serveren tillater kanskje bare avspilling på sitt lokale nettverk.',
 			'messages.logsUploaded' => 'Logger lastet opp',
 			'messages.logsUploadFailed' => 'Kunne ikke laste opp logger',
-			'messages.logId' => 'Logg-ID',
 			'messages.burnedSubtitlesUseMenu' => 'Undertekstene er brent inn i denne strømmen. Endre dem fra undertekstmenyen.',
 			'messages.noVideoUrl' => 'Ingen video-URL er tilgjengelig',
 			'messages.playbackNoMediaSources' => 'Serveren returnerte ingen avspillbare mediekilder',
@@ -4366,11 +4360,11 @@ extension on TranslationsNb {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servere nektet tilgang for denne kontoen',
 			'connections.signInAgain' => 'Logg inn igjen',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Rediger ${product}-tilkobling',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Legg til eller fjern URL-er for ${serverName}. PlenTV vil bruke den nåbare URL-en med lavest ventetid.',
 			'accountPreferences.sectionTitle' => 'Kontoinnstillinger',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Lyd-, undertekst- og bibliotekalternativer lagret på ${account}',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Lyd-, undertekst- og bibliotekalternativer lagret på ${count} kontoer',
 			'accountPreferences.pickAccount' => 'Hver konto lagrer sine egne innstillinger. Velg hvilken du vil redigere.',
 			'accountPreferences.storedOnAccount' => 'Disse alternativene lagres på selve kontoen, så alle apper som er logget på den, bruker dem — inkludert PlenTV på de andre enhetene dine.',
@@ -4880,11 +4874,11 @@ extension on TranslationsNb {
 			'collections.title' => 'Samlinger',
 			'collections.collection' => 'Samling',
 			'collections.empty' => 'Samlingen er tom',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Slett samling',
 			'collections.deleteConfirm' => ({required Object title}) => 'Slette "${title}"? Dette kan ikke angres.',
 			'collections.deleted' => 'Samling slettet',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Kunne ikke slette samling',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Kunne ikke slette samling: ${error}',
 			'collections.selectCollection' => 'Velg samling',
@@ -5394,11 +5388,11 @@ extension on TranslationsNb {
 			'externalPlayer.systemDefault' => 'Systemstandard',
 			'externalPlayer.addCustomPlayer' => 'Legg til egendefinert spiller',
 			'externalPlayer.playerName' => 'Spillernavn',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Min spiller',
 			'externalPlayer.playerCommand' => 'Kommando',
 			'externalPlayer.playerPackage' => 'Pakkenavn',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-skjema',
 			'externalPlayer.off' => 'Av',
 			'externalPlayer.launchFailed' => 'Kunne ikke åpne ekstern spiller',

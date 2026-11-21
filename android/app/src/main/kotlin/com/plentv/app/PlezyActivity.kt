@@ -167,6 +167,7 @@ class PlezyActivity : FlutterActivity() {
   private val apkInstallChannel = ApkInstallChannel(this)
   private val downloadsChannel = DownloadsChannel(this)
   private val catalogSyncForegroundChannel = CatalogSyncForegroundChannel(this)
+  private val platformHttpChannel = PlatformHttpChannel()
   private val exitDiagnosticsRequested = AtomicBoolean(false)
 
   private inline fun logTextInputDiag(message: () -> String) {
@@ -1245,6 +1246,7 @@ class PlezyActivity : FlutterActivity() {
     apkInstallChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
     downloadsChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
     catalogSyncForegroundChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
+    platformHttpChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
 
     // Splash screen theme: persist user's chosen theme for next launch (API 31+)
     MethodChannel(flutterEngine.dartExecutor.binaryMessenger, THEME_CHANNEL).setMethodCallHandler { call, result ->

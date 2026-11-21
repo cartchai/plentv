@@ -398,8 +398,6 @@ class _Translations$settings$ru extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Публичные серверы ретрансляции Open Watch Party, если не указан свой';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => 'Введите допустимый базовый HTTP- или HTTPS-адрес сервера ретрансляции.';
-	@override String get debugLogging => 'Журнал отладки';
-	@override String get debugLoggingDescription => 'Включить подробное журналирование для устранения неполадок';
 	@override String get viewLogs => 'Просмотр логов';
 	@override String get viewLogsDescription => 'Просмотр логов приложения';
 	@override String get clearImageCache => 'Очистить кэш изображений';
@@ -1091,7 +1089,6 @@ class _Translations$messages$ru extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'Сервер отказал в потоковой передаче этого элемента (HTTP 403). Возможно, у вашей учётной записи нет разрешения на его воспроизведение или сервер разрешает воспроизведение только в своей локальной сети.';
 	@override String get logsUploaded => 'Логи загружены';
 	@override String get logsUploadFailed => 'Не удалось загрузить логи';
-	@override String get logId => 'ID лога';
 	@override String get burnedSubtitlesUseMenu => 'Субтитры встроены в этот поток. Изменить их можно в меню субтитров.';
 	@override String get noVideoUrl => 'URL видео недоступен';
 	@override String get playbackNoMediaSources => 'Сервер не вернул пригодных для воспроизведения медиаисточников';
@@ -3644,8 +3641,6 @@ extension on TranslationsRu {
 			'settings.watchTogetherRelayDescription' => 'Публичные серверы ретрансляции Open Watch Party, если не указан свой',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => 'Введите допустимый базовый HTTP- или HTTPS-адрес сервера ретрансляции.',
-			'settings.debugLogging' => 'Журнал отладки',
-			'settings.debugLoggingDescription' => 'Включить подробное журналирование для устранения неполадок',
 			'settings.viewLogs' => 'Просмотр логов',
 			'settings.viewLogsDescription' => 'Просмотр логов приложения',
 			'settings.clearImageCache' => 'Очистить кэш изображений',
@@ -3876,10 +3871,10 @@ extension on TranslationsRu {
 			'themeEditor.contrast.textOnSurface' => 'Текст на поверхности',
 			'themeEditor.contrast.textMutedOnBg' => 'Второстепенный текст на фоне',
 			'themeEditor.contrast.textMutedOnSurface' => 'Второстепенный текст на поверхности',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Акцент на фоне',
 			'themeEditor.contrast.accentOnSurface' => 'Акцент на поверхности',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Надпись кнопки на акценте',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, ниже рекомендуемых ${minimum}:1',
 			'themeEditor.discardTitle' => 'Не сохранять изменения?',
@@ -4262,7 +4257,6 @@ extension on TranslationsRu {
 			'messages.playbackNotAllowedBody' => 'Сервер отказал в потоковой передаче этого элемента (HTTP 403). Возможно, у вашей учётной записи нет разрешения на его воспроизведение или сервер разрешает воспроизведение только в своей локальной сети.',
 			'messages.logsUploaded' => 'Логи загружены',
 			'messages.logsUploadFailed' => 'Не удалось загрузить логи',
-			'messages.logId' => 'ID лога',
 			'messages.burnedSubtitlesUseMenu' => 'Субтитры встроены в этот поток. Изменить их можно в меню субтитров.',
 			'messages.noVideoUrl' => 'URL видео недоступен',
 			'messages.playbackNoMediaSources' => 'Сервер не вернул пригодных для воспроизведения медиаисточников',
@@ -4390,11 +4384,11 @@ extension on TranslationsRu {
 			'connections.accessDeniedMany' => ({required Object count}) => 'Доступ для этой учётной записи запрещён на ${count} серверах',
 			'connections.signInAgain' => 'Войти снова',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Изменить подключение ${product}',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Добавьте или удалите URL-адреса для ${serverName}. PlenTV будет использовать доступный URL с наименьшей задержкой.',
 			'accountPreferences.sectionTitle' => 'Настройки аккаунта',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Параметры аудио, субтитров и библиотеки сохранены на аккаунте ${account}',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Параметры аудио, субтитров и библиотеки сохранены на ${count} аккаунтах',
 			'accountPreferences.pickAccount' => 'Каждый аккаунт хранит собственные настройки. Выберите, какой редактировать.',
 			'accountPreferences.storedOnAccount' => 'Эти параметры сохраняются на самом аккаунте, поэтому их используют все приложения, вошедшие в него, — включая PlenTV на ваших других устройствах.',
@@ -4904,11 +4898,11 @@ extension on TranslationsRu {
 			'collections.title' => 'Коллекции',
 			'collections.collection' => 'Коллекция',
 			'collections.empty' => 'Коллекция пуста',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Удалить коллекцию',
 			'collections.deleteConfirm' => ({required Object title}) => 'Удалить "${title}"? Это нельзя отменить.',
 			'collections.deleted' => 'Коллекция удалена',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Не удалось удалить коллекцию',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Не удалось удалить коллекцию: ${error}',
 			'collections.selectCollection' => 'Выбрать коллекцию',
@@ -5418,11 +5412,11 @@ extension on TranslationsRu {
 			'externalPlayer.systemDefault' => 'Системный по умолчанию',
 			'externalPlayer.addCustomPlayer' => 'Добавить свой плеер',
 			'externalPlayer.playerName' => 'Название плеера',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Мой плеер',
 			'externalPlayer.playerCommand' => 'Команда',
 			'externalPlayer.playerPackage' => 'Имя пакета',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-схема',
 			'externalPlayer.off' => 'Выкл.',
 			'externalPlayer.launchFailed' => 'Не удалось открыть внешний плеер',

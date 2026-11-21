@@ -399,8 +399,6 @@ class _Translations$settings$zh_Hant extends Translations$settings$zh {
 	@override String get watchTogetherRelayDescription => '除非您自行設定，否則使用公開的 Open Watch Party 中繼伺服器';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => '請輸入有效的 HTTP 或 HTTPS 中繼伺服器根網址。';
-	@override String get debugLogging => '偵錯日誌';
-	@override String get debugLoggingDescription => '啟用詳細日誌記錄以便進行疑難排解';
 	@override String get viewLogs => '查看日誌';
 	@override String get viewLogsDescription => '查看應用程式日誌記錄';
 	@override String get clearImageCache => '清除圖片快取';
@@ -1080,7 +1078,6 @@ class _Translations$messages$zh_Hant extends Translations$messages$zh {
 	@override String get playbackNotAllowedBody => '伺服器拒絕串流此項目（HTTP 403）。此帳戶可能沒有播放權限，或伺服器可能只允許在其區域網路內播放。';
 	@override String get logsUploaded => '日誌已上傳';
 	@override String get logsUploadFailed => '上傳日誌失敗';
-	@override String get logId => '日誌 ID';
 	@override String get burnedSubtitlesUseMenu => '字幕已燒錄至此串流中。請從字幕選單變更字幕。';
 	@override String get noVideoUrl => '沒有可用的視訊 URL';
 	@override String get playbackNoMediaSources => '伺服器未傳回可播放的媒體來源';
@@ -3609,8 +3606,6 @@ extension on TranslationsZhHant {
 			'settings.watchTogetherRelayDescription' => '除非您自行設定，否則使用公開的 Open Watch Party 中繼伺服器',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => '請輸入有效的 HTTP 或 HTTPS 中繼伺服器根網址。',
-			'settings.debugLogging' => '偵錯日誌',
-			'settings.debugLoggingDescription' => '啟用詳細日誌記錄以便進行疑難排解',
 			'settings.viewLogs' => '查看日誌',
 			'settings.viewLogsDescription' => '查看應用程式日誌記錄',
 			'settings.clearImageCache' => '清除圖片快取',
@@ -3841,10 +3836,10 @@ extension on TranslationsZhHant {
 			'themeEditor.contrast.textOnSurface' => '面板上的文字',
 			'themeEditor.contrast.textMutedOnBg' => '背景上的次要文字',
 			'themeEditor.contrast.textMutedOnSurface' => '面板上的次要文字',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => '背景上的強調色',
 			'themeEditor.contrast.accentOnSurface' => '面板上的強調色',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => '強調色上的按鈕文字',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}：${ratio}:1，低於建議的 ${minimum}:1',
 			'themeEditor.discardTitle' => '要捨棄變更嗎？',
@@ -4227,7 +4222,6 @@ extension on TranslationsZhHant {
 			'messages.playbackNotAllowedBody' => '伺服器拒絕串流此項目（HTTP 403）。此帳戶可能沒有播放權限，或伺服器可能只允許在其區域網路內播放。',
 			'messages.logsUploaded' => '日誌已上傳',
 			'messages.logsUploadFailed' => '上傳日誌失敗',
-			'messages.logId' => '日誌 ID',
 			'messages.burnedSubtitlesUseMenu' => '字幕已燒錄至此串流中。請從字幕選單變更字幕。',
 			'messages.noVideoUrl' => '沒有可用的視訊 URL',
 			'messages.playbackNoMediaSources' => '伺服器未傳回可播放的媒體來源',
@@ -4355,11 +4349,11 @@ extension on TranslationsZhHant {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} 台伺服器拒絕此帳戶存取',
 			'connections.signInAgain' => '重新登入',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '編輯 ${product} 連線',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '為 ${serverName} 新增或移除 URL。PlenTV 將使用延遲最低且可連線的 URL。',
 			'accountPreferences.sectionTitle' => '帳戶偏好設定',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '已在 ${account} 上儲存音訊、字幕與媒體庫選項',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '已在 ${count} 個帳戶上儲存音訊、字幕與媒體庫選項',
 			'accountPreferences.pickAccount' => '每個帳戶都會儲存各自的偏好設定。請選擇要編輯的帳戶。',
 			'accountPreferences.storedOnAccount' => '這些選項會儲存在帳戶本身，因此登入該帳戶的所有應用程式都會使用它們，包括您其他裝置上的 PlenTV。',
@@ -4869,11 +4863,11 @@ extension on TranslationsZhHant {
 			'collections.title' => '收藏集',
 			'collections.collection' => '收藏集',
 			'collections.empty' => '收藏集為空',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => '刪除收藏集',
 			'collections.deleteConfirm' => ({required Object title}) => '確定要刪除「${title}」嗎？此操作無法復原。',
 			'collections.deleted' => '已刪除收藏集',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => '刪除收藏集失敗',
 			'collections.deleteFailedWithError' => ({required Object error}) => '刪除收藏集失敗：${error}',
 			'collections.selectCollection' => '選擇收藏集',
@@ -5383,11 +5377,11 @@ extension on TranslationsZhHant {
 			'externalPlayer.systemDefault' => '系統預設',
 			'externalPlayer.addCustomPlayer' => '新增自訂播放器',
 			'externalPlayer.playerName' => '播放器名稱',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => '我的播放器',
 			'externalPlayer.playerCommand' => '執行命令',
 			'externalPlayer.playerPackage' => '套件名稱',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL 協定架構（Scheme）',
 			'externalPlayer.off' => '關閉',
 			'externalPlayer.launchFailed' => '無法啟動外部播放器',

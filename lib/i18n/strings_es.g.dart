@@ -398,8 +398,6 @@ class _Translations$settings$es extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => 'Servidores de retransmisión públicos de Open Watch Party, salvo que configures el tuyo';
 	@override String get watchTogetherRelayHint => 'https://mi-relay.ejemplo.com';
 	@override String get watchTogetherRelayInvalid => 'Introduce una URL base HTTP o HTTPS válida para el servidor de retransmisión.';
-	@override String get debugLogging => 'Registro de depuración';
-	@override String get debugLoggingDescription => 'Habilitar registros detallados para solucionar problemas';
 	@override String get viewLogs => 'Ver registros';
 	@override String get viewLogsDescription => 'Ver los registros de la aplicación';
 	@override String get clearImageCache => 'Vaciar caché de imágenes';
@@ -1083,7 +1081,6 @@ class _Translations$messages$es extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'El servidor se negó a transmitir este elemento (HTTP 403). Es posible que tu cuenta no tenga permiso para reproducirlo o que el servidor solo permita la reproducción en su red local.';
 	@override String get logsUploaded => 'Registros subidos';
 	@override String get logsUploadFailed => 'Error al subir registros';
-	@override String get logId => 'ID de registro';
 	@override String get burnedSubtitlesUseMenu => 'Los subtítulos están incrustados en esta transmisión. Cámbialos desde el menú de subtítulos.';
 	@override String get noVideoUrl => 'No hay ninguna URL de vídeo disponible';
 	@override String get playbackNoMediaSources => 'El servidor no devolvió ninguna fuente multimedia reproducible';
@@ -3620,8 +3617,6 @@ extension on TranslationsEs {
 			'settings.watchTogetherRelayDescription' => 'Servidores de retransmisión públicos de Open Watch Party, salvo que configures el tuyo',
 			'settings.watchTogetherRelayHint' => 'https://mi-relay.ejemplo.com',
 			'settings.watchTogetherRelayInvalid' => 'Introduce una URL base HTTP o HTTPS válida para el servidor de retransmisión.',
-			'settings.debugLogging' => 'Registro de depuración',
-			'settings.debugLoggingDescription' => 'Habilitar registros detallados para solucionar problemas',
 			'settings.viewLogs' => 'Ver registros',
 			'settings.viewLogsDescription' => 'Ver los registros de la aplicación',
 			'settings.clearImageCache' => 'Vaciar caché de imágenes',
@@ -3852,10 +3847,10 @@ extension on TranslationsEs {
 			'themeEditor.contrast.textOnSurface' => 'Texto sobre superficie',
 			'themeEditor.contrast.textMutedOnBg' => 'Texto secundario sobre fondo',
 			'themeEditor.contrast.textMutedOnSurface' => 'Texto secundario sobre superficie',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => 'Acento sobre fondo',
 			'themeEditor.contrast.accentOnSurface' => 'Acento sobre superficie',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Texto de botón sobre acento',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, por debajo del ${minimum}:1 recomendado',
 			'themeEditor.discardTitle' => '¿Descartar cambios?',
@@ -4238,7 +4233,6 @@ extension on TranslationsEs {
 			'messages.playbackNotAllowedBody' => 'El servidor se negó a transmitir este elemento (HTTP 403). Es posible que tu cuenta no tenga permiso para reproducirlo o que el servidor solo permita la reproducción en su red local.',
 			'messages.logsUploaded' => 'Registros subidos',
 			'messages.logsUploadFailed' => 'Error al subir registros',
-			'messages.logId' => 'ID de registro',
 			'messages.burnedSubtitlesUseMenu' => 'Los subtítulos están incrustados en esta transmisión. Cámbialos desde el menú de subtítulos.',
 			'messages.noVideoUrl' => 'No hay ninguna URL de vídeo disponible',
 			'messages.playbackNoMediaSources' => 'El servidor no devolvió ninguna fuente multimedia reproducible',
@@ -4366,11 +4360,11 @@ extension on TranslationsEs {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} servidores denegaron el acceso a esta cuenta',
 			'connections.signInAgain' => 'Iniciar sesión de nuevo',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => 'Editar conexión de ${product}',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Añade o elimina URL para ${serverName}. PlenTV usará la URL accesible con menor latencia.',
 			'accountPreferences.sectionTitle' => 'Preferencias de cuenta',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Opciones de audio, subtítulos y biblioteca guardadas en ${account}',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Opciones de audio, subtítulos y biblioteca guardadas en ${count} cuentas',
 			'accountPreferences.pickAccount' => 'Cada cuenta guarda sus propias preferencias. Elige la que quieras editar.',
 			'accountPreferences.storedOnAccount' => 'Estas opciones se guardan en la propia cuenta, así que cualquier aplicación con la sesión iniciada las usa, incluido PlenTV en tus otros dispositivos.',
@@ -4880,11 +4874,11 @@ extension on TranslationsEs {
 			'collections.title' => 'Colecciones',
 			'collections.collection' => 'Colección',
 			'collections.empty' => 'La colección está vacía',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'Eliminar colección',
 			'collections.deleteConfirm' => ({required Object title}) => '¿Eliminar "${title}"? No se puede deshacer.',
 			'collections.deleted' => 'Colección eliminada',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'Error al eliminar la colección',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Error al eliminar la colección: ${error}',
 			'collections.selectCollection' => 'Seleccionar colección',
@@ -5394,11 +5388,11 @@ extension on TranslationsEs {
 			'externalPlayer.systemDefault' => 'Predeterminado del sistema',
 			'externalPlayer.addCustomPlayer' => 'Añadir reproductor personalizado',
 			'externalPlayer.playerName' => 'Nombre del reproductor',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'Mi reproductor',
 			'externalPlayer.playerCommand' => 'Comando',
 			'externalPlayer.playerPackage' => 'Nombre del paquete',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'Esquema URL',
 			'externalPlayer.off' => 'Desactivado',
 			'externalPlayer.launchFailed' => 'No se pudo abrir el reproductor externo',

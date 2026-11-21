@@ -398,8 +398,6 @@ class _Translations$settings$ja extends Translations$settings$en {
 	@override String get watchTogetherRelayDescription => '独自のリレーサーバーを設定しない限り、公開のOpen Watch Partyリレーサーバーを使用します';
 	@override String get watchTogetherRelayHint => 'https://my-relay.example.com';
 	@override String get watchTogetherRelayInvalid => '有効なHTTPまたはHTTPSのリレーサーバーURLを入力してください。';
-	@override String get debugLogging => 'デバッグログ';
-	@override String get debugLoggingDescription => 'トラブルシューティング用の詳細なログを有効化';
 	@override String get viewLogs => 'ログを表示';
 	@override String get viewLogsDescription => 'アプリケーションログを表示';
 	@override String get clearImageCache => '画像キャッシュをクリア';
@@ -1079,7 +1077,6 @@ class _Translations$messages$ja extends Translations$messages$en {
 	@override String get playbackNotAllowedBody => 'サーバーがこのアイテムのストリーミングを拒否しました（HTTP 403）。お使いのアカウントに再生の権限がないか、サーバーがローカルネットワーク内での再生のみを許可している可能性があります。';
 	@override String get logsUploaded => 'ログをアップロードしました';
 	@override String get logsUploadFailed => 'ログのアップロードに失敗しました';
-	@override String get logId => 'ログID';
 	@override String get burnedSubtitlesUseMenu => '字幕はこのストリームに焼き付けられています。字幕メニューから変更してください。';
 	@override String get noVideoUrl => '利用可能な動画URLがありません';
 	@override String get playbackNoMediaSources => 'サーバーから再生可能なメディアソースが返されませんでした';
@@ -3608,8 +3605,6 @@ extension on TranslationsJa {
 			'settings.watchTogetherRelayDescription' => '独自のリレーサーバーを設定しない限り、公開のOpen Watch Partyリレーサーバーを使用します',
 			'settings.watchTogetherRelayHint' => 'https://my-relay.example.com',
 			'settings.watchTogetherRelayInvalid' => '有効なHTTPまたはHTTPSのリレーサーバーURLを入力してください。',
-			'settings.debugLogging' => 'デバッグログ',
-			'settings.debugLoggingDescription' => 'トラブルシューティング用の詳細なログを有効化',
 			'settings.viewLogs' => 'ログを表示',
 			'settings.viewLogsDescription' => 'アプリケーションログを表示',
 			'settings.clearImageCache' => '画像キャッシュをクリア',
@@ -3840,10 +3835,10 @@ extension on TranslationsJa {
 			'themeEditor.contrast.textOnSurface' => 'サーフェス上のテキスト',
 			'themeEditor.contrast.textMutedOnBg' => '背景上の補助テキスト',
 			'themeEditor.contrast.textMutedOnSurface' => 'サーフェス上の補助テキスト',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.accentOnBg' => '背景上のアクセント',
 			'themeEditor.contrast.accentOnSurface' => 'サーフェス上のアクセント',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'アクセント上のボタンラベル',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1（推奨値の${minimum}:1未満）',
 			'themeEditor.discardTitle' => '変更を破棄しますか？',
@@ -4226,7 +4221,6 @@ extension on TranslationsJa {
 			'messages.playbackNotAllowedBody' => 'サーバーがこのアイテムのストリーミングを拒否しました（HTTP 403）。お使いのアカウントに再生の権限がないか、サーバーがローカルネットワーク内での再生のみを許可している可能性があります。',
 			'messages.logsUploaded' => 'ログをアップロードしました',
 			'messages.logsUploadFailed' => 'ログのアップロードに失敗しました',
-			'messages.logId' => 'ログID',
 			'messages.burnedSubtitlesUseMenu' => '字幕はこのストリームに焼き付けられています。字幕メニューから変更してください。',
 			'messages.noVideoUrl' => '利用可能な動画URLがありません',
 			'messages.playbackNoMediaSources' => 'サーバーから再生可能なメディアソースが返されませんでした',
@@ -4354,11 +4348,11 @@ extension on TranslationsJa {
 			'connections.accessDeniedMany' => ({required Object count}) => '${count} 台のサーバーがこのアカウントへのアクセスを拒否しました',
 			'connections.signInAgain' => '再度サインイン',
 			'connections.editMediaBrowserTitle' => ({required Object product}) => '${product}接続を編集',
-			_ => null,
-		} ?? switch (path) {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName}のURLを追加または削除します。PlenTVは到達可能なURLのうち、レイテンシーが最も低いものを使用します。',
 			'accountPreferences.sectionTitle' => 'アカウント設定',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '音声・字幕・ライブラリのオプションは${account}に保存されています',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '音声・字幕・ライブラリのオプションは${count}個のアカウントに保存されています',
 			'accountPreferences.pickAccount' => '各アカウントに独自の設定が保存されています。編集するアカウントを選択してください。',
 			'accountPreferences.storedOnAccount' => 'これらのオプションはアカウント自体に保存されるため、サインインしているすべてのアプリ（他のデバイスのPlenTVを含む）で使用されます。',
@@ -4868,11 +4862,11 @@ extension on TranslationsJa {
 			'collections.title' => 'コレクション',
 			'collections.collection' => 'コレクション',
 			'collections.empty' => 'コレクションは空です',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteCollection' => 'コレクションを削除',
 			'collections.deleteConfirm' => ({required Object title}) => '「${title}」を削除しますか？この操作は元に戻せません。',
 			'collections.deleted' => 'コレクションを削除しました',
+			_ => null,
+		} ?? switch (path) {
 			'collections.deleteFailed' => 'コレクションの削除に失敗しました',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'コレクションの削除に失敗しました: ${error}',
 			'collections.selectCollection' => 'コレクションを選択',
@@ -5382,11 +5376,11 @@ extension on TranslationsJa {
 			'externalPlayer.systemDefault' => 'システム既定',
 			'externalPlayer.addCustomPlayer' => 'カスタムプレーヤーを追加',
 			'externalPlayer.playerName' => 'プレーヤー名',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerNameHint' => 'マイプレーヤー',
 			'externalPlayer.playerCommand' => 'コマンド',
 			'externalPlayer.playerPackage' => 'パッケージ名',
+			_ => null,
+		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URLスキーム',
 			'externalPlayer.off' => 'オフ',
 			'externalPlayer.launchFailed' => '外部プレーヤーの起動に失敗しました',
