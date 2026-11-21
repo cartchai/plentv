@@ -504,9 +504,15 @@ class XtreamApi {
     Duration timeout = MediaServerTimeouts.response,
     Duration receiveTimeout = MediaServerTimeouts.receive,
     Future<void>? abortTrigger,
+    bool force = false,
   }) async {
     // 1.4.3 C3: a recent 403 means no request at all — not even one.
-    await _throwIfBreakerOpen(uri);
+    // 1.6.13: [force] is the one exception — a user-initiated probe
+    // (see [forceProbeAccess]) fires a single real request past the
+    // breaker so an explicit Retry / Test tap can check whether a
+    // settings change lifted the block. Automatic callers never pass
+    // it, so the breaker still holds back every automatic attempt.
+    if (!force) await _throwIfBreakerOpen(uri);
     http.Response response;
     try {
       // Build #21: an AbortableRequest so a search section can hard-cancel
@@ -815,8 +821,14 @@ class XtreamApi {
     Uri uri, {
     Duration timeout = MediaServerTimeouts.response,
     Future<void>? abortTrigger,
+    bool force = false,
   }) async {
-    final body = await _fetchBody(uri, timeout: timeout, abortTrigger: abortTrigger);
+    final body = await _fetchBody(
+      uri,
+      timeout: timeout,
+      abortTrigger: abortTrigger,
+      force: force,
+    );
     try {
       // 1.2.19 (L-24): large info payloads decode in a worker isolate —
       // the main isolate never blocks on a multi-MB `jsonDecode`.
@@ -858,11 +870,53 @@ class XtreamApi {
   /// the payload has none (login rejected).
   Future<Map<String, dynamic>?> getUserInfo() async {
     final decoded = await _getJson(_playerApiUri());
+    return _userInfoFrom(decoded);
+  }
+
+  /// The `user_info` map inside a decoded `player_api.php` payload, or
+  /// null when the payload has none (login rejected). Shared by
+  /// [getUserInfo] and [forceProbeAccess] so the probe does not need its
+  /// own copy of the shape check.
+  static Map<String, dynamic>? _userInfoFrom(dynamic decoded) {
     if (decoded is Map<String, dynamic>) {
       final info = decoded['user_info'];
       if (info is Map<String, dynamic>) return info;
     }
     return null;
+  }
+
+  /// One user-initiated probe (1.6.13): a single real `player_api.php`
+  /// request with the current settings, fired even while the 403 breaker
+  /// is open — so an explicit Retry tap (detail pages) or Test tap
+  /// (Connection refusals screen) can check whether a settings change
+  /// lifted the block instead of waiting out the cooldown. Exactly one
+  /// request, no retry loop, no re-arming a burst. A 403 is recorded as
+  /// a refusal entry (with the UA that went out) exactly like a normal
+  /// call, and the breaker stays open — the probe proves the panel
+  /// answers (or not); it does not clear the hold. Only explicit user
+  /// taps call this: startup, sync, resume and background attempts keep
+  /// respecting the breaker.
+  Future<({bool ok, int? statusCode, String? message})>
+  forceProbeAccess() async {
+    try {
+      final info = _userInfoFrom(
+        await _getJson(_playerApiUri(), force: true),
+      );
+      if (info != null) {
+        return (ok: true, statusCode: null, message: null);
+      }
+      return (
+        ok: false,
+        statusCode: 401,
+        message: 'Xtream authentication failed',
+      );
+    } on MediaServerAuthException catch (e) {
+      return (ok: false, statusCode: e.statusCode, message: e.message);
+    } on MediaServerHttpException catch (e) {
+      return (ok: false, statusCode: e.statusCode, message: e.message);
+    } catch (e) {
+      return (ok: false, statusCode: null, message: e.toString());
+    }
   }
 
   Future<List<XtreamCategory>> getLiveCategories({Future<void>? abortTrigger}) async {

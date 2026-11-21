@@ -342,7 +342,14 @@ class IptvClient implements MediaServerClient {
     // and Chrome's network stack without rebuilding the client (or
     // restarting the app). The background isolate has no SettingsService,
     // so its provider reads OFF and the sync keeps Dart's client.
-    httpClient: XtreamTransportClient(superSpoofOn: _superSpoofOn),
+    // 1.6.13 (H1: IPv4-preference): the transport also reads the
+    // IPv4-preference per request — flipping Settings → Advanced →
+    // Prefer IPv4 switches the Xtream requests to the IPv4-only Dart
+    // client. IPv4 wins over Cronet when both are on.
+    httpClient: XtreamTransportClient(
+      superSpoofOn: _superSpoofOn,
+      preferIpv4On: _preferIpv4On,
+    ),
     // Build #20: the User-Agent is re-read from Settings on every request,
     // so changing Settings → IPTV → Xtream User-Agent applies to the next
     // request without rebuilding the client (or restarting the app).
@@ -438,6 +445,17 @@ class IptvClient implements MediaServerClient {
     final settings = SettingsService.instanceOrNull;
     if (settings == null) return false;
     return settings.read(SettingsService.iptvSuperSpoof);
+  }
+
+  /// Prefer IPv4 (1.6.13 H1): the IPv4-preference is on — the transport
+  /// reads it per request, so flipping it switches the Xtream requests
+  /// to the IPv4-only Dart client. False when Settings is not
+  /// initialized (tests, background isolate) — the requests stay on the
+  /// plain Dart client.
+  static bool _preferIpv4On() {
+    final settings = SettingsService.instanceOrNull;
+    if (settings == null) return false;
+    return settings.read(SettingsService.iptvPreferIpv4);
   }
 
   /// Super Spoof (1.6.11): the headers piece is active — master toggle
@@ -2850,6 +2868,27 @@ class IptvClient implements MediaServerClient {
   void clear403Cooldown() {
     _breakerClearedAt = DateTime.now();
     _api?.clearBreaker();
+  }
+
+  /// One user-initiated force probe (1.6.13): a single real request
+  /// with the current settings, fired even while the 403 breaker is
+  /// open — the detail-page Retry and the refusals-screen Test call
+  /// this so an explicit tap can check whether a settings change lifted
+  /// the block. M3U connections have no Xtream API to probe, so they
+  /// report not-ok with no status. The probe never clears the breaker
+  /// itself: the caller clears it only when the probe proves the panel
+  /// answers (see the detail-page Retry), so a failed probe leaves the
+  /// hold exactly as it was.
+  Future<({bool ok, int? statusCode, String? message})>
+  forceProbeAccess() {
+    if (!_isXtream) {
+      return Future.value((
+        ok: false,
+        statusCode: null,
+        message: 'Not an Xtream connection',
+      ));
+    }
+    return _xtreamApi.forceProbeAccess();
   }
 
   /// True when the refusal log holds a 403 for this connection recorded

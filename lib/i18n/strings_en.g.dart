@@ -607,6 +607,12 @@ class Translations$settings$en {
 	/// en: 'Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.'
 	String get iptvLiveTsDescription => 'Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.';
 
+	/// en: 'Prefer IPv4'
+	String get preferIpv4 => 'Prefer IPv4';
+
+	/// en: 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone's IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi.'
+	String get preferIpv4Description => 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone\'s IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi.';
+
 	/// en: 'Seconds'
 	String get secondsLabel => 'Seconds';
 
@@ -3949,9 +3955,11 @@ class Translations$about$en {
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 	];
 	List<String> get changelog2332 => [
-		'Fixed: with Super Spoof on (Settings → Advanced), the app\'s provider requests now ride Chrome\'s network stack instead of Dart\'s own — the same fingerprint a normal Android player sends — so the Wi-Fi block that kept refusing them should lift',
+		'Fixed: with Super Spoof on (Settings → Advanced), the app\'s provider requests now ride Chrome\'s network stack instead of Dart\'s own — the same fingerprint a normal Android player sends',
 		'Fixed: the app now says in the log which network stack its provider requests use, so you can see whether Chrome\'s stack or Dart\'s is in use',
 		'Fixed: if Chrome\'s stack can\'t start on a device, the app falls back to today\'s requests instead of failing',
+		'Added: Settings → Advanced has a “Prefer IPv4” switch — provider requests connect over IPv4 only, like the Fire Stick, for Wi-Fi networks that refuse the phone\'s IPv6 connection. Off by default',
+		'Fixed: Retry works again after a refusal — tapping Retry on a refused show, or Test on the Connection refusals screen, sends one real test with your current settings instead of waiting out the hold',
 	];
 	List<String> get changelog2331 => [
 		'Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it',
@@ -8117,6 +8125,18 @@ class Translations$iptv$en {
 	/// en: 'Refusals cleared'
 	String get refusalsCleared => 'Refusals cleared';
 
+	/// en: 'Test the connection now'
+	String get refusalsTest => 'Test the connection now';
+
+	/// en: 'Panel answered — the block has lifted'
+	String get refusalsTestOk => 'Panel answered — the block has lifted';
+
+	/// en: 'Still refused (HTTP 403) — see the newest entry'
+	String get refusalsTestRefused => 'Still refused (HTTP 403) — see the newest entry';
+
+	/// en: 'Test failed'
+	String get refusalsTestFailed => 'Test failed';
+
 	/// en: 'Status'
 	String get refusalsStatus => 'Status';
 
@@ -10341,6 +10361,8 @@ extension on Translations {
 			'settings.superSpoofStreamsDescription' => 'Use the same disguise for video streams and poster art, not just catalog and guide requests.',
 			'settings.iptvLiveTs' => 'Request live TV as MPEG-TS',
 			'settings.iptvLiveTsDescription' => 'Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.',
+			'settings.preferIpv4' => 'Prefer IPv4',
+			'settings.preferIpv4Description' => 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone\'s IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi.',
 			'settings.secondsLabel' => 'Seconds',
 			'settings.minutesLabel' => 'Minutes',
 			'settings.secondsShort' => 's',
@@ -10658,10 +10680,10 @@ extension on Translations {
 			'settings.generalDescription' => 'Language, startup, and window behavior',
 			'settings.languageAndRegion' => 'Language & Region',
 			'settings.startup' => 'Startup',
-			'settings.display' => 'Display',
-			'settings.libraryAndCards' => 'Library & Cards',
 			_ => null,
 		} ?? switch (path) {
+			'settings.display' => 'Display',
+			'settings.libraryAndCards' => 'Library & Cards',
 			'settings.homeScreen' => 'Home Screen',
 			'settings.navigation' => 'Navigation',
 			'settings.window' => 'Window',
@@ -11172,10 +11194,10 @@ extension on Translations {
 			'mpvConfig.lineHint' => 'option=value',
 			'mpvConfig.addLine' => 'Add line',
 			'mpvConfig.removeLine' => 'Remove line',
-			'mpvConfig.embeddedVoHint' => 'vo, gpu-context and gpu-api are ignored on Linux: embedded video always renders through vo=libmpv on the video plane, and gpu-next (which compute shaders like ArtCNN need) cannot run embedded.',
-			'dialog.confirmAction' => 'Confirm Action',
 			_ => null,
 		} ?? switch (path) {
+			'mpvConfig.embeddedVoHint' => 'vo, gpu-context and gpu-api are ignored on Linux: embedded video always renders through vo=libmpv on the video plane, and gpu-next (which compute shaders like ArtCNN need) cannot run embedded.',
+			'dialog.confirmAction' => 'Confirm Action',
 			'profiles.addPlezTVProfile' => 'Add PlenTV profile',
 			'profiles.switchingProfile' => 'Switching profile…',
 			'profiles.deleteThisProfileTitle' => 'Delete this profile?',
@@ -11579,9 +11601,11 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
-			'about.changelog2332.0' => 'Fixed: with Super Spoof on (Settings → Advanced), the app\'s provider requests now ride Chrome\'s network stack instead of Dart\'s own — the same fingerprint a normal Android player sends — so the Wi-Fi block that kept refusing them should lift',
+			'about.changelog2332.0' => 'Fixed: with Super Spoof on (Settings → Advanced), the app\'s provider requests now ride Chrome\'s network stack instead of Dart\'s own — the same fingerprint a normal Android player sends',
 			'about.changelog2332.1' => 'Fixed: the app now says in the log which network stack its provider requests use, so you can see whether Chrome\'s stack or Dart\'s is in use',
 			'about.changelog2332.2' => 'Fixed: if Chrome\'s stack can\'t start on a device, the app falls back to today\'s requests instead of failing',
+			'about.changelog2332.3' => 'Added: Settings → Advanced has a “Prefer IPv4” switch — provider requests connect over IPv4 only, like the Fire Stick, for Wi-Fi networks that refuse the phone\'s IPv6 connection. Off by default',
+			'about.changelog2332.4' => 'Fixed: Retry works again after a refusal — tapping Retry on a refused show, or Test on the Connection refusals screen, sends one real test with your current settings instead of waiting out the hold',
 			'about.changelog2331.0' => 'Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it',
 			'about.changelog2331.1' => 'New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi',
 			'about.changelog2331.2' => 'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
@@ -11684,12 +11708,12 @@ extension on Translations {
 			'about.changelog2309.1' => 'Signing in to MyAnimeList and AniList now goes straight to each service, instead of through the app maker\'s server',
 			'about.changelog2309.2' => 'The TV app and the Linux app now show the app\'s name everywhere',
 			'about.changelog2308.0' => 'Fixed: the TV guide could lose its saved copy when the app cleared its guide data at the same moment it was saving it — the guide now saves reliably and doesn\'t need to download again',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2308.1' => 'Fixed: the guide stopped asking the TV service for the same channel\'s listings over and over when you scroll — one request per channel, with a short pause after an interrupted one',
 			'about.changelog2308.2' => 'Fixed: some videos showed a black or frozen picture on the first play because the phone\'s video hardware rejected the picture format — the app now remembers and starts those videos the way that works',
 			'about.changelog2308.3' => 'Fixed: the channel-list check could show a confusing technical message when the connection timed out — it now says plainly that the connection timed out',
 			'about.changelog2308.4' => 'The emergency debug log now records what the app was doing when it freezes, and which exit ended the last session, so the next log actually answers those questions',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2308.5' => 'The TV guide now fills in channels it used to leave blank — including UK Sky Sports channels, which were being blocked by mistake',
 			'about.changelog2308.6' => 'The guide now tries more than one place for each channel\'s programmes, so if one source fails the next one picks it up instead of leaving the row empty',
 			'about.changelog2308.7' => 'You can now see, for any channel, which source its guide data came from',
@@ -12198,12 +12222,12 @@ extension on Translations {
 			'liveTv.startFromBeginning' => 'Start from beginning',
 			'liveTv.watchLive' => 'Watch Live',
 			'liveTv.goToLive' => 'Go to Live',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.record' => 'Record',
 			'liveTv.recordEpisode' => 'Record Episode',
 			'liveTv.recordSeries' => 'Record Series',
 			'liveTv.recordOptions' => 'Record Options',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.saveTo' => 'Save to',
 			'liveTv.recordings' => 'Recordings',
 			'liveTv.scheduledRecordings' => 'Scheduled',
@@ -12712,12 +12736,12 @@ extension on Translations {
 			'performanceOverlay.color' => 'Color',
 			'performanceOverlay.performance' => 'Performance',
 			'performanceOverlay.buffer' => 'Buffer',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.app' => 'App',
 			'performanceOverlay.decoder' => 'Decoder',
 			'performanceOverlay.rawDecoder' => 'Raw Decoder',
 			'performanceOverlay.tunneling' => 'Tunneling',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.passthrough' => 'Passthrough',
 			'performanceOverlay.aspect' => 'Aspect',
 			'performanceOverlay.rotation' => 'Rotation',
@@ -13226,12 +13250,12 @@ extension on Translations {
 			'iptv.seasonsFromDownloads' => 'Showing downloaded seasons — the panel refused access on this network',
 			'iptv.refusedOnThisNetwork' => 'The panel refused access on this network — see Connection refusals in Settings',
 			'iptv.epgNoGuideTitle' => 'Channels without guide',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgNoGuideDescription' => 'Channels with no guide data. Tap Assign to pick a guide for a channel by hand.',
 			'iptv.epgNoGuideEmpty' => 'Every channel has guide data',
 			'iptv.epgNoGuideLoadFailed' => ({required Object reason}) => 'Could not load the channels without guide — ${reason}',
 			'iptv.epgNoGuideReasonNoSource' => 'No guide source',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgNoGuideReasonNoMatch' => 'No matching guide',
 			'iptv.epgNoGuideReasonNoTvgId' => 'No channel ID',
 			'iptv.epgNoGuideReasonTvgIdNotInFeed' => 'Channel ID not in the guide',
@@ -13345,6 +13369,10 @@ extension on Translations {
 			'iptv.refusalsCopied' => 'Refusals copied to clipboard',
 			'iptv.refusalsClear' => 'Clear refusals',
 			'iptv.refusalsCleared' => 'Refusals cleared',
+			'iptv.refusalsTest' => 'Test the connection now',
+			'iptv.refusalsTestOk' => 'Panel answered — the block has lifted',
+			'iptv.refusalsTestRefused' => 'Still refused (HTTP 403) — see the newest entry',
+			'iptv.refusalsTestFailed' => 'Test failed',
 			'iptv.refusalsStatus' => 'Status',
 			'iptv.refusalsTime' => 'Time',
 			'iptv.refusalsConnection' => 'Connection',

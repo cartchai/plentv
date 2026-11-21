@@ -1068,6 +1068,15 @@ class SettingsService extends BaseSharedPreferencesService {
   /// like the other IPTV settings.
   static const iptvLiveTs = BoolPref('iptv_live_ts', defaultValue: false);
 
+  /// Prefer IPv4 for provider requests (1.6.13, H1): when on, the panel
+  /// host is resolved to IPv4 addresses only and the connection is made
+  /// over IPv4 — the same address family the working Fire Stick uses —
+  /// for Wi-Fi networks that refuse the phone's IPv6 connection. TLS is
+  /// still verified for the hostname. Off by default: with it off, every
+  /// request is byte-for-byte today's request. In `_portableOnlyPrefs`,
+  /// so it rides settings export/import like the other IPTV settings.
+  static const iptvPreferIpv4 = BoolPref('iptv_prefer_ipv4', defaultValue: false);
+
   /// Hours between IPTV catalog syncs (build #23): how often the whole
   /// catalog (live channels, movies, series) is re-downloaded into the
   /// local search index. 6 / 12 / 24 / 168 (once a week), or 0 for
@@ -1865,6 +1874,7 @@ class SettingsService extends BaseSharedPreferencesService {
     iptvSuperSpoofHeaders,
     iptvSuperSpoofStreams,
     iptvLiveTs,
+    iptvPreferIpv4,
     iptvCatalogSyncIntervalHours,
     iptvLargeDownloadsWifiOnly,
     iptvCatalogMode,

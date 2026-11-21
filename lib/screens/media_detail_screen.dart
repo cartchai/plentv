@@ -362,8 +362,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
   bool _seasonsLoadFailed = false; // the seasons fetch threw (vs. a genuinely empty show)
   // 1.4.3 G3: the seasons failure was a refusal (403) — the section
   // says the panel refused access on this network instead of the
-  // generic load-failed message, and its Retry does not re-fire
-  // while the breaker is open (see _loadSeasons).
+  // generic load-failed message, and its Retry fires one probe past the
+  // breaker (1.6.13) instead of re-firing blindly (see _loadSeasons).
   bool _seasonsRefused = false;
   // 1.4.3 G1: the shown seasons came from the downloads on disk, not
   // the panel — the live fetch was refused, so the section says so
@@ -1877,7 +1877,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
     }
   }
 
-  Future<void> _loadSeasons() async {
+  Future<void> _loadSeasons({bool force = false}) async {
     if (!_canUseDetail) return;
     _seasonsCompleter = Completer<void>();
     setStateIfMounted(() {
@@ -1901,18 +1901,31 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
 
     // 1.4.3 G3: while the 403 breaker is open the seasons fetch
     // cannot succeed — the panel is refusing, and re-firing only
-    // risks extending the block. The Retry tap lands here too, so
-    // it fires nothing either: the section shows the refused state
-    // instead of the generic load-failed message.
+    // risks extending the block. So an automatic load shows the
+    // refused state and sends nothing. 1.6.13: an explicit Retry tap
+    // ([force]) fires ONE probe with the current settings past the
+    // breaker first — if the panel answers, the hold is cleared and
+    // the load below runs; if it still refuses, the probe records a
+    // refusal entry and the section keeps showing the refused state.
     if (client is IptvClient && await client.isIn403Cooldown) {
-      setStateIfMounted(() {
-        _isLoadingSeasons = false;
-        _seasonsLoadFailed = true;
-        _seasonsRefused = true;
-        _hasLoadedSeasons = true;
-      });
-      if (!(_seasonsCompleter?.isCompleted ?? true)) _seasonsCompleter?.complete();
-      return;
+      var stillRefused = true;
+      if (force) {
+        final probe = await client.forceProbeAccess();
+        if (probe.ok) {
+          client.clear403Cooldown();
+          stillRefused = false;
+        }
+      }
+      if (stillRefused) {
+        setStateIfMounted(() {
+          _isLoadingSeasons = false;
+          _seasonsLoadFailed = true;
+          _seasonsRefused = true;
+          _hasLoadedSeasons = true;
+        });
+        if (!(_seasonsCompleter?.isCompleted ?? true)) _seasonsCompleter?.complete();
+        return;
+      }
     }
 
     try {
@@ -3693,7 +3706,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen>
                                 else if (_seasonsLoadFailed)
                                   _sectionError(
                                     _seasonsRefused ? t.iptv.refusedOnThisNetwork : t.messages.seasonsLoadFailed,
-                                    () => unawaited(_loadSeasons()),
+                                    () => unawaited(_loadSeasons(force: true)),
                                   )
                                 else if (_seasons.isEmpty)
                                   _sectionEmpty(context, t.messages.noSeasonsFound)

@@ -215,6 +215,8 @@
     "superSpoofStreamsDescription": "Use the same disguise for video streams and poster art, not just catalog and guide requests.",
     "iptvLiveTs": "Request live TV as MPEG-TS",
     "iptvLiveTsDescription": "Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.",
+    "preferIpv4": "Prefer IPv4",
+    "preferIpv4Description": "Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone's IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi.",
     "secondsLabel": "Seconds",
     "minutesLabel": "Minutes",
     "secondsShort": "s",
@@ -1577,9 +1579,11 @@
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
     ],
     "changelog2332": [
-      "Fixed: with Super Spoof on (Settings → Advanced), the app's provider requests now ride Chrome's network stack instead of Dart's own — the same fingerprint a normal Android player sends — so the Wi-Fi block that kept refusing them should lift",
+      "Fixed: with Super Spoof on (Settings → Advanced), the app's provider requests now ride Chrome's network stack instead of Dart's own — the same fingerprint a normal Android player sends",
       "Fixed: the app now says in the log which network stack its provider requests use, so you can see whether Chrome's stack or Dart's is in use",
-      "Fixed: if Chrome's stack can't start on a device, the app falls back to today's requests instead of failing"
+      "Fixed: if Chrome's stack can't start on a device, the app falls back to today's requests instead of failing",
+      "Added: Settings → Advanced has a “Prefer IPv4” switch — provider requests connect over IPv4 only, like the Fire Stick, for Wi-Fi networks that refuse the phone's IPv6 connection. Off by default",
+      "Fixed: Retry works again after a refusal — tapping Retry on a refused show, or Test on the Connection refusals screen, sends one real test with your current settings instead of waiting out the hold"
     ],
     "changelog2331": [
       "Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it",
@@ -3618,6 +3622,10 @@
     "refusalsCopied": "Refusals copied to clipboard",
     "refusalsClear": "Clear refusals",
     "refusalsCleared": "Refusals cleared",
+    "refusalsTest": "Test the connection now",
+    "refusalsTestOk": "Panel answered — the block has lifted",
+    "refusalsTestRefused": "Still refused (HTTP 403) — see the newest entry",
+    "refusalsTestFailed": "Test failed",
     "refusalsStatus": "Status",
     "refusalsTime": "Time",
     "refusalsConnection": "Connection",

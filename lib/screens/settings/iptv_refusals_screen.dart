@@ -8,6 +8,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import 'package:provider/provider.dart';
 
+import '../../connection/connection.dart';
 import '../../i18n/app_locale_utils.dart';
 import '../../i18n/strings.g.dart';
 import '../../media/ids.dart';
@@ -22,9 +23,13 @@ import '../../widgets/focused_scroll_scaffold.dart';
 /// "Connection refusals" (build #27): every time the provider refuses a
 /// request — the status, the response headers and the first bit of the
 /// response body — listed newest-first so the cause can be read off the
-/// phone instead of guessed at. Record-only: this screen never talks to
-/// the panel. Copy shares the whole log as text; Clear empties it.
-/// No usernames or passwords are ever stored here (see
+/// phone instead of guessed at. Copy shares the whole log as text; Clear
+/// empties it. Test (1.6.13) sends ONE real probe with the current
+/// settings to the newest entry's connection, even while the 403 breaker
+/// is open, and shows whether the panel answered — so a settings change
+/// can be tested from this screen instead of waiting out the hold. A
+/// 403 from the probe lands as a new entry, with the User-Agent that
+/// went out. No usernames or passwords are ever stored here (see
 /// [IptvRefusalEntry]).
 class IptvRefusalsScreen extends StatefulWidget {
   const IptvRefusalsScreen({super.key});
@@ -39,6 +44,8 @@ class _IptvRefusalsScreenState extends State<IptvRefusalsScreen> {
     super.initState();
     unawaited(IptvRefusalLog.instance.ensureLoaded());
   }
+
+  bool _testing = false;
 
   /// Android binder transactions are capped around 1 MiB and
   /// `Clipboard.setData` crosses one (same cap as the logs screen).
@@ -87,6 +94,51 @@ class _IptvRefusalsScreenState extends State<IptvRefusalsScreen> {
     showSuccessSnackBar(context, t.iptv.refusalsCleared);
   }
 
+  /// 1.6.13: one user-initiated probe to the newest entry's connection,
+  /// even while the 403 breaker is open — so a settings change (UA
+  /// choice, Prefer IPv4) can be tested from this screen instead of
+  /// waiting out the hold. Exactly one request; a 403 lands as a new
+  /// refusal entry, so the next test is provable from this screen. Only
+  /// an explicit tap runs this — nothing on this screen probes on its
+  /// own.
+  Future<void> _test() async {
+    final entries = IptvRefusalLog.instance.entriesNotifier.value;
+    if (entries.isEmpty || _testing) return;
+    final connectionId = entries
+        .map((e) => e.connectionId)
+        .firstWhere((id) => id.isNotEmpty, orElse: () => '');
+    // The provider is absent when the screen is pumped standalone
+    // (tests) — without a client there is nothing to probe.
+    final multiServer = context.read<MultiServerProvider?>();
+    final client = connectionId.isEmpty || multiServer == null
+        ? null
+        : multiServer.getClientForServer(ServerId(connectionId));
+    if (client is! IptvClient || client.connection is! XtreamConnection) {
+      showErrorSnackBar(context, t.iptv.refusalsTestFailed);
+      return;
+    }
+    setState(() => _testing = true);
+    try {
+      final result = await client.forceProbeAccess();
+      if (!mounted) return;
+      if (result.ok) {
+        showSuccessSnackBar(context, t.iptv.refusalsTestOk);
+      } else if (result.statusCode == 403) {
+        showErrorSnackBar(context, t.iptv.refusalsTestRefused);
+      } else {
+        final message = result.message;
+        showErrorSnackBar(
+          context,
+          message == null || message.isEmpty
+              ? t.iptv.refusalsTestFailed
+              : '${t.iptv.refusalsTestFailed}: $message',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _testing = false);
+    }
+  }
+
   String _formatTime(DateTime time) =>
       '${DateFormat.MMMd(LocaleSettings.currentLocale.intlLocaleName).format(time)} · '
       '${formatClockTime(time, is24Hour: MediaQuery.alwaysUse24HourFormatOf(context))}';
@@ -100,6 +152,11 @@ class _IptvRefusalsScreenState extends State<IptvRefusalsScreen> {
         return FocusedScrollScaffold(
           title: Text(t.iptv.refusalsTitle),
           actions: [
+            IconButton(
+              icon: const AppIcon(Symbols.network_check_rounded),
+              tooltip: t.iptv.refusalsTest,
+              onPressed: entries.isEmpty || _testing ? null : _test,
+            ),
             IconButton(
               icon: const AppIcon(Symbols.content_copy_rounded),
               tooltip: t.iptv.refusalsCopy,

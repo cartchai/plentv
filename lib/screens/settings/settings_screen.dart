@@ -142,6 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kWatchTogetherRelay = 'watch_together_relay';
   static const _kSuperSpoof = 'super_spoof';
   static const _kIptvLiveTs = 'iptv_live_ts';
+  static const _kIptvPreferIpv4 = 'iptv_prefer_ipv4';
   static const _kExportSettings = 'export_settings';
   static const _kImportSettings = 'import_settings';
   static const _kExportForkBackup = 'export_fork_backup';
@@ -667,6 +668,17 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           icon: Symbols.live_tv_rounded,
           title: t.settings.iptvLiveTs,
           subtitle: t.settings.iptvLiveTsDescription,
+        ),
+        // 1.6.13 (Prefer IPv4): a plain switch, always visible — it is
+        // independent of Super Spoof (which changes the network stack,
+        // not the address family). When both are on, IPv4 wins: the
+        // request goes out on Dart + IPv4, not Cronet.
+        SettingSwitchTile(
+          focusNode: _focusTracker.get(_kIptvPreferIpv4),
+          pref: settings.SettingsService.iptvPreferIpv4,
+          icon: Symbols.lan_rounded,
+          title: t.settings.preferIpv4,
+          subtitle: t.settings.preferIpv4Description,
         ),
         SettingNavigationTile(
           focusNode: _focusTracker.get(_kViewLogs),
