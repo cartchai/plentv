@@ -388,9 +388,9 @@ void main() {
   });
 
   group('Build #22 — IptvClient.streamHeaders (VOD / series / movie opens)', () {
-    test('default is VLC', () {
+    test('default is the player default', () {
       final client = IptvClient.xtream(xtreamConnection: _trexConnection());
-      expect(client.streamHeaders, {'User-Agent': 'VLC'});
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.player});
     });
 
     test('the configured choice flows through', () async {
@@ -403,11 +403,11 @@ void main() {
       await settings.write(SettingsService.iptvXtreamUserAgent, 'browser');
       expect(
         client.streamHeaders,
-        {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'},
+        {'User-Agent': XtreamUserAgent.browser},
       );
     });
 
-    test('custom text flows through; blank custom and unknown choice fall back to VLC', () async {
+    test('custom text flows through; blank custom and unknown choice fall back to the player default', () async {
       final settings = await SettingsService.getInstance();
       final client = IptvClient.xtream(xtreamConnection: _trexConnection());
 
@@ -416,16 +416,16 @@ void main() {
       expect(client.streamHeaders, {'User-Agent': 'MyAgent/9'});
 
       await settings.write(SettingsService.iptvXtreamUserAgentCustom, '   ');
-      expect(client.streamHeaders, {'User-Agent': 'VLC'});
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.player});
 
       await settings.write(SettingsService.iptvXtreamUserAgent, 'bogus-choice');
-      expect(client.streamHeaders, {'User-Agent': 'VLC'});
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.player});
     });
 
     test('a setting change applies to the next read, no client rebuild', () async {
       final settings = await SettingsService.getInstance();
       final client = IptvClient.xtream(xtreamConnection: _trexConnection());
-      expect(client.streamHeaders, {'User-Agent': 'VLC'});
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.player});
 
       await settings.write(SettingsService.iptvXtreamUserAgent, 'smarters');
       expect(client.streamHeaders, {'User-Agent': 'IPTVSmartersPro'});
@@ -433,7 +433,7 @@ void main() {
 
     test('an M3U client sends the same configured UA', () {
       final client = IptvClient.m3u(m3uConnection: _m3uConnection());
-      expect(client.streamHeaders, {'User-Agent': 'VLC'});
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.player});
     });
   });
 
@@ -448,7 +448,7 @@ void main() {
       );
       expect(session.streamHeaders, {
         'Accept-Language': 'en',
-        'User-Agent': 'VLC',
+        'User-Agent': XtreamUserAgent.player,
       });
     });
 
@@ -461,7 +461,7 @@ void main() {
         liveUrl: 'https://panel.example.com:8080/live/user/pass/100.m3u8',
         archiveDurationSeconds: 0,
       );
-      expect(session.streamHeaders['User-Agent'], 'VLC');
+      expect(session.streamHeaders['User-Agent'], XtreamUserAgent.player);
 
       await settings.write(SettingsService.iptvXtreamUserAgent, 'custom');
       await settings.write(SettingsService.iptvXtreamUserAgentCustom, 'MyAgent/9');
@@ -496,14 +496,14 @@ void main() {
       );
 
       expect(context.result.videoUrl, 'https://panel.example.com:8080/movie/user/pass/2.mp4');
-      expect(context.streamHeaders, containsPair('User-Agent', 'VLC'));
+      expect(context.streamHeaders, containsPair('User-Agent', XtreamUserAgent.player));
     });
   });
 
   group('Build #22 — panel image fetches carry the UA', () {
-    test('artworkHeadersFor gives VLC for an IPTV client, PlezTV otherwise', () {
+    test('artworkHeadersFor gives the player default for an IPTV client, PlezTV otherwise', () {
       final iptv = IptvClient.xtream(xtreamConnection: _trexConnection());
-      expect(MediaImageHelper.artworkHeadersFor(iptv), {'User-Agent': 'VLC'});
+      expect(MediaImageHelper.artworkHeadersFor(iptv), {'User-Agent': XtreamUserAgent.player});
       expect(MediaImageHelper.artworkHeadersFor(_OtherBackendClient()), {'User-Agent': 'PlenTV'});
       expect(MediaImageHelper.artworkHeadersFor(null), {'User-Agent': 'PlenTV'});
     });
@@ -552,7 +552,7 @@ void main() {
       expect(harness.players.single.openCount, 1);
       final media = harness.players.single.openedMedia.single;
       expect(media.uri, contains('live'));
-      expect(media.headers, containsPair('User-Agent', 'VLC'));
+      expect(media.headers, containsPair('User-Agent', XtreamUserAgent.player));
       expect(media.headers, containsPair('Accept-Language', 'en'));
     });
 
@@ -592,7 +592,7 @@ void main() {
       expect(harness.players.single.openCount, 1);
       final media = harness.players.single.openedMedia.single;
       expect(media.uri, contains('timeshift'));
-      expect(media.headers, containsPair('User-Agent', 'VLC'));
+      expect(media.headers, containsPair('User-Agent', XtreamUserAgent.player));
     });
 
     testWidgets('a setting change applies to the next tune', (tester) async {
@@ -606,7 +606,7 @@ void main() {
       await harness.settleRows(tester);
 
       await harness.tapChannel(tester, 'Trex News');
-      expect(harness.players.single.openedMedia.single.headers, containsPair('User-Agent', 'VLC'));
+      expect(harness.players.single.openedMedia.single.headers, containsPair('User-Agent', XtreamUserAgent.player));
 
       final settings = await SettingsService.getInstance();
       await settings.write(SettingsService.iptvXtreamUserAgent, 'custom');

@@ -102,7 +102,7 @@ void main() {
     test('master on picks the chosen mimic UA', () {
       expect(
         XtreamSuperSpoof.resolveUserAgent(masterOn: true, userAgentChoice: 'vlc', fallbackUserAgent: 'MyAgent/9'),
-        'VLC',
+        XtreamUserAgent.vlc,
       );
       expect(
         XtreamSuperSpoof.resolveUserAgent(masterOn: true, userAgentChoice: 'smarters', fallbackUserAgent: 'MyAgent/9'),
@@ -110,7 +110,7 @@ void main() {
       );
       expect(
         XtreamSuperSpoof.resolveUserAgent(masterOn: true, userAgentChoice: 'browser', fallbackUserAgent: 'MyAgent/9'),
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        XtreamUserAgent.browser,
       );
     });
 
@@ -208,7 +208,7 @@ void main() {
 
       expect(capturing.captured.length, 4);
       for (final request in capturing.captured) {
-        expect(_headerOf(request, 'User-Agent'), 'VLC', reason: '${request.url}');
+        expect(_headerOf(request, 'User-Agent'), XtreamUserAgent.player, reason: '${request.url}');
         expect(_headerOf(request, 'Accept'), isNull, reason: '${request.url}');
       }
     });
@@ -222,9 +222,9 @@ void main() {
 
     test('master off (default): exactly today’s headers', () {
       final client = IptvClient.xtream(xtreamConnection: _trexConnection());
-      expect(client.streamHeaders, {'User-Agent': 'VLC'});
-      expect(client.artworkHeaders, {'User-Agent': 'VLC'});
-      expect(client.xtreamApi.effectiveUserAgent, 'VLC');
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.player});
+      expect(client.artworkHeaders, {'User-Agent': XtreamUserAgent.player});
+      expect(client.xtreamApi.effectiveUserAgent, XtreamUserAgent.player);
     });
 
     test('master on: mimic UA + Accept on API, streams and artwork', () async {
@@ -232,9 +232,9 @@ void main() {
       final client = IptvClient.xtream(xtreamConnection: _trexConnection());
       await settings.write(SettingsService.iptvSuperSpoof, true);
 
-      expect(client.streamHeaders, {'User-Agent': 'VLC', 'Accept': '*/*'});
-      expect(client.artworkHeaders, {'User-Agent': 'VLC', 'Accept': '*/*'});
-      expect(client.xtreamApi.effectiveUserAgent, 'VLC');
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.vlc, 'Accept': '*/*'});
+      expect(client.artworkHeaders, {'User-Agent': XtreamUserAgent.vlc, 'Accept': '*/*'});
+      expect(client.xtreamApi.effectiveUserAgent, XtreamUserAgent.vlc);
     });
 
     test('UA piece picks the mimic name (smarters / browser)', () async {
@@ -248,7 +248,7 @@ void main() {
 
       await settings.write(SettingsService.iptvSuperSpoofUserAgent, 'browser');
       expect(client.streamHeaders, {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'User-Agent': XtreamUserAgent.browser,
         'Accept': '*/*',
       });
     });
@@ -261,10 +261,10 @@ void main() {
       await settings.write(SettingsService.iptvSuperSpoofUserAgent, 'off');
 
       expect(client.streamHeaders, {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'User-Agent': XtreamUserAgent.browser,
         'Accept': '*/*',
       });
-      expect(client.xtreamApi.effectiveUserAgent, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+      expect(client.xtreamApi.effectiveUserAgent, XtreamUserAgent.browser);
     });
 
     test('headers piece off: mimic UA, no Accept', () async {
@@ -273,8 +273,8 @@ void main() {
       await settings.write(SettingsService.iptvSuperSpoof, true);
       await settings.write(SettingsService.iptvSuperSpoofHeaders, false);
 
-      expect(client.streamHeaders, {'User-Agent': 'VLC'});
-      expect(client.artworkHeaders, {'User-Agent': 'VLC'});
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.vlc});
+      expect(client.artworkHeaders, {'User-Agent': XtreamUserAgent.vlc});
     });
 
     test('streams piece off: streams and artwork stay normal, the API path still spoofs', () async {
@@ -286,7 +286,7 @@ void main() {
 
       expect(client.streamHeaders, {'User-Agent': 'IPTVSmartersPro'});
       expect(client.artworkHeaders, {'User-Agent': 'IPTVSmartersPro'});
-      expect(client.xtreamApi.effectiveUserAgent, 'VLC');
+      expect(client.xtreamApi.effectiveUserAgent, XtreamUserAgent.vlc);
     });
 
     test('an M3U client spoofs its streams too', () async {
@@ -294,7 +294,7 @@ void main() {
       final client = IptvClient.m3u(m3uConnection: _m3uConnection());
       await settings.write(SettingsService.iptvSuperSpoof, true);
 
-      expect(client.streamHeaders, {'User-Agent': 'VLC', 'Accept': '*/*'});
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.vlc, 'Accept': '*/*'});
     });
   });
 }

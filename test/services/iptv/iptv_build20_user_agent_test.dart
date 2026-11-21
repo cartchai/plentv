@@ -137,7 +137,7 @@ String? _userAgentOf(http.BaseRequest request) {
 
 void main() {
   group('Build #20 — Xtream User-Agent', () {
-    test('default UA is VLC on every Xtream call, never a Dart/ UA', () async {
+    test('default UA is the player default on every Xtream call, never a Dart/ UA', () async {
       final capturing = _CapturingClient();
       final api = XtreamApi(
         serverUrl: 'https://panel.example.com:8080',
@@ -174,7 +174,7 @@ void main() {
       for (final request in capturing.captured) {
         final ua = _userAgentOf(request);
         expect(ua, isNotNull, reason: '${request.url} carries no User-Agent');
-        expect(ua, 'VLC', reason: '${request.url}');
+        expect(ua, XtreamUserAgent.player, reason: '${request.url}');
         expect(ua, isNot(startsWith('Dart/')), reason: '${request.url}');
       }
       // Belt and braces: no request anywhere in the run carried a Dart UA.

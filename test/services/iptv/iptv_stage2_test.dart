@@ -157,9 +157,9 @@ https://example.com/cnn.ts
       expect(client.backend.id, 'xtream');
       expect(client.capabilities.liveTv, isTrue);
       expect(client.capabilities.liveTvDvr, isFalse);
-      // Build #22: stream opens carry the configured Xtream UA (VLC by
-      // default) instead of no headers.
-      expect(client.streamHeaders, {'User-Agent': 'VLC'});
+      // Build #22: stream opens carry the configured Xtream UA (the player
+      // default since 1.6.12) instead of no headers.
+      expect(client.streamHeaders, {'User-Agent': XtreamUserAgent.player});
       expect(client.watchedThreshold, 0.9);
       client.close();
     });

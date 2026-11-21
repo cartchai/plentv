@@ -519,7 +519,7 @@ void main() {
       final ok = await IptvBackgroundSync.runOnce(deps: d.deps);
       expect(ok, isFalse, reason: 'transport failure is retryable');
       expect(panel.totalRequests, 3, reason: 'one category call per type, then the failure');
-      expect(d.userAgent(), XtreamUserAgent.vlc, reason: 'no UA setting: the VLC default');
+      expect(d.userAgent(), XtreamUserAgent.player, reason: 'no UA setting: the player default');
       final record = await IptvBackgroundSync.readLastRun();
       expect(record, isNotNull);
       expect(record!['retry'], isTrue);

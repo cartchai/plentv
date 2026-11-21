@@ -54,7 +54,7 @@ void main() {
     expect(entry.headers['server'], 'cloudflare');
     expect(entry.bodySnippet, contains('Just a moment...'));
     expect(entry.action, 'player_api.php');
-    expect(entry.userAgent, 'VLC');
+    expect(entry.userAgent, XtreamUserAgent.player);
     final json = jsonEncode(entry.toJson());
     expect(json, isNot(contains('alice-7')));
     expect(json, isNot(contains('hunter-9')));
