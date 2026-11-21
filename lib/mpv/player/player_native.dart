@@ -557,8 +557,34 @@ class PlayerNative extends PlayerBase {
       }
       if (userAgent != null && userAgent.isNotEmpty) {
         await setProperty('user-agent', userAgent);
+        // 1.6.12 (R4): verify the write landed — a refused write used to
+        // fail silently here (the 1.6.10 phone log showed the `del`
+        // failing with error -12), after which mpv sent its default
+        // `libmpv` UA. Read it back and say so in the log; a mismatch
+        // degrades to a warning, never aborts the open.
+        try {
+          final landed = await getProperty('user-agent');
+          if (landed == userAgent) {
+            appLogger.i('MPV: user-agent applied: $userAgent');
+          } else {
+            appLogger.w(
+              'MPV: user-agent write did not land (wanted "$userAgent", mpv reports "${landed ?? 'null'}") — streams will carry mpv\'s default UA',
+            );
+          }
+        } catch (e) {
+          appLogger.w('MPV: user-agent read-back failed — could not verify the write landed', error: e);
+        }
       } else {
         await command(['del', 'user-agent']);
+        // 1.6.12 (R4): same verification for the reset — a refused `del`
+        // leaks the previous open's UA into this one, so log what mpv
+        // reports now.
+        try {
+          final landed = await getProperty('user-agent');
+          appLogger.i('MPV: user-agent reset, mpv now reports "${landed ?? 'null'}"');
+        } catch (e) {
+          appLogger.w('MPV: user-agent reset read-back failed', error: e);
+        }
       }
     } catch (e) {
       appLogger.w('MPV: pre-open playback defaults not applied', error: e);

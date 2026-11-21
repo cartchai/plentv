@@ -13,43 +13,68 @@ import '../../utils/media_server_timeouts.dart';
 import 'iptv_refusal_log.dart';
 import 'iptv_streaming_json.dart';
 
-/// The User-Agent values the Xtream panel sees (build #20).
+/// The User-Agent values the Xtream panel sees (build #20, reworked 1.6.12).
 ///
 /// Trex returns HTTP 403 to PlenTV's requests while TiviMate works with the
-/// same account on the same phone: the app sent no User-Agent, so the panel
-/// saw Dart's default `Dart/3.13 (dart:io)` — a distinctive, non-player
-/// signature. Xtream panels enforce per-user allowed-UA lists and global
-/// blocked-UA patterns as a first-class feature (USER_AGENT_BAN / EMPTY_UA),
-/// and `VLC` is the most widely reported accepted value for 403s. The value
-/// is a setting (Settings → IPTV → Xtream User-Agent), stored as a choice
-/// key + custom text in SettingsService and resolved here so every caller
-/// (client, sign-in probe, tests) agrees on the wire value.
+/// same account on the same phone. The build #20 diagnosis was that the app
+/// sent no User-Agent, so the panel saw Dart's default `Dart/3.13 (dart:io)`
+/// — a distinctive, non-player signature — and bare `VLC` was picked as the
+/// default because it was the most widely reported accepted value for 403s.
+/// 1.6.12 evidence overturns that pick: Killua IPTV (plain OkHttp,
+/// `okhttp/4.x`, Conscrypt TLS, HTTP/2-capable) fails on the same home WiFi
+/// and works on mobile data, exactly like PlenTV — so the transport is not
+/// the discriminator — while TiviMate sends its DEFAULT user agent
+/// (ExoPlayer's; its User-Agent setting says "not set") and works on the
+/// same WiFi, same account, same public IP. Xtream panels enforce per-user
+/// allowed-UA lists and global blocked-UA patterns as a first-class feature
+/// (USER_AGENT_BAN / EMPTY_UA), and the values that fail are the non-player
+/// ones (Dart, OkHttp) and the bare, version-less `VLC`. The default is
+/// therefore an ordinary Android player default: the app's own name on the
+/// Android platform stack with the bundled ExoPlayer library tag — the same
+/// shape the app's own ExoPlayer path sends (ExoPlayerCore leaves the stock
+/// default UA in place). No other player's exact UA string is copied.
+///
+/// The value is a setting (Settings → IPTV → Xtream User-Agent), stored as a
+/// choice key + custom text in SettingsService and resolved here so every
+/// caller (client, sign-in probe, tests) agrees on the wire value.
 class XtreamUserAgent {
-  /// The default: the most widely reported accepted value for 403s.
-  static const String vlc = 'VLC';
+  /// The default (1.6.12): an ordinary Android player default. The media3
+  /// version must match the bundled ExoPlayer (android/app/build.gradle.kts
+  /// `media3Version`); bump both together.
+  static const String player = 'PlenTV (Linux; Android) ExoPlayerLib/1.11.0';
 
-  /// Second most reported fallback.
+  /// A real VLC: versioned, the form VLC itself sends over HTTP (1.6.12 —
+  /// the build #20 value was the bare `VLC` with no version).
+  static const String vlc = 'VLC/3.0.24 LibVLC/3.0.24';
+
+  /// IPTVSmartersPro app identifier (no verified versioned form — the app
+  /// name is the identifier panels allowlist).
   static const String smarters = 'IPTVSmartersPro';
 
-  /// Full browser UA, the third documented fallback.
-  static const String browser = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
+  /// Full browser UA, the third documented fallback (1.6.12: the build #20
+  /// value was a truncated `Mozilla/5.0 (Windows NT 10.0; Win64; x64)`,
+  /// which is not a real browser UA). Chrome 158 stable, November 2026.
+  static const String browser = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.8127.36 Safari/537.36';
 
   /// Stored choice keys for the Settings preference.
+  static const String choicePlayer = 'player';
   static const String choiceVlc = 'vlc';
   static const String choiceSmarters = 'smarters';
   static const String choiceBrowser = 'browser';
   static const String choiceCustom = 'custom';
 
-  static const String defaultChoice = choiceVlc;
+  static const String defaultChoice = choicePlayer;
 
   /// Resolve a stored choice + custom text to the UA string sent on the
-  /// wire. Unknown choices and a blank custom value fall back to VLC —
-  /// a request must never go out with no User-Agent again.
+  /// wire. Unknown choices and a blank custom value fall back to the
+  /// player default — a request must never go out with no User-Agent again.
   static String resolve(String choice, String custom) => switch (choice) {
+    choicePlayer => player,
+    choiceVlc => vlc,
     choiceSmarters => smarters,
     choiceBrowser => browser,
-    choiceCustom => custom.trim().isEmpty ? vlc : custom.trim(),
-    _ => vlc,
+    choiceCustom => custom.trim().isEmpty ? player : custom.trim(),
+    _ => player,
   };
 }
 
@@ -58,8 +83,8 @@ class XtreamUserAgent {
 /// generic player instead of the app's own signature. The home WiFi 403s
 /// the app's requests while TiviMate works on the same network — the
 /// panel tells the app apart by how its requests look — so the mimic set
-/// is the generic-player shape: a VLC User-Agent plus a generic Accept
-/// header. No TiviMate traffic was captured; this is a generic mimic,
+/// is the generic-player shape: a versioned VLC User-Agent plus a generic
+/// Accept header. No TiviMate traffic was captured; this is a generic mimic,
 /// not a copy of any one player.
 ///
 /// Pure functions over stored values (no SettingsService here — the
@@ -73,6 +98,7 @@ class XtreamSuperSpoof {
   /// Sub-setting values for the User-Agent piece: which name to mimic,
   /// or 'off' to leave the normal UA choice alone.
   static const String userAgentOff = 'off';
+  static const String userAgentPlayer = 'player';
   static const String userAgentVlc = 'vlc';
   static const String userAgentSmarters = 'smarters';
   static const String userAgentBrowser = 'browser';
@@ -86,6 +112,7 @@ class XtreamSuperSpoof {
   /// piece is off ('off') or the choice is unknown — the caller then
   /// keeps its normal UA.
   static String? userAgentForChoice(String choice) => switch (choice) {
+    userAgentPlayer => XtreamUserAgent.player,
     userAgentSmarters => XtreamUserAgent.smarters,
     userAgentBrowser => XtreamUserAgent.browser,
     userAgentVlc => XtreamUserAgent.vlc,
@@ -254,8 +281,9 @@ class XtreamApi {
   final String password;
   final http.Client _http;
 
-  /// The default User-Agent sent on every request (build #20).
-  static const String defaultUserAgent = XtreamUserAgent.vlc;
+  /// The default User-Agent sent on every request (build #20, reworked 1.6.12:
+  /// an ordinary Android player default — see [XtreamUserAgent]).
+  static const String defaultUserAgent = XtreamUserAgent.player;
 
   /// Hostile-response cap (build #23, IPTVMac SyncService shape): an
   /// unfiltered catalog response larger than this is refused before
@@ -281,6 +309,13 @@ class XtreamApi {
   /// header (see [_applyMimicHeaders]). Null means the piece is off
   /// (tests, sign-in probe) — the request is exactly today's request.
   final bool Function()? _mimicHeadersProvider;
+
+  /// Provider for the MPEG-TS live-stream switch (1.6.12), re-read on
+  /// every URL build when given — the Settings-backed one in IptvClient
+  /// reads Settings → Advanced → Request live TV as MPEG-TS per build, so
+  /// flipping it applies to the next channel open without rebuilding the
+  /// client. Null means off (tests, sign-in probe) — live URLs stay HLS.
+  final bool Function()? _preferTsProvider;
 
   /// The refusal recorder (build #27): called with a sanitized entry for
   /// every refused response and transport failure, before the throw.
@@ -375,6 +410,7 @@ class XtreamApi {
     this._userAgent,
     this._userAgentProvider,
     this._mimicHeadersProvider,
+    this._preferTsProvider,
     this._onRefusal,
     this._recent403Provider,
     this._connectionId = '',
@@ -393,7 +429,7 @@ class XtreamApi {
   }
 
   /// The User-Agent for the next request: provider, then fixed value,
-  /// then the VLC default. Never null, never empty.
+  /// then the player default. Never null, never empty.
   String get _effectiveUserAgent => _userAgentProvider?.call() ?? _userAgent ?? defaultUserAgent;
 
   /// The User-Agent the next request will carry (1.2.15 R4): the feed
@@ -1594,7 +1630,16 @@ static List<XtreamCategory> parseCategoriesBody(String body) =>
     _parseCatalogList(_asObjectList(_decodeCatalogJson(body)), XtreamCategory.fromJson, 'categories');
   // -- Stream URL builders (direct play, no transcode) ---------------------
 
-  String liveStreamUrl(String streamId) => '$serverUrl/live/$username/$password/$streamId.m3u8';
+  /// Whether live opens request MPEG-TS instead of HLS (1.6.12): TiviMate
+  /// requests `.ts` live streams on the same provider and works where the
+  /// app's `.m3u8` opens get refused, so the format is a deliberate,
+  /// user-visible switch (Settings → Advanced), off by default — HLS stays
+  /// the default. Movies/series are untouched (their container extension
+  /// comes from the provider row).
+  bool get _preferTs => _preferTsProvider?.call() ?? false;
+
+  String liveStreamUrl(String streamId) =>
+      '$serverUrl/live/$username/$password/$streamId${_preferTs ? '.ts' : '.m3u8'}';
 
   String movieStreamUrl(String streamId, String containerExtension) {
     final ext = containerExtension.isEmpty ? 'mp4' : containerExtension;
@@ -1621,7 +1666,7 @@ static List<XtreamCategory> parseCategoriesBody(String body) =>
     final utc = start.toUtc();
     String two(int n) => n.toString().padLeft(2, '0');
     final stamp = '${utc.year}-${two(utc.month)}-${two(utc.day)}:${two(utc.hour)}-${two(utc.minute)}';
-    return '$serverUrl/timeshift/$username/$password/$durationMinutes/$stamp/$streamId.m3u8';
+    return '$serverUrl/timeshift/$username/$password/$durationMinutes/$stamp/$streamId${_preferTs ? '.ts' : '.m3u8'}';
   }
 }
 

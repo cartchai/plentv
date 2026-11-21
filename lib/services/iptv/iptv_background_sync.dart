@@ -365,12 +365,14 @@ class IptvBackgroundSync {
       } on MediaServerHttpException catch (e) {
         // The sync itself only escapes on abort (cancelled) — anything
         // else is unexpected, so treat the connection as failed and
-        // retry the run.
+        // retry the run — EXCEPT a refusal (1.6.12, D9): a 403 is never
+        // retried. Retrying a refused run re-fires into a block and can
+        // reset or extend it; the next scheduled run picks it up.
         if (e.type == MediaServerHttpErrorType.cancelled || abort?.isAborted == true) return false;
         outcomes[connection.id] = {
           for (final type in const ['live', 'movie', 'series']) type: 'failed',
         };
-        retry = true;
+        if (e.statusCode != 403) retry = true;
       } catch (e) {
         appLogger.w('IPTV background sync: sync failed for ${connection.id}', error: e);
         outcomes[connection.id] = {

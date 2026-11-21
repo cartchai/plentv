@@ -141,6 +141,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kAbout = 'about';
   static const _kWatchTogetherRelay = 'watch_together_relay';
   static const _kSuperSpoof = 'super_spoof';
+  static const _kIptvLiveTs = 'iptv_live_ts';
   static const _kExportSettings = 'export_settings';
   static const _kImportSettings = 'import_settings';
   static const _kExportForkBackup = 'export_fork_backup';
@@ -624,6 +625,10 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
                       title: t.settings.superSpoofUserAgentOff,
                     ),
                     DialogOption(
+                      value: XtreamUserAgent.choicePlayer,
+                      title: t.iptv.xtreamUserAgentPlayer,
+                    ),
+                    DialogOption(
                       value: XtreamUserAgent.choiceVlc,
                       title: t.iptv.xtreamUserAgentVlc,
                     ),
@@ -652,6 +657,16 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
               ],
             );
           },
+        ),
+        // 1.6.12 (MPEG-TS live streams): a plain switch, always visible —
+        // it is independent of Super Spoof (which only changes what the
+        // requests claim to be, not what stream format is asked for).
+        SettingSwitchTile(
+          focusNode: _focusTracker.get(_kIptvLiveTs),
+          pref: settings.SettingsService.iptvLiveTs,
+          icon: Symbols.live_tv_rounded,
+          title: t.settings.iptvLiveTs,
+          subtitle: t.settings.iptvLiveTsDescription,
         ),
         SettingNavigationTile(
           focusNode: _focusTracker.get(_kViewLogs),

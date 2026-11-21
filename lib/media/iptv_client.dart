@@ -42,6 +42,7 @@ import '../services/api_cache.dart';
 import '../services/base_shared_preferences_service.dart';
 import '../services/device_performance.dart';
 import '../services/iptv/iptv_catalog_cache.dart';
+import '../services/iptv/iptv_call_pacer.dart';
 import '../services/iptv/iptv_epg_sources.dart';
 import '../services/lowend/epg_cadence_log.dart';
 import '../services/lowend/phase_rss_sampler.dart';
@@ -342,6 +343,10 @@ class IptvClient implements MediaServerClient {
     // the UA — flipping the toggle applies to the next request without
     // rebuilding the client (or restarting the app).
     mimicHeadersProvider: _mimicHeadersProviderOverride ?? _superSpoofHeaders,
+    // 1.6.12 (MPEG-TS live streams): re-read per URL build like the UA —
+    // flipping Settings → Advanced → Request live TV as MPEG-TS applies
+    // to the next channel open without rebuilding the client.
+    preferTsProvider: _preferTsProviderOverride ?? _preferTs,
     // Build #27: every refused response and transport failure is handed
     // to the refusal log (Settings → IPTV → Connection refusals) with
     // its headers and body — the 403 the app used to discard is the
@@ -376,12 +381,26 @@ class IptvClient implements MediaServerClient {
   /// See [_mimicHeadersProviderOverride].
   set mimicHeadersProvider(bool Function() provider) => _mimicHeadersProviderOverride = provider;
 
+  /// Override for the MPEG-TS live-stream provider (1.6.12): tests hand
+  /// the switch in here before the first URL build; the override wins
+  /// over [_preferTs].
+  bool Function()? _preferTsProviderOverride;
+
+  /// See [_preferTsProviderOverride].
+  set preferTsProvider(bool Function() provider) => _preferTsProviderOverride = provider;
+
+  /// The User-Agent the next request will carry, exposed for callers that
+  /// fetch without an [XtreamApi] (1.6.12): the M3U feed fetch wears the
+  /// same identity instead of Dart's default — an M3U playlist's guide
+  /// URL is usually the same provider. Same value [_xtreamApi] uses.
+  static String get effectiveUserAgent => _xtreamUserAgent();
+
   /// The configured Xtream User-Agent for this client's requests (build
   /// #20), with Super Spoof applied (1.6.11): when the master toggle is
   /// on and the UA piece picks a name, the mimic value wins over the
-  /// normal choice — one toggle, whole disguise. Falls back to VLC when
-  /// Settings is not initialized yet (tests) or the stored choice is
-  /// unknown — a request must never go out with no User-Agent.
+  /// normal choice — one toggle, whole disguise. Falls back to the player
+  /// default when Settings is not initialized yet (tests) or the stored
+  /// choice is unknown — a request must never go out with no User-Agent.
   static String _xtreamUserAgent() {
     final fallback = _normalXtreamUserAgent();
     final settings = SettingsService.instanceOrNull;
@@ -396,7 +415,7 @@ class IptvClient implements MediaServerClient {
   /// The normal Xtream User-Agent choice, without Super Spoof.
   static String _normalXtreamUserAgent() {
     final settings = SettingsService.instanceOrNull;
-    if (settings == null) return XtreamUserAgent.vlc;
+    if (settings == null) return XtreamUserAgent.player;
     return XtreamUserAgent.resolve(
       settings.read(SettingsService.iptvXtreamUserAgent),
       settings.read(SettingsService.iptvXtreamUserAgentCustom),
@@ -421,6 +440,15 @@ class IptvClient implements MediaServerClient {
     if (settings == null) return false;
     return settings.read(SettingsService.iptvSuperSpoof) &&
         settings.read(SettingsService.iptvSuperSpoofStreams);
+  }
+
+  /// MPEG-TS live streams (1.6.12): Settings → Advanced → Request live TV
+  /// as MPEG-TS. False when Settings is not initialized (tests) — HLS
+  /// stays the default unless the switch is on.
+  static bool _preferTs() {
+    final settings = SettingsService.instanceOrNull;
+    if (settings == null) return false;
+    return settings.read(SettingsService.iptvLiveTs);
   }
 
   /// The User-Agent for stream/artwork opens: the spoof-aware value when
@@ -2126,6 +2154,23 @@ class IptvClient implements MediaServerClient {
   /// ~9s at 500ms per call.
   static const int _catalogFallbackBatchSize = 16;
 
+  /// Paces the cold-catalog per-category crawl starts (1.6.12, request
+  /// discipline): successive category calls start at least 200 ms apart —
+  /// at most 5 starts/s, under the panel's documented 6–8 req/s flood
+  /// limit — instead of firing a whole 16-way batch at once. The batch
+  /// size above still bounds in-flight calls; the pacer bounds the rate.
+  /// A paced crawl is slower wall-clock than the old burst (rows still
+  /// publish per batch as they land, so the hub fills progressively),
+  /// but a burst is exactly what got the home IP flagged. Shared by the
+  /// VOD and series crawls (both go through the same cold-load path);
+  /// the live loader has no per-category crawl.
+  IptvCallPacer _catalogCrawlPacer = IptvCallPacer();
+
+  /// Test override for the crawl pacer — a zero-interval pacer keeps
+  /// crawl tests fast; the default paces real loads.
+  @visibleForTesting
+  set catalogCrawlPacer(IptvCallPacer pacer) => _catalogCrawlPacer = pacer;
+
   /// Build #21 — the search burst cap. Retained after R2.3 deleted the
   /// sweep: the sections make no panel requests, so no search request
   /// acquires a permit today — the semaphore stays wired through
@@ -3410,14 +3455,24 @@ class IptvClient implements MediaServerClient {
     // guarded — a clear mid-crawl must not publish stale rows.
     final generation = _catalogGeneration;
     for (var i = 0; i < wanted.length; i += _catalogFallbackBatchSize) {
+      // 1.6.12 (request discipline): stop the crawl the moment the panel
+      // refuses — the breaker is open, so the remaining categories would
+      // only throw cooldown 403s. Serve what landed so far.
+      if (_xtreamApi.isBreakerOpenInMemory) break;
       final end = (i + _catalogFallbackBatchSize).clamp(0, wanted.length);
       final batch = wanted.sublist(i, end);
       final results = await Future.wait(
         batch.map(
-          (c) => _xtreamApi.getVodStreams(categoryId: c.id).catchError((Object e) {
-            appLogger.w('IPTV: VOD category ${c.id} unavailable: $e');
-            return const <XtreamVodStream>[];
-          }),
+          (c) async {
+            // 1.6.12 (request discipline): pace the crawl starts — the
+            // old batch fired all its category calls at once, a burst
+            // against the panel's flood limit (see [_catalogCrawlPacer]).
+            await _catalogCrawlPacer.waitForSlot();
+            return _xtreamApi.getVodStreams(categoryId: c.id).catchError((Object e) {
+              appLogger.w('IPTV: VOD category ${c.id} unavailable: $e');
+              return const <XtreamVodStream>[];
+            });
+          },
         ),
       );
       final fresh = <XtreamVodStream>[];
@@ -3608,14 +3663,21 @@ class IptvClient implements MediaServerClient {
     // Publish each batch as it lands (build #13) — see [_loadVodStreams].
     final generation = _catalogGeneration;
     for (var i = 0; i < wanted.length; i += _catalogFallbackBatchSize) {
+      // 1.6.12 (request discipline): stop on a refusal — see [_loadVodStreams].
+      if (_xtreamApi.isBreakerOpenInMemory) break;
       final end = (i + _catalogFallbackBatchSize).clamp(0, wanted.length);
       final batch = wanted.sublist(i, end);
       final results = await Future.wait(
         batch.map(
-          (c) => _xtreamApi.getSeries(categoryId: c.id).catchError((Object e) {
-            appLogger.w('IPTV: series category ${c.id} unavailable: $e');
-            return const <XtreamSeries>[];
-          }),
+          (c) async {
+            // 1.6.12 (request discipline): pace the crawl starts — see
+            // [_loadVodStreams].
+            await _catalogCrawlPacer.waitForSlot();
+            return _xtreamApi.getSeries(categoryId: c.id).catchError((Object e) {
+              appLogger.w('IPTV: series category ${c.id} unavailable: $e');
+              return const <XtreamSeries>[];
+            });
+          },
         ),
       );
       final fresh = <XtreamSeries>[];

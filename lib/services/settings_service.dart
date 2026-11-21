@@ -1058,6 +1058,14 @@ class SettingsService extends BaseSharedPreferencesService {
   /// catalog/guide API calls. Default true.
   static const iptvSuperSpoofStreams = BoolPref('iptv_super_spoof_streams', defaultValue: true);
 
+  /// MPEG-TS live streams (1.6.12): when on, live channels (and catch-up)
+  /// are requested as `.ts` streams instead of HLS `.m3u8` playlists —
+  /// the shape TiviMate requests on the same provider, which works where
+  /// the app's HLS opens get refused. Off by default: HLS stays the
+  /// default. In `_portableOnlyPrefs`, so it rides settings export/import
+  /// like the other IPTV settings.
+  static const iptvLiveTs = BoolPref('iptv_live_ts', defaultValue: false);
+
   /// Hours between IPTV catalog syncs (build #23): how often the whole
   /// catalog (live channels, movies, series) is re-downloaded into the
   /// local search index. 6 / 12 / 24 / 168 (once a week), or 0 for
@@ -1854,6 +1862,7 @@ class SettingsService extends BaseSharedPreferencesService {
     iptvSuperSpoofUserAgent,
     iptvSuperSpoofHeaders,
     iptvSuperSpoofStreams,
+    iptvLiveTs,
     iptvCatalogSyncIntervalHours,
     iptvLargeDownloadsWifiOnly,
     iptvCatalogMode,

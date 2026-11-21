@@ -601,6 +601,12 @@ class Translations$settings$en {
 	/// en: 'Use the same disguise for video streams and poster art, not just catalog and guide requests.'
 	String get superSpoofStreamsDescription => 'Use the same disguise for video streams and poster art, not just catalog and guide requests.';
 
+	/// en: 'Request live TV as MPEG-TS'
+	String get iptvLiveTs => 'Request live TV as MPEG-TS';
+
+	/// en: 'Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.'
+	String get iptvLiveTsDescription => 'Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.';
+
 	/// en: 'Seconds'
 	String get secondsLabel => 'Seconds';
 
@@ -3941,6 +3947,13 @@ class Translations$about$en {
 		'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+	];
+	List<String> get changelog2331 => [
+		'Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it',
+		'New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi',
+		'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
+		'Fixed: opening Movies or TV shows with no saved catalogue no longer fires a burst of requests at once — the load is paced, and it stops if the provider refuses',
+		'Fixed: a background catalogue sync that gets refused is never retried',
 	];
 	List<String> get changelog2330 => [
 		'New: the catalog refresh keeps going when you lock the phone or switch to another app, and no longer says “failed” just because the screen went off — come back to a loaded catalog',
@@ -7913,6 +7926,9 @@ class Translations$iptv$en {
 	/// en: 'Xtream User-Agent'
 	String get xtreamUserAgent => 'Xtream User-Agent';
 
+	/// en: 'Player (PlenTV)'
+	String get xtreamUserAgentPlayer => 'Player (PlenTV)';
+
 	/// en: 'VLC'
 	String get xtreamUserAgentVlc => 'VLC';
 
@@ -10318,6 +10334,8 @@ extension on Translations {
 			'settings.superSpoofHeadersDescription' => 'Send generic-player request headers along with the disguised User-Agent.',
 			'settings.superSpoofStreams' => 'Spoof streams and artwork too',
 			'settings.superSpoofStreamsDescription' => 'Use the same disguise for video streams and poster art, not just catalog and guide requests.',
+			'settings.iptvLiveTs' => 'Request live TV as MPEG-TS',
+			'settings.iptvLiveTsDescription' => 'Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.',
 			'settings.secondsLabel' => 'Seconds',
 			'settings.minutesLabel' => 'Minutes',
 			'settings.secondsShort' => 's',
@@ -10637,10 +10655,10 @@ extension on Translations {
 			'settings.startup' => 'Startup',
 			'settings.display' => 'Display',
 			'settings.libraryAndCards' => 'Library & Cards',
-			'settings.homeScreen' => 'Home Screen',
-			'settings.navigation' => 'Navigation',
 			_ => null,
 		} ?? switch (path) {
+			'settings.homeScreen' => 'Home Screen',
+			'settings.navigation' => 'Navigation',
 			'settings.window' => 'Window',
 			'settings.liveTv' => 'Live TV',
 			'settings.player' => 'Player',
@@ -11151,10 +11169,10 @@ extension on Translations {
 			'mpvConfig.removeLine' => 'Remove line',
 			'mpvConfig.embeddedVoHint' => 'vo, gpu-context and gpu-api are ignored on Linux: embedded video always renders through vo=libmpv on the video plane, and gpu-next (which compute shaders like ArtCNN need) cannot run embedded.',
 			'dialog.confirmAction' => 'Confirm Action',
-			'profiles.addPlezTVProfile' => 'Add PlenTV profile',
-			'profiles.switchingProfile' => 'Switching profile…',
 			_ => null,
 		} ?? switch (path) {
+			'profiles.addPlezTVProfile' => 'Add PlenTV profile',
+			'profiles.switchingProfile' => 'Switching profile…',
 			'profiles.deleteThisProfileTitle' => 'Delete this profile?',
 			'profiles.deleteThisProfileMessage' => ({required Object displayName}) => 'Remove ${displayName}. Connections aren\'t affected.',
 			'profiles.active' => 'Active',
@@ -11556,6 +11574,11 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2331.0' => 'Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it',
+			'about.changelog2331.1' => 'New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi',
+			'about.changelog2331.2' => 'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
+			'about.changelog2331.3' => 'Fixed: opening Movies or TV shows with no saved catalogue no longer fires a burst of requests at once — the load is paced, and it stops if the provider refuses',
+			'about.changelog2331.4' => 'Fixed: a background catalogue sync that gets refused is never retried',
 			'about.changelog2330.0' => 'New: the catalog refresh keeps going when you lock the phone or switch to another app, and no longer says “failed” just because the screen went off — come back to a loaded catalog',
 			'about.changelog2330.1' => 'Fixed: the catalog refresh now shows how much has downloaded while it runs, and each section (live, then movies, then series) appears as soon as it lands',
 			'about.changelog2330.2' => 'Fixed: a movie page opens right away and fills in its details as they arrive, instead of making you wait for them first',
@@ -11660,6 +11683,8 @@ extension on Translations {
 			'about.changelog2308.5' => 'The TV guide now fills in channels it used to leave blank — including UK Sky Sports channels, which were being blocked by mistake',
 			'about.changelog2308.6' => 'The guide now tries more than one place for each channel\'s programmes, so if one source fails the next one picks it up instead of leaving the row empty',
 			'about.changelog2308.7' => 'You can now see, for any channel, which source its guide data came from',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2308.8' => 'The app now checks whether the other kind of playlist (M3U) carries guide IDs the main login doesn\'t, and uses them if it does',
 			'about.changelog2308.9' => 'You can now back up everything — all settings, connections, favourites and guide data — to one file, and restore it on a fresh install',
 			'about.changelog2308.10' => 'Sending a debug log now goes to our GitHub repo as an issue, instead of the app maker\'s server. Your log is cleaned of names, addresses and passwords on your device before it is sent.',
@@ -11667,8 +11692,6 @@ extension on Translations {
 			'about.changelog2307.0' => 'The update screen now shows the version, the device type and the download size under the Download button, so you can see what you are about to download',
 			'about.changelog2307.1' => 'If an update has no build for your device, the app now says so plainly instead of offering a download that cannot install',
 			'about.changelog2307.2' => 'On a TV, saving the debug log now puts it in Downloads where you can find it, instead of a hidden app folder',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2306.0' => 'The guide now opens with programmes already on its rows: after a reload the app puts the rows you were looking at into the guide before you scroll',
 			'about.changelog2306.1' => 'Scrolling the guide no longer re-reads the whole guide file for every row — the guide is now stored as a quick lookup, so rows fill in fast',
 			'about.changelog2306.2' => 'When the quick guide has a programme with no name, the row now fills it in from the provider guide instead of leaving it blank',
@@ -12174,6 +12197,8 @@ extension on Translations {
 			'liveTv.saveTo' => 'Save to',
 			'liveTv.recordings' => 'Recordings',
 			'liveTv.scheduledRecordings' => 'Scheduled',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.recordingRules' => 'Recording Rules',
 			'liveTv.noScheduledRecordings' => 'Nothing scheduled to record',
 			'liveTv.manageRecording' => 'Manage recording',
@@ -12181,8 +12206,6 @@ extension on Translations {
 			'liveTv.cancelRecordingTitle' => 'Cancel this recording?',
 			'liveTv.cancelRecordingMessage' => ({required Object title}) => '${title} will no longer be recorded.',
 			'liveTv.deleteRule' => 'Delete rule',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.deleteRuleTitle' => 'Delete recording rule?',
 			'liveTv.deleteRuleMessage' => ({required Object title}) => 'Future episodes of ${title} will not be recorded.',
 			'liveTv.recordingScheduled' => 'Recording scheduled',
@@ -12688,6 +12711,8 @@ extension on Translations {
 			'performanceOverlay.passthrough' => 'Passthrough',
 			'performanceOverlay.aspect' => 'Aspect',
 			'performanceOverlay.rotation' => 'Rotation',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.dvSource' => 'DV Source',
 			'performanceOverlay.dvPath' => 'DV Path',
 			'performanceOverlay.dvRouteDecoder' => 'Dolby Vision decoder',
@@ -12695,8 +12720,6 @@ extension on Translations {
 			'performanceOverlay.dvRouteBaseLayer' => 'Base layer',
 			'performanceOverlay.dvRouteBaseLayerHdr10' => 'HDR10 base layer',
 			'performanceOverlay.dvRouteBaseLayerHlg' => 'HLG base layer',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.dvRouteBaseLayerSdr' => 'SDR base layer',
 			'performanceOverlay.dvRouteReshaped' => 'RPU reshaped (gpu-next)',
 			'performanceOverlay.p7Conversion' => 'P7 Conv',
@@ -13202,6 +13225,8 @@ extension on Translations {
 			'iptv.epgNoGuideReasonNoMatch' => 'No matching guide',
 			'iptv.epgNoGuideReasonNoTvgId' => 'No channel ID',
 			'iptv.epgNoGuideReasonTvgIdNotInFeed' => 'Channel ID not in the guide',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgNoGuideReasonSourceFailed' => 'Guide source failed',
 			'iptv.epgNoGuideReasonNotLoaded' => 'Guide not loaded yet',
 			'iptv.epgNoGuideReasonAmbiguous' => 'Name matches more than one guide channel',
@@ -13209,8 +13234,6 @@ extension on Translations {
 			'iptv.epgNoGuideReasonMatchedButNoPrograms' => 'Matched a guide channel, but it has no programmes in this window',
 			'iptv.epgNoGuideReasonMatchedButNoProgramsDeclared' => 'Matched a guide channel, but the feed schedules nothing for it',
 			'iptv.epgNoGuideReasonMatchedButNoProgramsOutsideWindow' => 'Matched a guide channel, but its programmes fall outside this window',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgSourceShort' => 'Short EPG',
 			'iptv.epgSourceFeed' => 'Feed',
 			'iptv.epgSourceMixed' => 'Mixed',
@@ -13253,6 +13276,7 @@ extension on Translations {
 			'iptv.epgAssignmentCleared' => 'Assignment cleared',
 			'iptv.xtreamSection' => 'Xtream Codes',
 			'iptv.xtreamUserAgent' => 'Xtream User-Agent',
+			'iptv.xtreamUserAgentPlayer' => 'Player (PlenTV)',
 			'iptv.xtreamUserAgentVlc' => 'VLC',
 			'iptv.xtreamUserAgentSmarters' => 'IPTVSmartersPro',
 			'iptv.xtreamUserAgentBrowser' => 'Browser (Chrome)',

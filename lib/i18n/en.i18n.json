@@ -213,6 +213,8 @@
     "superSpoofHeadersDescription": "Send generic-player request headers along with the disguised User-Agent.",
     "superSpoofStreams": "Spoof streams and artwork too",
     "superSpoofStreamsDescription": "Use the same disguise for video streams and poster art, not just catalog and guide requests.",
+    "iptvLiveTs": "Request live TV as MPEG-TS",
+    "iptvLiveTsDescription": "Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.",
     "secondsLabel": "Seconds",
     "minutesLabel": "Minutes",
     "secondsShort": "s",
@@ -1573,6 +1575,13 @@
       "Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime",
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
+    ],
+    "changelog2331": [
+      "Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it",
+      "New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi",
+      "Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn't",
+      "Fixed: opening Movies or TV shows with no saved catalogue no longer fires a burst of requests at once — the load is paced, and it stops if the provider refuses",
+      "Fixed: a background catalogue sync that gets refused is never retried"
     ],
     "changelog2330": [
       "New: the catalog refresh keeps going when you lock the phone or switch to another app, and no longer says “failed” just because the screen went off — come back to a loaded catalog",
@@ -3540,6 +3549,7 @@
     "epgAssignmentCleared": "Assignment cleared",
     "xtreamSection": "Xtream Codes",
     "xtreamUserAgent": "Xtream User-Agent",
+    "xtreamUserAgentPlayer": "Player (PlenTV)",
     "xtreamUserAgentVlc": "VLC",
     "xtreamUserAgentSmarters": "IPTVSmartersPro",
     "xtreamUserAgentBrowser": "Browser (Chrome)",

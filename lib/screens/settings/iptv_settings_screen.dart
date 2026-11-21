@@ -268,6 +268,7 @@ class IptvSettingsScreen extends StatelessWidget {
                     title: t.iptv.xtreamUserAgent,
                     subtitleBuilder: _xtreamUserAgentSubtitle,
                     options: [
+                      DialogOption(value: XtreamUserAgent.choicePlayer, title: t.iptv.xtreamUserAgentPlayer),
                       DialogOption(value: XtreamUserAgent.choiceVlc, title: t.iptv.xtreamUserAgentVlc),
                       DialogOption(
                         value: XtreamUserAgent.choiceSmarters,

@@ -3999,7 +3999,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
             etag: useValidators ? validators.etag : null,
             lastModified: useValidators ? validators.lastModified : null,
           ),
-          userAgent: null,
+          userAgent: IptvClient.effectiveUserAgent,
         ),
       );
     }
@@ -4042,7 +4042,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
           etag: useValidators ? validators.etag : null,
           lastModified: useValidators ? validators.lastModified : null,
         ),
-        userAgent: null,
+        userAgent: IptvClient.effectiveUserAgent,
       );
     }
     return null;
@@ -5734,6 +5734,12 @@ class IptvLiveTvSupport implements LiveTvSupport {
     http.StreamedResponse streamed;
     try {
       final request = http.AbortableRequest('GET', Uri.parse(epgUrl), abortTrigger: abortTrigger);
+      // 1.6.12 (R2): the M3U feed used to send no User-Agent header, so
+      // the panel saw Dart's default `Dart/3.13 (dart:io)` — the same
+      // distinctive signature the Xtream calls were fixed for in build
+      // #20. Wear the effective UA (an M3U playlist's guide URL is
+      // usually the same provider).
+      request.headers['User-Agent'] = IptvClient.effectiveUserAgent;
       if (etag != null) request.headers['If-None-Match'] = etag;
       if (lastModified != null) request.headers['If-Modified-Since'] = lastModified;
       streamed = await client.send(request).timeout(const Duration(seconds: 120));
@@ -8201,10 +8207,10 @@ class _EpgSourceAttempt {
   final XmltvFeedFetcher fetchFeed;
 
   /// The User-Agent the feed request carries (1.2.15 R4): the Xtream
-  /// API's effective User-Agent for the provider feed, null for M3U
-  /// feeds (the M3U fetch sends no User-Agent header). Recorded in the
-  /// download diagnostics so a panel that answers differently per
-  /// client can be spotted.
+  /// API's effective User-Agent for the provider feed, and the same
+  /// effective UA for M3U feeds (1.6.12 — the M3U fetch used to send no
+  /// User-Agent header at all). Recorded in the download diagnostics so
+  /// a panel that answers differently per client can be spotted.
   final String? userAgent;
 
   const _EpgSourceAttempt({
