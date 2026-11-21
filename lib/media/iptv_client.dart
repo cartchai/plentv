@@ -2144,32 +2144,39 @@ class IptvClient implements MediaServerClient {
 
   /// Concurrent per-category fallback batch size (Task 8): the panel
   /// answers per-category calls even when the unfiltered call returns [].
-  /// 16, not 8 (build #13): at 8 the sweep covered ~72 categories inside
-  /// its 900ms deadline on a scaled Trex shape (150 visible categories,
-  /// 100ms per call) and missed a match in category 120 — both the sweep
-  /// and the crawl walk the list in order, so the batch size IS the
-  /// reach. 16 doubles the reach without doubling the per-batch wait
-  /// (one batch still costs one slow call, not sixteen), and at the owner's
-  /// real scale (~270 series categories) it brings a full crawl inside
-  /// ~9s at 500ms per call.
-  static const int _catalogFallbackBatchSize = 16;
+  /// 4, not 16 (1.6.12, request discipline): 16 was the sweep's reach
+  /// (build #13 — at 8 the sweep missed a match in category 120 inside
+  /// its 900ms deadline), but R2.3 deleted the sweep, so the reach
+  /// rationale is dead and the crawl is the only user of this size. 4
+  /// matches the short-EPG tier cap for panel calls (see
+  /// [DevicePerformance.shortEpgFanOut]) — the largest burst the
+  /// codebase already allows against the panel — and with the 200ms
+  /// gap between batches below, a Trex-scale crawl (150 categories)
+  /// still finishes in ~8s in-harness and ~20s at 300ms per call, with
+  /// rows publishing per batch so the hub fills progressively. A
+  /// per-start pacer at the panel's documented 6–8 req/s flood limit
+  /// would have been stricter (5/s), but 150 requests at 5/s is 30s
+  /// per crawl and the existing Trex-scale tests do two crawls inside a
+  /// 30s timeout — the rate cap and the cold-load time cannot both be
+  /// met, so the guard is a bounded burst plus the gap, and the
+  /// break-on-refusal in the loops is the backstop (a refusal stops the
+  /// crawl at once and the 5-minute breaker blocks further calls).
+  static const int _catalogFallbackBatchSize = 4;
 
-  /// Paces the cold-catalog per-category crawl starts (1.6.12, request
-  /// discipline): successive category calls start at least 200 ms apart —
-  /// at most 5 starts/s, under the panel's documented 6–8 req/s flood
-  /// limit — instead of firing a whole 16-way batch at once. The batch
-  /// size above still bounds in-flight calls; the pacer bounds the rate.
-  /// A paced crawl is slower wall-clock than the old burst (rows still
-  /// publish per batch as they land, so the hub fills progressively),
-  /// but a burst is exactly what got the home IP flagged. Shared by the
-  /// VOD and series crawls (both go through the same cold-load path);
-  /// the live loader has no per-category crawl.
-  IptvCallPacer _catalogCrawlPacer = IptvCallPacer();
+  /// Gap between cold-catalog per-category crawl batches (1.6.12,
+  /// request discipline): after each batch lands, the crawl waits this
+  /// long before starting the next batch, so the batches do not run
+  /// back-to-back. Shared by the VOD and series crawls (both go through
+  /// the same cold-load path); the live loader has no per-category
+  /// crawl. The short-EPG path keeps its own strict 200ms pacer
+  /// ([IptvCallPacer]) — its counts are small, so the rate cap costs
+  /// nothing there.
+  Duration _catalogCrawlBatchGap = const Duration(milliseconds: 200);
 
-  /// Test override for the crawl pacer — a zero-interval pacer keeps
-  /// crawl tests fast; the default paces real loads.
+  /// Test override for the crawl batch gap — a zero gap keeps crawl
+  /// tests fast; the default spaces real loads.
   @visibleForTesting
-  set catalogCrawlPacer(IptvCallPacer pacer) => _catalogCrawlPacer = pacer;
+  set catalogCrawlBatchGap(Duration gap) => _catalogCrawlBatchGap = gap;
 
   /// Build #21 — the search burst cap. Retained after R2.3 deleted the
   /// sweep: the sections make no panel requests, so no search request
@@ -3464,10 +3471,6 @@ class IptvClient implements MediaServerClient {
       final results = await Future.wait(
         batch.map(
           (c) async {
-            // 1.6.12 (request discipline): pace the crawl starts — the
-            // old batch fired all its category calls at once, a burst
-            // against the panel's flood limit (see [_catalogCrawlPacer]).
-            await _catalogCrawlPacer.waitForSlot();
             return _xtreamApi.getVodStreams(categoryId: c.id).catchError((Object e) {
               appLogger.w('IPTV: VOD category ${c.id} unavailable: $e');
               return const <XtreamVodStream>[];
@@ -3489,6 +3492,12 @@ class IptvClient implements MediaServerClient {
       if (generation == _catalogGeneration && fresh.isNotEmpty) {
         _vodPartialRows.addAll(fresh);
         _vodCrawledCategoryIds.addAll(batch.map((c) => c.id));
+      }
+      // 1.6.12 (request discipline): space the batches — a Trex-scale
+      // crawl is ~40 batches, and running them back-to-back is the burst
+      // the old 16-way batch was. No gap after the last batch.
+      if (i + _catalogFallbackBatchSize < wanted.length) {
+        await Future<void>.delayed(_catalogCrawlBatchGap);
       }
     }
     return (rows: out, complete: false, rawFilePath: null);
@@ -3670,9 +3679,6 @@ class IptvClient implements MediaServerClient {
       final results = await Future.wait(
         batch.map(
           (c) async {
-            // 1.6.12 (request discipline): pace the crawl starts — see
-            // [_loadVodStreams].
-            await _catalogCrawlPacer.waitForSlot();
             return _xtreamApi.getSeries(categoryId: c.id).catchError((Object e) {
               appLogger.w('IPTV: series category ${c.id} unavailable: $e');
               return const <XtreamSeries>[];
@@ -3694,6 +3700,11 @@ class IptvClient implements MediaServerClient {
       if (generation == _catalogGeneration && fresh.isNotEmpty) {
         _seriesPartialRows.addAll(fresh);
         _seriesCrawledCategoryIds.addAll(batch.map((c) => c.id));
+      }
+      // 1.6.12 (request discipline): space the batches — see
+      // [_loadVodStreams]. No gap after the last batch.
+      if (i + _catalogFallbackBatchSize < wanted.length) {
+        await Future<void>.delayed(_catalogCrawlBatchGap);
       }
     }
     return (rows: out, complete: false, rawFilePath: null);

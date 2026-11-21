@@ -4,20 +4,28 @@
 // The audit found one real burst in the app: when Movies/Series opens
 // with no disk catalog and the panel's unfiltered call returns [] (this
 // panel does at 199k VOD rows), the fallback crawl fired a whole 16-way
-// batch of per-category calls at once, with no pacing — a burst against
-// the panel's documented 6–8 req/s flood limit, and it kept going even
-// after a refusal. 1.6.12 paces the crawl starts (200 ms apart, at most
-// 5/s, via IptvCallPacer) and stops the crawl the moment the 403 breaker
-// opens, serving what landed so far.
+// batch of per-category calls at once, with no gap between batches — a
+// burst against the panel's documented 6–8 req/s flood limit, and it
+// kept going even after a refusal. 1.6.12 bounds the burst to 4 calls
+// at a time (the same cap the short-EPG tiers already allow), waits
+// 200 ms between batches, and stops the crawl the moment the 403
+// breaker opens, serving what landed so far.
 //
-// No live panel: a fake API records per-category start times (pacing),
-// and a recording real API over a MockClient proves the stop (the 403
-// opens the real breaker). Both tests fail on the 1.6.11 base — the
-// pacing test's starts land within milliseconds of each other, and the
-// stop test attempts all 40 categories instead of stopping after the
-// first batch.
+// Why a bounded burst + gap, not a per-start pacer at 5/s: 150
+// requests at 5/s is 30s per crawl, and the existing Trex-scale tests
+// do two crawls inside a 30s timeout — a strict rate cap and the
+// cold-load time cannot both be met (the 16-batch was the sweep's
+// reach, and R2.3 deleted the sweep, so nothing else needs 16).
+//
+// No live panel: a fake API records per-category start times and
+// in-flight counts (batch cap + gap), and a recording real API over a
+// MockClient proves the stop (the 403 opens the real breaker). Both
+// tests fail on the 1.6.11 base — the pacing test's starts land within
+// milliseconds of each other with 5 in flight, and the stop test
+// attempts all 40 categories instead of stopping after the first batch.
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -25,7 +33,6 @@ import 'package:http/testing.dart';
 import 'package:plezy/connection/connection.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/library_query.dart';
-import 'package:plezy/services/iptv/iptv_call_pacer.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/iptv_search_index.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
@@ -75,12 +82,14 @@ void main() {
     return client;
   }
 
-  group('1.6.12 request discipline: the cold crawl is paced', () {
-    test('per-category crawl starts land at least 200 ms apart', () async {
-      // Failing-first: on 1.6.11 the batch fires all its calls at once,
-      // so the starts land within milliseconds of each other.
+  group('1.6.12 request discipline: the cold crawl is bounded', () {
+    test('crawl runs at most 4 at a time with a gap between batches', () async {
+      // Failing-first: on 1.6.11 the batch is 16 wide with no gap, so
+      // all 5 starts land at once with 5 in flight and no spacing.
       final api = _PacingFakeXtreamApi(categoryCount: 5);
       final client = xtreamClient(api: api);
+      // A 50 ms gap keeps the test fast; the production gap is 200 ms.
+      client.catalogCrawlBatchGap = const Duration(milliseconds: 50);
       try {
         final page = await client.fetchLibraryPagedContent(
           'iptv:conn-xt-1:movies',
@@ -90,22 +99,20 @@ void main() {
           page.items.map((i) => i.title),
           ['Movie 1', 'Movie 2', 'Movie 3', 'Movie 4', 'Movie 5'],
         );
+        expect(api.maxInFlight, lessThanOrEqualTo(4), reason: 'batch cap is 4');
         final starts = api.categoryCallOrder.map((id) => api.categoryStarts[id]!).toList();
         expect(starts, hasLength(5));
-        final gaps = [
-          for (var i = 1; i < starts.length; i++) starts[i].difference(starts[i - 1]),
-        ];
-        for (final gap in gaps) {
-          expect(
-            gap,
-            greaterThanOrEqualTo(const Duration(milliseconds: 150)),
-            reason: 'crawl starts are 200 ms apart (150 ms floor allows scheduling slack)',
-          );
-        }
+        // Batch 1 is categories 1-4 (concurrent); category 5 starts
+        // only after the inter-batch gap.
         expect(
-          starts.last.difference(starts.first),
-          greaterThanOrEqualTo(const Duration(milliseconds: 600)),
-          reason: '5 starts span 4 x 200 ms',
+          starts[4].difference(starts[0]),
+          greaterThanOrEqualTo(const Duration(milliseconds: 40)),
+          reason: 'batch 2 starts only after the inter-batch gap (40 ms floor allows slack)',
+        );
+        expect(
+          starts[3].difference(starts[0]),
+          lessThan(const Duration(milliseconds: 40)),
+          reason: 'batch 1 starts together (4 at a time)',
         );
       } finally {
         client.close();
@@ -115,19 +122,18 @@ void main() {
     test('the crawl stops when the panel refuses instead of hammering on', () async {
       // Failing-first: on 1.6.11 the crawl has no breaker check, so it
       // attempts every category (40) even after the 403 on category 2.
-      // The zero-interval pacer isolates the stop from the pacing: the
-      // only difference under test is whether the loop breaks.
+      // The production gap is used as-is: the crawl stops after batch 1,
+      // so only one gap elapses before the breaker check breaks the loop.
       final panel = _RefusingPanel(categoryCount: 40, refuseCategoryId: '2');
       final api = _RecordingApi(panel: panel);
       final client = xtreamClient(api: api);
-      client.catalogCrawlPacer = IptvCallPacer(minInterval: Duration.zero);
       try {
         await client.fetchLibraryPagedContent('iptv:conn-xt-1:movies', query: const LibraryQuery());
-        // Batch 1 is 16 categories; the 403 on category 2 opens the
+        // Batch 1 is 4 categories; the 403 on category 2 opens the
         // breaker while batch 1 runs, so batches 2+ are never attempted.
-        expect(api.attemptedCategoryIds, hasLength(16));
-        expect(api.attemptedCategoryIds, containsAll(['1', '2', '3', '16']));
-        expect(api.attemptedCategoryIds.any((id) => int.parse(id) > 16), isFalse);
+        expect(api.attemptedCategoryIds, hasLength(4));
+        expect(api.attemptedCategoryIds, containsAll(['1', '2', '3', '4']));
+        expect(api.attemptedCategoryIds.any((id) => int.parse(id) > 4), isFalse);
       } finally {
         client.close();
       }
@@ -136,7 +142,8 @@ void main() {
 }
 
 /// Fake whose unfiltered VOD call returns [] (so the per-category crawl
-/// runs) and whose per-category calls record their start time.
+/// runs) and whose per-category calls record their start time and the
+/// peak in-flight count.
 class _PacingFakeXtreamApi extends XtreamApi {
   _PacingFakeXtreamApi({required this.categoryCount})
     : super(
@@ -149,14 +156,25 @@ class _PacingFakeXtreamApi extends XtreamApi {
   final int categoryCount;
   final Map<String, DateTime> categoryStarts = {};
   final List<String> categoryCallOrder = [];
+  int _inFlight = 0;
+  int maxInFlight = 0;
 
   @override
   Future<List<XtreamVodStream>> getVodStreams({String? categoryId, Future<void>? abortTrigger}) async {
     if (categoryId == null) return const [];
     categoryStarts[categoryId] = DateTime.now();
     categoryCallOrder.add(categoryId);
-    final id = int.parse(categoryId);
-    return [XtreamVodStream(streamId: id, name: 'Movie $categoryId', categoryId: categoryId)];
+    _inFlight++;
+    maxInFlight = math.max(maxInFlight, _inFlight);
+    try {
+      // Yield so the sibling calls in the batch all start (and count
+      // as in flight) before any of them returns.
+      await Future<void>.delayed(Duration.zero);
+      final id = int.parse(categoryId);
+      return [XtreamVodStream(streamId: id, name: 'Movie $categoryId', categoryId: categoryId)];
+    } finally {
+      _inFlight--;
+    }
   }
 
   @override

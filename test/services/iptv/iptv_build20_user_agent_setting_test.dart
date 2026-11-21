@@ -106,16 +106,16 @@ void main() {
       expect(_userAgentOf(captured.single), 'VLC');
     });
 
-    test('resolve maps every stored choice, with VLC as the fallback', () {
-      expect(XtreamUserAgent.resolve('vlc', ''), 'VLC');
+    test('resolve maps every stored choice, with the player default as the fallback', () {
+      expect(XtreamUserAgent.resolve('vlc', ''), XtreamUserAgent.vlc);
       expect(XtreamUserAgent.resolve('smarters', ''), 'IPTVSmartersPro');
-      expect(XtreamUserAgent.resolve('browser', ''), 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+      expect(XtreamUserAgent.resolve('browser', ''), XtreamUserAgent.browser);
       expect(XtreamUserAgent.resolve('custom', 'MyAgent/2.0'), 'MyAgent/2.0');
       // A blank custom value and an unknown stored choice must never
-      // produce an empty UA — both fall back to VLC.
-      expect(XtreamUserAgent.resolve('custom', ''), 'VLC');
-      expect(XtreamUserAgent.resolve('custom', '   '), 'VLC');
-      expect(XtreamUserAgent.resolve('something-else', ''), 'VLC');
+      // produce an empty UA — both fall back to the player default.
+      expect(XtreamUserAgent.resolve('custom', ''), XtreamUserAgent.player);
+      expect(XtreamUserAgent.resolve('custom', '   '), XtreamUserAgent.player);
+      expect(XtreamUserAgent.resolve('something-else', ''), XtreamUserAgent.player);
       // Custom text is trimmed: a stray space must not ship as a UA.
       expect(XtreamUserAgent.resolve('custom', '  MyAgent/2.0  '), 'MyAgent/2.0');
     });

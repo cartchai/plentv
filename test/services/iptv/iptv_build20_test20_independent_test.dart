@@ -8,8 +8,8 @@
 //   * Every Xtream endpoint (by URL, not just by count) carries a
 //     User-Agent on the wire, and none carries a Dart/ UA.
 //   * The Settings -> resolve -> wire chain with the REAL SettingsService:
-//     default VLC; a setting change applies to the NEXT request; custom
-//     text flows through; blank/unknown resolve to VLC.
+//     default player; a setting change applies to the NEXT request; custom
+//     text flows through; blank/unknown resolve to the player default.
 //   * The two new prefs survive a settings export/import round-trip.
 //   * A fake 403 still maps to HealthStatus.accessDenied AND the banner
 //     string the phone shows ("refused access for this account").
@@ -89,7 +89,7 @@ void main() {
   setUp(() => resetSharedPreferencesForTest());
 
   group('Tester probe #20 — every Xtream request carries a UA', () {
-    test('all 12 endpoints send VLC by default, never a Dart/ UA', () async {
+    test('all 12 endpoints send the player default, never a Dart/ UA', () async {
       final seen = <http.Request>[];
       final api = XtreamApi(
         serverUrl: 'https://panel.example.com:8080',
@@ -142,7 +142,7 @@ void main() {
       for (final request in seen) {
         final ua = _uaOf(request);
         expect(ua, isNotNull, reason: '${_label(request)} carries no User-Agent');
-        expect(ua, 'VLC', reason: _label(request));
+        expect(ua, XtreamUserAgent.player, reason: _label(request));
         expect(ua, isNot(startsWith('Dart/')), reason: _label(request));
       }
     });
@@ -167,10 +167,10 @@ void main() {
       );
       addTearDown(api.close);
 
-      // Default (nothing stored): VLC.
-      expect(settings.read(SettingsService.iptvXtreamUserAgent), 'vlc');
+      // Default (nothing stored): the player default.
+      expect(settings.read(SettingsService.iptvXtreamUserAgent), 'player');
       await api.getUserInfo();
-      expect(_uaOf(seen.single), 'VLC');
+      expect(_uaOf(seen.single), XtreamUserAgent.player);
 
       // Change the setting: the NEXT request carries the new value, with
       // no client rebuild.
@@ -180,7 +180,7 @@ void main() {
 
       await settings.write(SettingsService.iptvXtreamUserAgent, 'browser');
       await api.getUserInfo();
-      expect(_uaOf(seen.last), 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+      expect(_uaOf(seen.last), XtreamUserAgent.browser);
 
       // Custom text flows through.
       await settings.write(SettingsService.iptvXtreamUserAgent, 'custom');
@@ -188,23 +188,23 @@ void main() {
       await api.getUserInfo();
       expect(_uaOf(seen.last), 'MyAgent/9');
 
-      // Blank custom text falls back to VLC (never an empty UA).
+      // Blank custom text falls back to the player default (never an empty UA).
       await settings.write(SettingsService.iptvXtreamUserAgentCustom, '   ');
       await api.getUserInfo();
-      expect(_uaOf(seen.last), 'VLC');
+      expect(_uaOf(seen.last), XtreamUserAgent.player);
 
-      // An unknown stored choice falls back to VLC.
+      // An unknown stored choice falls back to the player default.
       await settings.write(SettingsService.iptvXtreamUserAgent, 'bogus-choice');
       await api.getUserInfo();
-      expect(_uaOf(seen.last), 'VLC');
+      expect(_uaOf(seen.last), XtreamUserAgent.player);
     });
 
     test('resolve: choice wins over custom text; keys are exact', () {
       // A stored custom value is ignored unless the choice is 'custom'.
-      expect(XtreamUserAgent.resolve('vlc', 'MyAgent/9'), 'VLC');
+      expect(XtreamUserAgent.resolve('vlc', 'MyAgent/9'), XtreamUserAgent.vlc);
       // Choice keys are lowercase exact — an uppercase key is unknown.
-      expect(XtreamUserAgent.resolve('VLC', ''), 'VLC');
-      expect(XtreamUserAgent.resolve('SMARTERS', ''), 'VLC');
+      expect(XtreamUserAgent.resolve('VLC', ''), XtreamUserAgent.player);
+      expect(XtreamUserAgent.resolve('SMARTERS', ''), XtreamUserAgent.player);
     });
 
     test('a fake 403 still maps to accessDenied and the banner string', () async {
@@ -261,15 +261,15 @@ void main() {
       expect(prefs.getString('iptv_xtream_user_agent_custom'), 'MyAgent/9');
     });
 
-    test('defaults round-trip as VLC when nothing is stored', () async {
+    test('defaults round-trip as the player default when nothing is stored', () async {
       final prefs = await BaseSharedPreferencesService.sharedCache();
       final exported = SettingsExportService.buildExportMap(prefs, currentUserUuid: 'alice');
       final map = exported['prefs'] as Map<String, dynamic>;
-      // Unset prefs are not exported; the app default (vlc) applies on read.
+      // Unset prefs are not exported; the app default (player) applies on read.
       expect(map, isNot(contains('iptv_xtream_user_agent')));
       final settings = await SettingsService.getInstance();
-      expect(settings.read(SettingsService.iptvXtreamUserAgent), 'vlc');
-      expect(XtreamUserAgent.resolve(settings.read(SettingsService.iptvXtreamUserAgent), ''), 'VLC');
+      expect(settings.read(SettingsService.iptvXtreamUserAgent), 'player');
+      expect(XtreamUserAgent.resolve(settings.read(SettingsService.iptvXtreamUserAgent), ''), XtreamUserAgent.player);
     });
   });
 }

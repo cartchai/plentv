@@ -1022,16 +1022,18 @@ class SettingsService extends BaseSharedPreferencesService {
   /// panel request. Trex 403s the app's default Dart UA while TiviMate
   /// works — panels enforce per-user allowed-UA lists, so the name the app
   /// sends is a setting, not a constant. Stored choice key, resolved by
-  /// XtreamUserAgent.resolve in services/iptv/xtream_api.dart: 'vlc'
-  /// (default, the most widely reported accepted value), 'smarters',
-  /// 'browser', or 'custom' (takes [iptvXtreamUserAgentCustom]). In
+  /// XtreamUserAgent.resolve in services/iptv/xtream_api.dart: 'player'
+  /// (default since 1.6.12 — an ordinary Android player default, the
+  /// profile TiviMate's working "not set" UA proves the panel accepts;
+  /// see XtreamUserAgent.defaultChoice), 'vlc', 'smarters', 'browser',
+  /// or 'custom' (takes [iptvXtreamUserAgentCustom]). In
   /// `_portableOnlyPrefs`, so it rides settings export/import like the
   /// other IPTV settings.
-  static const iptvXtreamUserAgent = StringPref('iptv_xtream_user_agent', defaultValue: 'vlc');
+  static const iptvXtreamUserAgent = StringPref('iptv_xtream_user_agent', defaultValue: 'player');
 
   /// Custom Xtream User-Agent text, used when [iptvXtreamUserAgent] is
-  /// 'custom'. Blank falls back to VLC at resolve time. Backed up with
-  /// the choice above.
+  /// 'custom'. Blank falls back to the player default at resolve time.
+  /// Backed up with the choice above.
   static const iptvXtreamUserAgentCustom = StringPref('iptv_xtream_user_agent_custom', defaultValue: '');
 
   /// Super Spoof master toggle (1.6.11): one Advanced switch that turns
