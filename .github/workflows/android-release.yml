@@ -72,13 +72,6 @@ jobs:
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "PlenTV.${{ github.ref_name }}-armeabi-v7a.apk"
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk "PlenTV.${{ github.ref_name }}-x86_64.apk"
 
-      - name: Upload APKs as workflow artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: PlenTV-${{ github.ref_name }}
-          path: PlenTV.${{ github.ref_name }}-*.apk
-          if-no-files-found: error
-
       # 1.4 (S2): R8 runs on every release build (the Flutter plugin
       # enables minification; keeps live in android/app/proguard-rules.pro,
       # e.g. the #1703 FFmpeg audio renderer). R8 renames Java/Kotlin
