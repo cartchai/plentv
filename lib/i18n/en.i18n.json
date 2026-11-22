@@ -1595,6 +1595,9 @@
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
     ],
+    "changelog2335": [
+      "Fixed: turning on VPN (WARP) failed to start — the tunnel setup sent the addresses without their network sizes, so the tunnel engine refused them; they now go out with their sizes, and the tunnel starts"
+    ],
     "changelog2334": [
       "New: Settings → Advanced has a “VPN (WARP)” switch — the app can route its own provider requests through Cloudflare's free WARP network, so they come from a different address. Off by default; nothing changes unless you turn it on",
       "New: turning the VPN on first shows Cloudflare's terms — the app only signs up for a free WARP account after you accept them, and the switch stays off until the sign-up works",

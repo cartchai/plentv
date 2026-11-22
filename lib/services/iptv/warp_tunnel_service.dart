@@ -80,6 +80,28 @@ class WarpRegistration {
   /// always present.
   final List<String> addresses;
 
+  /// Normalize an interface address to a prefix (what sing-box's
+  /// WireGuard `address` field requires): a bare IPv4 address gets
+  /// `/32`, a bare IPv6 address gets `/128`. An address that already
+  /// carries a mask passes through unchanged (idempotent). Cloudflare's
+  /// registration API returns BARE addresses, and sing-box refuses them
+  /// (`ParsePrefix: no '/'`) — that is why the 1.6.15 tunnel never
+  /// started on a real phone: the config carried `172.16.0.2` where
+  /// sing-box needs `172.16.0.2/32`.
+  static String toAddressPrefix(String address) {
+    final trimmed = address.trim();
+    if (trimmed.isEmpty) return trimmed;
+    if (trimmed.contains('/')) return trimmed;
+    return trimmed.contains(':') ? '$trimmed/128' : '$trimmed/32';
+  }
+
+  /// Normalize a list of interface addresses to prefixes (see
+  /// [toAddressPrefix]). Applied everywhere an address list enters
+  /// the model — fresh registration, stored JSON, and the built
+  /// config — so a bare address can never reach sing-box again.
+  static List<String> normalizeAddresses(Iterable<String> addresses) =>
+      addresses.map(toAddressPrefix).toList();
+
   /// The WireGuard peer to connect to (WARP).
   final WarpPeer peer;
 
@@ -103,9 +125,14 @@ class WarpRegistration {
     final peerJson = json['peer'];
     return WarpRegistration(
       privateKey: json['privateKey'] as String? ?? '',
-      addresses: (json['addresses'] as List<dynamic>? ?? const <dynamic>[])
-          .map((e) => e.toString())
-          .toList(),
+      // Stored registrations from 1.6.15 carry BARE addresses (the
+      // API returns them bare and 1.6.15 stored them as-is). Normalize
+      // on load so an already-stored registration heals itself — the
+      // user never has to re-register.
+      addresses: normalizeAddresses(
+        (json['addresses'] as List<dynamic>? ?? const <dynamic>[])
+            .map((e) => e.toString()),
+      ),
       peer: peerJson is Map<String, dynamic>
           ? WarpPeer.fromJson(peerJson)
           : peerJson is Map
@@ -328,6 +355,15 @@ class WarpTunnelService extends ChangeNotifier {
           // fail at once instead of paying four more doomed calls.
           rethrow;
         } catch (e, st) {
+          if (isConfigError(e)) {
+            // A config/parse error will fail on every port — the
+            // config is identical each time. Fail at once and surface
+            // the real error instead of burning through the port list
+            // and hiding it behind five identical warnings (the 1.6.15
+            // phone log showed the same `cannot unmarshal` error on
+            // all five ports).
+            rethrow;
+          }
           lastFailure = e;
           appLogger.w('WARP tunnel start failed on port $port, trying next', error: e, stackTrace: st);
         }
@@ -504,7 +540,9 @@ class WarpTunnelService extends ChangeNotifier {
     }
     return WarpRegistration(
       privateKey: privateKeyB64,
-      addresses: addresses,
+      // The API returns bare addresses (`172.16.0.2`, no mask);
+      // sing-box needs prefixes, so normalize here, at the source.
+      addresses: WarpRegistration.normalizeAddresses(addresses),
       peer: WarpPeer(
         type: 'warp',
         endpointHost: endpointHost,
@@ -517,6 +555,20 @@ class WarpTunnelService extends ChangeNotifier {
           : '',
       clientId: configMap['client_id']?.toString() ?? '',
     );
+  }
+
+  /// Whether a tunnel start failure is a config/parse error, not a
+  /// port problem: sing-box rejects a bad config the same way on every
+  /// port, so retrying ports only wastes attempts and hides the real
+  /// error. Matches the Go JSON-unmarshal failure the 1.6.15 phone log
+  /// showed (`cannot unmarshal ... netip.Prefix | netip.ParsePrefix`).
+  /// A bind failure or any other start error is NOT a config error,
+  /// so the port retry still runs for real port problems.
+  @visibleForTesting
+  static bool isConfigError(Object e) {
+    final message = e.toString();
+    return message.contains('cannot unmarshal') ||
+        message.contains('ParsePrefix');
   }
 
   /// The sing-box config for the tunnel: one mixed inbound (the local
@@ -547,7 +599,10 @@ class WarpTunnelService extends ChangeNotifier {
         {
           'type': 'wireguard',
           'tag': 'wg-ep',
-          'address': registration.addresses,
+          // Normalized again at the point of use: even a registration
+          // built directly with bare addresses can never send one to
+          // sing-box (the 1.6.15 failure was exactly this field).
+          'address': WarpRegistration.normalizeAddresses(registration.addresses),
           'private_key': registration.privateKey,
           'mtu': 1408,
           'peers': [
