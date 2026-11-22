@@ -85,7 +85,7 @@ jobs:
           mkdir -p android/app/libs
           cd android/warpbox
           gomobile init
-          gomobile bind -target android/arm64,android/arm,android/amd64 -tags with_wireguard,with_gvisor -o ../app/libs/libbox.aar .
+          gomobile bind -androidapi 25 -target android/arm64,android/arm,android/amd64 -tags with_wireguard,with_gvisor -o ../app/libs/libbox.aar .
           ls -lh ../app/libs/libbox.aar
 
       # 1.6.13 (R1: Cronet behind Super Spoof): cronetHttpNoPlay=true
