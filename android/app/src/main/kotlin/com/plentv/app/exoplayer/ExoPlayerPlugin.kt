@@ -9,6 +9,7 @@ import com.edde746.plezy.libass.media.AssHandler
 import com.plentv.app.mpv.MpvPlayerCore
 import com.plentv.app.mpv.completeMpvPropertyNotInitialized
 import com.plentv.app.mpv.completeMpvPropertyResult
+import com.plentv.app.WarpTunnel
 import com.plentv.app.shared.MpvContentUriResolver
 import com.plentv.app.shared.PlayerChannelBinding
 import com.plentv.app.shared.PlayerDebugLog
