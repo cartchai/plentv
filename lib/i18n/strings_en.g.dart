@@ -628,6 +628,42 @@ class Translations$settings$en {
 	/// en: 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone's IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi. When it's on, it wins over the Super Spoof transport choice.'
 	String get preferIpv4Description => 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone\'s IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi. When it\'s on, it wins over the Super Spoof transport choice.';
 
+	/// en: 'VPN (WARP)'
+	String get warpVpn => 'VPN (WARP)';
+
+	/// en: 'Route the app's own provider requests through Cloudflare's free WARP network, so they come from a different address. Only the app's provider traffic goes through it — nothing else on the phone. Off by default.'
+	String get warpVpnDescription => 'Route the app\'s own provider requests through Cloudflare\'s free WARP network, so they come from a different address. Only the app\'s provider traffic goes through it — nothing else on the phone. Off by default.';
+
+	/// en: 'Starting…'
+	String get warpVpnStateStarting => 'Starting…';
+
+	/// en: 'On — provider traffic goes through WARP'
+	String get warpVpnStateOn => 'On — provider traffic goes through WARP';
+
+	/// en: 'Failed to start — provider requests are going out directly'
+	String get warpVpnStateFailed => 'Failed to start — provider requests are going out directly';
+
+	/// en: 'Cloudflare WARP terms'
+	String get warpTermsTitle => 'Cloudflare WARP terms';
+
+	/// en: 'Turning this on signs the app up for a free WARP account with Cloudflare, and routes the app's own provider requests through Cloudflare's WARP network. Your provider requests will come from a Cloudflare address instead of your home address, and Cloudflare will see that traffic pass through its network. Only the app's provider traffic goes through it — nothing else on the phone. Cloudflare's WARP terms and privacy policy apply; you can read them in full before you decide.'
+	String get warpTermsBody => 'Turning this on signs the app up for a free WARP account with Cloudflare, and routes the app\'s own provider requests through Cloudflare\'s WARP network. Your provider requests will come from a Cloudflare address instead of your home address, and Cloudflare will see that traffic pass through its network. Only the app\'s provider traffic goes through it — nothing else on the phone. Cloudflare\'s WARP terms and privacy policy apply; you can read them in full before you decide.';
+
+	/// en: 'Read Cloudflare's WARP terms'
+	String get warpTermsReadTerms => 'Read Cloudflare\'s WARP terms';
+
+	/// en: 'Read Cloudflare's privacy policy'
+	String get warpTermsReadPrivacy => 'Read Cloudflare\'s privacy policy';
+
+	/// en: 'I accept'
+	String get warpTermsAccept => 'I accept';
+
+	/// en: 'Not now'
+	String get warpTermsDecline => 'Not now';
+
+	/// en: 'The VPN stays off until you accept Cloudflare's terms.'
+	String get warpTermsRequired => 'The VPN stays off until you accept Cloudflare\'s terms.';
+
 	/// en: 'Seconds'
 	String get secondsLabel => 'Seconds';
 
@@ -3968,6 +4004,11 @@ class Translations$about$en {
 		'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+	];
+	List<String> get changelog2334 => [
+		'New: Settings → Advanced has a “VPN (WARP)” switch — the app can route its own provider requests through Cloudflare\'s free WARP network, so they come from a different address. Off by default; nothing changes unless you turn it on',
+		'New: turning the VPN on first shows Cloudflare\'s terms — the app only signs up for a free WARP account after you accept them, and the switch stays off until the sign-up works',
+		'Fixed: while the VPN is on, provider requests (catalog, streams, and artwork from the provider) go through it — and if the tunnel drops, they stop instead of going out directly',
 	];
 	List<String> get changelog2333 => [
 		'New: all the spoofing now lives in one place — Settings → Advanced → Super Spoof. The name, the network stack and the extra headers are separate switches under it, so you can change one without touching the others',
@@ -10389,6 +10430,18 @@ extension on Translations {
 			'settings.iptvLiveTsDescription' => 'Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.',
 			'settings.preferIpv4' => 'Prefer IPv4',
 			'settings.preferIpv4Description' => 'Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone\'s IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi. When it\'s on, it wins over the Super Spoof transport choice.',
+			'settings.warpVpn' => 'VPN (WARP)',
+			'settings.warpVpnDescription' => 'Route the app\'s own provider requests through Cloudflare\'s free WARP network, so they come from a different address. Only the app\'s provider traffic goes through it — nothing else on the phone. Off by default.',
+			'settings.warpVpnStateStarting' => 'Starting…',
+			'settings.warpVpnStateOn' => 'On — provider traffic goes through WARP',
+			'settings.warpVpnStateFailed' => 'Failed to start — provider requests are going out directly',
+			'settings.warpTermsTitle' => 'Cloudflare WARP terms',
+			'settings.warpTermsBody' => 'Turning this on signs the app up for a free WARP account with Cloudflare, and routes the app\'s own provider requests through Cloudflare\'s WARP network. Your provider requests will come from a Cloudflare address instead of your home address, and Cloudflare will see that traffic pass through its network. Only the app\'s provider traffic goes through it — nothing else on the phone. Cloudflare\'s WARP terms and privacy policy apply; you can read them in full before you decide.',
+			'settings.warpTermsReadTerms' => 'Read Cloudflare\'s WARP terms',
+			'settings.warpTermsReadPrivacy' => 'Read Cloudflare\'s privacy policy',
+			'settings.warpTermsAccept' => 'I accept',
+			'settings.warpTermsDecline' => 'Not now',
+			'settings.warpTermsRequired' => 'The VPN stays off until you accept Cloudflare\'s terms.',
 			'settings.secondsLabel' => 'Seconds',
 			'settings.minutesLabel' => 'Minutes',
 			'settings.secondsShort' => 's',
@@ -10689,6 +10742,8 @@ extension on Translations {
 			'settings.requireProfileSelectionOnOpenDescription' => 'Show profile selection every time the app is opened',
 			'settings.forceTvMode' => 'Force TV mode',
 			'settings.forceTvModeDescription' => 'Force TV layout. For devices that don\'t auto-detect. Requires restart.',
+			_ => null,
+		} ?? switch (path) {
 			'settings.startInFullscreen' => 'Start in fullscreen',
 			'settings.startInFullscreenDescription' => 'Open PlenTV in fullscreen mode at launch',
 			'settings.exitFullscreenOnPlayerClose' => 'Exit fullscreen on player close',
@@ -10701,8 +10756,6 @@ extension on Translations {
 			'settings.showExploreTab' => 'Show Explore Tab',
 			'settings.showExploreTabDescription' => 'Display the Explore tab with content from Plex Discover and connected trackers',
 			'settings.liveTvDefaultFavorites' => 'Default to Favorite Channels',
-			_ => null,
-		} ?? switch (path) {
 			'settings.liveTvDefaultFavoritesDescription' => 'Show only favorite channels when opening Live TV',
 			'settings.general' => 'General',
 			'settings.generalDescription' => 'Language, startup, and window behavior',
@@ -11203,6 +11256,8 @@ extension on Translations {
 			'subtitlingStyling.renderResolution' => 'Render Resolution',
 			'subtitlingStyling.renderResolutionScreen' => 'Screen resolution',
 			'subtitlingStyling.renderResolutionVideo' => 'Video resolution',
+			_ => null,
+		} ?? switch (path) {
 			'mpvConfig.title' => 'mpv.conf',
 			'mpvConfig.description' => 'Advanced video player settings',
 			'mpvConfig.presets' => 'Presets',
@@ -11215,8 +11270,6 @@ extension on Translations {
 			'mpvConfig.presetSaved' => 'Preset saved',
 			'mpvConfig.presetLoaded' => 'Preset loaded',
 			'mpvConfig.presetDeleted' => 'Preset deleted',
-			_ => null,
-		} ?? switch (path) {
 			'mpvConfig.confirmDeletePreset' => 'Are you sure you want to delete this preset?',
 			'mpvConfig.configPlaceholder' => 'gpu-api=vulkan\nhwdec=auto\n# comment',
 			'mpvConfig.lineHint' => 'option=value',
@@ -11627,6 +11680,9 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2334.0' => 'New: Settings → Advanced has a “VPN (WARP)” switch — the app can route its own provider requests through Cloudflare\'s free WARP network, so they come from a different address. Off by default; nothing changes unless you turn it on',
+			'about.changelog2334.1' => 'New: turning the VPN on first shows Cloudflare\'s terms — the app only signs up for a free WARP account after you accept them, and the switch stays off until the sign-up works',
+			'about.changelog2334.2' => 'Fixed: while the VPN is on, provider requests (catalog, streams, and artwork from the provider) go through it — and if the tunnel drops, they stop instead of going out directly',
 			'about.changelog2333.0' => 'New: all the spoofing now lives in one place — Settings → Advanced → Super Spoof. The name, the network stack and the extra headers are separate switches under it, so you can change one without touching the others',
 			'about.changelog2333.1' => 'Fixed: the Super Spoof name list now has Custom too, like the main User-Agent list — the custom name you type is the same one in both places, so nothing gets lost',
 			'about.changelog2333.2' => 'New: Super Spoof has a “Platform (Android)” transport choice — the provider requests go out over Android\'s own built-in connection, the same one other TV players use, instead of the app\'s own or Chrome\'s. It only runs while Super Spoof is on, and it falls back to today\'s requests if it can\'t start',
@@ -11714,6 +11770,8 @@ extension on Translations {
 			'about.changelog2316.2' => 'Fixed: the Assign guide list now puts the closest matches on top — your channel\'s own affiliate first, then other US affiliates, with other countries at the bottom',
 			'about.changelog2315.0' => 'New: channels with no guide ID now fill from the closest US affiliate when the guide has one — FOX, NBC, CBS and PBS rows fill with an affiliate\'s guide. The Reload report counts these separately as \'affiliate guess\', so a guessed row is never shown as a certain match',
 			'about.changelog2315.1' => 'Fixed: the debug log and the channel details now name an affiliate guess as a guess, and you can keep a guessed guide for a channel from its details',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2314.0' => 'New: EPG sources can now be a .xml.gz file — the guide the US preset uses is compressed, and it used to be rejected',
 			'about.changelog2314.1' => 'New: a one-tap \'US guide (epgshare01)\' in EPG sources. It fills US cable and sports rows the provider guide misses. It does not carry the national FOX, NBC, CBS or PBS feeds, so those four rows stay empty — no guide we could verify carries them',
 			'about.changelog2314.2' => 'Fixed: the debug log now says when a guide row was served from the saved guide, so a log can tell that apart from a row that was never fetched',
@@ -11729,8 +11787,6 @@ extension on Translations {
 			'about.changelog2311.1' => 'Fixed: Log out now says it deletes everything in the app before you confirm — and you can sign out of just one Plex account instead',
 			'about.changelog2311.2' => 'Fixed: a Plex profile that asks for a PIN no longer blanks your libraries when the app checks it in the background',
 			'about.changelog2311.3' => 'Fixed: after restoring a backup, the app now picks up the restored profile straight away, and its channels load on their own',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2310.0' => 'Fixed: after a Reload, the guide could download its big guide file three times — it now downloads it once',
 			'about.changelog2310.1' => 'Fixed: rows left blank because you switched apps while they were loading now refill when you come back, without downloading again',
 			'about.changelog2310.2' => 'Fixed: switching away and back no longer drops the guide you just loaded, on phones and tablets with plenty of memory',
@@ -12228,6 +12284,8 @@ extension on Translations {
 			'liveTv.lateNight' => 'Late Night',
 			'liveTv.whatsOn' => 'What\'s On',
 			'liveTv.watchChannel' => 'Watch Channel',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.favorites' => 'Favorites',
 			'liveTv.reorderFavorites' => 'Reorder Favorites',
 			'liveTv.noFavoriteChannels' => 'No favorite channels',
@@ -12243,8 +12301,6 @@ extension on Translations {
 			'liveTv.showCategory' => 'Show category',
 			'liveTv.unhide' => 'Unhide',
 			'liveTv.allChannelsHidden' => 'All channels hidden',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.allChannelsHiddenHint' => 'You hid every channel in this guide. Unhide them to see the guide again.',
 			'liveTv.unhideAllChannels' => 'Unhide all',
 			'liveTv.favoritesLoadFailed' => 'Could not load favorites. Check your connection and try again.',
@@ -12742,6 +12798,8 @@ extension on Translations {
 			'videoSettings.playbackSpeed' => 'Playback Speed',
 			'videoSettings.normalSpeed' => 'Normal',
 			'videoSettings.sleepTimerActive' => ({required Object duration}) => 'Active (${duration})',
+			_ => null,
+		} ?? switch (path) {
 			'videoSettings.zoom' => 'Zoom',
 			'videoSettings.sleepTimer' => 'Sleep Timer',
 			'videoSettings.audioSync' => 'Audio Sync',
@@ -12757,8 +12815,6 @@ extension on Translations {
 			'videoSettings.audioOutput' => 'Audio Output',
 			'videoSettings.performanceOverlay' => 'Performance Overlay',
 			'videoSettings.audioOutputDolbyAtmos' => 'Dolby Atmos',
-			_ => null,
-		} ?? switch (path) {
 			'videoSettings.audioOutputDolbyAudio' => 'Dolby Audio',
 			'videoSettings.audioOutputSurround' => 'Surround',
 			'videoSettings.audioOutputSpatial' => 'Spatial Audio',
@@ -13256,6 +13312,8 @@ extension on Translations {
 			'iptv.epgM3uTvgIdStalled' => ({required Object received, required Object kept}) => 'the playlist download stalled — ${received} received, ${kept} kept, tap the check again to resume from there',
 			'iptv.epgM3uTvgIdUnreachable' => 'the playlist could not be reached — check the connection and try again',
 			'iptv.epgM3uTvgIdParseTimedOut' => 'the playlist downloaded but reading it timed out — try again',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgM3uTvgIdProgressWithTotal' => ({required Object received, required Object total, required Object percent}) => 'Downloading playlist — ${received} of ${total} (${percent}%)',
 			'iptv.epgM3uTvgIdProgressNoTotal' => ({required Object received}) => 'Downloading playlist — ${received} received',
 			'iptv.epgReloadChannelListFailed' => ({required Object reason}) => 'Channel list could not be re-fetched — ${reason}',
@@ -13271,8 +13329,6 @@ extension on Translations {
 			'iptv.epgFeedOutcomeNotAnswering' => ({required Object source}) => '${source}: the panel is not answering (timed out)',
 			'iptv.epgFeedDeniedReason' => 'the panel denied access (HTTP 403)',
 			'iptv.epgFeedNotAnsweringReason' => 'the panel is not answering (timed out)',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgFeedOutcomeDeferred' => ({required Object source}) => '${source}: waiting — will load when playback stops',
 			'iptv.epgFeedOutcomeFailed' => ({required Object source, required Object reason}) => '${source}: ${reason}',
 			'iptv.epgGuideDenied' => 'The panel denied access — the guide couldn\'t load',

@@ -544,6 +544,16 @@ class ExoPlayerPlugin :
     options.add("secondary-sid=no")
     appendExternalSubtitleOptions(options, externalSubtitles)
     appendHttpHeaderOptions(options, headers)
+    // 1.6.15 (WARP tunnel): while the tunnel is on, mpv routes this
+    // stream open through the tunnel's local proxy on 127.0.0.1 (read
+    // from the Kotlin singleton at open time). mpv has no SOCKS5
+    // support, so it is the HTTP proxy — the mixed inbound serves both.
+    // If the proxy is down, the open fails — it is never retried
+    // direct while the tunnel is on (fail-closed). While the tunnel is
+    // off, no option is added and the open is exactly as before.
+    WarpTunnel.proxyPort.takeIf { it > 0 }?.let { port ->
+      options.add("http-proxy=http://127.0.0.1:$port")
+    }
     val optionsStr = options.joinToString(",")
     core.command(arrayOf("loadfile", uri, "replace", "-1", optionsStr), onComplete)
   }

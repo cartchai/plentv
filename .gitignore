@@ -62,6 +62,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# 1.6.15 (in-app VPN, WARP): the sing-box core as a gomobile AAR is
+# built fresh in CI (android/warpbox) and placed at android/app/libs/
+# before the Flutter build — it is never committed.
+android/app/libs/
+
 # Code duplication reports
 duplication-report/
 

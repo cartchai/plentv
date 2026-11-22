@@ -1091,6 +1091,37 @@ class SettingsService extends BaseSharedPreferencesService {
   /// so it rides settings export/import like the other IPTV settings.
   static const iptvPreferIpv4 = BoolPref('iptv_prefer_ipv4', defaultValue: false);
 
+  /// In-app VPN (WARP) opt-in (1.6.15): when on, the app routes its own
+  /// provider traffic — Xtream API calls, stream opens, artwork from the
+  /// panel host, the M3U feed fetch — through a WireGuard tunnel to
+  /// Cloudflare's free WARP network, via a small proxy on 127.0.0.1
+  /// inside the app. Nothing else on the phone is touched (no
+  /// VpnService, no system VPN slot, no notification). Off by default:
+  /// with it off, every request is byte-for-byte today's request. The
+  /// switch stays off until the WARP registration succeeds — turning it
+  /// on first asks the user to accept Cloudflare's terms (see
+  /// [iptvWarpTermsAccepted]). In `_portableOnlyPrefs`, so it rides
+  /// settings export/import like the other IPTV settings.
+  static const iptvWarpVpn = BoolPref('iptv_warp_vpn', defaultValue: false);
+
+  /// WARP terms acceptance (1.6.15): set only when the user explicitly
+  /// accepts Cloudflare's WARP terms in the dialog the VPN switch shows
+  /// the first time it is turned on. Registration never runs without
+  /// this. In `_portableOnlyPrefs`, so a restore keeps the acceptance
+  /// (the user already said yes) without asking again.
+  static const iptvWarpTermsAccepted = BoolPref('iptv_warp_terms_accepted', defaultValue: false);
+
+  /// The WARP account the app registered for itself (1.6.15): one JSON
+  /// object with the account's private key, interface addresses, peer
+  /// public key and endpoint, token, and account/client ids — the same
+  /// fields the unofficial wgcf tool gets from Cloudflare's registration
+  /// API. Empty means not registered. This is a throwaway free account
+  /// (no user identity, no payment, re-registrable in one call), and it
+  /// lives here — not in a separate store — so a settings export/import
+  /// carries the registration with it, the same way the backup already
+  /// carries the Xtream login. In `_portableOnlyPrefs`.
+  static const iptvWarpRegistration = StringPref('iptv_warp_registration', defaultValue: '');
+
   /// Hours between IPTV catalog syncs (build #23): how often the whole
   /// catalog (live channels, movies, series) is re-downloaded into the
   /// local search index. 6 / 12 / 24 / 168 (once a week), or 0 for
@@ -1890,6 +1921,9 @@ class SettingsService extends BaseSharedPreferencesService {
     iptvSuperSpoofStreams,
     iptvLiveTs,
     iptvPreferIpv4,
+    iptvWarpVpn,
+    iptvWarpTermsAccepted,
+    iptvWarpRegistration,
     iptvCatalogSyncIntervalHours,
     iptvLargeDownloadsWifiOnly,
     iptvCatalogMode,

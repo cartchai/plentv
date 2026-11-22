@@ -63,6 +63,31 @@ jobs:
       - name: Get Flutter packages
         run: flutter pub get
 
+      # 1.6.15 (in-app VPN, WARP): build the sing-box core as a gomobile
+      # AAR from android/warpbox and place it where the Gradle build
+      # expects it (android/app/libs/libbox.aar). The AAR is not
+      # committed — the NDK lives on the runner (ANDROID_NDK_HOME), not
+      # in this repo. Tags: with_wireguard (the WireGuard endpoint) +
+      # with_gvisor (the userspace TCP/IP stack the endpoint runs on —
+      # without it the endpoint fails to construct). gomobile init
+      # finds the NDK from ANDROID_NDK_HOME, which the runner image
+      # sets. The Gradle build fails loudly if this step produced
+      # nothing, so a missing AAR can never ship as a silent no-VPN.
+      - name: Set up Go 1.27.4
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.4'
+
+      - name: Build libbox AAR (sing-box, in-app VPN)
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          mkdir -p android/app/libs
+          cd android/warpbox
+          gomobile init
+          gomobile bind -target android/arm64,android/armv7,android/amd64 -tags with_wireguard,with_gvisor -o ../app/libs/libbox.aar .
+          ls -lh ../app/libs/libbox.aar
+
       # 1.6.13 (R1: Cronet behind Super Spoof): cronetHttpNoPlay=true
       # switches the cronet_http Gradle dep to org.chromium.net
       # :cronet-embedded, so Chrome's network stack works WITHOUT Google

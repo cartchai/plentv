@@ -52,6 +52,7 @@ import '../services/iptv/iptv_playback_activity.dart';
 import '../services/iptv/iptv_heavy_work_gate.dart';
 import '../services/iptv/iptv_search_index.dart';
 import '../services/iptv/xtream_transport.dart';
+import '../services/iptv/warp_tunnel_service.dart';
 import '../services/iptv/metered_network.dart';
 import '../services/settings_service.dart';
 import '../services/storage_health.dart';
@@ -332,7 +333,19 @@ class IptvClient implements MediaServerClient {
 
   XtreamApi? _api;
 
-  XtreamApi get _xtreamApi => _api ??= XtreamApi(
+  XtreamApi get _xtreamApi {
+    if (_api != null) return _api!;
+    // 1.6.15 (WARP tunnel): register the panel host with the tunnel
+    // service before any request goes out on it, so the host-aware
+    // proxy (artwork, shared platform client) knows this host is
+    // provider traffic. The Xtream transport itself uses the
+    // unconditional provider proxy, so its requests never leak direct
+    // for a host that was never registered.
+    final panelHost = Uri.tryParse(_xtream.serverUrl)?.host ?? '';
+    if (panelHost.isNotEmpty) {
+      WarpTunnelService.instance.registerProviderHost(panelHost);
+    }
+    return _api = XtreamApi(
     serverUrl: _xtream.serverUrl,
     username: _xtream.username,
     password: _xtream.password,
@@ -351,10 +364,14 @@ class IptvClient implements MediaServerClient {
     // (Android)) — the master no longer bundles Cronet in with the UA
     // mimic. The transport choice is re-read per request like the
     // toggles, so flipping it applies to the next request.
+    // 1.6.15 (WARP tunnel): the transport also reads the tunnel per
+    // request — while it is on, Cronet is forced off (it has no proxy
+    // API) and the other transports ride the local proxy.
     httpClient: XtreamTransportClient(
       superSpoofOn: _superSpoofOn,
       preferIpv4On: _preferIpv4On,
       transportChoice: _superSpoofTransport,
+      tunnelOn: _tunnelOn,
     ),
     // Build #20: the User-Agent is re-read from Settings on every request,
     // so changing Settings → IPTV → Xtream User-Agent applies to the next
@@ -381,6 +398,7 @@ class IptvClient implements MediaServerClient {
     connectionId: connection.id,
     connectionName: _name,
   );
+  }
 
   /// Override for the Xtream User-Agent provider (build v1.0.13, R4):
   /// the background isolate has no SettingsService, so the callback
@@ -479,6 +497,13 @@ class IptvClient implements MediaServerClient {
     if (settings == null) return false;
     return settings.read(SettingsService.iptvPreferIpv4);
   }
+
+  /// WARP tunnel (1.6.15): the tunnel is up — the transport reads it
+  /// per request, so while it is on, Cronet is forced off (it has no
+  /// proxy API) and the other transports ride the local proxy. False
+  /// when the tunnel is off (the default) — the requests go out exactly
+  /// as before.
+  static bool _tunnelOn() => WarpTunnelService.instance.isOn;
 
   /// Super Spoof (1.6.11): the headers piece is active — master toggle
   /// on and the headers sub-setting on. False when Settings is not

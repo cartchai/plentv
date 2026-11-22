@@ -35,6 +35,7 @@ import '../../services/background_work_diagnostics_service.dart';
 import '../../services/settings_service.dart' as settings;
 import '../../services/iptv/xtream_api.dart';
 import '../../services/iptv/xtream_transport.dart';
+import '../../services/iptv/warp_tunnel_service.dart';
 import '../../services/settings_mutation_service.dart';
 import '../../services/supporter/supporter_mode.dart';
 import '../../widgets/background_download_warning_banner.dart';
@@ -144,6 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kSuperSpoof = 'super_spoof';
   static const _kIptvLiveTs = 'iptv_live_ts';
   static const _kIptvPreferIpv4 = 'iptv_prefer_ipv4';
+  static const _kWarpVpn = 'iptv_warp_vpn';
   static const _kExportSettings = 'export_settings';
   static const _kImportSettings = 'import_settings';
   static const _kExportForkBackup = 'export_fork_backup';
@@ -600,6 +602,132 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
     _ => t.settings.superSpoofTransportDart,
   };
 
+  /// The VPN (WARP) row (1.6.15): a switch bound to the opt-in pref
+  /// whose subtitle is the live tunnel state (off / starting / on /
+  /// failed), with the terms gate on turn-on. A plain SettingSwitchTile
+  /// cannot do this: it writes the pref first and reports after, but
+  /// the terms gate must run BEFORE the pref flips — declining leaves
+  /// the switch off, and registration never runs without an explicit
+  /// accept. Turning off writes the pref false and stops the tunnel.
+  Widget _warpVpnRow() {
+    return ListenableBuilder(
+      listenable: WarpTunnelService.instance,
+      builder: (context, _) {
+        final service = WarpTunnelService.instance;
+        final subtitle = switch (service.state) {
+          WarpTunnelState.on => t.settings.warpVpnStateOn,
+          WarpTunnelState.starting => t.settings.warpVpnStateStarting,
+          WarpTunnelState.failed => t.settings.warpVpnStateFailed,
+          WarpTunnelState.off => t.settings.warpVpnDescription,
+        };
+        return ValueListenableBuilder<bool>(
+          valueListenable: settings.SettingsService.instance.listenable(
+            settings.SettingsService.iptvWarpVpn,
+          ),
+          builder: (_, value, _) => FocusableSwitchListTile(
+            focusNode: _focusTracker.get(_kWarpVpn),
+            secondary: const AppIcon(Symbols.vpn_key_rounded, fill: 1),
+            title: Text(t.settings.warpVpn),
+            subtitle: Text(subtitle),
+            value: value,
+            onChanged: (v) => _onWarpVpnChanged(context, v),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _onWarpVpnChanged(BuildContext context, bool value) async {
+    final service = WarpTunnelService.instance;
+    if (!value) {
+      final failure = await const SettingsMutationService().write(
+        context,
+        settings.SettingsService.iptvWarpVpn,
+        false,
+      );
+      if (failure != null && context.mounted) {
+        showErrorSnackBar(context, failure.display);
+      }
+      await service.stop();
+      return;
+    }
+    // The terms gate runs BEFORE the pref flips: declining leaves the
+    // switch off, and registration never runs without an explicit
+    // accept. The acceptance is recorded first, then the pref, then
+    // the tunnel starts (registration runs inside the start).
+    if (!service.termsAccepted) {
+      final accepted = await _showWarpTermsDialog(context);
+      if (accepted != true) {
+        // Declining is not an error — but the switch stays off, and the
+        // user should hear why instead of wondering what happened.
+        if (context.mounted) showSnackBar(context, t.settings.warpTermsRequired);
+        return;
+      }
+      await service.acceptTerms();
+      if (!context.mounted) return;
+    }
+    final failure = await const SettingsMutationService().write(
+      context,
+      settings.SettingsService.iptvWarpVpn,
+      true,
+    );
+    if (failure != null) {
+      if (context.mounted) showErrorSnackBar(context, failure.display);
+      return;
+    }
+    await service.start();
+  }
+
+  /// The WARP terms dialog: the summary of what turning the VPN on
+  /// does, with links to Cloudflare's full terms and privacy policy.
+  /// Barrier-dismissible is off — the user must pick Accept or Not now,
+  /// so a tap outside cannot silently decline (or accept) for them.
+  Future<bool?> _showWarpTermsDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(t.settings.warpTermsTitle),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(t.settings.warpTermsBody),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => launchUrl(
+                  Uri.parse('https://www.cloudflare.com/application/terms/'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                child: Text(t.settings.warpTermsReadTerms),
+              ),
+              TextButton(
+                onPressed: () => launchUrl(
+                  Uri.parse(
+                    'https://www.cloudflare.com/application/privacypolicy/',
+                  ),
+                  mode: LaunchMode.externalApplication,
+                ),
+                child: Text(t.settings.warpTermsReadPrivacy),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(t.settings.warpTermsDecline),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(t.settings.warpTermsAccept),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAdvancedSection() {
     return SettingsGroup(
       title: t.settings.advanced,
@@ -772,6 +900,13 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           title: t.settings.preferIpv4,
           subtitle: t.settings.preferIpv4Description,
         ),
+        // 1.6.15 (VPN, WARP): its own row, not a plain switch tile —
+        // turning it on runs the terms gate BEFORE the pref flips
+        // (declining leaves the switch off), and the subtitle shows the
+        // live tunnel state (off / starting / on / failed) instead of a
+        // static description. Independent of Super Spoof and Prefer
+        // IPv4; while it is on, Cronet is forced off (no proxy API).
+        _warpVpnRow(),
         SettingNavigationTile(
           focusNode: _focusTracker.get(_kViewLogs),
           icon: Symbols.article_rounded,

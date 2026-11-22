@@ -8,6 +8,7 @@ import 'app_logger.dart';
 import 'happy_eyeballs.dart';
 import 'managed_http_client.dart';
 import 'media_server_timeouts.dart';
+import '../services/iptv/warp_tunnel_service.dart';
 
 final Set<String> _loggedPlatformClients = <String>{};
 
@@ -43,7 +44,16 @@ ManagedHttpClient _createIoClient(String debugLabel, Duration connectTimeout) {
     ..connectionTimeout = connectTimeout
     ..maxConnectionsPerHost = 12
     ..idleTimeout = const Duration(seconds: 15)
-    ..connectionFactory = happyEyeballsConnectionFactory;
+    ..connectionFactory = happyEyeballsConnectionFactory
+    // 1.6.15 (WARP tunnel): the host-aware proxy — provider traffic
+    // rides the tunnel's local proxy while it is on, everything else
+    // goes DIRECT. The check is per request (the tunnel state is read
+    // live), so flipping the tunnel applies to the next request. Only
+    // registered provider hosts ever proxy: Plex/Jellyfin hosts and
+    // public CDN artwork hosts are never registered, so they stay
+    // direct. In the background sync isolate the service is a fresh
+    // instance (tunnel off), so the sync keeps going direct.
+    ..findProxy = WarpTunnelService.instance.findProxy;
   return ManagedHttpClient(IOClient(httpClient), debugLabel: debugLabel, forceCloseOnDrainTimeout: true);
 }
 

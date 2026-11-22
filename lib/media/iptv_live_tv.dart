@@ -28,6 +28,7 @@ import '../services/iptv/iptv_feed_refresh_activity.dart';
 import '../services/iptv/iptv_playback_activity.dart';
 import '../services/iptv/m3u_parser.dart';
 import '../services/iptv/metered_network.dart';
+import '../services/iptv/warp_tunnel_service.dart';
 import '../services/iptv/xmltv_parser.dart';
 import '../services/iptv/xtream_api.dart';
 import '../services/lowend/epg_cadence_log.dart';
@@ -5730,7 +5731,11 @@ class IptvLiveTvSupport implements LiveTvSupport {
     String? etag,
     String? lastModified,
   }) async {
-    final client = http.Client();
+    // 1.6.15 (WARP tunnel): the feed fetch rides the tunnel's local
+    // proxy while it is on (the provider proxy — this fetch only ever
+    // talks to the provider), and goes direct otherwise. The client is
+    // short-lived and closed when the stream ends, as before.
+    final client = WarpTunnelService.instance.proxiedHttpClient();
     http.StreamedResponse streamed;
     try {
       final request = http.AbortableRequest('GET', Uri.parse(epgUrl), abortTrigger: abortTrigger);

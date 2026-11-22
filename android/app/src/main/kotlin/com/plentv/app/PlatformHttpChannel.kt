@@ -98,7 +98,19 @@ internal class PlatformHttpChannel {
     val readTimeoutMs = call.argument<Int>("readTimeoutMs") ?: DEFAULT_READ_TIMEOUT_MS
     Thread({
       try {
-        val connection = URL(url).openConnection() as HttpURLConnection
+        // 1.6.15 (WARP tunnel): while the tunnel is on, the connection
+        // goes through the tunnel's local proxy on 127.0.0.1 (read from
+        // the Kotlin singleton at open time — no Dart arg-threading).
+        // If the proxy is down, the connect fails here and the request
+        // fails — it is never retried direct while the tunnel is on
+        // (fail-closed). While the tunnel is off, this is exactly the
+        // direct open it was before.
+        val proxy = WarpTunnel.proxy()
+        val connection = if (proxy != null) {
+          URL(url).openConnection(proxy)
+        } else {
+          URL(url).openConnection()
+        } as HttpURLConnection
         // The platform default SSLContext, set explicitly: this is the
         // whole point of the channel — the same TLS configuration
         // TiviMate's stack uses, not Dart's BoringSSL fork and not

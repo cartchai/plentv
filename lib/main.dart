@@ -80,6 +80,7 @@ import 'providers/offline_watch_provider.dart';
 import 'providers/shader_provider.dart';
 import 'utils/snackbar_helper.dart';
 import 'services/iptv/iptv_background_sync.dart';
+import 'services/iptv/warp_tunnel_service.dart';
 import 'media/iptv_client.dart';
 import 'services/multi_server_manager.dart';
 import 'services/library_events/library_event_service.dart';
@@ -1130,6 +1131,12 @@ void _startNonessentialInitialization(SettingsService settings) {
     () => initializeDateFormatting(settings.read(SettingsService.appLocale).intlLocaleName, null),
   );
   bestEffort('Download storage', () => DownloadStorageService.instance.initialize(settings));
+  // 1.6.15 (in-app VPN, WARP): restore the tunnel when the user left it
+  // on — the toggle, the terms acceptance and the registration all have
+  // to be present, or the toggle is reset to off. Best-effort: a failed
+  // restore leaves the toggle off and the requests going direct, exactly
+  // as if the VPN had never been turned on.
+  bestEffort('WARP tunnel restore', WarpTunnelService.instance.restoreIfEnabled);
   // 1.5.2: Trakt, Simkl, MAL and AniList are gone. Wipe any session tokens
   // they left behind before the coordinator loads its (MDBList-only) sessions.
   bestEffort('Tracker removal purge', TrackerAccountStore.purgeRemovedServiceSessions);

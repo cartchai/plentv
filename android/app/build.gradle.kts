@@ -542,6 +542,23 @@ dependencies {
   // mpv core routes with (GpuVoPolicy, MediaCodecQuery, VideoRectPolicy).
   implementation(mpvAarDependency)
   mpvAarNatives(mpvAarDependency)
+
+  // 1.6.15 (in-app VPN, WARP): the sing-box core as a gomobile AAR,
+  // built fresh in CI from android/warpbox (gomobile bind, tags
+  // with_wireguard,with_gvisor) and placed at android/app/libs/libbox.aar
+  // before the Flutter build. The AAR is NOT committed — the NDK lives
+  // on the CI runner, not in this repo. The build fails loudly without
+  // it: WarpTunnelChannel.kt imports warpbox.Warpbox, so a missing AAR
+  // would otherwise surface as a confusing "unresolved reference"
+  // instead of the real cause. See android/warpbox/README.md.
+  if (!file("libs/libbox.aar").exists()) {
+    throw GradleException(
+      "libbox.aar is missing from android/app/libs/ — build it first " +
+        "(CI: the warpbox bind step; locally: gomobile bind in " +
+        "android/warpbox). See android/warpbox/README.md.",
+    )
+  }
+  implementation(files("libs/libbox.aar"))
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
   // Android TV Watch Next integration

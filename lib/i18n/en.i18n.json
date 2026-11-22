@@ -222,6 +222,18 @@
     "iptvLiveTsDescription": "Live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi.",
     "preferIpv4": "Prefer IPv4",
     "preferIpv4Description": "Provider requests connect over IPv4 only, like the Fire Stick, instead of the phone's IPv6 connection. Off by default; try it if your provider still refuses the app on your Wi-Fi. When it's on, it wins over the Super Spoof transport choice.",
+    "warpVpn": "VPN (WARP)",
+    "warpVpnDescription": "Route the app's own provider requests through Cloudflare's free WARP network, so they come from a different address. Only the app's provider traffic goes through it — nothing else on the phone. Off by default.",
+    "warpVpnStateStarting": "Starting…",
+    "warpVpnStateOn": "On — provider traffic goes through WARP",
+    "warpVpnStateFailed": "Failed to start — provider requests are going out directly",
+    "warpTermsTitle": "Cloudflare WARP terms",
+    "warpTermsBody": "Turning this on signs the app up for a free WARP account with Cloudflare, and routes the app's own provider requests through Cloudflare's WARP network. Your provider requests will come from a Cloudflare address instead of your home address, and Cloudflare will see that traffic pass through its network. Only the app's provider traffic goes through it — nothing else on the phone. Cloudflare's WARP terms and privacy policy apply; you can read them in full before you decide.",
+    "warpTermsReadTerms": "Read Cloudflare's WARP terms",
+    "warpTermsReadPrivacy": "Read Cloudflare's privacy policy",
+    "warpTermsAccept": "I accept",
+    "warpTermsDecline": "Not now",
+    "warpTermsRequired": "The VPN stays off until you accept Cloudflare's terms.",
     "secondsLabel": "Seconds",
     "minutesLabel": "Minutes",
     "secondsShort": "s",
@@ -1582,6 +1594,11 @@
       "Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime",
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
+    ],
+    "changelog2334": [
+      "New: Settings → Advanced has a “VPN (WARP)” switch — the app can route its own provider requests through Cloudflare's free WARP network, so they come from a different address. Off by default; nothing changes unless you turn it on",
+      "New: turning the VPN on first shows Cloudflare's terms — the app only signs up for a free WARP account after you accept them, and the switch stays off until the sign-up works",
+      "Fixed: while the VPN is on, provider requests (catalog, streams, and artwork from the provider) go through it — and if the tunnel drops, they stop instead of going out directly"
     ],
     "changelog2333": [
       "New: all the spoofing now lives in one place — Settings → Advanced → Super Spoof. The name, the network stack and the extra headers are separate switches under it, so you can change one without touching the others",

@@ -8,6 +8,7 @@ import 'package:http/io_client.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/ipv4_connection_factory.dart';
 import 'platform_http_client.dart';
+import 'warp_tunnel_service.dart';
 import 'xtream_api.dart';
 
 /// Which network stack an Xtream API request rides (1.6.14: the Super
@@ -32,6 +33,14 @@ import 'xtream_api.dart';
 /// an unknown choice falls back to Dart. A transport must never take
 /// the panel offline: a choice whose client cannot be built falls back
 /// to Dart at the client (see [XtreamTransportClient]).
+///
+/// 1.6.15 (WARP tunnel): Cronet has no proxy API, so while the tunnel
+/// is on it cannot ride the proxy — [tunnelOn] forces Cronet to Dart
+/// (whose client carries the proxy), and the other choices ride the
+/// proxy on their own clients (Dart and IPv4 via `findProxy`, Platform
+/// via the Kotlin proxy singleton). The tunnel never changes which
+/// transport is *chosen* except for Cronet; it only changes where the
+/// chosen transport's packets go.
 class XtreamTransportChoice {
   static const String dart = 'dart';
   static const String ipv4 = 'ipv4';
@@ -48,15 +57,23 @@ class XtreamTransportChoice {
     required bool masterOn,
     required bool preferIpv4,
     required String transportChoice,
+    bool tunnelOn = false,
   }) {
     if (preferIpv4) return (transport: ipv4, viaPreferIpv4Toggle: true);
     if (!masterOn) return (transport: dart, viaPreferIpv4Toggle: false);
-    return switch (transportChoice) {
+    final chosen = switch (transportChoice) {
       cronet => (transport: cronet, viaPreferIpv4Toggle: false),
       ipv4 => (transport: ipv4, viaPreferIpv4Toggle: false),
       platform => (transport: platform, viaPreferIpv4Toggle: false),
       _ => (transport: dart, viaPreferIpv4Toggle: false),
     };
+    // Cronet has no proxy API: while the tunnel is on, Cronet cannot
+    // ride it, so the request goes out on Dart (whose client carries
+    // the proxy) instead of going direct on Cronet.
+    if (tunnelOn && chosen.transport == cronet) {
+      return (transport: dart, viaPreferIpv4Toggle: false);
+    }
+    return chosen;
   }
 }
 
@@ -125,6 +142,16 @@ class XtreamTransportChoice {
 /// out on Dart's client instead of failing. A transport must never take
 /// the panel offline.
 ///
+/// 1.6.15 (WARP tunnel): while the tunnel is on, the Dart clients
+/// (plain and IPv4-only) carry `findProxy` pointing provider traffic at
+/// the tunnel's local proxy on 127.0.0.1, the Platform transport reads
+/// the proxy from the Kotlin singleton at open time, and Cronet is
+/// forced off (it has no proxy API). The proxy function returns DIRECT
+/// while the tunnel is off, so the tunnel changes nothing for users who
+/// never turn it on. If the proxy is down, the request fails — it never
+/// falls back to a direct connection while the tunnel is on
+/// (fail-closed).
+///
 /// The engine is built lazily, on the first Super-Spoof-ON request, and
 /// reused for this client's lifetime — building it per request would pay
 /// the engine start-up on every call. Flipping the toggle OFF mid-life
@@ -144,6 +171,7 @@ class XtreamTransportClient extends http.BaseClient {
     required this._superSpoofOn,
     bool Function()? preferIpv4On,
     String Function()? transportChoice,
+    bool Function()? tunnelOn,
     http.Client Function()? dartClientFactory,
     http.Client? Function()? cronetClientFactory,
     http.Client Function()? ipv4DartClientFactory,
@@ -151,7 +179,8 @@ class XtreamTransportClient extends http.BaseClient {
   })  : _preferIpv4On = preferIpv4On ?? (() => false),
         _transportChoice =
             transportChoice ?? (() => XtreamTransportChoice.defaultChoice),
-        _dartClientFactory = dartClientFactory ?? (() => http.Client()),
+        _tunnelOn = tunnelOn ?? (() => false),
+        _dartClientFactory = dartClientFactory ?? _defaultDartClientFactory,
         _cronetClientFactory =
             cronetClientFactory ?? _defaultCronetClientFactory,
         _ipv4DartClientFactory =
@@ -164,6 +193,7 @@ class XtreamTransportClient extends http.BaseClient {
   final bool Function() _superSpoofOn;
   final bool Function() _preferIpv4On;
   final String Function() _transportChoice;
+  final bool Function() _tunnelOn;
   final http.Client Function() _dartClientFactory;
   final http.Client? Function() _cronetClientFactory;
   final http.Client Function() _ipv4DartClientFactory;
@@ -203,12 +233,30 @@ class XtreamTransportClient extends http.BaseClient {
   bool _loggedPlatformInUse = false;
   bool _loggedPlatformUnavailable = false;
 
+  /// Build the plain Dart client: Dart's [HttpClient] wrapped for
+  /// `package:http`, with `findProxy` pointing provider traffic at the
+  /// WARP tunnel's local proxy while it is on ([WarpTunnelService.proxyForProvider]).
+  /// When the tunnel is off the proxy function returns DIRECT, so this
+  /// is byte-for-byte today's client. Never throws out of the
+  /// transport — the caller falls back to plain Dart.
+  static http.Client _defaultDartClientFactory() {
+    final httpClient = HttpClient()
+      ..findProxy = WarpTunnelService.instance.proxyForProvider;
+    return IOClient(httpClient);
+  }
+
   /// Build the IPv4-only Dart client: Dart's [HttpClient] with
-  /// [ipv4OnlyConnectionFactory], wrapped for `package:http`. Never
-  /// throws out of the transport — the caller falls back to plain Dart.
+  /// [ipv4OnlyConnectionFactory], wrapped for `package:http`. The
+  /// `findProxy` points provider traffic at the WARP tunnel's local
+  /// proxy while it is on — the proxy connection itself goes to
+  /// 127.0.0.1 (IPv4 either way) and the panel host is resolved inside
+  /// the tunnel, so the IPv4 factory is harmless for proxied requests
+  /// and still applies to direct ones. Never throws out of the
+  /// transport — the caller falls back to plain Dart.
   static http.Client _defaultIpv4DartClientFactory() {
     final httpClient = HttpClient()
-      ..connectionFactory = ipv4OnlyConnectionFactory;
+      ..connectionFactory = ipv4OnlyConnectionFactory
+      ..findProxy = WarpTunnelService.instance.proxyForProvider;
     return IOClient(httpClient);
   }
 
@@ -260,12 +308,17 @@ class XtreamTransportClient extends http.BaseClient {
   /// IPv4-only client), plain Dart otherwise. Both toggles and the
   /// choice are re-read on every request, so flipping any of them
   /// applies to the next request without rebuilding the client (or
-  /// restarting the app).
+  /// restarting the app). 1.6.15: while the WARP tunnel is on, Cronet
+  /// is forced off (it has no proxy API) — resolve() returns Dart for
+  /// it, and the Dart client carries the proxy. The other choices ride
+  /// the proxy on their own clients (Dart/IPv4 via findProxy, Platform
+  /// via the Kotlin proxy singleton).
   http.Client _clientForRequest() {
     final resolved = XtreamTransportChoice.resolve(
       masterOn: _superSpoofOn(),
       preferIpv4: _preferIpv4On(),
       transportChoice: _transportChoice(),
+      tunnelOn: _tunnelOn(),
     );
     switch (resolved.transport) {
       case XtreamTransportChoice.ipv4:
