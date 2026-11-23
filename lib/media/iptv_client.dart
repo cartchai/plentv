@@ -2384,6 +2384,12 @@ class IptvClient implements MediaServerClient {
   /// Cleared when the deferred probe fires, once, after the search ends.
   bool _deferredHealthProbe = false;
 
+  /// The first health check of this client's life has waited for the
+  /// WARP tunnel restore to settle (1.6.18 — see [checkHealth]). One
+  /// shot: later checks await an already-settled restore, which costs
+  /// nothing, so only the first call needs the flag.
+  bool _startupTunnelGateDone = false;
+
   /// Called once, coalesced, when a deferred health probe fires (build
   /// #21): the search has ended and the probe that arrived mid-search
   /// should run now. Set by [MultiServerManager] when it binds the
@@ -2970,6 +2976,26 @@ class IptvClient implements MediaServerClient {
 
   @override
   Future<HealthStatus> checkHealth() async {
+    // 1.6.18: the first health check of this client's life waits for
+    // the WARP tunnel restore to settle when the toggle is on. On a
+    // cold start the restore runs after the first frame while binding
+    // probes the panel in the same window, so without this the first
+    // probe goes out direct and 403s — then arms the 5-minute refusal
+    // backoff (the 1.6.17 phone log: first request 74 ms before
+    // tunnel-on). Bounded to 5 s by [WarpTunnelService
+    // .waitForRestoreSettled]; the gate must never take the health
+    // check down with it, so any failure here is swallowed and the
+    // probe proceeds as it did before.
+    if (!_startupTunnelGateDone) {
+      _startupTunnelGateDone = true;
+      try {
+        if (WarpTunnelService.instance.toggleOn) {
+          await WarpTunnelService.instance.waitForRestoreSettled();
+        }
+      } catch (_) {
+        // The gate is best-effort: proceed with the probe.
+      }
+    }
     // 1.2.19, L-23: a panel remembered unreachable on this network is
     // not re-probed — return the last-known verdict with no panel call
     // (same shape as the refusal guard below). The verdict lasts 24 h,
@@ -2988,6 +3014,13 @@ class IptvClient implements MediaServerClient {
     // panel call. After the window, probe normally. A fresh sign-in
     // bypasses this (different path — the user explicitly asked).
     if (await _hasRecentRefusal()) {
+      // 1.6.18: say so in the log — before this the cached return
+      // logged the same "health check failed" line at the caller as a
+      // fresh 403, so the 1.6.17 phone log's :42/:50 "accessDenied"
+      // lines looked like live refusals when no request went out at all.
+      appLogger.d(
+        'IPTV health probe skipped: cached verdict (403 within ${refusalProbeBackoff.inMinutes} min backoff, no panel call)',
+      );
       return _lastHealthStatus;
     }
     // Build #21: a probe that fires while a search is in flight is
@@ -2997,6 +3030,7 @@ class IptvClient implements MediaServerClient {
     // coalesced, when the search ends (see [_fireDeferredHealthProbe]).
     if (_activeSearchCount > 0) {
       _deferredHealthProbe = true;
+      appLogger.d('IPTV health probe deferred: search in flight, cached verdict');
       return _lastHealthStatus;
     }
     if (_isXtream) {

@@ -176,11 +176,61 @@ class WarpRegistration {
 /// meet on one channel; a missing channel (non-Android) is a clean
 /// start failure, never a crash.
 class WarpTunnelService extends ChangeNotifier {
-  WarpTunnelService({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
+  WarpTunnelService({http.Client? httpClient, http.Client Function(int proxyPort)? probeClientFactory})
+      : _httpClient = httpClient ?? http.Client(),
+        _probeClientFactory = probeClientFactory ?? _defaultProbeClientFactory;
 
   /// The app-wide instance. Tests build their own with an injected
   /// client instead of touching this one.
   static final WarpTunnelService instance = WarpTunnelService();
+
+  /// The post-start probe target: Cloudflare's own 1.1.1.1 page. Any
+  /// HTTP response proves the handshake completed and the egress works;
+  /// the target's status never matters, only that something answered
+  /// through the tunnel.
+  static final Uri _probeUrl = Uri.parse('https://one.one.one.one/');
+
+  /// Derive the WireGuard `reserved` bytes for the WARP peer from the
+  /// stored client id: the first 3 bytes of the base64-decoded
+  /// `client_id` (Cloudflare identifies the account from these bytes —
+  /// the registration API returns no `reserved_*` field; every WARP
+  /// client derives them this way). Sending [0, 0, 0] makes Cloudflare
+  /// ignore the handshake entirely — no error, tunnel shows ON, nothing
+  /// flows (the 1.6.17 phone log). Falls back to [0, 0, 0] with a
+  /// warning when the client id is missing, not valid base64, or decodes
+  /// to fewer than 3 bytes — never throws, never blocks the tunnel start.
+  @visibleForTesting
+  static List<int> reservedBytesForClientId(String clientId) {
+    final trimmed = clientId.trim();
+    if (trimmed.isEmpty) {
+      appLogger.w(
+        'WARP: no client id stored, using reserved [0, 0, 0] (handshake may not complete)',
+      );
+      return const [0, 0, 0];
+    }
+    try {
+      // The client id may wear the URL-safe alphabet ('-'/'_'); the
+      // standard decoder rejects those, so translate first, then let
+      // normalize() repair missing padding.
+      final normalized = base64.normalize(
+        trimmed.replaceAll('-', '+').replaceAll('_', '/'),
+      );
+      final decoded = base64Decode(normalized);
+      if (decoded.length < 3) {
+        appLogger.w(
+          'WARP: stored client id decodes to fewer than 3 bytes, using reserved [0, 0, 0]',
+        );
+        return const [0, 0, 0];
+      }
+      return [decoded[0], decoded[1], decoded[2]];
+    } catch (e) {
+      appLogger.w(
+        'WARP: stored client id is not valid base64, using reserved [0, 0, 0]',
+        error: e,
+      );
+      return const [0, 0, 0];
+    }
+  }
 
   static const _channelName = 'com.plentv.app/warp_tunnel';
 
@@ -208,6 +258,24 @@ class WarpTunnelService extends ChangeNotifier {
 
   final http.Client _httpClient;
   final MethodChannel _channel = const MethodChannel(_channelName);
+
+  /// Builds the client the post-start probe uses: a short-lived Dart
+  /// client whose requests ride the tunnel's local proxy on the given
+  /// port. Injectable so tests can drive the probe with a fake client
+  /// instead of the real network.
+  final http.Client Function(int proxyPort) _probeClientFactory;
+
+  /// The future of the current startup restore attempt (see
+  /// [restoreIfEnabled]): the first IPTV health check awaits it so a
+  /// cold start with WARP left on never probes the panel before the
+  /// tunnel is up. Null until the first restore runs.
+  Future<void>? _restoreFuture;
+
+  /// Whether the last post-start probe proved the tunnel carries
+  /// traffic (true), proved it does not (false), or no probe has ever
+  /// run (null).
+  bool? _lastProbeOk;
+  bool? get lastProbeOk => _lastProbeOk;
 
   WarpTunnelState _state = WarpTunnelState.off;
   String? _lastError;
@@ -348,6 +416,14 @@ class WarpTunnelService extends ChangeNotifier {
           _proxyPort = port;
           _setState(WarpTunnelState.on);
           appLogger.i('WARP tunnel on', error: {'proxyPort': port, 'peer': reg.peer.type});
+          // 1.6.18: "tunnel on" must mean the tunnel carries traffic —
+          // Start() returning nil only proves the box started, not that
+          // the handshake completed (the 1.6.17 phone log: on, yet every
+          // proxied request 502d). One detached probe through the proxy,
+          // logged with its outcome; it never delays the toggle and
+          // never throws, so it can never turn a good start into a
+          // failed one.
+          unawaited(_runPostStartProbe(port));
           return true;
         } on MissingPluginException {
           // No channel on this device (non-Android, or an engine that
@@ -403,14 +479,114 @@ class WarpTunnelService extends ChangeNotifier {
   /// toggle, the terms acceptance and the registration all have to be
   /// present, or the toggle is reset to off (a settings import can set
   /// the toggle without the terms — fail safe to off). Fire-and-forget
-  /// from startup; a failed restore leaves the toggle off.
-  Future<void> restoreIfEnabled() async {
+  /// from startup; a failed restore leaves the toggle off. The attempt
+  /// is tracked in [_restoreFuture] so the first IPTV health check can
+  /// wait for it to settle instead of probing the panel before the
+  /// tunnel is up (see [restoreSettled]).
+  Future<void> restoreIfEnabled() {
+    _restoreFuture ??= _doRestoreIfEnabled();
+    return _restoreFuture!;
+  }
+
+  Future<void> _doRestoreIfEnabled() async {
     if (!toggleOn) return;
     if (!termsAccepted) {
       await SettingsService.instance.write(SettingsService.iptvWarpVpn, false);
       return;
     }
     await start();
+  }
+
+  /// A future that completes when the current startup restore attempt
+  /// settles — or at once when no restore is running (or has ever run).
+  /// The first IPTV health check awaits it (see [waitForRestoreSettled])
+  /// so a cold start with WARP left on never probes the panel before
+  /// the tunnel is up: on the 1.6.17 phone log the first Xtream request
+  /// went out 74 ms before the tunnel reported on, went direct, and
+  /// 403d — then armed the 5-minute refusal backoff.
+  Future<void> get restoreSettled => _restoreFuture ?? Future<void>.value();
+
+  /// Wait for the startup restore to settle, bounded: a restore that
+  /// is still settling after [timeout] does not hold the caller — the
+  /// health check proceeds and the tunnel state is whatever it is by
+  /// then. Never throws.
+  Future<void> waitForRestoreSettled({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    try {
+      await restoreSettled.timeout(timeout);
+    } on TimeoutException {
+      appLogger.d(
+        'WARP: tunnel restore still settling after ${timeout.inSeconds}s, continuing without it',
+      );
+    }
+  }
+
+  /// Prove the tunnel actually carries traffic (1.6.18): one HEAD
+  /// through the local proxy at [_probeUrl]. A 2xx/3xx response proves
+  /// the WireGuard handshake completed and the egress works; the
+  /// target's answer never matters beyond that, only that something
+  /// answered through the tunnel. A transport error, a timeout, or a
+  /// 4xx/5xx means the tunnel is up but carrying nothing (a 4xx from
+  /// whatever happens to listen on the port is not proof — the probe
+  /// only trusts the target's own success range). Single-shot, no
+  /// retries, never throws; the outcome is logged and kept in
+  /// [lastProbeOk]. [client] is injectable for tests; null builds the
+  /// real proxied client for [proxyPort] (or the current port when
+  /// omitted).
+  @visibleForTesting
+  Future<bool> probeTunnel({http.Client? client, int? proxyPort}) async {
+    final port = proxyPort ?? _proxyPort;
+    if (port <= 0) return false;
+    final probeClient = client ?? _probeClientFactory(port);
+    try {
+      final response =
+          await probeClient.head(_probeUrl).timeout(const Duration(seconds: 15));
+      final ok = response.statusCode >= 200 && response.statusCode < 400;
+      _lastProbeOk = ok;
+      if (ok) {
+        appLogger.i(
+          'WARP tunnel probe OK: traffic flows through the proxy',
+          error: {'status': response.statusCode, 'proxyPort': port},
+        );
+      } else {
+        appLogger.w(
+          'WARP tunnel probe failed: HTTP ${response.statusCode} through the proxy (tunnel may not carry traffic)',
+          error: {'status': response.statusCode, 'proxyPort': port},
+        );
+      }
+      return ok;
+    } catch (e) {
+      _lastProbeOk = false;
+      appLogger.w(
+        'WARP tunnel probe failed: the tunnel is up but carries no traffic (handshake may not have completed)',
+        error: e,
+      );
+      return false;
+    } finally {
+      if (client == null) probeClient.close();
+    }
+  }
+
+  /// The real probe client: a short-lived Dart client pointed at the
+  /// tunnel's local proxy on [proxyPort] (explicit PROXY, not the
+  /// [proxyForProvider] state check — the probe runs right after start,
+  /// when the state is on by construction, and must not depend on it).
+  static http.Client _defaultProbeClientFactory(int proxyPort) {
+    final httpClient = HttpClient()..findProxy = (_) => 'PROXY 127.0.0.1:$proxyPort';
+    return IOClient(httpClient);
+  }
+
+  /// Run the post-start probe detached from start(): it must never
+  /// delay the toggle or turn a good start into a failed one.
+  /// [probeTunnel] never throws; this is belt-and-braces.
+  Future<void> _runPostStartProbe(int port) async {
+    try {
+      await probeTunnel(proxyPort: port);
+    } catch (_) {
+      // Unreachable in practice — probeTunnel swallows its own
+      // failures — but a probe must never surface as a start failure.
+    }
   }
 
   /// Register a free WARP account for the app (the same registration
@@ -613,7 +789,13 @@ class WarpTunnelService extends ChangeNotifier {
               'public_key': peer.publicKey,
               'allowed_ips': ['0.0.0.0/0', '::/0'],
               'persistent_keepalive_interval': keepAliveSeconds,
-              'reserved': [0, 0, 0],
+              // 1.6.18: the reserved bytes identify the account to
+              // Cloudflare — the first 3 bytes of the base64-decoded
+              // client id. [0, 0, 0] makes the handshake hang forever
+              // (the 1.6.17 phone log). The client id is already stored
+              // from registration, so stored registrations heal on load
+              // with no re-registration.
+              'reserved': reservedBytesForClientId(registration.clientId),
             },
           ],
         },

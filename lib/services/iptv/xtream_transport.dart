@@ -301,9 +301,10 @@ class XtreamTransportClient extends http.BaseClient {
     }
   }
 
-  /// The client for the next request, from [XtreamTransportChoice.resolve]:
-  /// IPv4-only Dart when the IPv4-preference is on (it wins over the
-  /// stored choice — Cronet has no IPv4-only option), the stored
+  /// The client for the next request, from [XtreamTransportChoice.resolve],
+  /// plus the transport name it resolved to (for the per-request log
+  /// line): IPv4-only Dart when the IPv4-preference is on (it wins over
+  /// the stored choice — Cronet has no IPv4-only option), the stored
   /// transport while Super Spoof is on (Cronet, Platform, or the
   /// IPv4-only client), plain Dart otherwise. Both toggles and the
   /// choice are re-read on every request, so flipping any of them
@@ -313,7 +314,7 @@ class XtreamTransportClient extends http.BaseClient {
   /// it, and the Dart client carries the proxy. The other choices ride
   /// the proxy on their own clients (Dart/IPv4 via findProxy, Platform
   /// via the Kotlin proxy singleton).
-  http.Client _clientForRequest() {
+  ({http.Client client, String transport}) _clientForRequest() {
     final resolved = XtreamTransportChoice.resolve(
       masterOn: _superSpoofOn(),
       preferIpv4: _preferIpv4On(),
@@ -322,13 +323,22 @@ class XtreamTransportClient extends http.BaseClient {
     );
     switch (resolved.transport) {
       case XtreamTransportChoice.ipv4:
-        return _ipv4Client(viaPreferIpv4Toggle: resolved.viaPreferIpv4Toggle);
+        return (
+          client: _ipv4Client(viaPreferIpv4Toggle: resolved.viaPreferIpv4Toggle),
+          transport: XtreamTransportChoice.ipv4,
+        );
       case XtreamTransportChoice.cronet:
-        return _cronetClient() ?? _dart;
+        return (
+          client: _cronetClient() ?? _dart,
+          transport: XtreamTransportChoice.cronet,
+        );
       case XtreamTransportChoice.platform:
-        return _platformClient() ?? _dart;
+        return (
+          client: _platformClient() ?? _dart,
+          transport: XtreamTransportChoice.platform,
+        );
       default:
-        return _dart;
+        return (client: _dart, transport: XtreamTransportChoice.dart);
     }
   }
 
@@ -460,7 +470,17 @@ class XtreamTransportClient extends http.BaseClient {
     if (_closed) {
       throw http.ClientException('HTTP client is closed', request.url);
     }
-    final client = _clientForRequest();
+    final (:client, :transport) = _clientForRequest();
+    // 1.6.18: log the proxy verdict per request so a future debug log
+    // shows which path each provider request took — DIRECT vs the
+    // tunnel's local proxy. The 1.6.17 investigation could not tell
+    // them apart from the log alone. The verdict is the same function
+    // the Dart clients' findProxy evaluates, so it matches what the
+    // request will do (Cronet is forced to Dart while the tunnel is on,
+    // so it can never ride the proxy; Platform reads the same proxy
+    // from the Kotlin singleton at open time).
+    final verdict = WarpTunnelService.instance.proxyForProvider(request.url);
+    appLogger.d('Xtream ${request.method} ${request.url.host} via $verdict ($transport)');
     // Fail-open for the platform channel: a MissingPluginException
     // means the channel is not there (non-Android build, or an engine
     // that never attached it) — no request went out, so serving this

@@ -4005,6 +4005,9 @@ class Translations$about$en {
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 	];
+	List<String> get changelog2337 => [
+		'Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts',
+	];
 	List<String> get changelog2336 => [
 		'Fixed: turning on VPN (WARP) still failed to start — the tunnel setup told the engine to watch the network with a placeholder that always fails; it now runs without the watcher, and the tunnel starts',
 	];
@@ -11686,6 +11689,7 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2337.0' => 'Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts',
 			'about.changelog2336.0' => 'Fixed: turning on VPN (WARP) still failed to start — the tunnel setup told the engine to watch the network with a placeholder that always fails; it now runs without the watcher, and the tunnel starts',
 			'about.changelog2335.0' => 'Fixed: turning on VPN (WARP) failed to start — the tunnel setup sent the addresses without their network sizes, so the tunnel engine refused them; they now go out with their sizes, and the tunnel starts',
 			'about.changelog2334.0' => 'New: Settings → Advanced has a “VPN (WARP)” switch — the app can route its own provider requests through Cloudflare\'s free WARP network, so they come from a different address. Off by default; nothing changes unless you turn it on',
@@ -11775,9 +11779,9 @@ extension on Translations {
 			'about.changelog2317.4' => 'New: the debug log now records memory at each startup step on its own, so the next TV export shows exactly which step owns the startup peak',
 			'about.changelog2316.0' => 'Fixed: the four bare FOX, NBC, CBS and PBS rows now fill from a local affiliate\'s guide — the guess now recognises affiliate names shaped like a callsign and city, not just a channel number',
 			'about.changelog2316.1' => 'Fixed: the US guide preset now adds cleanly — a big guide file is no longer rejected part-way through its description — and a guide with one broken programme still loads the good ones around it',
-			'about.changelog2316.2' => 'Fixed: the Assign guide list now puts the closest matches on top — your channel\'s own affiliate first, then other US affiliates, with other countries at the bottom',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2316.2' => 'Fixed: the Assign guide list now puts the closest matches on top — your channel\'s own affiliate first, then other US affiliates, with other countries at the bottom',
 			'about.changelog2315.0' => 'New: channels with no guide ID now fill from the closest US affiliate when the guide has one — FOX, NBC, CBS and PBS rows fill with an affiliate\'s guide. The Reload report counts these separately as \'affiliate guess\', so a guessed row is never shown as a certain match',
 			'about.changelog2315.1' => 'Fixed: the debug log and the channel details now name an affiliate guess as a guess, and you can keep a guessed guide for a channel from its details',
 			'about.changelog2314.0' => 'New: EPG sources can now be a .xml.gz file — the guide the US preset uses is compressed, and it used to be rejected',
@@ -12289,9 +12293,9 @@ extension on Translations {
 			'liveTv.morning' => 'Morning',
 			'liveTv.daytime' => 'Daytime',
 			'liveTv.evening' => 'Evening',
-			'liveTv.lateNight' => 'Late Night',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.lateNight' => 'Late Night',
 			'liveTv.whatsOn' => 'What\'s On',
 			'liveTv.watchChannel' => 'Watch Channel',
 			'liveTv.favorites' => 'Favorites',
@@ -12803,9 +12807,9 @@ extension on Translations {
 			'companionRemote.errors.connectionLostAfterAttempts' => ({required Object attempts}) => 'Connection lost after ${attempts} attempts',
 			'companionRemote.errors.connectionLost' => 'Connection lost',
 			'companionRemote.closedBeforeAuth' => 'The connection closed before authentication',
-			'videoSettings.playbackSpeed' => 'Playback Speed',
 			_ => null,
 		} ?? switch (path) {
+			'videoSettings.playbackSpeed' => 'Playback Speed',
 			'videoSettings.normalSpeed' => 'Normal',
 			'videoSettings.sleepTimerActive' => ({required Object duration}) => 'Active (${duration})',
 			'videoSettings.zoom' => 'Zoom',
@@ -13317,9 +13321,9 @@ extension on Translations {
 			'iptv.epgM3uTvgIdApplied' => ({required Object applied}) => 'Applied ${applied} guide IDs — reloading the guide…',
 			'iptv.epgM3uTvgIdAppliedSkipped' => ({required Object applied, required Object skipped}) => 'Applied ${applied} guide IDs — ${skipped} kept their hand-assigned guide ID — reloading the guide…',
 			'iptv.epgM3uTvgIdNoGain' => 'The playlist carries no guide IDs the feed doesn\'t already have',
-			'iptv.epgM3uTvgIdStalled' => ({required Object received, required Object kept}) => 'the playlist download stalled — ${received} received, ${kept} kept, tap the check again to resume from there',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.epgM3uTvgIdStalled' => ({required Object received, required Object kept}) => 'the playlist download stalled — ${received} received, ${kept} kept, tap the check again to resume from there',
 			'iptv.epgM3uTvgIdUnreachable' => 'the playlist could not be reached — check the connection and try again',
 			'iptv.epgM3uTvgIdParseTimedOut' => 'the playlist downloaded but reading it timed out — try again',
 			'iptv.epgM3uTvgIdProgressWithTotal' => ({required Object received, required Object total, required Object percent}) => 'Downloading playlist — ${received} of ${total} (${percent}%)',

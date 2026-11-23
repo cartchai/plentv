@@ -1595,6 +1595,9 @@
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
     ],
+    "changelog2337": [
+      "Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts"
+    ],
     "changelog2336": [
       "Fixed: turning on VPN (WARP) still failed to start — the tunnel setup told the engine to watch the network with a placeholder that always fails; it now runs without the watcher, and the tunnel starts"
     ],
