@@ -49,7 +49,18 @@ func (s *platformStub) ProcessPlatformOptions(options option.TunPlatformOptions)
 }
 
 func (s *platformStub) UsePlatformDefaultInterfaceMonitor() bool {
-	return true
+	// False: sing-box builds its own interface monitors, and on
+	// Android it detects the netlink ban and proceeds with none —
+	// the designed fallback for a proxy-only config. True hands
+	// sing-box the interfaceMonitorStub below, whose Start() is a
+	// deliberate tripwire (os.ErrInvalid); box.Start() trips it and
+	// the tunnel fails with "initialize network: invalid argument"
+	// before any WireGuard code runs (1.6.16 phone log). Do NOT fix
+	// that by making the stub's Start() return nil instead: the
+	// start would succeed, but at post-start sing-box asks the stub
+	// for the default interface, gets nil, and pauses the whole
+	// network — the tunnel would show ON while dead.
+	return false
 }
 
 func (s *platformStub) CreateDefaultInterfaceMonitor(logger logger.Logger) tun.DefaultInterfaceMonitor {

@@ -52,13 +52,13 @@ func warpConfig(t *testing.T, proxyPort int) string {
   "endpoints": [
     {
       "type": "wireguard", "tag": "wg-ep",
-      "address": ["172.16.0.2/32"],
+      "address": ["172.16.0.2/32", "2606:4700:110:8000::2/128"],
       "private_key": %q,
       "mtu": 1408,
       "peers": [
         {
           "address": %q, "port": 2408, "public_key": %q,
-          "allowed_ips": ["0.0.0.0/0"],
+          "allowed_ips": ["0.0.0.0/0", "::/0"],
           "persistent_keepalive_interval": 25,
           "reserved": [0, 0, 0]
         }

@@ -568,7 +568,8 @@ class WarpTunnelService extends ChangeNotifier {
   static bool isConfigError(Object e) {
     final message = e.toString();
     return message.contains('cannot unmarshal') ||
-        message.contains('ParsePrefix');
+        message.contains('ParsePrefix') ||
+        message.contains('initialize network');
   }
 
   /// The sing-box config for the tunnel: one mixed inbound (the local
