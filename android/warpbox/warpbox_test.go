@@ -4,16 +4,11 @@
 //
 // What these tests can prove on a dev machine: the WARP config parses
 // and constructs, the box starts, the mixed proxy listens, and the
-// proxy fails closed when the tunnel is down. The handshake itself is
-// proven against a LOCAL WireGuard peer in warpbox_handshake_test.go
-// (loopback UDP works in this sandbox) — a GET through the tunnel
-// proves the handshake completed and traffic flowed. What they CANNOT
-// prove here: that Cloudflare accepts the handshake, because the local
-// peer identifies clients by public key while Cloudflare reads the
-// `reserved` bytes to identify the account (and this VM's sandbox
-// forbids outbound UDP, so the live endpoint is unreachable anyway).
-// The tunnel data path is proven on Matt's phone (CI + phone test),
-// not here.
+// proxy fails closed when the tunnel is down. They CANNOT prove the
+// handshake itself: no local handshake test exists in this tree — the
+// local-peer handshake test was removed because this VM's sandbox
+// forbids outbound UDP, even to loopback, so it cannot run here. The
+// handshake is proven on Matt's phone only (CI + phone test), not here.
 //
 // The WARP peer values below are Cloudflare's public, shared WARP
 // endpoint (same peer key every WARP client uses); the private key is
