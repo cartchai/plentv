@@ -35,6 +35,7 @@ package warpbox
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"sync"
 
 	box "github.com/sagernet/sing-box"
@@ -86,6 +87,9 @@ func Start(configJSON string) error {
 		_ = currentBox.Close()
 		currentBox = nil
 	}
+	// 1.6.20: guarantee the log file's parent directory exists
+	// before sing-box opens it (see ensureLogDir).
+	ensureLogDir(configJSON)
 	instance, err := newBox(configJSON)
 	if err != nil {
 		return err
@@ -96,6 +100,32 @@ func Start(configJSON string) error {
 	}
 	currentBox = instance
 	return nil
+}
+
+// ensureLogDir creates the parent directory of the config's
+// log.output path (when present), so sing-box can open its log file.
+// Go's O_CREATE creates the file, not parent dirs — and the Dart
+// side and the Kotlin side name different folders (app_flutter vs
+// files), so the log dir may not exist even though Setup created the
+// work dir (the 1.6.19 phone log: box.Start failed on every port
+// with `no such file or directory`). Best-effort: the Dart side
+// already omits log.output when it cannot create the dir, so this is
+// belt-and-braces for any other caller — the wrapper must not depend
+// on the caller having created the dir. A failure here is ignored
+// and sing-box reports the real error itself.
+func ensureLogDir(configJSON string) {
+	var cfg struct {
+		Log struct {
+			Output string `json:"output"`
+		} `json:"log"`
+	}
+	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
+		return
+	}
+	if cfg.Log.Output == "" {
+		return
+	}
+	_ = os.MkdirAll(filepath.Dir(cfg.Log.Output), 0o777)
 }
 
 // Stop closes the running tunnel, if any. Safe to call when off.

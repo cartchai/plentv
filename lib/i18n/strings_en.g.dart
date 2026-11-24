@@ -4020,6 +4020,9 @@ class Translations$about$en {
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 	];
+	List<String> get changelog2339 => [
+		'Fixed: the tunnel wouldn\'t start at all — its log file pointed at a folder that didn\'t exist, because the app and the tunnel named two different folders. The app now makes the folder before starting, and if it ever can\'t, it starts without the log file instead of failing. Also fixed the tunnel\'s address, which had the port number stuck on it so it could never resolve, and the address check, which made the same mistake and wrongly said it doesn\'t resolve',
+	];
 	List<String> get changelog2338 => [
 		'Fixed: the VPN tunnel started but couldn\'t reach anything — it couldn\'t look up Cloudflare\'s address, because the app gave it no DNS of its own and the phone\'s DNS feed was switched off. The tunnel now uses its own DNS (1.1.1.1) to find Cloudflare, logs what it finds, and the startup check waits a few seconds instead of deciding instantly. Also added a Reset WARP registration button in Settings under Advanced, in case the sign-up itself ever needs a fresh start',
 	];
@@ -11712,6 +11715,7 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2339.0' => 'Fixed: the tunnel wouldn\'t start at all — its log file pointed at a folder that didn\'t exist, because the app and the tunnel named two different folders. The app now makes the folder before starting, and if it ever can\'t, it starts without the log file instead of failing. Also fixed the tunnel\'s address, which had the port number stuck on it so it could never resolve, and the address check, which made the same mistake and wrongly said it doesn\'t resolve',
 			'about.changelog2338.0' => 'Fixed: the VPN tunnel started but couldn\'t reach anything — it couldn\'t look up Cloudflare\'s address, because the app gave it no DNS of its own and the phone\'s DNS feed was switched off. The tunnel now uses its own DNS (1.1.1.1) to find Cloudflare, logs what it finds, and the startup check waits a few seconds instead of deciding instantly. Also added a Reset WARP registration button in Settings under Advanced, in case the sign-up itself ever needs a fresh start',
 			'about.changelog2337.0' => 'Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts',
 			'about.changelog2336.0' => 'Fixed: turning on VPN (WARP) still failed to start — the tunnel setup told the engine to watch the network with a placeholder that always fails; it now runs without the watcher, and the tunnel starts',
@@ -11796,9 +11800,9 @@ extension on Translations {
 			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
 			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
-			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
 			'about.changelog2317.1' => 'Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV',
 			'about.changelog2317.2' => 'Fixed: the weekly catalog refresh now reads the lists one row at a time instead of all at once, cutting its biggest memory spike',
 			'about.changelog2317.3' => 'New: when a video starts playing on a low-memory TV, the app now drops the browsing lists and posters it does not need until you come back, freeing room for playback',
@@ -12310,9 +12314,9 @@ extension on Translations {
 			'liveTv.channelsSection' => 'Channels',
 			'liveTv.programsSection' => 'Programs',
 			'liveTv.now' => 'Now',
-			'liveTv.today' => 'Today',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.today' => 'Today',
 			'liveTv.tomorrow' => 'Tomorrow',
 			'liveTv.midnight' => 'Midnight',
 			'liveTv.overnight' => 'Overnight',
@@ -12824,9 +12828,9 @@ extension on Translations {
 			'companionRemote.remote.searchHint' => 'Search on desktop...',
 			'companionRemote.errors.noNetworkInterface' => 'No network interface found',
 			'companionRemote.errors.authenticationFailed' => 'Authentication failed',
-			'companionRemote.errors.serverStartFailed' => ({required Object error}) => 'Failed to start remote server: ${error}',
 			_ => null,
 		} ?? switch (path) {
+			'companionRemote.errors.serverStartFailed' => ({required Object error}) => 'Failed to start remote server: ${error}',
 			'companionRemote.errors.commandFailed' => ({required Object error}) => 'Failed to send remote command: ${error}',
 			'companionRemote.errors.joinTimedOut' => 'Timed out joining session',
 			'companionRemote.errors.failedToConnectAnyAddress' => 'Failed to connect to any address',
@@ -13338,9 +13342,9 @@ extension on Translations {
 			'iptv.epgM3uTvgIdCheckDescription' => 'One-time check: fetch the provider\'s playlist once and see how many channels without a guide ID gain one from it — and how many of those IDs are in the guide',
 			'iptv.epgM3uTvgIdResult' => ({required Object checked, required Object noId, required Object gained, required Object inFeed}) => '${checked} channels checked · ${noId} without a guide ID · ${gained} gain one from the playlist · ${inFeed} of those are in the guide',
 			'iptv.epgM3uTvgIdSample' => ({required Object samples}) => 'Examples: ${samples}',
-			'iptv.epgM3uTvgIdFeedNotLoaded' => 'The guide feed was not loaded, so the in-guide count could not be checked — reload the TV details first',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.epgM3uTvgIdFeedNotLoaded' => 'The guide feed was not loaded, so the in-guide count could not be checked — reload the TV details first',
 			'iptv.epgM3uTvgIdFailed' => ({required Object reason}) => 'The playlist check failed: ${reason}',
 			'iptv.epgM3uTvgIdApply' => 'Apply these guide IDs',
 			'iptv.epgM3uTvgIdApplyNote' => ({required Object gained}) => 'Applying gives ${gained} channels a guide ID, then reloads the guide so they can match',

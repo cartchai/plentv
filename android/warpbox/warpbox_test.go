@@ -312,3 +312,47 @@ func TestStartStopAndFailClosed(t *testing.T) {
 		t.Fatalf("second Stop = %v, want nil", err)
 	}
 }
+
+// TestStartCreatesLogDir (1.6.20): the log file's parent directory
+// must not need to exist beforehand. On the 1.6.19 phone the config
+// pointed log.output at <app_flutter>/warpbox/singbox.log while Setup
+// only created <files>/warpbox — nobody created the log dir, so
+// box.Start failed on every port with `no such file or directory`
+// (the 1.6.19 phone log, build 2245). The 1.6.19 test above passed
+// only because it put the log file directly under the (existing)
+// temp dir — that is the hole that let this through.
+//
+// This test models the phone: a fresh base dir, Setup creating only
+// work/ and tmp/, and a config whose log.output sits under a warpbox/
+// dir nobody made. Start must succeed and the log file must exist
+// afterwards. On the 1.6.19 base this test FAILS with the phone's
+// error; the fix is the wrapper creating the log dir before sing-box
+// opens it (plus the Dart side creating its own dir before start).
+// No test setup here may pre-create the warpbox/ dir.
+func TestStartCreatesLogDir(t *testing.T) {
+	base := t.TempDir()
+	if err := warpbox.Setup(base, base+"/work", base+"/tmp"); err != nil {
+		t.Fatalf("Setup = %v", err)
+	}
+	// The phone's shape: the log lives under a warpbox/ dir that
+	// Setup did NOT create (Setup only makes work/ and tmp/).
+	logPath := filepath.Join(base, "warpbox", "singbox.log")
+	if _, err := os.Stat(filepath.Dir(logPath)); !os.IsNotExist(err) {
+		t.Fatalf("precondition: log dir %s should not exist yet", filepath.Dir(logPath))
+	}
+	const port = 18084
+	if err := warpbox.Start(warpConfig(t, port, logPath)); err != nil {
+		t.Fatalf("Start = %v, want nil (fresh log dir)", err)
+	}
+	defer func() {
+		if err := warpbox.Stop(); err != nil {
+			t.Errorf("Stop = %v", err)
+		}
+	}()
+	if got := warpbox.Status(); got != "on" {
+		t.Fatalf("Status() = %q, want %q", got, "on")
+	}
+	if _, err := os.Stat(logPath); err != nil {
+		t.Fatalf("log file %s was not created: %v", logPath, err)
+	}
+}

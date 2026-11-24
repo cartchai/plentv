@@ -52,7 +52,18 @@ class WarpPeer {
 
   factory WarpPeer.fromJson(Map<String, dynamic> json) => WarpPeer(
         type: json['type'] as String? ?? 'warp',
-        endpointHost: json['endpointHost'] as String? ?? '',
+        // The registration API returns the endpoint host WITH the
+        // port (`engage.cloudflareclient.com:2408`) and 1.6.15–1.6.19
+        // stored it whole. Strip it on load so a stored registration
+        // heals itself: sing-box parses the config's peer `address`
+        // with ParseSocksaddrHostPort, which takes the whole string
+        // as the hostname, so a host WITH a port becomes a name that
+        // can never resolve and no handshake packet ever leaves the
+        // phone (the 1.6.18 phone log: the probe failed in 9 ms /
+        // 2 ms). The port stays in the separate `endpointPort` field.
+        endpointHost: WarpTunnelService.stripEndpointPort(
+          json['endpointHost'] as String? ?? '',
+        ),
         endpointPort: json['endpointPort'] as int? ?? 2408,
         publicKey: json['publicKey'] as String? ?? '',
       );
@@ -243,11 +254,16 @@ class WarpTunnelService extends ChangeNotifier {
 
   /// Derive the WireGuard `reserved` bytes for the WARP peer from the
   /// stored client id: the first 3 bytes of the base64-decoded
-  /// `client_id` (Cloudflare identifies the account from these bytes —
-  /// the registration API returns no `reserved_*` field; every WARP
-  /// client derives them this way). Sending [0, 0, 0] makes Cloudflare
-  /// ignore the handshake entirely — no error, tunnel shows ON, nothing
-  /// flows (the 1.6.17 phone log). Falls back to [0, 0, 0] with a
+  /// `client_id` (Cloudflare puts the client identifier in these bytes
+  /// and uses it to route the session to the right account — the
+  /// registration API returns no `reserved_*` field; every WARP
+  /// client derives them this way). Sending [0, 0, 0] does NOT make
+  /// Cloudflare reject the handshake: Cloudflare's own blog says
+  /// messages without the identifier are still supported, "albeit
+  /// with less reliable routing" — so the session may be misrouted
+  /// and data may not flow, but it is not a guaranteed hang (the
+  /// 1.6.17 phone log proves nothing about reserved: that build had
+  /// both resolution defects too). Falls back to [0, 0, 0] with a
   /// warning when the client id is missing, not valid base64, or decodes
   /// to fewer than 3 bytes — never throws, never blocks the tunnel start.
   @visibleForTesting
@@ -476,20 +492,25 @@ class WarpTunnelService extends ChangeNotifier {
       // failure points at the phone's resolver; a Dart-side success
       // with a later probe failure points at sing-box's own DNS.
       // Bounded and never throws: a failed lookup must not stop the start.
+      // 1.6.20: the stored endpoint host carries its port, so strip
+      // it for the log and the lookup — printing it as-is with the
+      // port appended again gave `host:port:port`, and looking up
+      // `host:port` always fails.
+      final endpointHost = stripEndpointPort(reg.peer.endpointHost);
       appLogger.i('WARP tunnel starting', error: {
-        'endpoint': '${reg.peer.endpointHost}:${reg.peer.endpointPort}',
+        'endpoint': '$endpointHost:${reg.peer.endpointPort}',
         'reserved': reservedBytesForClientId(reg.clientId),
       });
-      final resolved = await resolveEndpointHost(reg.peer.endpointHost);
+      final resolved = await resolveEndpointHost(endpointHost);
       if (resolved.isEmpty) {
         appLogger.w(
           'WARP endpoint does not resolve (Dart-side system resolver)',
-          error: {'host': reg.peer.endpointHost},
+          error: {'host': endpointHost},
         );
       } else {
         appLogger.i(
           'WARP endpoint resolves (Dart-side system resolver)',
-          error: {'host': reg.peer.endpointHost, 'addresses': resolved},
+          error: {'host': endpointHost, 'addresses': resolved},
         );
       }
       // 1.6.19: sing-box's own logs go to a file when the config
@@ -829,43 +850,98 @@ class WarpTunnelService extends ChangeNotifier {
     }
   }
 
+  /// Strip a trailing `:port` from a stored endpoint host, so the
+  /// result is a bare hostname (or bare IP) for lookup, display, and
+  /// the sing-box config. The stored `endpointHost` carries the port
+  /// (`engage.cloudflareclient.com:2408`, as the registration API
+  /// returns it) — but `InternetAddress.lookup` needs the bare
+  /// hostname: looking up the host WITH the port always fails, which
+  /// is why 1.6.19 falsely logged "WARP endpoint does not resolve".
+  /// The config needs the same strip: sing-box parses the peer
+  /// `address` with ParseSocksaddrHostPort, which takes the whole
+  /// string as the hostname — a host WITH a port becomes a name that
+  /// can never resolve, so no handshake packet ever leaves the phone
+  /// (the 1.6.18 phone log: the probe failed in 9 ms / 2 ms).
+  /// A bare hostname, a bare IPv4 address, or a bare IPv6 literal
+  /// is returned unchanged.
+  @visibleForTesting
+  static String stripEndpointPort(String host) {
+    if (host.startsWith('[')) {
+      // Bracketed IPv6 literal, with or without :port: '[v6]' or
+      // '[v6]:port' -> 'v6' (the bare literal, no brackets).
+      final close = host.indexOf(']');
+      if (close > 0) return host.substring(1, close);
+      return host;
+    }
+    final idx = host.lastIndexOf(':');
+    if (idx <= 0) return host;
+    final after = host.substring(idx + 1);
+    if (after.isEmpty || int.tryParse(after) == null) return host;
+    final before = host.substring(0, idx);
+    // A second colon means a bare IPv6 literal — no port to strip.
+    if (before.contains(':')) return host;
+    return before;
+  }
+
   /// Resolve the endpoint hostname with the phone's system resolver
   /// (Dart-side) and return the addresses, or empty when it does not
   /// resolve. Pure lookup, never throws; bounded by [timeout].
   /// The caller logs the outcome (see [start]): a Dart-side failure
   /// points at the phone's resolver, a Dart-side success with a later
   /// probe failure points at sing-box's own DNS.
+  ///
+  /// The stored endpoint host carries its port — it is stripped
+  /// first (see [stripEndpointPort]): looking up `host:port`
+  /// always fails.
   @visibleForTesting
   static Future<List<String>> resolveEndpointHost(
     String host, {
     Duration timeout = const Duration(seconds: 3),
   }) async {
+    final bareHost = stripEndpointPort(host);
     try {
       final addresses =
-          await InternetAddress.lookup(host).timeout(timeout);
+          await InternetAddress.lookup(bareHost).timeout(timeout);
       return addresses.map((a) => a.address).toList();
     } catch (_) {
       return const [];
     }
   }
 
-  /// The sing-box log file, relative to the app's files dir: the
-  /// Kotlin side runs sing-box under `<filesDir>/warpbox` (the work
-  /// dir), so the log lives there too. Dart resolves the same path
-  /// from `getApplicationDocumentsDirectory()` (the files dir on
-  /// Android) — both sides name the same file.
+  /// The sing-box log file, relative to the app's documents dir.
+  /// NOTE (1.6.20): this is NOT the same folder the Kotlin/Go side
+  /// uses. `getApplicationDocumentsDirectory()` on Android returns
+  /// `app_flutter/`, while the Kotlin side runs sing-box under
+  /// `context.filesDir` (`files/warpbox`). The two sides name
+  /// DIFFERENT folders — the 1.6.19 comment claiming they name the
+  /// same file was wrong, and that mistake is why 1.6.19's tunnel
+  /// never started (the `app_flutter/warpbox` dir was never created).
+  /// The log path is independent of the sing-box work dir; the Dart
+  /// side creates its own directory in [_resolveSingboxLogPath]
+  /// before start.
   static const String singboxLogRelativePath = 'warpbox/singbox.log';
 
   /// Resolve the sing-box log file path for this device, once per
   /// service lifetime. Null when the files dir cannot be resolved
   /// (non-Android, or no platform channel in tests) — the config then
   /// carries no `log.output`. Never throws.
+  ///
+  /// 1.6.20: the log directory is created here, before start. Go's
+  /// O_CREATE creates the log FILE but not its parent directories,
+  /// and nobody else creates this one — the Kotlin/Go side mkdirs
+  /// `files/warpbox`, not `app_flutter/warpbox` — so without this,
+  /// box.Start fails on every port with `no such file or directory`
+  /// (the 1.6.19 phone log). If the directory cannot be created,
+  /// the path is null and the config omits `log.output`, so a
+  /// logging problem can never kill the tunnel.
   Future<String?> _resolveSingboxLogPath() async {
     if (_singboxLogPathResolved) return _singboxLogPath;
     _singboxLogPathResolved = true;
     try {
       final dir = await getApplicationDocumentsDirectory();
-      _singboxLogPath = '${dir.path}/$singboxLogRelativePath';
+      final logFile = File('${dir.path}/$singboxLogRelativePath');
+      await logFile.parent.create(recursive: true);
+      _singboxLogPath = logFile.path;
     } catch (_) {
       _singboxLogPath = null;
     }
@@ -1016,9 +1092,14 @@ class WarpTunnelService extends ChangeNotifier {
         : endpointJson is Map
             ? Map<String, dynamic>.from(endpointJson)
             : <String, dynamic>{};
-    final endpointHost = endpointMap['host']?.toString() ??
-        endpointMap['v4']?.toString() ??
-        '';
+    // The API returns the endpoint host WITH the port in one string
+    // (`engage.cloudflareclient.com:2408`). Strip it at the source:
+    // sing-box takes the config's peer `address` as the hostname
+    // verbatim, so a host WITH a port becomes a name that can never
+    // resolve. The port comes from `endpoint.ports[0]` below.
+    final endpointHost = stripEndpointPort(
+      endpointMap['host']?.toString() ?? endpointMap['v4']?.toString() ?? '',
+    );
     final ports = endpointJson is Map
         ? (endpointMap['ports'] as List<dynamic>? ?? const <dynamic>[])
         : const <dynamic>[];
@@ -1052,15 +1133,19 @@ class WarpTunnelService extends ChangeNotifier {
   /// port problem: sing-box rejects a bad config the same way on every
   /// port, so retrying ports only wastes attempts and hides the real
   /// error. Matches the Go JSON-unmarshal failure the 1.6.15 phone log
-  /// showed (`cannot unmarshal ... netip.Prefix | netip.ParsePrefix`).
-  /// A bind failure or any other start error is NOT a config error,
+  /// showed (`cannot unmarshal ... netip.Prefix | netip.ParsePrefix`),
+  /// and the sing-box logger failure the 1.6.19 phone log showed
+  /// (`start logger: open .../singbox.log: no such file or
+  /// directory` — the log file's parent dir did not exist). A bind
+  /// failure or any other start error is NOT a config error,
   /// so the port retry still runs for real port problems.
   @visibleForTesting
   static bool isConfigError(Object e) {
     final message = e.toString();
     return message.contains('cannot unmarshal') ||
         message.contains('ParsePrefix') ||
-        message.contains('initialize network');
+        message.contains('initialize network') ||
+        message.contains('start logger');
   }
 
   /// The tag of the explicit DNS server (1.6.19): the `dns.final`
@@ -1160,15 +1245,26 @@ class WarpTunnelService extends ChangeNotifier {
           'mtu': 1408,
           'peers': [
             {
-              'address': peer.endpointHost,
+              // Normalized again at the point of use: even a
+              // registration built directly with a host:port
+              // endpoint can never send a malformed name to
+              // sing-box — ParseSocksaddrHostPort would take the
+              // whole string as the hostname and the lookup would
+              // fail, so no handshake packet would ever leave the
+              // phone (the 1.6.18 phone log: probe failed in
+              // 9 ms / 2 ms).
+              'address': stripEndpointPort(peer.endpointHost),
               'port': peer.endpointPort,
               'public_key': peer.publicKey,
               'allowed_ips': ['0.0.0.0/0', '::/0'],
               'persistent_keepalive_interval': keepAliveSeconds,
-              // 1.6.18: the reserved bytes identify the account to
-              // Cloudflare — the first 3 bytes of the base64-decoded
-              // client id. [0, 0, 0] makes the handshake hang forever
-              // (the 1.6.17 phone log). The client id is already stored
+              // 1.6.18: the reserved bytes carry the client identifier
+              // for routing — the first 3 bytes of the base64-decoded
+              // client id. [0, 0, 0] is NOT a guaranteed hang:
+              // Cloudflare's own blog says messages without the
+              // identifier are still supported, "albeit with less
+              // reliable routing", so the session may be misrouted
+              // and data may not flow. The client id is already stored
               // from registration, so stored registrations heal on load
               // with no re-registration.
               'reserved': reservedBytesForClientId(registration.clientId),

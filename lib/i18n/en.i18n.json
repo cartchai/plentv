@@ -1600,6 +1600,9 @@
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
     ],
+    "changelog2339": [
+      "Fixed: the tunnel wouldn't start at all — its log file pointed at a folder that didn't exist, because the app and the tunnel named two different folders. The app now makes the folder before starting, and if it ever can't, it starts without the log file instead of failing. Also fixed the tunnel's address, which had the port number stuck on it so it could never resolve, and the address check, which made the same mistake and wrongly said it doesn't resolve"
+    ],
     "changelog2338": [
       "Fixed: the VPN tunnel started but couldn't reach anything — it couldn't look up Cloudflare's address, because the app gave it no DNS of its own and the phone's DNS feed was switched off. The tunnel now uses its own DNS (1.1.1.1) to find Cloudflare, logs what it finds, and the startup check waits a few seconds instead of deciding instantly. Also added a Reset WARP registration button in Settings under Advanced, in case the sign-up itself ever needs a fresh start"
     ],

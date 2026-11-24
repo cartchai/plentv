@@ -1,7 +1,7 @@
 name: plezy
 description: "PlenTV — a Plex, Jellyfin and Emby client for Flutter with IPTV: M3U and Xtream Codes, live TV, movies and series."
 publish_to: "none"
-version: 1.6.19-2.26.0+245
+version: 1.6.20-2.26.0+246
 
 environment:
   # Dart floor stays 3.12: freezed 3.x emits `final` constructor parameters,
