@@ -121,6 +121,18 @@ void main() {
       expect(text, isNot(contains('hunter2')));
       expect(text, contains('[REDACTED_URL]'));
     });
+
+    test('buildDebugText carries the sing-box log section (absent in tests)', () async {
+      // 1.6.19: sing-box's own logs go to a file when the tunnel
+      // config carries log.output. In tests there is no files dir and
+      // no tunnel, so the section says plainly that there is no log
+      // yet — the section itself must still be present.
+      final text = await DebugLogExportService.buildDebugText(
+        baseLogsText: 'some log\n',
+      );
+      expect(text, contains('== sing-box log =='));
+      expect(text, contains('(no sing-box log — tunnel never started)'));
+    });
   });
 
   group('summary block (1.2.9)', () {

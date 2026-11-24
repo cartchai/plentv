@@ -664,6 +664,21 @@ class Translations$settings$en {
 	/// en: 'The VPN stays off until you accept Cloudflare's terms.'
 	String get warpTermsRequired => 'The VPN stays off until you accept Cloudflare\'s terms.';
 
+	/// en: 'Reset WARP registration'
+	String get resetWarpRegistration => 'Reset WARP registration';
+
+	/// en: 'Sign up for a fresh free WARP account, replacing the current one. Only use this if the tunnel still won't connect — a fresh sign-up gets a new account, a new ID and new keys. If it fails, the current account stays put.'
+	String get resetWarpRegistrationDescription => 'Sign up for a fresh free WARP account, replacing the current one. Only use this if the tunnel still won\'t connect — a fresh sign-up gets a new account, a new ID and new keys. If it fails, the current account stays put.';
+
+	/// en: 'WARP registration reset — turn the VPN on to use the fresh account.'
+	String get resetWarpRegistrationSuccess => 'WARP registration reset — turn the VPN on to use the fresh account.';
+
+	/// en: 'Cloudflare said too many sign-ups — wait a minute and try again.'
+	String get resetWarpRegistrationRateLimited => 'Cloudflare said too many sign-ups — wait a minute and try again.';
+
+	/// en: 'The fresh sign-up failed — the current account is still there.'
+	String get resetWarpRegistrationFailed => 'The fresh sign-up failed — the current account is still there.';
+
 	/// en: 'Seconds'
 	String get secondsLabel => 'Seconds';
 
@@ -4004,6 +4019,9 @@ class Translations$about$en {
 		'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+	];
+	List<String> get changelog2338 => [
+		'Fixed: the VPN tunnel started but couldn\'t reach anything — it couldn\'t look up Cloudflare\'s address, because the app gave it no DNS of its own and the phone\'s DNS feed was switched off. The tunnel now uses its own DNS (1.1.1.1) to find Cloudflare, logs what it finds, and the startup check waits a few seconds instead of deciding instantly. Also added a Reset WARP registration button in Settings under Advanced, in case the sign-up itself ever needs a fresh start',
 	];
 	List<String> get changelog2337 => [
 		'Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts',
@@ -10451,6 +10469,11 @@ extension on Translations {
 			'settings.warpTermsAccept' => 'I accept',
 			'settings.warpTermsDecline' => 'Not now',
 			'settings.warpTermsRequired' => 'The VPN stays off until you accept Cloudflare\'s terms.',
+			'settings.resetWarpRegistration' => 'Reset WARP registration',
+			'settings.resetWarpRegistrationDescription' => 'Sign up for a fresh free WARP account, replacing the current one. Only use this if the tunnel still won\'t connect — a fresh sign-up gets a new account, a new ID and new keys. If it fails, the current account stays put.',
+			'settings.resetWarpRegistrationSuccess' => 'WARP registration reset — turn the VPN on to use the fresh account.',
+			'settings.resetWarpRegistrationRateLimited' => 'Cloudflare said too many sign-ups — wait a minute and try again.',
+			'settings.resetWarpRegistrationFailed' => 'The fresh sign-up failed — the current account is still there.',
 			'settings.secondsLabel' => 'Seconds',
 			'settings.minutesLabel' => 'Minutes',
 			'settings.secondsShort' => 's',
@@ -10746,13 +10769,13 @@ extension on Translations {
 			'settings.deinterlaceVideo' => 'Video',
 			'settings.deinterlaceVideoDescription' => 'Turn each field into a full frame. For video shot for TV, like sports, news, and concerts',
 			'settings.deinterlaceFilm' => 'Film',
+			_ => null,
+		} ?? switch (path) {
 			'settings.deinterlaceFilmDescription' => 'Restore the original frames of film and animation telecined to 29.97 fps, common on NTSC DVDs. Video shot for TV stutters. Live TV uses Video',
 			'settings.requireProfileSelectionOnOpen' => 'Ask for profile on app open',
 			'settings.requireProfileSelectionOnOpenDescription' => 'Show profile selection every time the app is opened',
 			'settings.forceTvMode' => 'Force TV mode',
 			'settings.forceTvModeDescription' => 'Force TV layout. For devices that don\'t auto-detect. Requires restart.',
-			_ => null,
-		} ?? switch (path) {
 			'settings.startInFullscreen' => 'Start in fullscreen',
 			'settings.startInFullscreenDescription' => 'Open PlenTV in fullscreen mode at launch',
 			'settings.exitFullscreenOnPlayerClose' => 'Exit fullscreen on player close',
@@ -11260,13 +11283,13 @@ extension on Translations {
 			'subtitlingStyling.useMarginsDescription' => 'Allow text subtitles in the space outside the video. Styled subtitles may keep their original placement.',
 			'subtitlingStyling.anchorToScreen' => 'Anchor to Screen',
 			'subtitlingStyling.anchorToScreenDescription' => 'Show text subtitles in the black bars below widescreen video',
+			_ => null,
+		} ?? switch (path) {
 			'subtitlingStyling.bold' => 'Bold',
 			'subtitlingStyling.italic' => 'Italic',
 			'subtitlingStyling.renderResolution' => 'Render Resolution',
 			'subtitlingStyling.renderResolutionScreen' => 'Screen resolution',
 			'subtitlingStyling.renderResolutionVideo' => 'Video resolution',
-			_ => null,
-		} ?? switch (path) {
 			'mpvConfig.title' => 'mpv.conf',
 			'mpvConfig.description' => 'Advanced video player settings',
 			'mpvConfig.presets' => 'Presets',
@@ -11689,6 +11712,7 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2338.0' => 'Fixed: the VPN tunnel started but couldn\'t reach anything — it couldn\'t look up Cloudflare\'s address, because the app gave it no DNS of its own and the phone\'s DNS feed was switched off. The tunnel now uses its own DNS (1.1.1.1) to find Cloudflare, logs what it finds, and the startup check waits a few seconds instead of deciding instantly. Also added a Reset WARP registration button in Settings under Advanced, in case the sign-up itself ever needs a fresh start',
 			'about.changelog2337.0' => 'Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts',
 			'about.changelog2336.0' => 'Fixed: turning on VPN (WARP) still failed to start — the tunnel setup told the engine to watch the network with a placeholder that always fails; it now runs without the watcher, and the tunnel starts',
 			'about.changelog2335.0' => 'Fixed: turning on VPN (WARP) failed to start — the tunnel setup sent the addresses without their network sizes, so the tunnel engine refused them; they now go out with their sizes, and the tunnel starts',
@@ -11773,14 +11797,14 @@ extension on Translations {
 			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
 			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2317.1' => 'Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV',
 			'about.changelog2317.2' => 'Fixed: the weekly catalog refresh now reads the lists one row at a time instead of all at once, cutting its biggest memory spike',
 			'about.changelog2317.3' => 'New: when a video starts playing on a low-memory TV, the app now drops the browsing lists and posters it does not need until you come back, freeing room for playback',
 			'about.changelog2317.4' => 'New: the debug log now records memory at each startup step on its own, so the next TV export shows exactly which step owns the startup peak',
 			'about.changelog2316.0' => 'Fixed: the four bare FOX, NBC, CBS and PBS rows now fill from a local affiliate\'s guide — the guess now recognises affiliate names shaped like a callsign and city, not just a channel number',
 			'about.changelog2316.1' => 'Fixed: the US guide preset now adds cleanly — a big guide file is no longer rejected part-way through its description — and a guide with one broken programme still loads the good ones around it',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2316.2' => 'Fixed: the Assign guide list now puts the closest matches on top — your channel\'s own affiliate first, then other US affiliates, with other countries at the bottom',
 			'about.changelog2315.0' => 'New: channels with no guide ID now fill from the closest US affiliate when the guide has one — FOX, NBC, CBS and PBS rows fill with an affiliate\'s guide. The Reload report counts these separately as \'affiliate guess\', so a guessed row is never shown as a certain match',
 			'about.changelog2315.1' => 'Fixed: the debug log and the channel details now name an affiliate guess as a guess, and you can keep a guessed guide for a channel from its details',
@@ -12287,14 +12311,14 @@ extension on Translations {
 			'liveTv.programsSection' => 'Programs',
 			'liveTv.now' => 'Now',
 			'liveTv.today' => 'Today',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.tomorrow' => 'Tomorrow',
 			'liveTv.midnight' => 'Midnight',
 			'liveTv.overnight' => 'Overnight',
 			'liveTv.morning' => 'Morning',
 			'liveTv.daytime' => 'Daytime',
 			'liveTv.evening' => 'Evening',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.lateNight' => 'Late Night',
 			'liveTv.whatsOn' => 'What\'s On',
 			'liveTv.watchChannel' => 'Watch Channel',
@@ -12801,14 +12825,14 @@ extension on Translations {
 			'companionRemote.errors.noNetworkInterface' => 'No network interface found',
 			'companionRemote.errors.authenticationFailed' => 'Authentication failed',
 			'companionRemote.errors.serverStartFailed' => ({required Object error}) => 'Failed to start remote server: ${error}',
+			_ => null,
+		} ?? switch (path) {
 			'companionRemote.errors.commandFailed' => ({required Object error}) => 'Failed to send remote command: ${error}',
 			'companionRemote.errors.joinTimedOut' => 'Timed out joining session',
 			'companionRemote.errors.failedToConnectAnyAddress' => 'Failed to connect to any address',
 			'companionRemote.errors.connectionLostAfterAttempts' => ({required Object attempts}) => 'Connection lost after ${attempts} attempts',
 			'companionRemote.errors.connectionLost' => 'Connection lost',
 			'companionRemote.closedBeforeAuth' => 'The connection closed before authentication',
-			_ => null,
-		} ?? switch (path) {
 			'videoSettings.playbackSpeed' => 'Playback Speed',
 			'videoSettings.normalSpeed' => 'Normal',
 			'videoSettings.sleepTimerActive' => ({required Object duration}) => 'Active (${duration})',
@@ -13315,14 +13339,14 @@ extension on Translations {
 			'iptv.epgM3uTvgIdResult' => ({required Object checked, required Object noId, required Object gained, required Object inFeed}) => '${checked} channels checked · ${noId} without a guide ID · ${gained} gain one from the playlist · ${inFeed} of those are in the guide',
 			'iptv.epgM3uTvgIdSample' => ({required Object samples}) => 'Examples: ${samples}',
 			'iptv.epgM3uTvgIdFeedNotLoaded' => 'The guide feed was not loaded, so the in-guide count could not be checked — reload the TV details first',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgM3uTvgIdFailed' => ({required Object reason}) => 'The playlist check failed: ${reason}',
 			'iptv.epgM3uTvgIdApply' => 'Apply these guide IDs',
 			'iptv.epgM3uTvgIdApplyNote' => ({required Object gained}) => 'Applying gives ${gained} channels a guide ID, then reloads the guide so they can match',
 			'iptv.epgM3uTvgIdApplied' => ({required Object applied}) => 'Applied ${applied} guide IDs — reloading the guide…',
 			'iptv.epgM3uTvgIdAppliedSkipped' => ({required Object applied, required Object skipped}) => 'Applied ${applied} guide IDs — ${skipped} kept their hand-assigned guide ID — reloading the guide…',
 			'iptv.epgM3uTvgIdNoGain' => 'The playlist carries no guide IDs the feed doesn\'t already have',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgM3uTvgIdStalled' => ({required Object received, required Object kept}) => 'the playlist download stalled — ${received} received, ${kept} kept, tap the check again to resume from there',
 			'iptv.epgM3uTvgIdUnreachable' => 'the playlist could not be reached — check the connection and try again',
 			'iptv.epgM3uTvgIdParseTimedOut' => 'the playlist downloaded but reading it timed out — try again',

@@ -231,6 +231,12 @@ void main() {
         probeClientFactory: (_) => MockClient((request) async {
           return http.Response('', 200);
         }),
+        // 1.6.19: the detached probe now waits 2 s before its first
+        // attempt — drive it fast here so the 200 ms wait below still
+        // sees the outcome.
+        probeInitialDelay: const Duration(milliseconds: 10),
+        probeBetweenAttempts: const Duration(milliseconds: 10),
+        probeAttemptTimeout: const Duration(milliseconds: 100),
       );
       addTearDown(service.dispose);
       final calls = _ChannelCalls();

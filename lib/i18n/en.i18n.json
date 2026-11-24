@@ -234,6 +234,11 @@
     "warpTermsAccept": "I accept",
     "warpTermsDecline": "Not now",
     "warpTermsRequired": "The VPN stays off until you accept Cloudflare's terms.",
+    "resetWarpRegistration": "Reset WARP registration",
+    "resetWarpRegistrationDescription": "Sign up for a fresh free WARP account, replacing the current one. Only use this if the tunnel still won't connect — a fresh sign-up gets a new account, a new ID and new keys. If it fails, the current account stays put.",
+    "resetWarpRegistrationSuccess": "WARP registration reset — turn the VPN on to use the fresh account.",
+    "resetWarpRegistrationRateLimited": "Cloudflare said too many sign-ups — wait a minute and try again.",
+    "resetWarpRegistrationFailed": "The fresh sign-up failed — the current account is still there.",
     "secondsLabel": "Seconds",
     "minutesLabel": "Minutes",
     "secondsShort": "s",
@@ -1594,6 +1599,9 @@
       "Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime",
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
+    ],
+    "changelog2338": [
+      "Fixed: the VPN tunnel started but couldn't reach anything — it couldn't look up Cloudflare's address, because the app gave it no DNS of its own and the phone's DNS feed was switched off. The tunnel now uses its own DNS (1.1.1.1) to find Cloudflare, logs what it finds, and the startup check waits a few seconds instead of deciding instantly. Also added a Reset WARP registration button in Settings under Advanced, in case the sign-up itself ever needs a fresh start"
     ],
     "changelog2337": [
       "Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts"

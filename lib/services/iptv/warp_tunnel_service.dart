@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show HttpClient, Platform;
+import 'dart:io' show File, HttpClient, InternetAddress, Platform;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../utils/app_logger.dart';
 import '../settings_service.dart';
@@ -156,6 +157,40 @@ class WarpRegistration {
       peer.publicKey.isNotEmpty;
 }
 
+/// A WARP registration failure with the HTTP status Cloudflare
+/// answered (1.6.19). The reset flow needs the status to tell a
+/// throttle (429: too many sign-ups too fast — "wait a minute and try
+/// again") from any other failure. [WarpTunnelService.start] treats it
+/// like any other start failure (its message is the last error).
+class WarpRegistrationException implements Exception {
+  const WarpRegistrationException(this.statusCode);
+
+  /// The HTTP status Cloudflare answered.
+  final int statusCode;
+
+  /// True when Cloudflare throttled the sign-up: too many
+  /// registrations too fast. A single re-registration is safe;
+  /// repeated rapid taps are the only risk.
+  bool get isRateLimited => statusCode == 429;
+
+  @override
+  String toString() => 'WARP registration failed: HTTP $statusCode';
+}
+
+/// The outcome of [WarpTunnelService.resetRegistration].
+enum WarpResetResult {
+  /// A fresh registration replaced the stored one.
+  replaced,
+
+  /// Cloudflare throttled the fresh sign-up (HTTP 429): the stored
+  /// registration is untouched, so the old account still works.
+  rateLimited,
+
+  /// The fresh sign-up failed for another reason: the stored
+  /// registration is untouched.
+  failed,
+}
+
 /// The in-app VPN (WARP) service (1.6.15): the app registers a free
 /// WARP account for itself, opens a WireGuard tunnel to Cloudflare
 /// with sing-box running in-process (no VpnService, no system VPN
@@ -176,8 +211,14 @@ class WarpRegistration {
 /// meet on one channel; a missing channel (non-Android) is a clean
 /// start failure, never a crash.
 class WarpTunnelService extends ChangeNotifier {
-  WarpTunnelService({http.Client? httpClient, http.Client Function(int proxyPort)? probeClientFactory})
-      : _httpClient = httpClient ?? http.Client(),
+  WarpTunnelService({
+    http.Client? httpClient,
+    http.Client Function(int proxyPort)? probeClientFactory,
+    this._probeInitialDelay = probeInitialDelayDefault,
+    this._probeBetweenAttempts = probeBetweenAttemptsDefault,
+    this._probeAttemptTimeout = probeAttemptTimeoutDefault,
+    this._probeMaxAttempts = probeMaxAttemptsDefault,
+  })  : _httpClient = httpClient ?? http.Client(),
         _probeClientFactory = probeClientFactory ?? _defaultProbeClientFactory;
 
   /// The app-wide instance. Tests build their own with an injected
@@ -189,6 +230,16 @@ class WarpTunnelService extends ChangeNotifier {
   /// the target's status never matters, only that something answered
   /// through the tunnel.
   static final Uri _probeUrl = Uri.parse('https://one.one.one.one/');
+
+  /// The post-start probe's timings (1.6.19): the defaults wait 2 s
+  /// for the handshake to start, then try up to 3 times with 2 s
+  /// attempts 2 s apart (attempts start ~2 s, ~6 s and ~10 s after
+  /// start). Injectable via the constructor so tests can drive the
+  /// detached probe fast instead of waiting ~10 s.
+  static const Duration probeInitialDelayDefault = Duration(seconds: 2);
+  static const Duration probeBetweenAttemptsDefault = Duration(seconds: 2);
+  static const Duration probeAttemptTimeoutDefault = Duration(seconds: 2);
+  static const int probeMaxAttemptsDefault = 3;
 
   /// Derive the WireGuard `reserved` bytes for the WARP peer from the
   /// stored client id: the first 3 bytes of the base64-decoded
@@ -265,6 +316,14 @@ class WarpTunnelService extends ChangeNotifier {
   /// instead of the real network.
   final http.Client Function(int proxyPort) _probeClientFactory;
 
+  /// The post-start probe's timings for this instance (see the
+  /// defaults above): the detached probe run uses these; direct calls
+  /// to [probeTunnelWithRetries] take their own parameters.
+  final Duration _probeInitialDelay;
+  final Duration _probeBetweenAttempts;
+  final Duration _probeAttemptTimeout;
+  final int _probeMaxAttempts;
+
   /// The future of the current startup restore attempt (see
   /// [restoreIfEnabled]): the first IPTV health check awaits it so a
   /// cold start with WARP left on never probes the panel before the
@@ -285,6 +344,13 @@ class WarpTunnelService extends ChangeNotifier {
   /// carries it); Dart clients build their `PROXY 127.0.0.1:<port>`
   /// string from this.
   int _proxyPort = -1;
+
+  /// The sing-box log file path, resolved once per service lifetime
+  /// (see [_resolveSingboxLogPath]): null means the path could not be
+  /// resolved on this device (no files dir), so the config carries no
+  /// `log.output` and sing-box logs nowhere.
+  String? _singboxLogPath;
+  bool _singboxLogPathResolved = false;
 
   /// Provider hostnames (lowercased) whose traffic rides the tunnel.
   /// Registered by [IptvClient] from the panel's server URL when a
@@ -400,6 +466,43 @@ class WarpTunnelService extends ChangeNotifier {
           jsonEncode(reg.toJson()),
         );
       }
+      // 1.6.19 diagnostics: the next phone log must show what was
+      // actually sent and what resolved. The derived reserved bytes
+      // (the 1.6.18 log's silence on them proves nothing either way),
+      // and a Dart-side lookup of the endpoint hostname — sing-box
+      // resolves the same hostname lazily at first dial, and the
+      // 1.6.18 phone log showed the dial failing in 2 ms, which means
+      // the hostname never resolved inside sing-box. A Dart-side
+      // failure points at the phone's resolver; a Dart-side success
+      // with a later probe failure points at sing-box's own DNS.
+      // Bounded and never throws: a failed lookup must not stop the start.
+      appLogger.i('WARP tunnel starting', error: {
+        'endpoint': '${reg.peer.endpointHost}:${reg.peer.endpointPort}',
+        'reserved': reservedBytesForClientId(reg.clientId),
+      });
+      final resolved = await resolveEndpointHost(reg.peer.endpointHost);
+      if (resolved.isEmpty) {
+        appLogger.w(
+          'WARP endpoint does not resolve (Dart-side system resolver)',
+          error: {'host': reg.peer.endpointHost},
+        );
+      } else {
+        appLogger.i(
+          'WARP endpoint resolves (Dart-side system resolver)',
+          error: {'host': reg.peer.endpointHost, 'addresses': resolved},
+        );
+      }
+      // 1.6.19: sing-box's own logs go to a file when the config
+      // carries log.output — truncate it so each start gets a fresh
+      // log instead of appending forever. Best-effort: a stale log
+      // must never stop a start.
+      final logPath = await _resolveSingboxLogPath();
+      if (logPath != null) {
+        try {
+          final logFile = File(logPath);
+          if (await logFile.exists()) await logFile.delete();
+        } catch (_) {}
+      }
       // Try the proxy ports in order: a port already in use by
       // something else on the phone fails the bind fast, and the next
       // port is tried. A tunnel that starts on any port is up; a
@@ -408,7 +511,11 @@ class WarpTunnelService extends ChangeNotifier {
       Object? lastFailure;
       for (final port in proxyPorts) {
         try {
-          final config = buildSingBoxConfig(registration: reg, proxyPort: port);
+          final config = buildSingBoxConfig(
+            registration: reg,
+            proxyPort: port,
+            singboxLogPath: logPath,
+          );
           await _channel.invokeMethod<String>('start', {
             'configJson': config,
             'proxyPort': port,
@@ -419,10 +526,10 @@ class WarpTunnelService extends ChangeNotifier {
           // 1.6.18: "tunnel on" must mean the tunnel carries traffic —
           // Start() returning nil only proves the box started, not that
           // the handshake completed (the 1.6.17 phone log: on, yet every
-          // proxied request 502d). One detached probe through the proxy,
-          // logged with its outcome; it never delays the toggle and
-          // never throws, so it can never turn a good start into a
-          // failed one.
+          // proxied request 502d). One detached probe run through the
+          // proxy (with retries, 1.6.19), logged with its outcome; it
+          // never delays the toggle and never throws, so it can never
+          // turn a good start into a failed one.
           unawaited(_runPostStartProbe(port));
           return true;
         } on MissingPluginException {
@@ -473,6 +580,48 @@ class WarpTunnelService extends ChangeNotifier {
     _proxyPort = -1;
     _setState(WarpTunnelState.off);
     appLogger.i('WARP tunnel off');
+  }
+
+  /// Forget the stored WARP registration and sign up fresh (1.6.19,
+  /// Settings → Advanced → "Reset WARP registration"). The tunnel
+  /// must be stopped first — the caller (the Settings UI) writes the
+  /// toggle pref false and stops the tunnel before calling this.
+  ///
+  /// The fresh sign-up runs FIRST and replaces the stored registration
+  /// ONLY on success: clearing first and then hitting a 429 would
+  /// leave the user with NO registration at all. On failure the old
+  /// registration stays put, so the old account still works, and the
+  /// result says why ([WarpResetResult.rateLimited] for a 429 —
+  /// "wait a minute and try again" — [WarpResetResult.failed] for
+  /// anything else). The terms acceptance is kept: the user already
+  /// accepted Cloudflare's terms, and a fresh sign-up does not need a
+  /// new accept. Explicit only: nothing calls this automatically.
+  Future<WarpResetResult> resetRegistration() async {
+    await stop();
+    try {
+      final reg = await _register();
+      await SettingsService.instance.write(
+        SettingsService.iptvWarpRegistration,
+        jsonEncode(reg.toJson()),
+      );
+      notifyListeners();
+      appLogger.i('WARP registration reset: fresh account stored');
+      return WarpResetResult.replaced;
+    } on WarpRegistrationException catch (e) {
+      appLogger.w(
+        'WARP registration reset failed: keeping the stored account',
+        error: e,
+      );
+      if (e.isRateLimited) return WarpResetResult.rateLimited;
+      return WarpResetResult.failed;
+    } catch (e, st) {
+      appLogger.w(
+        'WARP registration reset failed: keeping the stored account',
+        error: e,
+        stackTrace: st,
+      );
+      return WarpResetResult.failed;
+    }
   }
 
   /// Restore the tunnel at app startup when the user left it on: the
@@ -533,39 +682,121 @@ class WarpTunnelService extends ChangeNotifier {
   /// retries, never throws; the outcome is logged and kept in
   /// [lastProbeOk]. [client] is injectable for tests; null builds the
   /// real proxied client for [proxyPort] (or the current port when
-  /// omitted).
+  /// omitted). [quiet] drops the per-attempt log to debug so the retry
+  /// loop ([probeTunnelWithRetries]) can log the final verdict once
+  /// instead of once per attempt.
   @visibleForTesting
-  Future<bool> probeTunnel({http.Client? client, int? proxyPort}) async {
+  Future<bool> probeTunnel({
+    http.Client? client,
+    int? proxyPort,
+    Duration timeout = const Duration(seconds: 15),
+    bool quiet = false,
+  }) async {
     final port = proxyPort ?? _proxyPort;
     if (port <= 0) return false;
     final probeClient = client ?? _probeClientFactory(port);
     try {
       final response =
-          await probeClient.head(_probeUrl).timeout(const Duration(seconds: 15));
+          await probeClient.head(_probeUrl).timeout(timeout);
       final ok = response.statusCode >= 200 && response.statusCode < 400;
       _lastProbeOk = ok;
       if (ok) {
-        appLogger.i(
-          'WARP tunnel probe OK: traffic flows through the proxy',
-          error: {'status': response.statusCode, 'proxyPort': port},
-        );
+        if (quiet) {
+          appLogger.d(
+            'WARP tunnel probe OK: traffic flows through the proxy',
+            error: {'status': response.statusCode, 'proxyPort': port},
+          );
+        } else {
+          appLogger.i(
+            'WARP tunnel probe OK: traffic flows through the proxy',
+            error: {'status': response.statusCode, 'proxyPort': port},
+          );
+        }
       } else {
-        appLogger.w(
-          'WARP tunnel probe failed: HTTP ${response.statusCode} through the proxy (tunnel may not carry traffic)',
-          error: {'status': response.statusCode, 'proxyPort': port},
-        );
+        if (quiet) {
+          appLogger.d(
+            'WARP tunnel probe failed: HTTP ${response.statusCode} through the proxy (tunnel may not carry traffic)',
+            error: {'status': response.statusCode, 'proxyPort': port},
+          );
+        } else {
+          appLogger.w(
+            'WARP tunnel probe failed: HTTP ${response.statusCode} through the proxy (tunnel may not carry traffic)',
+            error: {'status': response.statusCode, 'proxyPort': port},
+          );
+        }
       }
       return ok;
     } catch (e) {
       _lastProbeOk = false;
-      appLogger.w(
-        'WARP tunnel probe failed: the tunnel is up but carries no traffic (handshake may not have completed)',
-        error: e,
-      );
+      if (quiet) {
+        appLogger.d(
+          'WARP tunnel probe failed: the tunnel is up but carries no traffic (handshake may not have completed)',
+          error: e,
+        );
+      } else {
+        appLogger.w(
+          'WARP tunnel probe failed: the tunnel is up but carries no traffic (handshake may not have completed)',
+          error: e,
+        );
+      }
       return false;
     } finally {
       if (client == null) probeClient.close();
     }
+  }
+
+  /// The post-start probe with retries (1.6.19): the single-shot
+  /// probe fired 2 ms after start on the 1.6.18 phone log — before the
+  /// handshake had any chance to complete — and its instant failure
+  /// said nothing about the handshake. This waits [initialDelay] for
+  /// the handshake to start, then tries up to [maxAttempts] times
+  /// (attempts start ~2 s, ~6 s and ~10 s after start with the
+  /// defaults), stopping early on success. Bounded: the per-attempt
+  /// timeout and the gaps keep the worst case to about a dozen
+  /// seconds; it hits Cloudflare's own 1.1.1.1 page, never the panel,
+  /// so three attempts are not a retry storm and not hammering.
+  /// Attempts are logged at debug; only the final verdict is logged
+  /// at info/warning. Never throws; the outcome is kept in
+  /// [lastProbeOk]. All timings are parameters so tests can drive the
+  /// loop fast with an injected [client].
+  @visibleForTesting
+  Future<bool> probeTunnelWithRetries({
+    http.Client? client,
+    int? proxyPort,
+    Duration initialDelay = probeInitialDelayDefault,
+    Duration betweenAttempts = probeBetweenAttemptsDefault,
+    Duration attemptTimeout = probeAttemptTimeoutDefault,
+    int maxAttempts = probeMaxAttemptsDefault,
+  }) async {
+    final port = proxyPort ?? _proxyPort;
+    if (port <= 0) return false;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      await Future<void>.delayed(
+        attempt == 1 ? initialDelay : betweenAttempts,
+      );
+      final ok = await probeTunnel(
+        client: client,
+        proxyPort: port,
+        timeout: attemptTimeout,
+        quiet: true,
+      );
+      if (ok) {
+        appLogger.i(
+          'WARP tunnel probe OK after $attempt attempt(s): traffic flows through the proxy',
+          error: {'attempts': attempt, 'proxyPort': port},
+        );
+        return true;
+      }
+      appLogger.d(
+        'WARP tunnel probe attempt $attempt/$maxAttempts failed, retrying',
+        error: {'attempt': attempt, 'proxyPort': port},
+      );
+    }
+    appLogger.w(
+      'WARP tunnel probe failed after $maxAttempts attempts: the tunnel is up but carries no traffic',
+      error: {'attempts': maxAttempts, 'proxyPort': port},
+    );
+    return false;
   }
 
   /// The real probe client: a short-lived Dart client pointed at the
@@ -579,13 +810,97 @@ class WarpTunnelService extends ChangeNotifier {
 
   /// Run the post-start probe detached from start(): it must never
   /// delay the toggle or turn a good start into a failed one.
-  /// [probeTunnel] never throws; this is belt-and-braces.
+  /// [probeTunnelWithRetries] never throws; this is belt-and-braces.
+  /// The probe waits and retries (1.6.19) instead of firing once 2 ms
+  /// after start: the single-shot probe on the 1.6.18 phone log failed
+  /// before the handshake had any chance to complete.
   Future<void> _runPostStartProbe(int port) async {
     try {
-      await probeTunnel(proxyPort: port);
+      await probeTunnelWithRetries(
+        proxyPort: port,
+        initialDelay: _probeInitialDelay,
+        betweenAttempts: _probeBetweenAttempts,
+        attemptTimeout: _probeAttemptTimeout,
+        maxAttempts: _probeMaxAttempts,
+      );
     } catch (_) {
-      // Unreachable in practice — probeTunnel swallows its own
+      // Unreachable in practice — the probe swallows its own
       // failures — but a probe must never surface as a start failure.
+    }
+  }
+
+  /// Resolve the endpoint hostname with the phone's system resolver
+  /// (Dart-side) and return the addresses, or empty when it does not
+  /// resolve. Pure lookup, never throws; bounded by [timeout].
+  /// The caller logs the outcome (see [start]): a Dart-side failure
+  /// points at the phone's resolver, a Dart-side success with a later
+  /// probe failure points at sing-box's own DNS.
+  @visibleForTesting
+  static Future<List<String>> resolveEndpointHost(
+    String host, {
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    try {
+      final addresses =
+          await InternetAddress.lookup(host).timeout(timeout);
+      return addresses.map((a) => a.address).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// The sing-box log file, relative to the app's files dir: the
+  /// Kotlin side runs sing-box under `<filesDir>/warpbox` (the work
+  /// dir), so the log lives there too. Dart resolves the same path
+  /// from `getApplicationDocumentsDirectory()` (the files dir on
+  /// Android) — both sides name the same file.
+  static const String singboxLogRelativePath = 'warpbox/singbox.log';
+
+  /// Resolve the sing-box log file path for this device, once per
+  /// service lifetime. Null when the files dir cannot be resolved
+  /// (non-Android, or no platform channel in tests) — the config then
+  /// carries no `log.output`. Never throws.
+  Future<String?> _resolveSingboxLogPath() async {
+    if (_singboxLogPathResolved) return _singboxLogPath;
+    _singboxLogPathResolved = true;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      _singboxLogPath = '${dir.path}/$singboxLogRelativePath';
+    } catch (_) {
+      _singboxLogPath = null;
+    }
+    return _singboxLogPath;
+  }
+
+  /// The sing-box log file path for the debug-log export, resolved the
+  /// same way as [_resolveSingboxLogPath] but static so the export
+  /// service can call it without the tunnel service instance. Null
+  /// when the files dir cannot be resolved.
+  static Future<String?> resolveSingboxLogPath() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      return '${dir.path}/$singboxLogRelativePath';
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Read the tail of a sing-box log file (last [maxLines] lines, or
+  /// the whole file when shorter). Pure file read, never throws:
+  /// returns '' when the file does not exist or cannot be read. The
+  /// debug-log export calls this with the resolved log path.
+  static Future<String> readSingboxLogTail(
+    String logPath, {
+    int maxLines = 200,
+  }) async {
+    try {
+      final file = File(logPath);
+      if (!await file.exists()) return '';
+      final lines = await file.readAsLines();
+      if (lines.length <= maxLines) return lines.join('\n');
+      return lines.sublist(lines.length - maxLines).join('\n');
+    } catch (_) {
+      return '';
     }
   }
 
@@ -632,9 +947,9 @@ class WarpTunnelService extends ChangeNotifier {
         )
         .timeout(const Duration(seconds: 30));
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError(
-        'WARP registration failed: HTTP ${response.statusCode}',
-      );
+      // 1.6.19: typed so the reset flow can tell a throttle (429)
+      // from any other failure — and so start() can surface it plainly.
+      throw WarpRegistrationException(response.statusCode);
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
@@ -748,22 +1063,58 @@ class WarpTunnelService extends ChangeNotifier {
         message.contains('initialize network');
   }
 
+  /// The tag of the explicit DNS server (1.6.19): the `dns.final`
+  /// value must name this tag — with no rule matching, the router
+  /// falls back to the transport `final` names, or the dead `local`
+  /// transport when `final` is empty.
+  static const String dnsServerTag = 'dns-direct';
+
+  /// The explicit DNS server the tunnel uses to resolve its endpoint
+  /// (1.6.19): Cloudflare's 1.1.1.1 over plain UDP, a literal IP so
+  /// the server itself needs no resolution.
+  static const String dnsServerAddress = '1.1.1.1';
+
   /// The sing-box config for the tunnel: one mixed inbound (the local
-  /// HTTP proxy on 127.0.0.1), one WireGuard endpoint (the peer), and
-  /// one route rule sending everything to the endpoint. The endpoint
-  /// runs on gVisor's userspace stack (`system` off — the default), so
-  /// no TUN and no kernel WireGuard are involved. Pure (no I/O) so
-  /// tests can assert the exact shape. The config is built from the
-  /// peer struct, so a future Oracle peer is a different [WarpPeer],
-  /// not a different builder.
+  /// HTTP proxy on 127.0.0.1), one WireGuard endpoint (the peer), one
+  /// explicit DNS server (1.6.19 — see below), and one route rule
+  /// sending everything to the endpoint. The endpoint runs on gVisor's
+  /// userspace stack (`system` off — the default), so no TUN and no
+  /// kernel WireGuard are involved. Pure (no I/O) so tests can assert
+  /// the exact shape. The config is built from the peer struct, so a
+  /// future Oracle peer is a different [WarpPeer], not a different
+  /// builder.
+  ///
+  /// The `dns` section (1.6.19): without it sing-box falls back to its
+  /// `local` DNS transport, which reads /etc/resolv.conf — a file that
+  /// does not exist in the Android app sandbox — so the endpoint
+  /// hostname never resolves, the handshake never starts, and the
+  /// first dial fails in milliseconds (the 1.6.18 phone log). The
+  /// server carries no detour, so its queries go out directly on the
+  /// system network, never through the tunnel: the tunnel needs DNS
+  /// to start, so routing DNS through it would deadlock the
+  /// handshake. No `strategy` is set: sing-box's default resolves A
+  /// and AAAA in parallel and sorts IPv4 first. No `outbounds`
+  /// section is needed: with no detour the DNS transport dials
+  /// directly and the route table never sees the queries.
+  ///
+  /// [singboxLogPath] (1.6.19): when given, the config points
+  /// sing-box's own logs at that file (`log.output`) so the next phone
+  /// debug log can show WHY a start fails — sing-box's stderr is
+  /// /dev/null for an Android app process. Null (the default) keeps
+  /// the old behaviour: no `output` key.
   @visibleForTesting
   static String buildSingBoxConfig({
     required WarpRegistration registration,
     required int proxyPort,
+    String? singboxLogPath,
   }) {
     final peer = registration.peer;
+    final logSection = <String, dynamic>{'level': 'warn'};
+    if (singboxLogPath != null && singboxLogPath.isNotEmpty) {
+      logSection['output'] = singboxLogPath;
+    }
     final config = <String, dynamic>{
-      'log': {'level': 'warn'},
+      'log': logSection,
       'inbounds': [
         {
           'type': 'mixed',
@@ -772,6 +1123,31 @@ class WarpTunnelService extends ChangeNotifier {
           'listen_port': proxyPort,
         },
       ],
+      'dns': {
+        'servers': [
+          {
+            'type': 'udp',
+            'tag': dnsServerTag,
+            'server': dnsServerAddress,
+            'server_port': 53,
+            // No detour: without one, the DNS transport dials
+            // 1.1.1.1 directly on the system network — never through
+            // the tunnel (the tunnel needs DNS to start, so routing
+            // DNS through it would deadlock the handshake) and never
+            // through the route table. A `detour: "direct"` is NOT
+            // the way to say that: sing-box rejects a detour to an
+            // empty direct outbound at box.Start ("detour to an empty
+            // direct outbound makes no sense"), and the auto-created
+            // direct outbound is empty (verified by the Go Start test).
+          },
+        ],
+        // Mandatory, not optional: with no DNS rule matching, the
+        // router falls back to the transport this names — or the dead
+        // `local` transport when it is empty. A dns section without
+        // `final` leaves endpoint resolution exactly where 1.6.18
+        // had it: broken.
+        'final': dnsServerTag,
+      },
       'endpoints': [
         {
           'type': 'wireguard',

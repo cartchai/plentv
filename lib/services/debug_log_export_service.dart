@@ -17,6 +17,7 @@ import '../utils/last_decode_stats.dart';
 import 'downloads_media_store.dart';
 import 'file_picker_service.dart';
 import 'iptv/iptv_refusal_log.dart';
+import 'iptv/warp_tunnel_service.dart';
 import 'last_crash_store.dart';
 import 'lowend/frame_time_collector.dart';
 import 'lowend/phase_rss_sampler.dart';
@@ -460,9 +461,29 @@ class DebugLogExportService {
     buffer.writeln('== Relief valve ==');
     buffer.writeln(ReliefLog.summarizeLogText(baseLogsText));
     buffer.writeln();
+    buffer.writeln('== sing-box log ==');
+    buffer.writeln(await buildSingboxLogSection());
+    buffer.writeln();
     buffer.writeln('== Last crash ==');
     buffer.writeln(await buildLastCrashSection());
     return LogRedactionManager.redact(buffer.toString());
+  }
+
+  /// The sing-box log tail (1.6.19): sing-box's own logs go to a file
+  /// when the tunnel config carries `log.output` — the Dart debug log
+  /// cannot see them otherwise (stderr is /dev/null for an Android
+  /// app process). The last 200 lines, or a plain line saying there
+  /// is no log yet (the tunnel never started). Never throws.
+  static Future<String> buildSingboxLogSection() async {
+    try {
+      final logPath = await WarpTunnelService.resolveSingboxLogPath();
+      if (logPath == null) return '(no sing-box log — tunnel never started)';
+      final tail = await WarpTunnelService.readSingboxLogTail(logPath);
+      if (tail.isEmpty) return '(no sing-box log — tunnel never started)';
+      return tail;
+    } catch (_) {
+      return '(no sing-box log — tunnel never started)';
+    }
   }
 
   /// Test seam: when set, the TV branch uses this instead of

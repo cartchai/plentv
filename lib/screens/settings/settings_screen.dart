@@ -146,6 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kIptvLiveTs = 'iptv_live_ts';
   static const _kIptvPreferIpv4 = 'iptv_prefer_ipv4';
   static const _kWarpVpn = 'iptv_warp_vpn';
+  static const _kResetWarpRegistration = 'reset_warp_registration';
   static const _kExportSettings = 'export_settings';
   static const _kImportSettings = 'import_settings';
   static const _kExportForkBackup = 'export_fork_backup';
@@ -728,6 +729,56 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
     );
   }
 
+  /// The Reset WARP registration action (1.6.19): signs the app up
+  /// for a fresh free WARP account, replacing the stored one. The
+  /// tunnel is stopped first (and the switch turned off), and the
+  /// fresh sign-up runs before anything is replaced — if it fails,
+  /// the current account stays put. A 429 is surfaced plainly as
+  /// "wait a minute and try again" instead of a generic failure.
+  Future<void> _showResetWarpRegistrationDialog() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: t.settings.resetWarpRegistration,
+      message: t.settings.resetWarpRegistrationDescription,
+      confirmText: t.common.reset,
+      isDestructive: true,
+    );
+    if (!mounted || !confirmed) return;
+    final service = WarpTunnelService.instance;
+    // The tunnel must be stopped first: a reset while it is on would
+    // leave a running tunnel with no account behind it.
+    if (service.isOn) {
+      final failure = await const SettingsMutationService().write(
+        context,
+        settings.SettingsService.iptvWarpVpn,
+        false,
+      );
+      if (failure != null && mounted) {
+        showErrorSnackBar(context, failure.display);
+      }
+      await service.stop();
+    }
+    final result = await service.resetRegistration();
+    if (!mounted) return;
+    switch (result) {
+      case WarpResetResult.replaced:
+        showSuccessSnackBar(
+          context,
+          t.settings.resetWarpRegistrationSuccess,
+        );
+      case WarpResetResult.rateLimited:
+        showErrorSnackBar(
+          context,
+          t.settings.resetWarpRegistrationRateLimited,
+        );
+      case WarpResetResult.failed:
+        showErrorSnackBar(
+          context,
+          t.settings.resetWarpRegistrationFailed,
+        );
+    }
+  }
+
   Widget _buildAdvancedSection() {
     return SettingsGroup(
       title: t.settings.advanced,
@@ -907,6 +958,18 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
         // static description. Independent of Super Spoof and Prefer
         // IPv4; while it is on, Cronet is forced off (no proxy API).
         _warpVpnRow(),
+        // 1.6.19 (Reset WARP registration): signs the app up for a
+        // fresh free WARP account, replacing the stored one — only
+        // for when the tunnel still won't connect. The fresh sign-up
+        // runs before anything is replaced, so a failure leaves the
+        // current account in place.
+        SettingNavigationTile(
+          focusNode: _focusTracker.get(_kResetWarpRegistration),
+          icon: Symbols.restart_alt_rounded,
+          title: t.settings.resetWarpRegistration,
+          subtitle: t.settings.resetWarpRegistrationDescription,
+          onTap: () => _showResetWarpRegistrationDialog(),
+        ),
         SettingNavigationTile(
           focusNode: _focusTracker.get(_kViewLogs),
           icon: Symbols.article_rounded,

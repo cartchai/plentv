@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -85,7 +87,15 @@ func reservedOf(t *testing.T, configJSON string) []int {
 // derived from the fixed test client id (1.6.18) — the same derivation
 // the Dart side applies to the stored client id — never [0, 0, 0],
 // which makes Cloudflare ignore the handshake.
-func warpConfig(t *testing.T, proxyPort int) string {
+// The config carries the explicit DNS section (1.6.19): a UDP server
+// at 1.1.1.1 with no detour (its queries go out directly on the
+// system network, never through the tunnel), with dns.final pointing
+// at it — without `final` the router falls back to the dead `local`
+// transport and endpoint resolution stays broken. When
+// logPath is non-empty the config also carries log.output pointing
+// there, so sing-box's own logs land in a file (the Dart side tails
+// it into the debug-log export).
+func warpConfig(t *testing.T, proxyPort int, logPath string) string {
 	t.Helper()
 	var priv [32]byte
 	if _, err := rand.Read(priv[:]); err != nil {
@@ -93,11 +103,21 @@ func warpConfig(t *testing.T, proxyPort int) string {
 	}
 	privB64 := base64.StdEncoding.EncodeToString(priv[:])
 	reserved := derivedReserved(t, testClientID)
+	logOutput := ""
+	if logPath != "" {
+		logOutput = fmt.Sprintf(`, "output": %q`, logPath)
+	}
 	return fmt.Sprintf(`{
-  "log": {"level": "warn"},
+  "log": {"level": "warn"%s},
   "inbounds": [
     {"type": "mixed", "tag": "proxy-in", "listen": "127.0.0.1", "listen_port": %d}
   ],
+  "dns": {
+    "servers": [
+      {"type": "udp", "tag": "dns-direct", "server": "1.1.1.1", "server_port": 53}
+    ],
+    "final": "dns-direct"
+  },
   "endpoints": [
     {
       "type": "wireguard", "tag": "wg-ep",
@@ -115,12 +135,72 @@ func warpConfig(t *testing.T, proxyPort int) string {
     }
   ],
   "route": {"rules": [{"outbound": "wg-ep"}]}
-}`, proxyPort, privB64, warpEndpoint, warpPeerKey, reserved[0], reserved[1], reserved[2])
+}`, logOutput, proxyPort, privB64, warpEndpoint, warpPeerKey, reserved[0], reserved[1], reserved[2])
 }
 
 func TestCheckConfigWarpAccepts(t *testing.T) {
-	if err := warpbox.CheckConfig(warpConfig(t, 18081)); err != nil {
+	if err := warpbox.CheckConfig(warpConfig(t, 18081, "")); err != nil {
 		t.Fatalf("CheckConfig(warp) = %v, want nil", err)
+	}
+}
+
+// dnsOf parses a sing-box config and returns its dns section.
+func dnsOf(t *testing.T, configJSON string) map[string]any {
+	t.Helper()
+	var parsed struct {
+		DNS map[string]any `json:"dns"`
+	}
+	if err := json.Unmarshal([]byte(configJSON), &parsed); err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if parsed.DNS == nil {
+		t.Fatal("config has no dns section")
+	}
+	return parsed.DNS
+}
+
+// TestWarpConfigHasExplicitDNS (1.6.19): the config must carry an
+// explicit DNS section — a UDP server at 1.1.1.1 with no detour —
+// AND dns.final pointing at that server.
+// Without `final`, the router falls back to the dead `local`
+// transport when no rule matches, and endpoint resolution stays
+// exactly where 1.6.18 had it: broken. On the 1.6.18 base this test
+// FAILS — the fixture has no dns section at all.
+func TestWarpConfigHasExplicitDNS(t *testing.T) {
+	dns := dnsOf(t, warpConfig(t, 18081, ""))
+	servers, ok := dns["servers"].([]any)
+	if !ok || len(servers) != 1 {
+		t.Fatalf("dns.servers = %v, want exactly one server", dns["servers"])
+	}
+	server, ok := servers[0].(map[string]any)
+	if !ok {
+		t.Fatalf("dns.servers[0] = %T, want an object", servers[0])
+	}
+	if server["type"] != "udp" {
+		t.Fatalf("dns server type = %v, want udp", server["type"])
+	}
+	if server["tag"] != "dns-direct" {
+		t.Fatalf("dns server tag = %v, want dns-direct", server["tag"])
+	}
+	if server["server"] != "1.1.1.1" {
+		t.Fatalf("dns server = %v, want 1.1.1.1", server["server"])
+	}
+	if server["server_port"] != float64(53) {
+		t.Fatalf("dns server_port = %v, want 53", server["server_port"])
+	}
+	// The server carries NO detour: without one, the DNS transport
+	// dials 1.1.1.1 directly on the system network — never through
+	// the tunnel (the tunnel needs DNS to start, so routing DNS
+	// through it would deadlock the handshake) and never through
+	// the route table. A `detour: "direct"` is NOT the way to say
+	// that: sing-box rejects a detour to an empty direct outbound
+	// at box.Start ("detour to an empty direct outbound makes no
+	// sense"), and the auto-created direct outbound is empty.
+	if _, hasDetour := server["detour"]; hasDetour {
+		t.Fatalf("dns server has a detour = %v, want none (see comment)", server["detour"])
+	}
+	if dns["final"] != "dns-direct" {
+		t.Fatalf("dns.final = %v, want dns-direct", dns["final"])
 	}
 }
 
@@ -135,7 +215,7 @@ func TestWarpConfigCarriesDerivedReserved(t *testing.T) {
 	if want != [3]uint8{35, 74, 190} {
 		t.Fatalf("derivedReserved(testClientID) = %v, want [35 74 190]", want)
 	}
-	got := reservedOf(t, warpConfig(t, 18081))
+	got := reservedOf(t, warpConfig(t, 18081, ""))
 	if len(got) != 3 || got[0] != 35 || got[1] != 74 || got[2] != 190 {
 		t.Fatalf("config reserved = %v, want [35 74 190]", got)
 	}
@@ -153,8 +233,12 @@ func TestStartStopAndFailClosed(t *testing.T) {
 	if err := warpbox.Setup(base, base+"/work", base+"/tmp"); err != nil {
 		t.Fatalf("Setup = %v", err)
 	}
+	// 1.6.19: the config points sing-box's own logs at this file
+	// (log.output); the failed request below must leave its DNS
+	// failure in it, so the next phone debug log can show WHY.
+	logPath := filepath.Join(base, "singbox.log")
 	const port = 18083
-	if err := warpbox.Start(warpConfig(t, port)); err != nil {
+	if err := warpbox.Start(warpConfig(t, port, logPath)); err != nil {
 		t.Fatalf("Start = %v", err)
 	}
 	defer func() {
@@ -178,16 +262,40 @@ func TestStartStopAndFailClosed(t *testing.T) {
 	resp, err := client.Get("http://example.com/")
 	if err == nil {
 		_ = resp.Body.Close()
-		t.Fatalf("GET via proxy = %s, want an error (fail-closed); a success here would mean the proxy forwarded direct", resp.Status)
-	}
-	if !strings.Contains(err.Error(), "proxy") && !strings.Contains(err.Error(), "EOF") && !strings.Contains(err.Error(), "connection") && !strings.Contains(err.Error(), "timeout") {
+		// A 5xx from the proxy is fail-closed too: sing-box's HTTP
+		// inbound answers a dial failure with an empty 502 (the same
+		// empty 502 the phone log shows), not a fetch. Only a 2xx/3xx
+		// would mean the proxy forwarded direct.
+		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+			t.Fatalf("GET via proxy = %s, want an error or a 5xx (fail-closed); a success here would mean the proxy forwarded direct", resp.Status)
+		}
+		t.Logf("GET via proxy = %s (fail-closed: the proxy answered with an error status, not a fetch)", resp.Status)
+	} else if !strings.Contains(err.Error(), "proxy") && !strings.Contains(err.Error(), "EOF") && !strings.Contains(err.Error(), "connection") && !strings.Contains(err.Error(), "timeout") {
 		t.Logf("proxy request failed as expected (fail-closed): %v", err)
 	} else {
 		t.Logf("proxy request failed as expected (fail-closed): %v", err)
 	}
 
+	// 1.6.19: the failed request had to resolve example.com through
+	// the explicit DNS server (UDP to 1.1.1.1, blocked in this
+	// sandbox), so sing-box must have logged the lookup failure at
+	// Error level into the log file. Poll briefly — the log write is
+	// asynchronous — then assert the failure is in the file.
+	found := false
+	for i := 0; i < 50 && !found; i++ {
+		if data, readErr := os.ReadFile(logPath); readErr == nil {
+			found = strings.Contains(string(data), "example.com")
+		}
+		if !found {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	if !found {
+		t.Fatalf("sing-box log %s does not mention example.com after the failed request (want the DNS lookup failure in the log)", logPath)
+	}
+
 	// Starting again replaces the running tunnel instead of erroring.
-	if err := warpbox.Start(warpConfig(t, port)); err != nil {
+	if err := warpbox.Start(warpConfig(t, port, logPath)); err != nil {
 		t.Fatalf("second Start = %v, want nil", err)
 	}
 	if got := warpbox.Status(); got != "on" {
