@@ -407,15 +407,6 @@ class _Translations$settings$bg extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Възстанови настройките по подразбиране. Това не може да бъде отменено.';
 	@override String get resetSettingsSuccess => 'Настройките са нулирани успешно';
 	@override String get backup => 'Резервно копие';
-	@override String get exportSettings => 'Експортирай настройките';
-	@override String get exportSettingsDescription => 'Запази предпочитанията си във файл';
-	@override String get exportSettingsSuccess => 'Настройките са експортирани';
-	@override String get importSettings => 'Импортирай настройки';
-	@override String get importSettingsDescription => 'Възстанови предпочитания от файл';
-	@override String get importSettingsConfirm => 'Това ще замени текущите ви настройки. Продължавате ли?';
-	@override String get importSettingsSuccess => 'Настройките са импортирани';
-	@override String get importSettingsInvalidFile => 'Този файл не е валиден експорт на настройки от PlenTV';
-	@override String get importSettingsNoUser => 'Влезте, преди да импортирате настройки';
 	@override String get shortcutsReset => 'Клавишните комбинации са нулирани до подразбиране';
 	@override String get resetShortcutsConfirm => 'Това ще замени персонализираните ви клавишни комбинации с тези по подразбиране. Искате ли да продължите?';
 	@override String get about => 'Относно';
@@ -3626,15 +3617,6 @@ extension on TranslationsBg {
 			'settings.resetSettingsDescription' => 'Възстанови настройките по подразбиране. Това не може да бъде отменено.',
 			'settings.resetSettingsSuccess' => 'Настройките са нулирани успешно',
 			'settings.backup' => 'Резервно копие',
-			'settings.exportSettings' => 'Експортирай настройките',
-			'settings.exportSettingsDescription' => 'Запази предпочитанията си във файл',
-			'settings.exportSettingsSuccess' => 'Настройките са експортирани',
-			'settings.importSettings' => 'Импортирай настройки',
-			'settings.importSettingsDescription' => 'Възстанови предпочитания от файл',
-			'settings.importSettingsConfirm' => 'Това ще замени текущите ви настройки. Продължавате ли?',
-			'settings.importSettingsSuccess' => 'Настройките са импортирани',
-			'settings.importSettingsInvalidFile' => 'Този файл не е валиден експорт на настройки от PlenTV',
-			'settings.importSettingsNoUser' => 'Влезте, преди да импортирате настройки',
 			'settings.shortcutsReset' => 'Клавишните комбинации са нулирани до подразбиране',
 			'settings.resetShortcutsConfirm' => 'Това ще замени персонализираните ви клавишни комбинации с тези по подразбиране. Искате ли да продължите?',
 			'settings.about' => 'Относно',
@@ -3849,8 +3831,6 @@ extension on TranslationsBg {
 			'themeEditor.contrast.textMutedOnSurface' => 'Вторичен текст върху повърхността',
 			'themeEditor.contrast.accentOnBg' => 'Акцент върху фона',
 			'themeEditor.contrast.accentOnSurface' => 'Акцент върху повърхността',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Надпис на бутон върху акцента',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, под препоръчителното ${minimum}:1',
 			'themeEditor.discardTitle' => 'Да се отхвърлят ли промените?',
@@ -3860,6 +3840,8 @@ extension on TranslationsBg {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Остават ${minutes} мин',
 			'themeEditor.previewSwitch' => 'Автоматично пускане',
 			'themeEditor.previewMutedText' => 'Вторичният текст изглежда така',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Търсене на филми, сериали, музика...',
 			'search.tryDifferentTerm' => 'Опитайте с различна дума за търсене',
 			'search.searchYourMedia' => 'Търсете в медийното си съдържание',
@@ -4363,8 +4345,6 @@ extension on TranslationsBg {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Добавете или премахнете URL адреси за ${serverName}. PlenTV ще използва достъпния URL адрес с най-ниска латентност.',
 			'accountPreferences.sectionTitle' => 'Предпочитания на акаунта',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Опции за аудио, субтитри и библиотека, запазени на ${account}',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Опции за аудио, субтитри и библиотека, запазени на ${count} акаунта',
 			'accountPreferences.pickAccount' => 'Всеки акаунт съхранява собствени предпочитания. Изберете кой да редактирате.',
 			'accountPreferences.storedOnAccount' => 'Тези опции се запазват на самия акаунт, така че всяко приложение, вписано в него, ги използва — включително PlenTV на другите ви устройства.',
@@ -4374,6 +4354,8 @@ extension on TranslationsBg {
 			'accountPreferences.loadFailed' => 'Предпочитанията не можаха да бъдат заредени',
 			'accountPreferences.noPreference' => 'Без предпочитание',
 			'accountPreferences.notSet' => 'Не е зададено',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Аудио и субтитри',
 			'accountPreferences.groups.libraryDisplay' => 'Библиотека',
 			'accountPreferences.groups.personalMedia' => 'Лична медия',
@@ -4877,8 +4859,6 @@ extension on TranslationsBg {
 			'collections.deleteCollection' => 'Изтрий колекция',
 			'collections.deleteConfirm' => ({required Object title}) => 'Да се изтрие ли "${title}"? Това не може да бъде отменено.',
 			'collections.deleted' => 'Колекцията е изтрита',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Неуспешно изтриване на колекция',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Неуспешно изтриване на колекция: ${error}',
 			'collections.selectCollection' => 'Избери колекция',
@@ -4888,6 +4868,8 @@ extension on TranslationsBg {
 			'collections.errorAddingToCollection' => 'Неуспешно добавяне към колекция',
 			'collections.created' => 'Колекцията е създадена',
 			'collections.removeFromCollection' => 'Премахни от колекция',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Да се премахне ли "${title}" от тази колекция?',
 			'collections.removedFromCollection' => 'Премахнато от колекция',
 			'collections.removeFromCollectionFailed' => 'Неуспешно премахване от колекция',
@@ -5391,8 +5373,6 @@ extension on TranslationsBg {
 			'externalPlayer.playerNameHint' => 'Моят плеър',
 			'externalPlayer.playerCommand' => 'Команда',
 			'externalPlayer.playerPackage' => 'Име на пакет',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL схема',
 			'externalPlayer.off' => 'Изключено',
 			'externalPlayer.launchFailed' => 'Неуспешно отваряне на външен плеър',
@@ -5402,6 +5382,8 @@ extension on TranslationsBg {
 			'metadataEdit.screenTitle' => 'Редактиране на метаданни',
 			'metadataEdit.basicInfo' => 'Основна информация',
 			'metadataEdit.artwork' => 'Обложка',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Разширени настройки',
 			'metadataEdit.title' => 'Заглавие',
 			'metadataEdit.sortTitle' => 'Заглавие за сортиране',

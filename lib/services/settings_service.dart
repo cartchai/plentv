@@ -742,12 +742,16 @@ class SettingsService extends BaseSharedPreferencesService {
 
   /// 1.4.4: pause IPTV downloads while a stream is playing (Settings →
   /// IPTV). Off by default — downloads keep running while you watch.
+  /// In `_portableOnlyPrefs`, so it rides the full backup like the other
+  /// IPTV settings.
   static const iptvPauseDownloadsWhileWatching = BoolPref('iptv_pause_downloads_while_watching');
 
   /// 1.4.61: download run timeout in whole minutes (Settings → IPTV):
   /// how long one expedited native run may transfer before the worker
   /// pauses it as a resume checkpoint. 2 by default; 9 is the library's
   /// non-expedited run cap. The native side clamps to 2–9.
+  /// In `_portableOnlyPrefs`, so it rides the full backup like the other
+  /// IPTV settings.
   static const iptvDownloadRunTimeoutMinutes = IntPref('iptv_download_run_timeout_minutes', defaultValue: 2);
 
   /// Set once the user has seen the pre-flight "background downloads are
@@ -1015,7 +1019,8 @@ class SettingsService extends BaseSharedPreferencesService {
   /// connection (1.3.28). Default off — built-in default vs one-tap
   /// preset is the owner's decision, not the code's. When on, the
   /// preset is added once, the first time the EPG sources screen
-  /// loads for a connection.
+  /// loads for a connection. In `_portableOnlyPrefs`, so it rides the
+  /// full backup like the other IPTV settings.
   static const iptvEpgUsPresetDefault = BoolPref('iptv_epg_us_preset_default', defaultValue: false);
 
   /// Xtream User-Agent (build #20): the User-Agent sent on every Xtream
@@ -1947,6 +1952,9 @@ class SettingsService extends BaseSharedPreferencesService {
     iptvCatalogSyncIntervalHours,
     iptvLargeDownloadsWifiOnly,
     iptvCatalogMode,
+    iptvPauseDownloadsWhileWatching,
+    iptvDownloadRunTimeoutMinutes,
+    iptvEpgUsPresetDefault,
     matchRefreshRate,
     matchDynamicRange,
     displaySwitchDelay,

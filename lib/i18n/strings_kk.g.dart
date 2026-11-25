@@ -407,15 +407,6 @@ class _Translations$settings$kk extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Әдепкі баптауларды қайтару. Бұл әрекетті қайтару мүмкін емес.';
 	@override String get resetSettingsSuccess => 'Баптаулар сәтті қалпына келтірілді';
 	@override String get backup => 'Резервтік көшірме';
-	@override String get exportSettings => 'Баптауларды экспорттау';
-	@override String get exportSettingsDescription => 'Параметрлеріңізді файлға сақтаңыз';
-	@override String get exportSettingsSuccess => 'Баптаулар экспортталды';
-	@override String get importSettings => 'Баптауларды импорттау';
-	@override String get importSettingsDescription => 'Параметрлерді файлдан қалпына келтіріңіз';
-	@override String get importSettingsConfirm => 'Бұл ағымдағы баптауларыңыздың үстінен жазады. Жалғастырасыз ба?';
-	@override String get importSettingsSuccess => 'Баптаулар импортталды';
-	@override String get importSettingsInvalidFile => 'Бұл файл дұрыс PlenTV баптаулар файлы емес';
-	@override String get importSettingsNoUser => 'Баптауларды импорттау алдында жүйеге кіріңіз';
 	@override String get shortcutsReset => 'Пернелер тіркесі әдепкі күйге қайтарылды';
 	@override String get resetShortcutsConfirm => 'Бұл таңдамалы пернелер тіркесін әдепкі мәндермен ауыстырады. Жалғастырасыз ба?';
 	@override String get about => 'Қолданба туралы';
@@ -3626,15 +3617,6 @@ extension on TranslationsKk {
 			'settings.resetSettingsDescription' => 'Әдепкі баптауларды қайтару. Бұл әрекетті қайтару мүмкін емес.',
 			'settings.resetSettingsSuccess' => 'Баптаулар сәтті қалпына келтірілді',
 			'settings.backup' => 'Резервтік көшірме',
-			'settings.exportSettings' => 'Баптауларды экспорттау',
-			'settings.exportSettingsDescription' => 'Параметрлеріңізді файлға сақтаңыз',
-			'settings.exportSettingsSuccess' => 'Баптаулар экспортталды',
-			'settings.importSettings' => 'Баптауларды импорттау',
-			'settings.importSettingsDescription' => 'Параметрлерді файлдан қалпына келтіріңіз',
-			'settings.importSettingsConfirm' => 'Бұл ағымдағы баптауларыңыздың үстінен жазады. Жалғастырасыз ба?',
-			'settings.importSettingsSuccess' => 'Баптаулар импортталды',
-			'settings.importSettingsInvalidFile' => 'Бұл файл дұрыс PlenTV баптаулар файлы емес',
-			'settings.importSettingsNoUser' => 'Баптауларды импорттау алдында жүйеге кіріңіз',
 			'settings.shortcutsReset' => 'Пернелер тіркесі әдепкі күйге қайтарылды',
 			'settings.resetShortcutsConfirm' => 'Бұл таңдамалы пернелер тіркесін әдепкі мәндермен ауыстырады. Жалғастырасыз ба?',
 			'settings.about' => 'Қолданба туралы',
@@ -3849,8 +3831,6 @@ extension on TranslationsKk {
 			'themeEditor.contrast.textMutedOnSurface' => 'Беткі қабаттағы қосалқы мәтін',
 			'themeEditor.contrast.accentOnBg' => 'Фондағы акцент',
 			'themeEditor.contrast.accentOnSurface' => 'Беткі қабаттағы акцент',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Акценттегі түйме мәтіні',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, ұсынылған ${minimum}:1 мәнінен төмен',
 			'themeEditor.discardTitle' => 'Өзгерістер жойылсын ба?',
@@ -3860,6 +3840,8 @@ extension on TranslationsKk {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} мин қалды',
 			'themeEditor.previewSwitch' => 'Автоойнату',
 			'themeEditor.previewMutedText' => 'Қосалқы мәтін осылай көрінеді',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Фильмдер, сериалдар, музыка іздеу...',
 			'search.tryDifferentTerm' => 'Басқа іздеу сөзін байқап көріңіз',
 			'search.searchYourMedia' => 'Медиафайлдардан іздеу',
@@ -4363,8 +4345,6 @@ extension on TranslationsKk {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} үшін URL мекенжайларды қосыңыз немесе өшіріңіз. PlenTV ең төмен кідірісі бар қолжетімді URL мекенжайды пайдаланады.',
 			'accountPreferences.sectionTitle' => 'Тіркелгі баптаулары',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} тіркелгісінде сақталған аудио, субтитр және кітапхана баптаулары',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count} тіркелгіде сақталған аудио, субтитр және кітапхана баптаулары',
 			'accountPreferences.pickAccount' => 'Әр тіркелгі өз баптауларын сақтайды. Өңдеу үшін біреуін таңдаңыз.',
 			'accountPreferences.storedOnAccount' => 'Бұл баптаулар тіркелгінің өзінде сақталады, сондықтан оған кірген әрбір қолданба оларды пайдаланады — басқа құрылғыларыңыздағы PlenTV қоса.',
@@ -4374,6 +4354,8 @@ extension on TranslationsKk {
 			'accountPreferences.loadFailed' => 'Бұл баптауларды жүктеу мүмкін болмады',
 			'accountPreferences.noPreference' => 'Таңдау жоқ',
 			'accountPreferences.notSet' => 'Орнатылмаған',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Аудио және субтитрлер',
 			'accountPreferences.groups.libraryDisplay' => 'Кітапхана',
 			'accountPreferences.groups.personalMedia' => 'Жеке медиа',
@@ -4877,8 +4859,6 @@ extension on TranslationsKk {
 			'collections.deleteCollection' => 'Топтаманы өшіру',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" өшірілсін бе?',
 			'collections.deleted' => 'Топтама өшірілді',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Топтаманы өшіру мүмкін болмады',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Топтаманы өшіру қатесі: ${error}',
 			'collections.selectCollection' => 'Топтаманы таңдау',
@@ -4888,6 +4868,8 @@ extension on TranslationsKk {
 			'collections.errorAddingToCollection' => 'Топтамаға қосу мүмкін болмады',
 			'collections.created' => 'Топтама жасалды',
 			'collections.removeFromCollection' => 'Топтамадан өшіру',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" осы топтамадан өшірілсін бе?',
 			'collections.removedFromCollection' => 'Топтамадан өшірілді',
 			'collections.removeFromCollectionFailed' => 'Топтамадан өшіру мүмкін болмады',
@@ -5391,8 +5373,6 @@ extension on TranslationsKk {
 			'externalPlayer.playerNameHint' => 'Менің ойнатқышым',
 			'externalPlayer.playerCommand' => 'Пәрмен',
 			'externalPlayer.playerPackage' => 'Пакет атауы',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL схемасы',
 			'externalPlayer.off' => 'Өшірулі',
 			'externalPlayer.launchFailed' => 'Сыртқы ойнатқышты іске қосу мүмкін болмады',
@@ -5402,6 +5382,8 @@ extension on TranslationsKk {
 			'metadataEdit.screenTitle' => 'Метадеректерді өңдеу',
 			'metadataEdit.basicInfo' => 'Негізгі ақпарат',
 			'metadataEdit.artwork' => 'Суреттер/Постерлер',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Кеңейтілген баптаулар',
 			'metadataEdit.title' => 'Атауы',
 			'metadataEdit.sortTitle' => 'Сұрыптау атауы',

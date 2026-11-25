@@ -408,15 +408,6 @@ class _Translations$settings$zh_Hant extends Translations$settings$zh {
 	@override String get resetSettingsDescription => '恢復預設設定。此操作無法復原。';
 	@override String get resetSettingsSuccess => '設定重設成功';
 	@override String get backup => '備份';
-	@override String get exportSettings => '匯出設定';
-	@override String get exportSettingsDescription => '將您的偏好設定儲存至檔案';
-	@override String get exportSettingsSuccess => '設定已匯出';
-	@override String get importSettings => '匯入設定';
-	@override String get importSettingsDescription => '從檔案還原偏好設定';
-	@override String get importSettingsConfirm => '這將覆蓋您目前的設定。要繼續嗎？';
-	@override String get importSettingsSuccess => '設定已匯入';
-	@override String get importSettingsInvalidFile => '此檔案不是有效的 PlenTV 設定匯出檔';
-	@override String get importSettingsNoUser => '匯入設定前請先登入';
 	@override String get shortcutsReset => '快速鍵已重設為預設值';
 	@override String get resetShortcutsConfirm => '這會將您的自訂快速鍵替換為預設值。要繼續嗎？';
 	@override String get about => '關於';
@@ -3615,15 +3606,6 @@ extension on TranslationsZhHant {
 			'settings.resetSettingsDescription' => '恢復預設設定。此操作無法復原。',
 			'settings.resetSettingsSuccess' => '設定重設成功',
 			'settings.backup' => '備份',
-			'settings.exportSettings' => '匯出設定',
-			'settings.exportSettingsDescription' => '將您的偏好設定儲存至檔案',
-			'settings.exportSettingsSuccess' => '設定已匯出',
-			'settings.importSettings' => '匯入設定',
-			'settings.importSettingsDescription' => '從檔案還原偏好設定',
-			'settings.importSettingsConfirm' => '這將覆蓋您目前的設定。要繼續嗎？',
-			'settings.importSettingsSuccess' => '設定已匯入',
-			'settings.importSettingsInvalidFile' => '此檔案不是有效的 PlenTV 設定匯出檔',
-			'settings.importSettingsNoUser' => '匯入設定前請先登入',
 			'settings.shortcutsReset' => '快速鍵已重設為預設值',
 			'settings.resetShortcutsConfirm' => '這會將您的自訂快速鍵替換為預設值。要繼續嗎？',
 			'settings.about' => '關於',
@@ -3838,8 +3820,6 @@ extension on TranslationsZhHant {
 			'themeEditor.contrast.textMutedOnSurface' => '面板上的次要文字',
 			'themeEditor.contrast.accentOnBg' => '背景上的強調色',
 			'themeEditor.contrast.accentOnSurface' => '面板上的強調色',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => '強調色上的按鈕文字',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}：${ratio}:1，低於建議的 ${minimum}:1',
 			'themeEditor.discardTitle' => '要捨棄變更嗎？',
@@ -3849,6 +3829,8 @@ extension on TranslationsZhHant {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '剩餘 ${minutes} 分鐘',
 			'themeEditor.previewSwitch' => '自動播放',
 			'themeEditor.previewMutedText' => '次要文字看起來像這樣',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => '搜尋電影、影集、音樂…',
 			'search.tryDifferentTerm' => '嘗試不同的關鍵字',
 			'search.searchYourMedia' => '搜尋媒體庫',
@@ -4352,8 +4334,6 @@ extension on TranslationsZhHant {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '為 ${serverName} 新增或移除 URL。PlenTV 將使用延遲最低且可連線的 URL。',
 			'accountPreferences.sectionTitle' => '帳戶偏好設定',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '已在 ${account} 上儲存音訊、字幕與媒體庫選項',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '已在 ${count} 個帳戶上儲存音訊、字幕與媒體庫選項',
 			'accountPreferences.pickAccount' => '每個帳戶都會儲存各自的偏好設定。請選擇要編輯的帳戶。',
 			'accountPreferences.storedOnAccount' => '這些選項會儲存在帳戶本身，因此登入該帳戶的所有應用程式都會使用它們，包括您其他裝置上的 PlenTV。',
@@ -4363,6 +4343,8 @@ extension on TranslationsZhHant {
 			'accountPreferences.loadFailed' => '無法載入這些偏好設定',
 			'accountPreferences.noPreference' => '無偏好',
 			'accountPreferences.notSet' => '未設定',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => '音訊與字幕',
 			'accountPreferences.groups.libraryDisplay' => '媒體庫',
 			'accountPreferences.groups.personalMedia' => '個人媒體',
@@ -4866,8 +4848,6 @@ extension on TranslationsZhHant {
 			'collections.deleteCollection' => '刪除收藏集',
 			'collections.deleteConfirm' => ({required Object title}) => '確定要刪除「${title}」嗎？此操作無法復原。',
 			'collections.deleted' => '已刪除收藏集',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => '刪除收藏集失敗',
 			'collections.deleteFailedWithError' => ({required Object error}) => '刪除收藏集失敗：${error}',
 			'collections.selectCollection' => '選擇收藏集',
@@ -4877,6 +4857,8 @@ extension on TranslationsZhHant {
 			'collections.errorAddingToCollection' => '新增至收藏集失敗',
 			'collections.created' => '已建立收藏集',
 			'collections.removeFromCollection' => '從收藏集移除',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '將「${title}」從此收藏集移除？',
 			'collections.removedFromCollection' => '已從收藏集移除',
 			'collections.removeFromCollectionFailed' => '從收藏集移除失敗',
@@ -5380,8 +5362,6 @@ extension on TranslationsZhHant {
 			'externalPlayer.playerNameHint' => '我的播放器',
 			'externalPlayer.playerCommand' => '執行命令',
 			'externalPlayer.playerPackage' => '套件名稱',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL 協定架構（Scheme）',
 			'externalPlayer.off' => '關閉',
 			'externalPlayer.launchFailed' => '無法啟動外部播放器',
@@ -5391,6 +5371,8 @@ extension on TranslationsZhHant {
 			'metadataEdit.screenTitle' => '編輯中繼資料',
 			'metadataEdit.basicInfo' => '基本資訊',
 			'metadataEdit.artwork' => '海報與背景',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => '進階設定',
 			'metadataEdit.title' => '標題',
 			'metadataEdit.sortTitle' => '排序標題',

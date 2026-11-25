@@ -407,15 +407,6 @@ class _Translations$settings$ja extends Translations$settings$en {
 	@override String get resetSettingsDescription => '設定を既定に戻します。元に戻せません。';
 	@override String get resetSettingsSuccess => '設定を正常にリセットしました';
 	@override String get backup => 'バックアップ';
-	@override String get exportSettings => '設定をエクスポート';
-	@override String get exportSettingsDescription => '設定をファイルに保存';
-	@override String get exportSettingsSuccess => '設定をエクスポートしました';
-	@override String get importSettings => '設定をインポート';
-	@override String get importSettingsDescription => 'ファイルから設定を復元';
-	@override String get importSettingsConfirm => '現在の設定を置き換えます。続行しますか？';
-	@override String get importSettingsSuccess => '設定をインポートしました';
-	@override String get importSettingsInvalidFile => 'このファイルは有効なPlenTVの設定エクスポートではありません';
-	@override String get importSettingsNoUser => '設定をインポートする前にサインインしてください';
 	@override String get shortcutsReset => 'ショートカットをデフォルトにリセットしました';
 	@override String get resetShortcutsConfirm => 'カスタムショートカットがデフォルトに置き換えられます。続行しますか？';
 	@override String get about => 'アプリについて';
@@ -3614,15 +3605,6 @@ extension on TranslationsJa {
 			'settings.resetSettingsDescription' => '設定を既定に戻します。元に戻せません。',
 			'settings.resetSettingsSuccess' => '設定を正常にリセットしました',
 			'settings.backup' => 'バックアップ',
-			'settings.exportSettings' => '設定をエクスポート',
-			'settings.exportSettingsDescription' => '設定をファイルに保存',
-			'settings.exportSettingsSuccess' => '設定をエクスポートしました',
-			'settings.importSettings' => '設定をインポート',
-			'settings.importSettingsDescription' => 'ファイルから設定を復元',
-			'settings.importSettingsConfirm' => '現在の設定を置き換えます。続行しますか？',
-			'settings.importSettingsSuccess' => '設定をインポートしました',
-			'settings.importSettingsInvalidFile' => 'このファイルは有効なPlenTVの設定エクスポートではありません',
-			'settings.importSettingsNoUser' => '設定をインポートする前にサインインしてください',
 			'settings.shortcutsReset' => 'ショートカットをデフォルトにリセットしました',
 			'settings.resetShortcutsConfirm' => 'カスタムショートカットがデフォルトに置き換えられます。続行しますか？',
 			'settings.about' => 'アプリについて',
@@ -3837,8 +3819,6 @@ extension on TranslationsJa {
 			'themeEditor.contrast.textMutedOnSurface' => 'サーフェス上の補助テキスト',
 			'themeEditor.contrast.accentOnBg' => '背景上のアクセント',
 			'themeEditor.contrast.accentOnSurface' => 'サーフェス上のアクセント',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'アクセント上のボタンラベル',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1（推奨値の${minimum}:1未満）',
 			'themeEditor.discardTitle' => '変更を破棄しますか？',
@@ -3848,6 +3828,8 @@ extension on TranslationsJa {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '残り${minutes}分',
 			'themeEditor.previewSwitch' => '自動再生',
 			'themeEditor.previewMutedText' => '補助テキストはこのように表示されます',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => '映画、番組、音楽を検索…',
 			'search.tryDifferentTerm' => '別の検索語をお試しください',
 			'search.searchYourMedia' => 'メディアを検索',
@@ -4351,8 +4333,6 @@ extension on TranslationsJa {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName}のURLを追加または削除します。PlenTVは到達可能なURLのうち、レイテンシーが最も低いものを使用します。',
 			'accountPreferences.sectionTitle' => 'アカウント設定',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '音声・字幕・ライブラリのオプションは${account}に保存されています',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '音声・字幕・ライブラリのオプションは${count}個のアカウントに保存されています',
 			'accountPreferences.pickAccount' => '各アカウントに独自の設定が保存されています。編集するアカウントを選択してください。',
 			'accountPreferences.storedOnAccount' => 'これらのオプションはアカウント自体に保存されるため、サインインしているすべてのアプリ（他のデバイスのPlenTVを含む）で使用されます。',
@@ -4362,6 +4342,8 @@ extension on TranslationsJa {
 			'accountPreferences.loadFailed' => 'この設定を読み込めませんでした',
 			'accountPreferences.noPreference' => '指定なし',
 			'accountPreferences.notSet' => '未設定',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => '音声と字幕',
 			'accountPreferences.groups.libraryDisplay' => 'ライブラリ',
 			'accountPreferences.groups.personalMedia' => '個人メディア',
@@ -4865,8 +4847,6 @@ extension on TranslationsJa {
 			'collections.deleteCollection' => 'コレクションを削除',
 			'collections.deleteConfirm' => ({required Object title}) => '「${title}」を削除しますか？この操作は元に戻せません。',
 			'collections.deleted' => 'コレクションを削除しました',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'コレクションの削除に失敗しました',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'コレクションの削除に失敗しました: ${error}',
 			'collections.selectCollection' => 'コレクションを選択',
@@ -4876,6 +4856,8 @@ extension on TranslationsJa {
 			'collections.errorAddingToCollection' => 'コレクションへの追加に失敗しました',
 			'collections.created' => 'コレクションを作成しました',
 			'collections.removeFromCollection' => 'コレクションから削除',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '「${title}」をこのコレクションから削除しますか？',
 			'collections.removedFromCollection' => 'コレクションから削除しました',
 			'collections.removeFromCollectionFailed' => 'コレクションからの削除に失敗しました',
@@ -5379,8 +5361,6 @@ extension on TranslationsJa {
 			'externalPlayer.playerNameHint' => 'マイプレーヤー',
 			'externalPlayer.playerCommand' => 'コマンド',
 			'externalPlayer.playerPackage' => 'パッケージ名',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URLスキーム',
 			'externalPlayer.off' => 'オフ',
 			'externalPlayer.launchFailed' => '外部プレーヤーの起動に失敗しました',
@@ -5390,6 +5370,8 @@ extension on TranslationsJa {
 			'metadataEdit.screenTitle' => 'メタデータを編集',
 			'metadataEdit.basicInfo' => '基本情報',
 			'metadataEdit.artwork' => 'アートワーク',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => '詳細設定',
 			'metadataEdit.title' => 'タイトル',
 			'metadataEdit.sortTitle' => 'ソートタイトル',

@@ -407,15 +407,6 @@ class Translations$settings$zh extends Translations$settings$en {
 	@override String get resetSettingsDescription => '恢复默认设置。此操作无法撤销。';
 	@override String get resetSettingsSuccess => '设置重置成功';
 	@override String get backup => '备份';
-	@override String get exportSettings => '导出设置';
-	@override String get exportSettingsDescription => '将偏好设置保存到文件';
-	@override String get exportSettingsSuccess => '设置已导出';
-	@override String get importSettings => '导入设置';
-	@override String get importSettingsDescription => '从文件恢复偏好设置';
-	@override String get importSettingsConfirm => '这将替换您当前的设置。继续吗？';
-	@override String get importSettingsSuccess => '设置已导入';
-	@override String get importSettingsInvalidFile => '此文件不是有效的 PlenTV 设置导出';
-	@override String get importSettingsNoUser => '导入设置前请先登录';
 	@override String get shortcutsReset => '快捷键已重置为默认值';
 	@override String get resetShortcutsConfirm => '这将用默认快捷键替换你的自定义快捷键。继续吗？';
 	@override String get about => '关于';
@@ -3614,15 +3605,6 @@ extension on TranslationsZh {
 			'settings.resetSettingsDescription' => '恢复默认设置。此操作无法撤销。',
 			'settings.resetSettingsSuccess' => '设置重置成功',
 			'settings.backup' => '备份',
-			'settings.exportSettings' => '导出设置',
-			'settings.exportSettingsDescription' => '将偏好设置保存到文件',
-			'settings.exportSettingsSuccess' => '设置已导出',
-			'settings.importSettings' => '导入设置',
-			'settings.importSettingsDescription' => '从文件恢复偏好设置',
-			'settings.importSettingsConfirm' => '这将替换您当前的设置。继续吗？',
-			'settings.importSettingsSuccess' => '设置已导入',
-			'settings.importSettingsInvalidFile' => '此文件不是有效的 PlenTV 设置导出',
-			'settings.importSettingsNoUser' => '导入设置前请先登录',
 			'settings.shortcutsReset' => '快捷键已重置为默认值',
 			'settings.resetShortcutsConfirm' => '这将用默认快捷键替换你的自定义快捷键。继续吗？',
 			'settings.about' => '关于',
@@ -3837,8 +3819,6 @@ extension on TranslationsZh {
 			'themeEditor.contrast.textMutedOnSurface' => '表面上的次要文字',
 			'themeEditor.contrast.accentOnBg' => '背景上的强调色',
 			'themeEditor.contrast.accentOnSurface' => '表面上的强调色',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => '强调色上的按钮文字',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}：${ratio}:1，低于建议的 ${minimum}:1',
 			'themeEditor.discardTitle' => '放弃更改？',
@@ -3848,6 +3828,8 @@ extension on TranslationsZh {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '剩余 ${minutes} 分钟',
 			'themeEditor.previewSwitch' => '自动播放',
 			'themeEditor.previewMutedText' => '次要文字看起来是这样的',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => '搜索电影、剧集、音乐…',
 			'search.tryDifferentTerm' => '尝试不同的搜索词',
 			'search.searchYourMedia' => '搜索媒体',
@@ -4351,8 +4333,6 @@ extension on TranslationsZh {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '为 ${serverName} 添加或移除 URL。PlenTV 会使用延迟最低且可访问的 URL。',
 			'accountPreferences.sectionTitle' => '账户偏好',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '音频、字幕和媒体库选项已保存在 ${account} 上',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '音频、字幕和媒体库选项已保存在 ${count} 个账户上',
 			'accountPreferences.pickAccount' => '每个账户都保存自己的偏好设置。选择要编辑的账户。',
 			'accountPreferences.storedOnAccount' => '这些选项保存在账户本身，因此所有登录该账户的应用都会使用它们——包括你其他设备上的 PlenTV。',
@@ -4362,6 +4342,8 @@ extension on TranslationsZh {
 			'accountPreferences.loadFailed' => '无法加载这些偏好设置',
 			'accountPreferences.noPreference' => '无偏好',
 			'accountPreferences.notSet' => '未设置',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => '音频与字幕',
 			'accountPreferences.groups.libraryDisplay' => '媒体库',
 			'accountPreferences.groups.personalMedia' => '个人媒体',
@@ -4865,8 +4847,6 @@ extension on TranslationsZh {
 			'collections.deleteCollection' => '删除合集',
 			'collections.deleteConfirm' => ({required Object title}) => '要删除“${title}”吗？此操作无法撤销。',
 			'collections.deleted' => '已删除合集',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => '删除合集失败',
 			'collections.deleteFailedWithError' => ({required Object error}) => '删除合集失败：${error}',
 			'collections.selectCollection' => '选择合集',
@@ -4876,6 +4856,8 @@ extension on TranslationsZh {
 			'collections.errorAddingToCollection' => '添加到合集失败',
 			'collections.created' => '已创建合集',
 			'collections.removeFromCollection' => '从合集移除',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '将“${title}”从此合集移除？',
 			'collections.removedFromCollection' => '已从合集移除',
 			'collections.removeFromCollectionFailed' => '从合集移除失败',
@@ -5379,8 +5361,6 @@ extension on TranslationsZh {
 			'externalPlayer.playerNameHint' => '我的播放器',
 			'externalPlayer.playerCommand' => '命令',
 			'externalPlayer.playerPackage' => '包名',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL 方案',
 			'externalPlayer.off' => '关闭',
 			'externalPlayer.launchFailed' => '无法打开外部播放器',
@@ -5390,6 +5370,8 @@ extension on TranslationsZh {
 			'metadataEdit.screenTitle' => '编辑元数据',
 			'metadataEdit.basicInfo' => '基本信息',
 			'metadataEdit.artwork' => '封面图片',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => '高级设置',
 			'metadataEdit.title' => '标题',
 			'metadataEdit.sortTitle' => '排序标题',

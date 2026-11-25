@@ -407,15 +407,6 @@ class _Translations$settings$uz extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Standart sozlamalarni tiklash. Bu amalni ortga qaytarib boʻlmaydi.';
 	@override String get resetSettingsSuccess => 'Sozlamalar muvaffaqiyatli qayta oʻrnatildi';
 	@override String get backup => 'Zahira nusxa';
-	@override String get exportSettings => 'Sozlamalarni eksport qilish';
-	@override String get exportSettingsDescription => 'Parametrlaringizni faylga saqlang';
-	@override String get exportSettingsSuccess => 'Sozlamalar eksport qilindi';
-	@override String get importSettings => 'Sozlamalarni import qilish';
-	@override String get importSettingsDescription => 'Parametrlarni fayldan tiklang';
-	@override String get importSettingsConfirm => 'Bu joriy sozlamalaringiz ustidan yoziladi. Davom etasizmi?';
-	@override String get importSettingsSuccess => 'Sozlamalar import qilindi';
-	@override String get importSettingsInvalidFile => 'Ushbu fayl toʻgʻri PlenTV sozlamalar fayli emas';
-	@override String get importSettingsNoUser => 'Sozlamalarni import qilishdan oldin tizimga kiring';
 	@override String get shortcutsReset => 'Tugmalar birlashmasi standart holatga qaytarildi';
 	@override String get resetShortcutsConfirm => 'Bu oʻzingiz sozlagan tugmalar birlashmalarini standart holatga qaytaradi. Davom etasizmi?';
 	@override String get about => 'Dastur haqida';
@@ -3626,15 +3617,6 @@ extension on TranslationsUz {
 			'settings.resetSettingsDescription' => 'Standart sozlamalarni tiklash. Bu amalni ortga qaytarib boʻlmaydi.',
 			'settings.resetSettingsSuccess' => 'Sozlamalar muvaffaqiyatli qayta oʻrnatildi',
 			'settings.backup' => 'Zahira nusxa',
-			'settings.exportSettings' => 'Sozlamalarni eksport qilish',
-			'settings.exportSettingsDescription' => 'Parametrlaringizni faylga saqlang',
-			'settings.exportSettingsSuccess' => 'Sozlamalar eksport qilindi',
-			'settings.importSettings' => 'Sozlamalarni import qilish',
-			'settings.importSettingsDescription' => 'Parametrlarni fayldan tiklang',
-			'settings.importSettingsConfirm' => 'Bu joriy sozlamalaringiz ustidan yoziladi. Davom etasizmi?',
-			'settings.importSettingsSuccess' => 'Sozlamalar import qilindi',
-			'settings.importSettingsInvalidFile' => 'Ushbu fayl toʻgʻri PlenTV sozlamalar fayli emas',
-			'settings.importSettingsNoUser' => 'Sozlamalarni import qilishdan oldin tizimga kiring',
 			'settings.shortcutsReset' => 'Tugmalar birlashmasi standart holatga qaytarildi',
 			'settings.resetShortcutsConfirm' => 'Bu oʻzingiz sozlagan tugmalar birlashmalarini standart holatga qaytaradi. Davom etasizmi?',
 			'settings.about' => 'Dastur haqida',
@@ -3849,8 +3831,6 @@ extension on TranslationsUz {
 			'themeEditor.contrast.textMutedOnSurface' => 'Sirtdagi ikkilamchi matn',
 			'themeEditor.contrast.accentOnBg' => 'Fondagi urgʻu rangi',
 			'themeEditor.contrast.accentOnSurface' => 'Sirtdagi urgʻu rangi',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Urgʻu rangidagi tugma matni',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, tavsiya etilgan ${minimum}:1 dan past',
 			'themeEditor.discardTitle' => 'Oʻzgarishlardan voz kechilsinmi?',
@@ -3860,6 +3840,8 @@ extension on TranslationsUz {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} daq qoldi',
 			'themeEditor.previewSwitch' => 'Avtomatik ijro',
 			'themeEditor.previewMutedText' => 'Ikkilamchi matn shunday koʻrinadi',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Filmlar, seriallar, musiqa qidirish...',
 			'search.tryDifferentTerm' => 'Boshqa qidiruv soʻzini kiriting',
 			'search.searchYourMedia' => 'Medialaringizdan qidiring',
@@ -4363,8 +4345,6 @@ extension on TranslationsUz {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} uchun URL-larni qoʻshing yoki olib tashlang. PlenTV eng kam kechikishga ega boʻlgan mavjud URL-dan foydalanadi.',
 			'accountPreferences.sectionTitle' => 'Hisob sozlamalari',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} hisobida saqlangan audio, subtitr va kutubxona parametrlari',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count} ta hisobda saqlangan audio, subtitr va kutubxona parametrlari',
 			'accountPreferences.pickAccount' => 'Har bir hisob oʻz sozlamalarini saqlaydi. Tahrirlash uchun birini tanlang.',
 			'accountPreferences.storedOnAccount' => 'Bu parametrlar hisobning oʻzida saqlanadi — unga kirilgan har bir ilova ulardan foydalanadi, jumladan boshqa qurilmalaringizdagi PlenTV ham.',
@@ -4374,6 +4354,8 @@ extension on TranslationsUz {
 			'accountPreferences.loadFailed' => 'Bu sozlamalarni yuklab boʻlmadi',
 			'accountPreferences.noPreference' => 'Afzallik yoʻq',
 			'accountPreferences.notSet' => 'Oʻrnatilmagan',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Audio va subtitrlar',
 			'accountPreferences.groups.libraryDisplay' => 'Kutubxona',
 			'accountPreferences.groups.personalMedia' => 'Shaxsiy media',
@@ -4877,8 +4859,6 @@ extension on TranslationsUz {
 			'collections.deleteCollection' => 'Toʻplamni oʻchirish',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" oʻchirilsinmi?',
 			'collections.deleted' => 'Toʻplam oʻchirildi',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Toʻplamni oʻchirib boʻlmadi',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Toʻplamni oʻchirish xatoligi: ${error}',
 			'collections.selectCollection' => 'Toʻplamni tanlash',
@@ -4888,6 +4868,8 @@ extension on TranslationsUz {
 			'collections.errorAddingToCollection' => 'Toʻplamga qoʻshib boʻlmadi',
 			'collections.created' => 'Toʻplam yaratildi',
 			'collections.removeFromCollection' => 'Toʻplamdan oʻchirish',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" ushbu toʻplamdan oʻchirilsinmi?',
 			'collections.removedFromCollection' => 'Toʻplamdan oʻchirildi',
 			'collections.removeFromCollectionFailed' => 'Toʻplamdan oʻchirib boʻlmadi',
@@ -5391,8 +5373,6 @@ extension on TranslationsUz {
 			'externalPlayer.playerNameHint' => 'Mening pleyerim',
 			'externalPlayer.playerCommand' => 'Buyruq',
 			'externalPlayer.playerPackage' => 'Paket nomi',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL sxemasi',
 			'externalPlayer.off' => 'Oʻchirilgan',
 			'externalPlayer.launchFailed' => 'Tashqi pleyerni ishga tushirib boʻlmadi',
@@ -5402,6 +5382,8 @@ extension on TranslationsUz {
 			'metadataEdit.screenTitle' => 'Metamaʼlumotlarni tahrirlash',
 			'metadataEdit.basicInfo' => 'Asosiy maʼlumotlar',
 			'metadataEdit.artwork' => 'Rasmlar/Posterlar',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Kengaytirilgan sozlamalar',
 			'metadataEdit.title' => 'Nomi',
 			'metadataEdit.sortTitle' => 'Saralash nomi',

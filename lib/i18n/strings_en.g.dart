@@ -1102,33 +1102,6 @@ class Translations$settings$en {
 	/// en: 'Backup'
 	String get backup => 'Backup';
 
-	/// en: 'Export Settings'
-	String get exportSettings => 'Export Settings';
-
-	/// en: 'Save your preferences to a file'
-	String get exportSettingsDescription => 'Save your preferences to a file';
-
-	/// en: 'Settings exported'
-	String get exportSettingsSuccess => 'Settings exported';
-
-	/// en: 'Import Settings'
-	String get importSettings => 'Import Settings';
-
-	/// en: 'Restore preferences from a file'
-	String get importSettingsDescription => 'Restore preferences from a file';
-
-	/// en: 'This will replace your current settings. Continue?'
-	String get importSettingsConfirm => 'This will replace your current settings. Continue?';
-
-	/// en: 'Settings imported'
-	String get importSettingsSuccess => 'Settings imported';
-
-	/// en: 'This file isn't a valid PlenTV settings export'
-	String get importSettingsInvalidFile => 'This file isn\'t a valid PlenTV settings export';
-
-	/// en: 'Sign in before importing settings'
-	String get importSettingsNoUser => 'Sign in before importing settings';
-
 	/// en: 'Back up everything'
 	String get exportForkBackup => 'Back up everything';
 
@@ -1159,8 +1132,8 @@ class Translations$settings$en {
 	/// en: 'Backup restored'
 	String get importForkBackupSummaryTitle => 'Backup restored';
 
-	/// en: '${connections} connections · ${profiles} profiles · ${settings} settings · ${guideSettings} guide settings · ${guideStores} guide stores · ${favourites} favourites · ${resume} watch positions'
-	String importForkBackupSummary({required Object connections, required Object profiles, required Object settings, required Object guideSettings, required Object guideStores, required Object favourites, required Object resume}) => '${connections} connections · ${profiles} profiles · ${settings} settings · ${guideSettings} guide settings · ${guideStores} guide stores · ${favourites} favourites · ${resume} watch positions';
+	/// en: '${connections} connections · ${profiles} profiles · ${settings} settings · ${guideSettings} guide settings · ${guideStores} guide stores · ${favourites} favourites · ${resume} watch positions · ${hidden} hidden channels'
+	String importForkBackupSummary({required Object connections, required Object profiles, required Object settings, required Object guideSettings, required Object guideStores, required Object favourites, required Object resume, required Object hidden}) => '${connections} connections · ${profiles} profiles · ${settings} settings · ${guideSettings} guide settings · ${guideStores} guide stores · ${favourites} favourites · ${resume} watch positions · ${hidden} hidden channels';
 
 	/// en: '(one) {1 item could not be restored} (other) {${count} items could not be restored}'
 	String importForkBackupSkipped({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
@@ -10651,15 +10624,6 @@ extension on Translations {
 			'settings.resetSettingsDescription' => 'Restore default settings. This can\'t be undone.',
 			'settings.resetSettingsSuccess' => 'Settings reset successfully',
 			'settings.backup' => 'Backup',
-			'settings.exportSettings' => 'Export Settings',
-			'settings.exportSettingsDescription' => 'Save your preferences to a file',
-			'settings.exportSettingsSuccess' => 'Settings exported',
-			'settings.importSettings' => 'Import Settings',
-			'settings.importSettingsDescription' => 'Restore preferences from a file',
-			'settings.importSettingsConfirm' => 'This will replace your current settings. Continue?',
-			'settings.importSettingsSuccess' => 'Settings imported',
-			'settings.importSettingsInvalidFile' => 'This file isn\'t a valid PlenTV settings export',
-			'settings.importSettingsNoUser' => 'Sign in before importing settings',
 			'settings.exportForkBackup' => 'Back up everything',
 			'settings.exportForkBackupDescription' => 'Save all settings, connections, favourites and guide data to one file',
 			'settings.exportForkBackupWarningTitle' => 'Keep this file private',
@@ -10670,7 +10634,7 @@ extension on Translations {
 			'settings.importForkBackupConfirm' => 'This will replace your current connections, settings, favourites and guide data with the backup. Continue?',
 			'settings.importForkBackupInvalidFile' => 'This file isn\'t a valid PlenTV backup',
 			'settings.importForkBackupSummaryTitle' => 'Backup restored',
-			'settings.importForkBackupSummary' => ({required Object connections, required Object profiles, required Object settings, required Object guideSettings, required Object guideStores, required Object favourites, required Object resume}) => '${connections} connections · ${profiles} profiles · ${settings} settings · ${guideSettings} guide settings · ${guideStores} guide stores · ${favourites} favourites · ${resume} watch positions',
+			'settings.importForkBackupSummary' => ({required Object connections, required Object profiles, required Object settings, required Object guideSettings, required Object guideStores, required Object favourites, required Object resume, required Object hidden}) => '${connections} connections · ${profiles} profiles · ${settings} settings · ${guideSettings} guide settings · ${guideStores} guide stores · ${favourites} favourites · ${resume} watch positions · ${hidden} hidden channels',
 			'settings.importForkBackupSkipped' => ({required num n, required Object count}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 item could not be restored', other: '${count} items could not be restored', ), 
 			'settings.importForkBackupActiveProfile' => 'Active profile restored',
 			'settings.importForkBackupNoActiveProfile' => 'No active profile in the backup',
@@ -10805,8 +10769,6 @@ extension on Translations {
 			'settings.hdrSdrConversionDeviceDescription' => 'Your device\'s video hardware converts it. Fastest, but colors depend on the device',
 			'settings.hdrSdrConversionPlayer' => 'Player',
 			'settings.hdrSdrConversionPlayerDescription' => 'The player converts it. Consistent colors, but 4K may stutter on low-end TV boxes',
-			_ => null,
-		} ?? switch (path) {
 			'settings.deinterlace' => 'Deinterlacing',
 			'settings.deinterlaceDescription' => 'Remove combing artifacts from interlaced video (mpv player only)',
 			'settings.deinterlaceOff' => 'Off',
@@ -10816,6 +10778,8 @@ extension on Translations {
 			'settings.deinterlaceFilm' => 'Film',
 			'settings.deinterlaceFilmDescription' => 'Restore the original frames of film and animation telecined to 29.97 fps, common on NTSC DVDs. Video shot for TV stutters. Live TV uses Video',
 			'settings.requireProfileSelectionOnOpen' => 'Ask for profile on app open',
+			_ => null,
+		} ?? switch (path) {
 			'settings.requireProfileSelectionOnOpenDescription' => 'Show profile selection every time the app is opened',
 			'settings.forceTvMode' => 'Force TV mode',
 			'settings.forceTvModeDescription' => 'Force TV layout. For devices that don\'t auto-detect. Requires restart.',
@@ -11319,8 +11283,6 @@ extension on Translations {
 			'subtitlingStyling.position' => 'Position',
 			'subtitlingStyling.assOverride' => 'ASS Override',
 			'subtitlingStyling.overrideScale' => 'Scale',
-			_ => null,
-		} ?? switch (path) {
 			'subtitlingStyling.overrideForce' => 'Force',
 			'subtitlingStyling.overrideStrip' => 'Remove styling',
 			'subtitlingStyling.positionTop' => 'Top',
@@ -11330,6 +11292,8 @@ extension on Translations {
 			'subtitlingStyling.anchorToScreen' => 'Anchor to Screen',
 			'subtitlingStyling.anchorToScreenDescription' => 'Show text subtitles in the black bars below widescreen video',
 			'subtitlingStyling.bold' => 'Bold',
+			_ => null,
+		} ?? switch (path) {
 			'subtitlingStyling.italic' => 'Italic',
 			'subtitlingStyling.renderResolution' => 'Render Resolution',
 			'subtitlingStyling.renderResolutionScreen' => 'Screen resolution',
@@ -11833,8 +11797,6 @@ extension on Translations {
 			'about.changelog2320.0' => 'Fixed: a download that gets cut off now picks up where it left off instead of starting over from 0% — the app keeps the part it already downloaded and resumes it',
 			'about.changelog2320.1' => 'Fixed: if a download can\'t resume because the panel won\'t allow it, it now pauses with the reason shown instead of silently starting over again and again',
 			'about.changelog2320.2' => 'Fixed: reassigning a channel\'s guide now refreshes that row straight away — you no longer have to close and reopen the guide to see the new programmes',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2320.3' => 'Fixed: Reload now keeps showing the guide you already have while the new one downloads in the background, instead of emptying the guide for a minute',
 			'about.changelog2320.4' => 'New: a setting under Settings, IPTV lets you choose whether downloads keep running while you watch something, or pause until you stop watching — downloads keep running by default',
 			'about.changelog2320.5' => 'Fixed: the Downloads screen now shows the real progress of a show\'s episode while it downloads, instead of saying nothing is queued',
@@ -11844,6 +11806,8 @@ extension on Translations {
 			'about.changelog2319.3' => 'New: the access-denied banner now has a button that opens Connection refusals, so you can see exactly what the panel said',
 			'about.changelog2319.4' => 'Fixed: the Retry buttons on a refused connection no longer re-fire the same refused request — they say the connection is refused instead',
 			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
 			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
@@ -12347,8 +12311,6 @@ extension on Translations {
 			'liveTv.reloadGuide' => 'Reload Guide',
 			'liveTv.softwareDecodeWarning' => ({required Object codec}) => 'This channel needs software decoding (${codec}) — it may stutter on this TV',
 			'liveTv.softwareDecodeUnknownCodec' => 'this codec',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.staleFeedBanner' => 'The TV guide is out of date — it has not updated in over a day.',
 			'liveTv.staleFeedReload' => 'Reload guide',
 			'liveTv.loadingGuide' => 'Loading guide…',
@@ -12358,6 +12320,8 @@ extension on Translations {
 			'liveTv.searchNoResults' => ({required Object query}) => 'No matches for "${query}"',
 			'liveTv.searchJumpNotFound' => 'That channel isn\'t in the guide any more — try refreshing it.',
 			'liveTv.channelsSection' => 'Channels',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.programsSection' => 'Programs',
 			'liveTv.now' => 'Now',
 			'liveTv.today' => 'Today',
@@ -12861,8 +12825,6 @@ extension on Translations {
 			'companionRemote.remote.playPause' => 'Play/Pause',
 			'companionRemote.remote.next' => 'Next',
 			'companionRemote.remote.seekBack' => 'Seek Back',
-			_ => null,
-		} ?? switch (path) {
 			'companionRemote.remote.stop' => 'Stop',
 			'companionRemote.remote.seekForward' => 'Seek Fwd',
 			'companionRemote.remote.volume' => 'Volume',
@@ -12872,6 +12834,8 @@ extension on Translations {
 			'companionRemote.remote.subtitles' => 'Subtitles',
 			'companionRemote.remote.audio' => 'Audio',
 			'companionRemote.remote.searchHint' => 'Search on desktop...',
+			_ => null,
+		} ?? switch (path) {
 			'companionRemote.errors.noNetworkInterface' => 'No network interface found',
 			'companionRemote.errors.authenticationFailed' => 'Authentication failed',
 			'companionRemote.errors.serverStartFailed' => ({required Object error}) => 'Failed to start remote server: ${error}',
@@ -13375,8 +13339,6 @@ extension on Translations {
 			'iptv.epgReloadGuideCoverageScopeGuideOrder' => 'rows in guide order — guide not opened',
 			'iptv.epgReloadGuideCoverageNotOpened' => 'Guide not opened at Reload — short-EPG coverage unknown (rows fill in as you open the guide)',
 			'iptv.epgReloadCheckGained' => ({required Object gained, required Object inFeed}) => 'Playlist check: gained ${gained} guide IDs (${inFeed} of those are in the guide)',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgReloadCheckNoGain' => 'Playlist check: the playlist adds no guide IDs',
 			'iptv.epgReloadCheckFailed' => ({required Object reason}) => 'Playlist check failed: ${reason}',
 			'iptv.epgReloadWindowSlideReady' => ({required Object count}) => 'Guide rows ready: ${count} channels',
@@ -13386,6 +13348,8 @@ extension on Translations {
 			'iptv.epgSourceDownloadDetail' => ({required Object detail}) => 'Download: ${detail}',
 			'iptv.epgM3uTvgIdCheck' => 'Check M3U guide IDs',
 			'iptv.epgM3uTvgIdCheckDescription' => 'One-time check: fetch the provider\'s playlist once and see how many channels without a guide ID gain one from it — and how many of those IDs are in the guide',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgM3uTvgIdResult' => ({required Object checked, required Object noId, required Object gained, required Object inFeed}) => '${checked} channels checked · ${noId} without a guide ID · ${gained} gain one from the playlist · ${inFeed} of those are in the guide',
 			'iptv.epgM3uTvgIdSample' => ({required Object samples}) => 'Examples: ${samples}',
 			'iptv.epgM3uTvgIdFeedNotLoaded' => 'The guide feed was not loaded, so the in-guide count could not be checked — reload the TV details first',

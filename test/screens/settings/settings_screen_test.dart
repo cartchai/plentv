@@ -140,8 +140,6 @@ void main() {
       _MigratedRow(title: t.settings.clearImageCache, focusLabel: 'settings_clear_image_cache'),
       _MigratedRow(title: t.settings.resetSettings, focusLabel: 'settings_reset_settings'),
       const _MigratedRow(title: 'Test ANR', isVisible: kDebugMode),
-      _MigratedRow(title: t.settings.exportSettings, focusLabel: 'settings_export_settings'),
-      _MigratedRow(title: t.settings.importSettings, focusLabel: 'settings_import_settings'),
     ];
 
     final referenceHeight = tester.getSize(_focusableTileFor(t.settings.viewLogs)).height;
@@ -204,6 +202,21 @@ void main() {
     await _pumpUi(tester);
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text(t.settings.clearImageCache), findsWidgets);
+  });
+
+  // 1.6.25 backup cleanup: the Backup section is exactly two rows —
+  // Back up everything / Restore a backup. The preferences-only
+  // Export/Import Settings rows are gone.
+  testWidgets('backup section has exactly the full-backup and restore rows', (tester) async {
+    final harness = await _pumpSettingsScreen(tester);
+    addTearDown(() => harness.dispose(tester));
+
+    expect(find.text(t.settings.exportForkBackup), findsOneWidget);
+    expect(find.text(t.settings.importForkBackup), findsOneWidget);
+    // The deleted rows' labels are literals now — their i18n keys are
+    // gone with the rows.
+    expect(find.text('Export Settings'), findsNothing);
+    expect(find.text('Import Settings'), findsNothing);
   });
 
   testWidgets('special download and generic update rows keep rich content on the shared compact row', (tester) async {
@@ -386,7 +399,11 @@ void main() {
     expect(requirements, [RequireWiFi.forAllTasks, RequireWiFi.forNoTasks]);
   });
 
-  testWidgets('importing Wi-Fi only applies it to downloads that are already queued', (tester) async {
+  // 1.6.25 backup cleanup: the settings-import path is gone, so the
+  // Wi-Fi requirement is exercised through the Download on Wi-Fi only
+  // toggle instead — same SettingsMutationService effect, same
+  // already-queued downloads.
+  testWidgets('toggling Wi-Fi only applies it to downloads that are already queued', (tester) async {
     final requirements = <RequireWiFi>[];
     final harness = await _pumpSettingsScreen(
       tester,
@@ -394,16 +411,10 @@ void main() {
         requirements.add(requirement);
         return true;
       },
-      settingsImporter: () async {
-        await SettingsService.instance.write(SettingsService.downloadOnWifiOnly, true);
-        return const ImportResult(keysImported: 1, keysSkipped: 0);
-      },
     );
     addTearDown(() => harness.dispose(tester));
 
-    await tester.tap(find.text(t.settings.importSettings));
-    await _pumpUi(tester);
-    await tester.tap(find.widgetWithText(DialogActionButton, t.settings.importSettings));
+    await tester.tap(find.text(t.settings.downloadOnWifiOnly));
     await _pumpUi(tester);
 
     expect(SettingsService.instance.read(SettingsService.downloadOnWifiOnly), isTrue);
@@ -527,66 +538,6 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(harness.locationEvents, isEmpty);
-  });
-
-  testWidgets('late settings export failure does not use a disposed context', (tester) async {
-    final exportGate = Completer<String?>();
-    final harness = await _pumpSettingsScreen(tester, settingsExporter: () => exportGate.future);
-
-    await tester.tap(find.text(t.settings.exportSettings));
-    await tester.pump();
-    await harness.dispose(tester);
-
-    exportGate.completeError(PlatformException(code: 'late_export_failure'));
-    await tester.pump();
-
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('late settings import failure does not use a disposed context', (tester) async {
-    final importGate = Completer<ImportResult?>();
-    final harness = await _pumpSettingsScreen(tester, settingsImporter: () => importGate.future);
-
-    await tester.tap(find.text(t.settings.importSettings));
-    await _pumpUi(tester);
-    await tester.tap(find.widgetWithText(DialogActionButton, t.settings.importSettings));
-    await tester.pump();
-    await harness.dispose(tester);
-
-    importGate.completeError(PlatformException(code: 'late_import_failure'));
-    await tester.pump();
-
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('settings export platform failure uses shared settings feedback', (tester) async {
-    final harness = await _pumpSettingsScreen(
-      tester,
-      settingsExporter: () async => throw PlatformException(code: 'save_failed'),
-    );
-    addTearDown(() => harness.dispose(tester));
-
-    await tester.tap(find.text(t.settings.exportSettings));
-    await _pumpUi(tester);
-
-    expect(find.text(t.settings.saveFailed), findsOneWidget);
-    expect(find.text(t.settings.exportSettingsSuccess), findsNothing);
-  });
-
-  testWidgets('settings import platform failure uses shared settings feedback', (tester) async {
-    final harness = await _pumpSettingsScreen(
-      tester,
-      settingsImporter: () async => throw PlatformException(code: 'pick_failed'),
-    );
-    addTearDown(() => harness.dispose(tester));
-
-    await tester.tap(find.text(t.settings.importSettings));
-    await _pumpUi(tester);
-    await tester.tap(find.widgetWithText(DialogActionButton, t.settings.importSettings));
-    await _pumpUi(tester);
-
-    expect(find.text(t.settings.saveFailed), findsOneWidget);
-    expect(find.text(t.settings.importSettingsSuccess), findsNothing);
   });
 
   // Build #6 (in-app update): the Updates section only renders when the
@@ -859,6 +810,7 @@ void main() {
         profileConnections: ForkBackupSectionReport(restored: 1, skipped: 0),
         epg: ForkBackupSectionReport(restored: 0, skipped: 0),
         favorites: ForkBackupSectionReport(restored: 0, skipped: 0),
+        hidden: ForkBackupSectionReport(restored: 0, skipped: 0),
         resume: ForkBackupSectionReport(restored: 0, skipped: 0),
         activeProfileRestored: true,
       );
@@ -1010,8 +962,6 @@ class _SettingsHarness {
 Future<_SettingsHarness> _pumpSettingsScreen(
   WidgetTester tester, {
   Future<bool> Function(Directory directory)? writableChecker,
-  Future<String?> Function()? settingsExporter,
-  Future<ImportResult?> Function()? settingsImporter,
   Future<ForkBackupRestoreReport?> Function()? forkBackupImporter,
   Future<void> Function(AppDatabase database, ActiveProfileProvider activeProfile)? prePumpSetup,
   bool includeBinder = false,
@@ -1151,8 +1101,6 @@ Future<_SettingsHarness> _pumpSettingsScreen(
                           MaterialPageRoute<void>(
                             builder: (_) => SettingsScreen(
                               downloadDirectoryWritableChecker: writableChecker ?? (_) async => true,
-                              settingsExporter: settingsExporter,
-                              settingsImporter: settingsImporter,
                               forkBackupImporter: forkBackupImporter,
                               backgroundWorkDiagnosticsService: backgroundWorkDiagnosticsService,
                             ),
@@ -1165,8 +1113,6 @@ Future<_SettingsHarness> _pumpSettingsScreen(
                 )
               : SettingsScreen(
                   downloadDirectoryWritableChecker: writableChecker ?? (_) async => true,
-                  settingsExporter: settingsExporter,
-                  settingsImporter: settingsImporter,
                   forkBackupImporter: forkBackupImporter,
                   backgroundWorkDiagnosticsService: backgroundWorkDiagnosticsService,
                 ),

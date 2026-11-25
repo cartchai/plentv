@@ -407,15 +407,6 @@ class _Translations$settings$ru extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Восстановить настройки по умолчанию. Это нельзя отменить.';
 	@override String get resetSettingsSuccess => 'Настройки успешно сброшены';
 	@override String get backup => 'Резервная копия';
-	@override String get exportSettings => 'Экспорт настроек';
-	@override String get exportSettingsDescription => 'Сохранить настройки в файл';
-	@override String get exportSettingsSuccess => 'Настройки экспортированы';
-	@override String get importSettings => 'Импорт настроек';
-	@override String get importSettingsDescription => 'Восстановить настройки из файла';
-	@override String get importSettingsConfirm => 'Это заменит ваши текущие настройки. Продолжить?';
-	@override String get importSettingsSuccess => 'Настройки импортированы';
-	@override String get importSettingsInvalidFile => 'Этот файл не является действительным экспортом настроек PlenTV';
-	@override String get importSettingsNoUser => 'Войдите в систему перед импортом настроек';
 	@override String get shortcutsReset => 'Горячие клавиши сброшены по умолчанию';
 	@override String get resetShortcutsConfirm => 'Это заменит ваши горячие клавиши стандартными. Продолжить?';
 	@override String get about => 'О приложении';
@@ -3650,15 +3641,6 @@ extension on TranslationsRu {
 			'settings.resetSettingsDescription' => 'Восстановить настройки по умолчанию. Это нельзя отменить.',
 			'settings.resetSettingsSuccess' => 'Настройки успешно сброшены',
 			'settings.backup' => 'Резервная копия',
-			'settings.exportSettings' => 'Экспорт настроек',
-			'settings.exportSettingsDescription' => 'Сохранить настройки в файл',
-			'settings.exportSettingsSuccess' => 'Настройки экспортированы',
-			'settings.importSettings' => 'Импорт настроек',
-			'settings.importSettingsDescription' => 'Восстановить настройки из файла',
-			'settings.importSettingsConfirm' => 'Это заменит ваши текущие настройки. Продолжить?',
-			'settings.importSettingsSuccess' => 'Настройки импортированы',
-			'settings.importSettingsInvalidFile' => 'Этот файл не является действительным экспортом настроек PlenTV',
-			'settings.importSettingsNoUser' => 'Войдите в систему перед импортом настроек',
 			'settings.shortcutsReset' => 'Горячие клавиши сброшены по умолчанию',
 			'settings.resetShortcutsConfirm' => 'Это заменит ваши горячие клавиши стандартными. Продолжить?',
 			'settings.about' => 'О приложении',
@@ -3873,8 +3855,6 @@ extension on TranslationsRu {
 			'themeEditor.contrast.textMutedOnSurface' => 'Второстепенный текст на поверхности',
 			'themeEditor.contrast.accentOnBg' => 'Акцент на фоне',
 			'themeEditor.contrast.accentOnSurface' => 'Акцент на поверхности',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Надпись кнопки на акценте',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, ниже рекомендуемых ${minimum}:1',
 			'themeEditor.discardTitle' => 'Не сохранять изменения?',
@@ -3884,6 +3864,8 @@ extension on TranslationsRu {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Осталось ${minutes} мин',
 			'themeEditor.previewSwitch' => 'Автовоспроизведение',
 			'themeEditor.previewMutedText' => 'Так выглядит второстепенный текст',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Поиск фильмов, сериалов, музыки...',
 			'search.tryDifferentTerm' => 'Попробуйте другой запрос',
 			'search.searchYourMedia' => 'Поиск в вашей медиатеке',
@@ -4387,8 +4369,6 @@ extension on TranslationsRu {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Добавьте или удалите URL-адреса для ${serverName}. PlenTV будет использовать доступный URL с наименьшей задержкой.',
 			'accountPreferences.sectionTitle' => 'Настройки аккаунта',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Параметры аудио, субтитров и библиотеки сохранены на аккаунте ${account}',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Параметры аудио, субтитров и библиотеки сохранены на ${count} аккаунтах',
 			'accountPreferences.pickAccount' => 'Каждый аккаунт хранит собственные настройки. Выберите, какой редактировать.',
 			'accountPreferences.storedOnAccount' => 'Эти параметры сохраняются на самом аккаунте, поэтому их используют все приложения, вошедшие в него, — включая PlenTV на ваших других устройствах.',
@@ -4398,6 +4378,8 @@ extension on TranslationsRu {
 			'accountPreferences.loadFailed' => 'Не удалось загрузить эти настройки',
 			'accountPreferences.noPreference' => 'Без предпочтений',
 			'accountPreferences.notSet' => 'Не задано',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Аудио и субтитры',
 			'accountPreferences.groups.libraryDisplay' => 'Библиотека',
 			'accountPreferences.groups.personalMedia' => 'Личные медиа',
@@ -4901,8 +4883,6 @@ extension on TranslationsRu {
 			'collections.deleteCollection' => 'Удалить коллекцию',
 			'collections.deleteConfirm' => ({required Object title}) => 'Удалить "${title}"? Это нельзя отменить.',
 			'collections.deleted' => 'Коллекция удалена',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Не удалось удалить коллекцию',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Не удалось удалить коллекцию: ${error}',
 			'collections.selectCollection' => 'Выбрать коллекцию',
@@ -4912,6 +4892,8 @@ extension on TranslationsRu {
 			'collections.errorAddingToCollection' => 'Не удалось добавить в коллекцию',
 			'collections.created' => 'Коллекция создана',
 			'collections.removeFromCollection' => 'Удалить из коллекции',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Удалить "${title}" из этой коллекции?',
 			'collections.removedFromCollection' => 'Удалено из коллекции',
 			'collections.removeFromCollectionFailed' => 'Не удалось удалить из коллекции',
@@ -5415,8 +5397,6 @@ extension on TranslationsRu {
 			'externalPlayer.playerNameHint' => 'Мой плеер',
 			'externalPlayer.playerCommand' => 'Команда',
 			'externalPlayer.playerPackage' => 'Имя пакета',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-схема',
 			'externalPlayer.off' => 'Выкл.',
 			'externalPlayer.launchFailed' => 'Не удалось открыть внешний плеер',
@@ -5426,6 +5406,8 @@ extension on TranslationsRu {
 			'metadataEdit.screenTitle' => 'Редактировать метаданные',
 			'metadataEdit.basicInfo' => 'Основная информация',
 			'metadataEdit.artwork' => 'Обложка',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Дополнительные настройки',
 			'metadataEdit.title' => 'Название',
 			'metadataEdit.sortTitle' => 'Название для сортировки',

@@ -28,6 +28,7 @@
 //                                    {"xmltvId", "sourceId"} } } },
 //     "favorites": { "<connectionId>": { "channels": "<raw JSON string>",
 //                                        "items": "<raw JSON string>" } },
+//     "hidden": { "<connectionId>": ["<channelKey>", ...] },
 //     "resume": { "<connectionId>": "<raw JSON string>" }
 //   }
 //
@@ -102,6 +103,7 @@ class ForkBackupRestoreReport {
     required this.profileConnections,
     required this.epg,
     required this.favorites,
+    required this.hidden,
     required this.resume,
     required this.activeProfileRestored,
   });
@@ -113,6 +115,7 @@ class ForkBackupRestoreReport {
   final ForkBackupSectionReport profileConnections;
   final ForkBackupSectionReport epg;
   final ForkBackupSectionReport favorites;
+  final ForkBackupSectionReport hidden;
   final ForkBackupSectionReport resume;
   final bool activeProfileRestored;
 
@@ -124,6 +127,7 @@ class ForkBackupRestoreReport {
       profileConnections.restored +
       epg.restored +
       favorites.restored +
+      hidden.restored +
       resume.restored;
 }
 
@@ -207,6 +211,7 @@ class ForkBackupService {
     final connectionIds = connections.map((c) => c.id).toList();
     final epg = <String, dynamic>{};
     final favorites = <String, dynamic>{};
+    final hidden = <String, dynamic>{};
     final resume = <String, dynamic>{};
     for (final id in connectionIds) {
       final store = IptvEpgSourcesStore(id);
@@ -233,6 +238,13 @@ class ForkBackupService {
       if (favChannels != null || favItems != null) {
         favorites[id] = {'channels': favChannels, 'items': favItems};
       }
+      // Same rule as the favourites above: a connection with no
+      // hidden channels gets no entry, so the counts and the summary
+      // only count connections that actually hold data.
+      final hiddenChannels = prefs.getStringList('iptv_hidden_channels:$id');
+      if (hiddenChannels != null && hiddenChannels.isNotEmpty) {
+        hidden[id] = hiddenChannels;
+      }
       final resumeValue = prefs.getString('iptv_resume:$id');
       if (resumeValue != null) resume[id] = resumeValue;
     }
@@ -251,6 +263,7 @@ class ForkBackupService {
       'profileConnections': profileConnections.map(_profileConnectionToBackupJson).toList(),
       'epg': epg,
       'favorites': favorites,
+      'hidden': hidden,
       'resume': resume,
     };
   }
@@ -459,6 +472,7 @@ class ForkBackupService {
     final epgPrefsReport = await _importEpgPrefs(data['epgPrefs'], settings);
     final epgReport = await _importEpg(data['epg']);
     final favoritesReport = await _importFavorites(data['favorites'], prefs);
+    final hiddenReport = await _importHidden(data['hidden'], prefs);
     final resumeReport = await _importResume(data['resume'], prefs);
 
     return ForkBackupRestoreReport(
@@ -469,6 +483,7 @@ class ForkBackupService {
       profileConnections: profileConnectionsReport,
       epg: epgReport,
       favorites: favoritesReport,
+      hidden: hiddenReport,
       resume: resumeReport,
       activeProfileRestored: activeProfileRestored,
     );
@@ -846,6 +861,48 @@ class ForkBackupService {
       }
     }
     return ForkBackupSectionReport(restored: restored, skipped: skipped);
+  }
+
+  /// Hidden channels (1.6.25): mirrors [_importFavorites] — the raw
+  /// string list per connection, written verbatim. A bad entry is
+  /// skipped, never a crash.
+  Future<ForkBackupSectionReport> _importHidden(Object? raw, SharedPreferencesWithCache prefs) async {
+    if (raw == null) return const ForkBackupSectionReport(restored: 0, skipped: 0);
+    if (raw is! Map) {
+      return const ForkBackupSectionReport(restored: 0, skipped: 0, note: 'hidden section is not an object');
+    }
+    var restored = 0;
+    var skipped = 0;
+    for (final entry in raw.entries) {
+      final id = entry.key.toString();
+      final ok = await _importRawStringList(prefs, 'iptv_hidden_channels:$id', entry.value);
+      if (ok) {
+        restored++;
+      } else {
+        skipped++;
+      }
+    }
+    return ForkBackupSectionReport(restored: restored, skipped: skipped);
+  }
+
+  /// Writes a raw string list verbatim (or removes the key when the
+  /// backup has null for it). Returns false when the value is corrupt —
+  /// a bad list never crashes the import.
+  Future<bool> _importRawStringList(SharedPreferencesWithCache prefs, String key, Object? value) async {
+    try {
+      if (value == null) {
+        await prefs.remove(key);
+        return prefs.getStringList(key) == null;
+      }
+      if (value is! List) return false;
+      if (value.any((e) => e is! String)) return false;
+      final list = value.cast<String>();
+      await prefs.setStringList(key, list);
+      final stored = prefs.getStringList(key);
+      return stored != null && stored.length == list.length && stored.every(list.contains);
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<ForkBackupSectionReport> _importResume(Object? raw, SharedPreferencesWithCache prefs) async {

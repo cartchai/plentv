@@ -120,6 +120,27 @@ Future<void> _seedExportState(AppDatabase db) async {
   await prefs.setString('iptv_fav_channels:trex', jsonEncode(['100', '101']));
   await prefs.setString('iptv_fav_items:trex', jsonEncode([{'id': 'vod-1'}]));
   await prefs.setString('iptv_resume:trex', jsonEncode({'vod-1': 123}));
+
+  // 1.6.25 backup cleanup: the three IPTV prefs the portable registry
+  // used to miss, plus the five Super Spoof prefs and a throwaway WARP
+  // registration as regression guards.
+  await prefs.setBool('iptv_pause_downloads_while_watching', true);
+  await prefs.setInt('iptv_download_run_timeout_minutes', 5);
+  await prefs.setBool('iptv_epg_us_preset_default', true);
+  await prefs.setBool('iptv_super_spoof', true);
+  await prefs.setString('iptv_super_spoof_user_agent', 'tivimate');
+  await prefs.setString('iptv_super_spoof_transport', 'dart');
+  await prefs.setBool('iptv_super_spoof_headers', false);
+  await prefs.setBool('iptv_super_spoof_streams', false);
+  // Throwaway registration — never a real account, never real keys.
+  await prefs.setString(
+    'iptv_warp_registration',
+    jsonEncode({'token': 'throwaway-token', 'accountId': 'throwaway-account'}),
+  );
+
+  // Hidden channels: only trex hides any — m3u-1 carries none, so the
+  // backup must carry exactly one hidden entry.
+  await prefs.setStringList('iptv_hidden_channels:trex', ['ch-1', 'ch-2']);
 }
 
 void _setMockPackage(String packageName, String version, String buildNumber) {
@@ -164,6 +185,11 @@ void main() {
 
     expect(map['format'], 'plentv-backup');
     expect(map['formatVersion'], 1);
+    // 1.6.25: the hidden-channels section carries only the connection
+    // that actually hides channels.
+    expect(map['hidden'], {
+      'trex': ['ch-1', 'ch-2'],
+    });
     // Package-agnostic by construction: no package name, no absolute
     // paths anywhere in the file.
     final jsonString = jsonEncode(map);
@@ -196,7 +222,13 @@ void main() {
     expect(report.resume.skipped, 0);
     expect(report.epgPrefs.restored, 7);
     expect(report.epgPrefs.skipped, 0);
-    expect(report.prefs.keysImported, 3, reason: '2 portable + 1 user-scoped library key');
+    expect(report.hidden.restored, 1);
+    expect(report.hidden.skipped, 0);
+    expect(
+      report.prefs.keysImported,
+      12,
+      reason: '2 portable + 1 user-scoped library key + 3 gap IPTV prefs + 5 Super Spoof prefs + 1 WARP registration',
+    );
     expect(report.activeProfileRestored, isTrue);
 
     // Connections: logins and hidden lists survive, ids preserved.
@@ -242,6 +274,21 @@ void main() {
     expect(settings.read(SettingsService.iptvEpgUpdateTimeMinutes), 600);
     expect(settings.read(SettingsService.iptvEpgUpdateOnPlaylistChange), isFalse);
 
+    // 1.6.25 gap prefs + Super Spoof prefs + WARP registration ride
+    // the backup and land.
+    expect(settings.read(SettingsService.iptvPauseDownloadsWhileWatching), isTrue);
+    expect(settings.read(SettingsService.iptvDownloadRunTimeoutMinutes), 5);
+    expect(settings.read(SettingsService.iptvEpgUsPresetDefault), isTrue);
+    expect(settings.read(SettingsService.iptvSuperSpoof), isTrue);
+    expect(settings.read(SettingsService.iptvSuperSpoofUserAgent), 'tivimate');
+    expect(settings.read(SettingsService.iptvSuperSpoofTransport), 'dart');
+    expect(settings.read(SettingsService.iptvSuperSpoofHeaders), isFalse);
+    expect(settings.read(SettingsService.iptvSuperSpoofStreams), isFalse);
+    expect(
+      prefs.getString('iptv_warp_registration'),
+      jsonEncode({'token': 'throwaway-token', 'accountId': 'throwaway-account'}),
+    );
+
     // EPG store: sources, precedence, mappings. The provider feed is
     // implicit — loadUserSources filters it out — so only the one
     // user-added source comes back.
@@ -259,6 +306,10 @@ void main() {
     expect(prefs.getString('iptv_fav_channels:trex'), jsonEncode(['100', '101']));
     expect(prefs.getString('iptv_fav_items:trex'), jsonEncode([{'id': 'vod-1'}]));
     expect(prefs.getString('iptv_resume:trex'), jsonEncode({'vod-1': 123}));
+
+    // Hidden channels: byte-faithful string list, only for trex.
+    expect(prefs.getStringList('iptv_hidden_channels:trex'), ['ch-1', 'ch-2']);
+    expect(prefs.getStringList('iptv_hidden_channels:m3u-1'), isNull);
   });
 
   test('exportToFile + importFromFile round-trip through the file seams', () async {
@@ -326,13 +377,15 @@ void main() {
     await _seedExportState(exportDb);
     final map = await ForkBackupService(exportDb).buildBackupMap();
 
-    // Corrupt one connection's kind, one favourites string, one mapping.
+    // Corrupt one connection's kind, one favourites string, one mapping,
+    // and the hidden-channels list.
     final connections = map['connections'] as List;
     (connections.firstWhere((c) => (c as Map)['id'] == 'trex') as Map)['kind'] = 'nope';
     final favorites = map['favorites'] as Map;
     (favorites['trex'] as Map)['channels'] = 'not-json{{{';
     final epg = map['epg'] as Map;
     (epg['trex'] as Map)['mappings'] = {'100': 'not-a-map'};
+    (map['hidden'] as Map)['trex'] = 'not-a-list';
 
     await exportDb.close();
     resetSharedPreferencesForTest();
@@ -345,9 +398,11 @@ void main() {
     expect(report.connections.skipped, 1, reason: 'the unknown-kind xtream row');
     expect(report.favorites.skipped, 1);
     expect(report.epg.skipped, 1, reason: 'the corrupt mapping fails verification');
+    expect(report.hidden.restored, 0);
+    expect(report.hidden.skipped, 1, reason: 'the corrupt hidden list is skipped, not a crash');
     // The valid parts still land: the profile, the prefs, the resume.
     expect(report.profiles.restored, 1);
-    expect(report.prefs.keysImported, 3);
+    expect(report.prefs.keysImported, 12);
     expect(report.resume.restored, 1);
     expect(report.activeProfileRestored, isTrue);
   });

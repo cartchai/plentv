@@ -407,15 +407,6 @@ class _Translations$settings$az extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Defolt tənzimləmələri bərpa edin. Bu əməliyyat geri qaytarıla bilməz.';
 	@override String get resetSettingsSuccess => 'Tənzimləmələr uğurla sıfırlandı';
 	@override String get backup => 'Ehtiyat nüsxə';
-	@override String get exportSettings => 'Tənzimləmələri ixrac et';
-	@override String get exportSettingsDescription => 'Seçimlərinizi fayla yadda saxlayın';
-	@override String get exportSettingsSuccess => 'Tənzimləmələr ixrac edildi';
-	@override String get importSettings => 'Tənzimləmələri idxal et';
-	@override String get importSettingsDescription => 'Seçimləri fayldan bərpa edin';
-	@override String get importSettingsConfirm => 'Bu cari tənzimləmələrinizin üzərinə yazacaq. Davam edilsin?';
-	@override String get importSettingsSuccess => 'Tənzimləmələr idxal edildi';
-	@override String get importSettingsInvalidFile => 'Bu fayl düzgün PlenTV tənzimləmələr faylı deyil';
-	@override String get importSettingsNoUser => 'Tənzimləmələri idxal etməzdən əvvəl daxil olun';
 	@override String get shortcutsReset => 'Qısayollar defolt vəziyyətə sıfırlandı';
 	@override String get resetShortcutsConfirm => 'Bu, xüsusi qısayollarınızı defolt qısayollarla əvəz edəcək. Davam edilsin?';
 	@override String get about => 'Haqqında';
@@ -3626,15 +3617,6 @@ extension on TranslationsAz {
 			'settings.resetSettingsDescription' => 'Defolt tənzimləmələri bərpa edin. Bu əməliyyat geri qaytarıla bilməz.',
 			'settings.resetSettingsSuccess' => 'Tənzimləmələr uğurla sıfırlandı',
 			'settings.backup' => 'Ehtiyat nüsxə',
-			'settings.exportSettings' => 'Tənzimləmələri ixrac et',
-			'settings.exportSettingsDescription' => 'Seçimlərinizi fayla yadda saxlayın',
-			'settings.exportSettingsSuccess' => 'Tənzimləmələr ixrac edildi',
-			'settings.importSettings' => 'Tənzimləmələri idxal et',
-			'settings.importSettingsDescription' => 'Seçimləri fayldan bərpa edin',
-			'settings.importSettingsConfirm' => 'Bu cari tənzimləmələrinizin üzərinə yazacaq. Davam edilsin?',
-			'settings.importSettingsSuccess' => 'Tənzimləmələr idxal edildi',
-			'settings.importSettingsInvalidFile' => 'Bu fayl düzgün PlenTV tənzimləmələr faylı deyil',
-			'settings.importSettingsNoUser' => 'Tənzimləmələri idxal etməzdən əvvəl daxil olun',
 			'settings.shortcutsReset' => 'Qısayollar defolt vəziyyətə sıfırlandı',
 			'settings.resetShortcutsConfirm' => 'Bu, xüsusi qısayollarınızı defolt qısayollarla əvəz edəcək. Davam edilsin?',
 			'settings.about' => 'Haqqında',
@@ -3849,8 +3831,6 @@ extension on TranslationsAz {
 			'themeEditor.contrast.textMutedOnSurface' => 'Səthdə köməkçi mətn',
 			'themeEditor.contrast.accentOnBg' => 'Arxa fonda vurğu',
 			'themeEditor.contrast.accentOnSurface' => 'Səthdə vurğu',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Vurğu üzərində düymə mətni',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, tövsiyə olunan ${minimum}:1-dən aşağı',
 			'themeEditor.discardTitle' => 'Dəyişikliklərdən imtina edilsin?',
@@ -3860,6 +3840,8 @@ extension on TranslationsAz {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} dəq qaldı',
 			'themeEditor.previewSwitch' => 'Avtomatik oynatma',
 			'themeEditor.previewMutedText' => 'Köməkçi mətn belə görünür',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Kino, serial, musiqi axtar...',
 			'search.tryDifferentTerm' => 'Fərqli axtarış sözü cəhd edin',
 			'search.searchYourMedia' => 'Mediyanızda axtarın',
@@ -4363,8 +4345,6 @@ extension on TranslationsAz {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} üçün URL-lər əlavə edin və ya silin. PlenTV əlçatan olan ən aşağı gecikməli URL-i istifadə edəcək.',
 			'accountPreferences.sectionTitle' => 'Hesab tərcihləri',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account} hesabında saxlanılan səs, altyazı və kitabxana seçimləri',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count} hesabda saxlanılan səs, altyazı və kitabxana seçimləri',
 			'accountPreferences.pickAccount' => 'Hər hesab öz tərcihlərini saxlayır. Düzəliş etmək üçün birini seçin.',
 			'accountPreferences.storedOnAccount' => 'Bu seçimlər hesabın özündə saxlanılır, ona görə də ona daxil olan hər tətbiq onlardan istifadə edir — digər cihazlarınızdakı PlenTV də daxil olmaqla.',
@@ -4374,6 +4354,8 @@ extension on TranslationsAz {
 			'accountPreferences.loadFailed' => 'Bu tərcihlər yüklənə bilmədi',
 			'accountPreferences.noPreference' => 'Tərcih yoxdur',
 			'accountPreferences.notSet' => 'Təyin edilməyib',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Səs və altyazılar',
 			'accountPreferences.groups.libraryDisplay' => 'Kitabxana',
 			'accountPreferences.groups.personalMedia' => 'Şəxsi media',
@@ -4877,8 +4859,6 @@ extension on TranslationsAz {
 			'collections.deleteCollection' => 'Kolleksiyanı sil',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" silinsin? Bu əməliyyat geri qaytarıla bilməz.',
 			'collections.deleted' => 'Kolleksiya silindi',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Kolleksiya silinə bilmədi',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Kolleksiya silinə bilmədi: ${error}',
 			'collections.selectCollection' => 'Kolleksiya seç',
@@ -4888,6 +4868,8 @@ extension on TranslationsAz {
 			'collections.errorAddingToCollection' => 'Kolleksiyaya əlavə edilə bilmədi',
 			'collections.created' => 'Kolleksiya yaradıldı',
 			'collections.removeFromCollection' => 'Kolleksiyadan sil',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" bu kolleksiyadan silinsin?',
 			'collections.removedFromCollection' => 'Kolleksiyadan silindi',
 			'collections.removeFromCollectionFailed' => 'Kolleksiyadan silinə bilmədi',
@@ -5391,8 +5373,6 @@ extension on TranslationsAz {
 			'externalPlayer.playerNameHint' => 'Mənim oynadıcım',
 			'externalPlayer.playerCommand' => 'Əmr',
 			'externalPlayer.playerPackage' => 'Paket adı',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL sxemi',
 			'externalPlayer.off' => 'Söndürülüb',
 			'externalPlayer.launchFailed' => 'Xarici oynadıcı açıla bilmədi',
@@ -5402,6 +5382,8 @@ extension on TranslationsAz {
 			'metadataEdit.screenTitle' => 'Meta-məlumatlara düzəliş et',
 			'metadataEdit.basicInfo' => 'Əsas məlumatlar',
 			'metadataEdit.artwork' => 'Şəkillər/Posterlər',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Təkmilləşdirilmiş tənzimləmələr',
 			'metadataEdit.title' => 'Başlıq',
 			'metadataEdit.sortTitle' => 'Sıralama başlığı',

@@ -407,15 +407,6 @@ class _Translations$settings$sv extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Återställ standardinställningarna. Det går inte att ångra.';
 	@override String get resetSettingsSuccess => 'Inställningarna har återställts';
 	@override String get backup => 'Säkerhetskopia';
-	@override String get exportSettings => 'Exportera inställningar';
-	@override String get exportSettingsDescription => 'Spara dina inställningar till en fil';
-	@override String get exportSettingsSuccess => 'Inställningar exporterade';
-	@override String get importSettings => 'Importera inställningar';
-	@override String get importSettingsDescription => 'Återställ inställningar från en fil';
-	@override String get importSettingsConfirm => 'Detta ersätter dina nuvarande inställningar. Fortsätta?';
-	@override String get importSettingsSuccess => 'Inställningar importerade';
-	@override String get importSettingsInvalidFile => 'Filen är inte en giltig export av PlenTV-inställningar';
-	@override String get importSettingsNoUser => 'Logga in innan du importerar inställningar';
 	@override String get shortcutsReset => 'Genvägarna har återställts till standard';
 	@override String get resetShortcutsConfirm => 'Detta ersätter dina anpassade genvägar med standardgenvägarna. Fortsätta?';
 	@override String get about => 'Om';
@@ -3626,15 +3617,6 @@ extension on TranslationsSv {
 			'settings.resetSettingsDescription' => 'Återställ standardinställningarna. Det går inte att ångra.',
 			'settings.resetSettingsSuccess' => 'Inställningarna har återställts',
 			'settings.backup' => 'Säkerhetskopia',
-			'settings.exportSettings' => 'Exportera inställningar',
-			'settings.exportSettingsDescription' => 'Spara dina inställningar till en fil',
-			'settings.exportSettingsSuccess' => 'Inställningar exporterade',
-			'settings.importSettings' => 'Importera inställningar',
-			'settings.importSettingsDescription' => 'Återställ inställningar från en fil',
-			'settings.importSettingsConfirm' => 'Detta ersätter dina nuvarande inställningar. Fortsätta?',
-			'settings.importSettingsSuccess' => 'Inställningar importerade',
-			'settings.importSettingsInvalidFile' => 'Filen är inte en giltig export av PlenTV-inställningar',
-			'settings.importSettingsNoUser' => 'Logga in innan du importerar inställningar',
 			'settings.shortcutsReset' => 'Genvägarna har återställts till standard',
 			'settings.resetShortcutsConfirm' => 'Detta ersätter dina anpassade genvägar med standardgenvägarna. Fortsätta?',
 			'settings.about' => 'Om',
@@ -3849,8 +3831,6 @@ extension on TranslationsSv {
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundär text på yta',
 			'themeEditor.contrast.accentOnBg' => 'Accentfärg på bakgrund',
 			'themeEditor.contrast.accentOnSurface' => 'Accentfärg på yta',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Knapptext på accentfärg',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, under det rekommenderade ${minimum}:1',
 			'themeEditor.discardTitle' => 'Släng ändringarna?',
@@ -3860,6 +3840,8 @@ extension on TranslationsSv {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} min kvar',
 			'themeEditor.previewSwitch' => 'Autouppspelning',
 			'themeEditor.previewMutedText' => 'Sekundär text ser ut så här',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Sök filmer, serier, musik...',
 			'search.tryDifferentTerm' => 'Prova en annan sökterm',
 			'search.searchYourMedia' => 'Sök i dina media',
@@ -4363,8 +4345,6 @@ extension on TranslationsSv {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Lägg till eller ta bort URL:er för ${serverName}. PlenTV använder den nåbara URL:en med lägst latens.',
 			'accountPreferences.sectionTitle' => 'Kontoinställningar',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Ljud-, undertext- och biblioteksalternativ sparade på ${account}',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Ljud-, undertext- och biblioteksalternativ sparade på ${count} konton',
 			'accountPreferences.pickAccount' => 'Varje konto lagrar sina egna inställningar. Välj det du vill redigera.',
 			'accountPreferences.storedOnAccount' => 'Dessa alternativ sparas på själva kontot, så alla appar som är inloggade på det använder dem — inklusive PlenTV på dina andra enheter.',
@@ -4374,6 +4354,8 @@ extension on TranslationsSv {
 			'accountPreferences.loadFailed' => 'Det gick inte att läsa in dessa inställningar',
 			'accountPreferences.noPreference' => 'Ingen preferens',
 			'accountPreferences.notSet' => 'Inte angiven',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Ljud och undertexter',
 			'accountPreferences.groups.libraryDisplay' => 'Bibliotek',
 			'accountPreferences.groups.personalMedia' => 'Personliga media',
@@ -4877,8 +4859,6 @@ extension on TranslationsSv {
 			'collections.deleteCollection' => 'Ta bort samling',
 			'collections.deleteConfirm' => ({required Object title}) => 'Ta bort "${title}"? Detta kan inte ångras.',
 			'collections.deleted' => 'Samling borttagen',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Det gick inte att ta bort samlingen',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Det gick inte att ta bort samlingen: ${error}',
 			'collections.selectCollection' => 'Välj samling',
@@ -4888,6 +4868,8 @@ extension on TranslationsSv {
 			'collections.errorAddingToCollection' => 'Det gick inte att lägga till objektet i samlingen',
 			'collections.created' => 'Samlingen har skapats',
 			'collections.removeFromCollection' => 'Ta bort från samlingen',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Ta bort "${title}" från den här samlingen?',
 			'collections.removedFromCollection' => 'Objektet har tagits bort från samlingen',
 			'collections.removeFromCollectionFailed' => 'Det gick inte att ta bort objektet från samlingen',
@@ -5391,8 +5373,6 @@ extension on TranslationsSv {
 			'externalPlayer.playerNameHint' => 'Min spelare',
 			'externalPlayer.playerCommand' => 'Kommando',
 			'externalPlayer.playerPackage' => 'Paketnamn',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-schema',
 			'externalPlayer.off' => 'Av',
 			'externalPlayer.launchFailed' => 'Kunde inte öppna extern spelare',
@@ -5402,6 +5382,8 @@ extension on TranslationsSv {
 			'metadataEdit.screenTitle' => 'Redigera metadata',
 			'metadataEdit.basicInfo' => 'Grundläggande information',
 			'metadataEdit.artwork' => 'Bildmaterial',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Avancerade inställningar',
 			'metadataEdit.title' => 'Titel',
 			'metadataEdit.sortTitle' => 'Sorteringstitel',

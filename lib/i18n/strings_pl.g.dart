@@ -407,15 +407,6 @@ class _Translations$settings$pl extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Przywróć ustawienia domyślne. Tego nie można cofnąć.';
 	@override String get resetSettingsSuccess => 'Przywrócono ustawienia domyślne';
 	@override String get backup => 'Kopia zapasowa';
-	@override String get exportSettings => 'Eksportuj ustawienia';
-	@override String get exportSettingsDescription => 'Zapisz swoje preferencje do pliku';
-	@override String get exportSettingsSuccess => 'Ustawienia wyeksportowane';
-	@override String get importSettings => 'Importuj ustawienia';
-	@override String get importSettingsDescription => 'Przywróć preferencje z pliku';
-	@override String get importSettingsConfirm => 'Bieżące ustawienia zostaną zastąpione. Kontynuować?';
-	@override String get importSettingsSuccess => 'Ustawienia zaimportowane';
-	@override String get importSettingsInvalidFile => 'Ten plik nie jest prawidłowym eksportem PlenTV';
-	@override String get importSettingsNoUser => 'Zaloguj się przed importem ustawień';
 	@override String get shortcutsReset => 'Skróty przywrócone do domyślnych';
 	@override String get resetShortcutsConfirm => 'Twoje własne skróty zostaną zastąpione domyślnymi. Kontynuować?';
 	@override String get about => 'O aplikacji';
@@ -3650,15 +3641,6 @@ extension on TranslationsPl {
 			'settings.resetSettingsDescription' => 'Przywróć ustawienia domyślne. Tego nie można cofnąć.',
 			'settings.resetSettingsSuccess' => 'Przywrócono ustawienia domyślne',
 			'settings.backup' => 'Kopia zapasowa',
-			'settings.exportSettings' => 'Eksportuj ustawienia',
-			'settings.exportSettingsDescription' => 'Zapisz swoje preferencje do pliku',
-			'settings.exportSettingsSuccess' => 'Ustawienia wyeksportowane',
-			'settings.importSettings' => 'Importuj ustawienia',
-			'settings.importSettingsDescription' => 'Przywróć preferencje z pliku',
-			'settings.importSettingsConfirm' => 'Bieżące ustawienia zostaną zastąpione. Kontynuować?',
-			'settings.importSettingsSuccess' => 'Ustawienia zaimportowane',
-			'settings.importSettingsInvalidFile' => 'Ten plik nie jest prawidłowym eksportem PlenTV',
-			'settings.importSettingsNoUser' => 'Zaloguj się przed importem ustawień',
 			'settings.shortcutsReset' => 'Skróty przywrócone do domyślnych',
 			'settings.resetShortcutsConfirm' => 'Twoje własne skróty zostaną zastąpione domyślnymi. Kontynuować?',
 			'settings.about' => 'O aplikacji',
@@ -3873,8 +3855,6 @@ extension on TranslationsPl {
 			'themeEditor.contrast.textMutedOnSurface' => 'Tekst drugorzędny na powierzchni',
 			'themeEditor.contrast.accentOnBg' => 'Akcent na tle',
 			'themeEditor.contrast.accentOnSurface' => 'Akcent na powierzchni',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Etykieta przycisku na akcencie',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, poniżej zalecanego ${minimum}:1',
 			'themeEditor.discardTitle' => 'Odrzucić zmiany?',
@@ -3884,6 +3864,8 @@ extension on TranslationsPl {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Pozostało ${minutes} min',
 			'themeEditor.previewSwitch' => 'Automatyczne odtwarzanie',
 			'themeEditor.previewMutedText' => 'Tak wygląda tekst drugorzędny',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Szukaj filmów, seriali, muzyki...',
 			'search.tryDifferentTerm' => 'Spróbuj innego wyszukiwania',
 			'search.searchYourMedia' => 'Przeszukaj swoje media',
@@ -4387,8 +4369,6 @@ extension on TranslationsPl {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Dodaj lub usuń adresy URL dla ${serverName}. PlenTV będzie używać osiągalnego adresu URL o najniższym opóźnieniu.',
 			'accountPreferences.sectionTitle' => 'Preferencje konta',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Opcje audio, napisów i biblioteki zapisane na koncie ${account}',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Opcje audio, napisów i biblioteki zapisane na ${count} kontach',
 			'accountPreferences.pickAccount' => 'Każde konto przechowuje własne preferencje. Wybierz to, które chcesz edytować.',
 			'accountPreferences.storedOnAccount' => 'Te opcje są zapisywane na samym koncie, więc używa ich każda aplikacja zalogowana na to konto — w tym PlenTV na Twoich innych urządzeniach.',
@@ -4398,6 +4378,8 @@ extension on TranslationsPl {
 			'accountPreferences.loadFailed' => 'Nie udało się wczytać tych preferencji',
 			'accountPreferences.noPreference' => 'Brak preferencji',
 			'accountPreferences.notSet' => 'Nie ustawiono',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Audio i napisy',
 			'accountPreferences.groups.libraryDisplay' => 'Biblioteka',
 			'accountPreferences.groups.personalMedia' => 'Osobiste multimedia',
@@ -4901,8 +4883,6 @@ extension on TranslationsPl {
 			'collections.deleteCollection' => 'Usuń kolekcję',
 			'collections.deleteConfirm' => ({required Object title}) => 'Usunąć "${title}"? Tego nie można cofnąć.',
 			'collections.deleted' => 'Kolekcja usunięta',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Nie udało się usunąć kolekcji',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Nie udało się usunąć kolekcji: ${error}',
 			'collections.selectCollection' => 'Wybierz kolekcję',
@@ -4912,6 +4892,8 @@ extension on TranslationsPl {
 			'collections.errorAddingToCollection' => 'Nie udało się dodać do kolekcji',
 			'collections.created' => 'Kolekcja utworzona',
 			'collections.removeFromCollection' => 'Usuń z kolekcji',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Usunąć "${title}" z tej kolekcji?',
 			'collections.removedFromCollection' => 'Usunięto z kolekcji',
 			'collections.removeFromCollectionFailed' => 'Nie udało się usunąć z kolekcji',
@@ -5415,8 +5397,6 @@ extension on TranslationsPl {
 			'externalPlayer.playerNameHint' => 'Mój odtwarzacz',
 			'externalPlayer.playerCommand' => 'Polecenie',
 			'externalPlayer.playerPackage' => 'Nazwa pakietu',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'Schemat URL',
 			'externalPlayer.off' => 'Wyłączony',
 			'externalPlayer.launchFailed' => 'Nie udało się otworzyć zewnętrznego odtwarzacza',
@@ -5426,6 +5406,8 @@ extension on TranslationsPl {
 			'metadataEdit.screenTitle' => 'Edytuj metadane',
 			'metadataEdit.basicInfo' => 'Podstawowe informacje',
 			'metadataEdit.artwork' => 'Grafika',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Ustawienia zaawansowane',
 			'metadataEdit.title' => 'Tytuł',
 			'metadataEdit.sortTitle' => 'Tytuł do sortowania',

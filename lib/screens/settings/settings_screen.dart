@@ -26,7 +26,6 @@ import '../../services/download_storage_service.dart';
 import '../../services/file_picker_service.dart';
 import '../../services/fork_backup_service.dart';
 import '../../services/saf_storage_service.dart';
-import '../../services/settings_export_service.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/seerr_account_provider.dart';
 import '../../services/account_preferences_accounts.dart';
@@ -78,8 +77,6 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     this.downloadDirectoryWritableChecker,
-    this.settingsExporter,
-    this.settingsImporter,
     this.forkBackupExporter,
     this.forkBackupImporter,
     this.backgroundWorkDiagnosticsService,
@@ -88,15 +85,8 @@ class SettingsScreen extends StatefulWidget {
   @visibleForTesting
   final Future<bool> Function(Directory directory)? downloadDirectoryWritableChecker;
 
-  @visibleForTesting
-  final Future<String?> Function()? settingsExporter;
-
-  @visibleForTesting
-  final Future<ImportResult?> Function()? settingsImporter;
-
-  /// 1.2.22 §65: full-backup seams, mirroring [settingsExporter] /
-  /// [settingsImporter] — a test provides the export / import itself so
-  /// no database or file picker is needed.
+  /// 1.2.22 §65: full-backup seams — a test provides the export /
+  /// import itself so no database or file picker is needed.
   @visibleForTesting
   final Future<String?> Function()? forkBackupExporter;
 
@@ -146,8 +136,6 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kIptvPreferIpv4 = 'iptv_prefer_ipv4';
   static const _kWarpVpn = 'iptv_warp_vpn';
   static const _kResetWarpRegistration = 'reset_warp_registration';
-  static const _kExportSettings = 'export_settings';
-  static const _kImportSettings = 'import_settings';
   static const _kExportForkBackup = 'export_fork_backup';
   static const _kImportForkBackup = 'import_fork_backup';
   static const _kAccountPreferences = 'account_preferences';
@@ -733,20 +721,6 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
     return SettingsGroup(
       title: t.settings.backup,
       children: [
-        SettingNavigationTile(
-          focusNode: _focusTracker.get(_kExportSettings),
-          icon: Symbols.upload_rounded,
-          title: t.settings.exportSettings,
-          subtitle: t.settings.exportSettingsDescription,
-          onTap: _handleExportSettings,
-        ),
-        SettingNavigationTile(
-          focusNode: _focusTracker.get(_kImportSettings),
-          icon: Symbols.download_rounded,
-          title: t.settings.importSettings,
-          subtitle: t.settings.importSettingsDescription,
-          onTap: _showImportSettingsDialog,
-        ),
         // 1.2.22 §65: full backup — everything the fork stores, not just
         // the portable settings above. The export warns first (the file
         // contains the logins); the restore verifies and reports counts.
@@ -986,71 +960,6 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
     }
   }
 
-  Future<void> _handleExportSettings() async {
-    await guardSettingsOperation<void, SettingsExportException>(
-      context,
-      operation: 'Settings export',
-      body: () async {
-        final path = await (widget.settingsExporter ?? SettingsExportService.exportToFile)();
-        if (!mounted || path == null) return;
-        showSuccessSnackBar(context, t.settings.exportSettingsSuccess);
-      },
-    );
-  }
-
-  Future<void> _showImportSettingsDialog() async {
-    final confirmed = await showConfirmDialog(
-      context,
-      title: t.settings.importSettings,
-      message: t.settings.importSettingsConfirm,
-      confirmText: t.settings.importSettings,
-    );
-    if (!mounted || !confirmed) return;
-    await _handleImportSettings();
-  }
-
-  Future<void> _handleImportSettings() async {
-    await guardSettingsOperation<void, SettingsExportException>(
-      context,
-      operation: 'Settings import',
-      body: () async {
-        // The two typed import failures carry their own message, so they are
-        // handled here instead of falling through to the generic guard.
-        try {
-          final previousRootConfiguration = SettingsMutationService.captureRootConfiguration();
-          final result = await (widget.settingsImporter ?? SettingsExportService.importFromFile)();
-          if (!mounted) return;
-          if (result == null) return; // user cancelled file picker
-
-          final hiddenLibrariesProvider = context.read<HiddenLibrariesProvider>();
-          final librariesProvider = context.read<LibrariesProvider>();
-
-          // Import wrote directly to SharedPreferences, bypassing `write`. Push
-          // fresh values into active listenables before providers re-read settings.
-          _settingsService.refreshListenables();
-          await hiddenLibrariesProvider.refresh();
-          unawaited(librariesProvider.refresh());
-          if (!mounted) return;
-          final failures = await const SettingsMutationService().applyStoredEffects(
-            context,
-            previousRootConfiguration: previousRootConfiguration,
-          );
-
-          if (!mounted) return;
-          if (failures.isEmpty) {
-            showSuccessSnackBar(context, t.settings.importSettingsSuccess);
-          } else {
-            showErrorSnackBar(context, failures.first.display);
-          }
-        } on NoUserSignedInException {
-          if (mounted) showErrorSnackBar(context, t.settings.importSettingsNoUser);
-        } on InvalidExportFileException {
-          if (mounted) showErrorSnackBar(context, t.settings.importSettingsInvalidFile);
-        }
-      },
-    );
-  }
-
   /// 1.2.22 §65: the export file contains the logins, so the warning
   /// comes FIRST — the export only runs after the user confirms they
   /// understand the file must stay private.
@@ -1165,6 +1074,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
         guideStores: report.epg.restored,
         favourites: report.favorites.restored,
         resume: report.resume.restored,
+        hidden: report.hidden.restored,
       ),
       if (report.activeProfileRestored)
         t.settings.importForkBackupActiveProfile
@@ -1178,6 +1088,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
         report.epgPrefs.skipped +
         report.epg.skipped +
         report.favorites.skipped +
+        report.hidden.skipped +
         report.resume.skipped +
         report.prefs.keysSkipped;
     if (skipped > 0) lines.add(t.settings.importForkBackupSkipped(n: skipped, count: skipped));

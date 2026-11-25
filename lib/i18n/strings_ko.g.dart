@@ -407,15 +407,6 @@ class _Translations$settings$ko extends Translations$settings$en {
 	@override String get resetSettingsDescription => '기본 설정으로 복원합니다. 되돌릴 수 없습니다.';
 	@override String get resetSettingsSuccess => '설정 재설정 성공';
 	@override String get backup => '백업';
-	@override String get exportSettings => '설정 내보내기';
-	@override String get exportSettingsDescription => '기본 설정을 파일로 저장';
-	@override String get exportSettingsSuccess => '설정 내보내기 완료';
-	@override String get importSettings => '설정 가져오기';
-	@override String get importSettingsDescription => '파일에서 기본 설정 복원';
-	@override String get importSettingsConfirm => '현재 설정을 대체합니다. 계속하시겠습니까?';
-	@override String get importSettingsSuccess => '설정 가져오기 완료';
-	@override String get importSettingsInvalidFile => '유효한 PlenTV 설정 내보내기 파일이 아닙니다';
-	@override String get importSettingsNoUser => '설정을 가져오기 전에 로그인하세요';
 	@override String get shortcutsReset => '단축키가 기본값으로 재설정되었습니다';
 	@override String get resetShortcutsConfirm => '사용자 지정 단축키가 기본값으로 대체됩니다. 계속하시겠습니까?';
 	@override String get about => '정보';
@@ -3614,15 +3605,6 @@ extension on TranslationsKo {
 			'settings.resetSettingsDescription' => '기본 설정으로 복원합니다. 되돌릴 수 없습니다.',
 			'settings.resetSettingsSuccess' => '설정 재설정 성공',
 			'settings.backup' => '백업',
-			'settings.exportSettings' => '설정 내보내기',
-			'settings.exportSettingsDescription' => '기본 설정을 파일로 저장',
-			'settings.exportSettingsSuccess' => '설정 내보내기 완료',
-			'settings.importSettings' => '설정 가져오기',
-			'settings.importSettingsDescription' => '파일에서 기본 설정 복원',
-			'settings.importSettingsConfirm' => '현재 설정을 대체합니다. 계속하시겠습니까?',
-			'settings.importSettingsSuccess' => '설정 가져오기 완료',
-			'settings.importSettingsInvalidFile' => '유효한 PlenTV 설정 내보내기 파일이 아닙니다',
-			'settings.importSettingsNoUser' => '설정을 가져오기 전에 로그인하세요',
 			'settings.shortcutsReset' => '단축키가 기본값으로 재설정되었습니다',
 			'settings.resetShortcutsConfirm' => '사용자 지정 단축키가 기본값으로 대체됩니다. 계속하시겠습니까?',
 			'settings.about' => '정보',
@@ -3837,8 +3819,6 @@ extension on TranslationsKo {
 			'themeEditor.contrast.textMutedOnSurface' => '표면 위 보조 텍스트',
 			'themeEditor.contrast.accentOnBg' => '배경 위 강조색',
 			'themeEditor.contrast.accentOnSurface' => '표면 위 강조색',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => '강조색 위 버튼 라벨',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, 권장 기준 ${minimum}:1 미만',
 			'themeEditor.discardTitle' => '변경 사항을 버리시겠습니까?',
@@ -3848,6 +3828,8 @@ extension on TranslationsKo {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes}분 남음',
 			'themeEditor.previewSwitch' => '자동 재생',
 			'themeEditor.previewMutedText' => '보조 텍스트는 이렇게 표시됩니다',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => '영화, 시리즈, 음악 등을 검색하세요...',
 			'search.tryDifferentTerm' => '다른 검색어를 시도해 보세요',
 			'search.searchYourMedia' => '미디어 검색',
@@ -4351,8 +4333,6 @@ extension on TranslationsKo {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName}의 URL을 추가하거나 제거하세요. PlenTV는 연결 가능한 URL 중 지연 시간이 가장 낮은 URL을 사용합니다.',
 			'accountPreferences.sectionTitle' => '계정 기본 설정',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => '${account}에 저장된 오디오, 자막 및 라이브러리 옵션',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => '${count}개 계정에 저장된 오디오, 자막 및 라이브러리 옵션',
 			'accountPreferences.pickAccount' => '각 계정은 고유한 기본 설정을 저장합니다. 편집할 계정을 선택하세요.',
 			'accountPreferences.storedOnAccount' => '이 옵션은 계정 자체에 저장되므로 해당 계정으로 로그인한 모든 앱에서 사용됩니다 — 다른 기기의 PlenTV를 포함합니다.',
@@ -4362,6 +4342,8 @@ extension on TranslationsKo {
 			'accountPreferences.loadFailed' => '이 기본 설정을 불러올 수 없습니다',
 			'accountPreferences.noPreference' => '기본 설정 없음',
 			'accountPreferences.notSet' => '설정되지 않음',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => '오디오 및 자막',
 			'accountPreferences.groups.libraryDisplay' => '라이브러리',
 			'accountPreferences.groups.personalMedia' => '개인 미디어',
@@ -4865,8 +4847,6 @@ extension on TranslationsKo {
 			'collections.deleteCollection' => '컬렉션 삭제',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}"을(를) 삭제할까요? 되돌릴 수 없습니다.',
 			'collections.deleted' => '컬렉션 삭제됨',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => '컬렉션 삭제 실패',
 			'collections.deleteFailedWithError' => ({required Object error}) => '컬렉션 삭제 실패: ${error}',
 			'collections.selectCollection' => '컬렉션 선택',
@@ -4876,6 +4856,8 @@ extension on TranslationsKo {
 			'collections.errorAddingToCollection' => '컬렉션에 추가 실패',
 			'collections.created' => '컬렉션 생성됨',
 			'collections.removeFromCollection' => '컬렉션에서 제거',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '${title}을(를) 이 컬렉션에서 제거하시겠습니까?',
 			'collections.removedFromCollection' => '컬렉션에서 제거됨',
 			'collections.removeFromCollectionFailed' => '컬렉션에서 제거 실패',
@@ -5379,8 +5361,6 @@ extension on TranslationsKo {
 			'externalPlayer.playerNameHint' => '내 플레이어',
 			'externalPlayer.playerCommand' => '명령어',
 			'externalPlayer.playerPackage' => '패키지 이름',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL 스킴',
 			'externalPlayer.off' => '꺼짐',
 			'externalPlayer.launchFailed' => '외부 플레이어를 열 수 없습니다',
@@ -5390,6 +5370,8 @@ extension on TranslationsKo {
 			'metadataEdit.screenTitle' => '메타데이터 편집',
 			'metadataEdit.basicInfo' => '기본 정보',
 			'metadataEdit.artwork' => '아트워크',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => '고급 설정',
 			'metadataEdit.title' => '제목',
 			'metadataEdit.sortTitle' => '정렬 제목',

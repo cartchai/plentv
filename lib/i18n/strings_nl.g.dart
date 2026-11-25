@@ -407,15 +407,6 @@ class _Translations$settings$nl extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Standaardinstellingen herstellen. Dit kan niet ongedaan worden gemaakt.';
 	@override String get resetSettingsSuccess => 'Instellingen succesvol gereset';
 	@override String get backup => 'Back-up';
-	@override String get exportSettings => 'Instellingen exporteren';
-	@override String get exportSettingsDescription => 'Sla je voorkeuren op in een bestand';
-	@override String get exportSettingsSuccess => 'Instellingen geëxporteerd';
-	@override String get importSettings => 'Instellingen importeren';
-	@override String get importSettingsDescription => 'Voorkeuren herstellen vanuit een bestand';
-	@override String get importSettingsConfirm => 'Hiermee worden je huidige instellingen vervangen. Doorgaan?';
-	@override String get importSettingsSuccess => 'Instellingen geïmporteerd';
-	@override String get importSettingsInvalidFile => 'Dit bestand is geen geldige PlenTV-export';
-	@override String get importSettingsNoUser => 'Meld je aan voordat je instellingen importeert';
 	@override String get shortcutsReset => 'Sneltoetsen gereset naar standaard';
 	@override String get resetShortcutsConfirm => 'Hiermee worden je aangepaste sneltoetsen vervangen door de standaardinstellingen. Doorgaan?';
 	@override String get about => 'Over';
@@ -3626,15 +3617,6 @@ extension on TranslationsNl {
 			'settings.resetSettingsDescription' => 'Standaardinstellingen herstellen. Dit kan niet ongedaan worden gemaakt.',
 			'settings.resetSettingsSuccess' => 'Instellingen succesvol gereset',
 			'settings.backup' => 'Back-up',
-			'settings.exportSettings' => 'Instellingen exporteren',
-			'settings.exportSettingsDescription' => 'Sla je voorkeuren op in een bestand',
-			'settings.exportSettingsSuccess' => 'Instellingen geëxporteerd',
-			'settings.importSettings' => 'Instellingen importeren',
-			'settings.importSettingsDescription' => 'Voorkeuren herstellen vanuit een bestand',
-			'settings.importSettingsConfirm' => 'Hiermee worden je huidige instellingen vervangen. Doorgaan?',
-			'settings.importSettingsSuccess' => 'Instellingen geïmporteerd',
-			'settings.importSettingsInvalidFile' => 'Dit bestand is geen geldige PlenTV-export',
-			'settings.importSettingsNoUser' => 'Meld je aan voordat je instellingen importeert',
 			'settings.shortcutsReset' => 'Sneltoetsen gereset naar standaard',
 			'settings.resetShortcutsConfirm' => 'Hiermee worden je aangepaste sneltoetsen vervangen door de standaardinstellingen. Doorgaan?',
 			'settings.about' => 'Over',
@@ -3849,8 +3831,6 @@ extension on TranslationsNl {
 			'themeEditor.contrast.textMutedOnSurface' => 'Secundaire tekst op oppervlak',
 			'themeEditor.contrast.accentOnBg' => 'Accent op achtergrond',
 			'themeEditor.contrast.accentOnSurface' => 'Accent op oppervlak',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Knoptekst op accent',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, onder de aanbevolen ${minimum}:1',
 			'themeEditor.discardTitle' => 'Wijzigingen negeren?',
@@ -3860,6 +3840,8 @@ extension on TranslationsNl {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Nog ${minutes} min',
 			'themeEditor.previewSwitch' => 'Automatisch afspelen',
 			'themeEditor.previewMutedText' => 'Secundaire tekst ziet er zo uit',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Zoek films, series, muziek...',
 			'search.tryDifferentTerm' => 'Probeer een andere zoekterm',
 			'search.searchYourMedia' => 'Zoek in je media',
@@ -4363,8 +4345,6 @@ extension on TranslationsNl {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Voeg URL\'s toe aan ${serverName} of verwijder ze. PlenTV gebruikt de bereikbare URL met de laagste latentie.',
 			'accountPreferences.sectionTitle' => 'Accountvoorkeuren',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Audio-, ondertitel- en bibliotheekopties opgeslagen op ${account}',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Audio-, ondertitel- en bibliotheekopties opgeslagen op ${count} accounts',
 			'accountPreferences.pickAccount' => 'Elk account slaat zijn eigen voorkeuren op. Kies het account dat je wilt bewerken.',
 			'accountPreferences.storedOnAccount' => 'Deze opties worden op het account zelf opgeslagen, zodat elke app die ermee is aangemeld ze gebruikt — ook PlenTV op je andere apparaten.',
@@ -4374,6 +4354,8 @@ extension on TranslationsNl {
 			'accountPreferences.loadFailed' => 'Deze voorkeuren konden niet worden geladen',
 			'accountPreferences.noPreference' => 'Geen voorkeur',
 			'accountPreferences.notSet' => 'Niet ingesteld',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Audio en ondertitels',
 			'accountPreferences.groups.libraryDisplay' => 'Bibliotheek',
 			'accountPreferences.groups.personalMedia' => 'Persoonlijke media',
@@ -4877,8 +4859,6 @@ extension on TranslationsNl {
 			'collections.deleteCollection' => 'Collectie verwijderen',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" verwijderen? Dit kan niet ongedaan worden gemaakt.',
 			'collections.deleted' => 'Collectie verwijderd',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Collectie verwijderen mislukt',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Collectie verwijderen mislukt: ${error}',
 			'collections.selectCollection' => 'Collectie selecteren',
@@ -4888,6 +4868,8 @@ extension on TranslationsNl {
 			'collections.errorAddingToCollection' => 'Fout bij toevoegen aan collectie',
 			'collections.created' => 'Collectie gemaakt',
 			'collections.removeFromCollection' => 'Verwijderen uit collectie',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" uit deze collectie verwijderen?',
 			'collections.removedFromCollection' => 'Uit collectie verwijderd',
 			'collections.removeFromCollectionFailed' => 'Verwijderen uit collectie mislukt',
@@ -5391,8 +5373,6 @@ extension on TranslationsNl {
 			'externalPlayer.playerNameHint' => 'Mijn speler',
 			'externalPlayer.playerCommand' => 'Commando',
 			'externalPlayer.playerPackage' => 'Pakketnaam',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-schema',
 			'externalPlayer.off' => 'Uit',
 			'externalPlayer.launchFailed' => 'Kan externe speler niet openen',
@@ -5402,6 +5382,8 @@ extension on TranslationsNl {
 			'metadataEdit.screenTitle' => 'Metadata bewerken',
 			'metadataEdit.basicInfo' => 'Basisinformatie',
 			'metadataEdit.artwork' => 'Illustraties',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Geavanceerde instellingen',
 			'metadataEdit.title' => 'Titel',
 			'metadataEdit.sortTitle' => 'Sorteertitel',

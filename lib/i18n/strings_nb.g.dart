@@ -407,15 +407,6 @@ class _Translations$settings$nb extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Gjenopprett standardinnstillinger. Dette kan ikke angres.';
 	@override String get resetSettingsSuccess => 'Innstillinger tilbakestilt';
 	@override String get backup => 'Sikkerhetskopi';
-	@override String get exportSettings => 'Eksporter innstillinger';
-	@override String get exportSettingsDescription => 'Lagre innstillingene i en fil';
-	@override String get exportSettingsSuccess => 'Innstillinger eksportert';
-	@override String get importSettings => 'Importer innstillinger';
-	@override String get importSettingsDescription => 'Gjenopprett innstillinger fra en fil';
-	@override String get importSettingsConfirm => 'Dette vil erstatte nåværende innstillinger. Fortsette?';
-	@override String get importSettingsSuccess => 'Innstillinger importert';
-	@override String get importSettingsInvalidFile => 'Denne filen er ikke en gyldig PlenTV-innstillingseksport';
-	@override String get importSettingsNoUser => 'Logg inn før import av innstillinger';
 	@override String get shortcutsReset => 'Snarveier tilbakestilt til standard';
 	@override String get resetShortcutsConfirm => 'Dette vil erstatte de egendefinerte snarveiene dine med standardsnarveiene. Fortsette?';
 	@override String get about => 'Om';
@@ -3626,15 +3617,6 @@ extension on TranslationsNb {
 			'settings.resetSettingsDescription' => 'Gjenopprett standardinnstillinger. Dette kan ikke angres.',
 			'settings.resetSettingsSuccess' => 'Innstillinger tilbakestilt',
 			'settings.backup' => 'Sikkerhetskopi',
-			'settings.exportSettings' => 'Eksporter innstillinger',
-			'settings.exportSettingsDescription' => 'Lagre innstillingene i en fil',
-			'settings.exportSettingsSuccess' => 'Innstillinger eksportert',
-			'settings.importSettings' => 'Importer innstillinger',
-			'settings.importSettingsDescription' => 'Gjenopprett innstillinger fra en fil',
-			'settings.importSettingsConfirm' => 'Dette vil erstatte nåværende innstillinger. Fortsette?',
-			'settings.importSettingsSuccess' => 'Innstillinger importert',
-			'settings.importSettingsInvalidFile' => 'Denne filen er ikke en gyldig PlenTV-innstillingseksport',
-			'settings.importSettingsNoUser' => 'Logg inn før import av innstillinger',
 			'settings.shortcutsReset' => 'Snarveier tilbakestilt til standard',
 			'settings.resetShortcutsConfirm' => 'Dette vil erstatte de egendefinerte snarveiene dine med standardsnarveiene. Fortsette?',
 			'settings.about' => 'Om',
@@ -3849,8 +3831,6 @@ extension on TranslationsNb {
 			'themeEditor.contrast.textMutedOnSurface' => 'Sekundærtekst på overflate',
 			'themeEditor.contrast.accentOnBg' => 'Aksent på bakgrunn',
 			'themeEditor.contrast.accentOnSurface' => 'Aksent på overflate',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Knappetekst på aksent',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, under anbefalt minimum på ${minimum}:1',
 			'themeEditor.discardTitle' => 'Forkaste endringene?',
@@ -3860,6 +3840,8 @@ extension on TranslationsNb {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} min igjen',
 			'themeEditor.previewSwitch' => 'Autospill',
 			'themeEditor.previewMutedText' => 'Sekundærtekst ser slik ut',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Søk i filmer, serier, musikk...',
 			'search.tryDifferentTerm' => 'Prøv et annet søkeord',
 			'search.searchYourMedia' => 'Søk i mediene dine',
@@ -4363,8 +4345,6 @@ extension on TranslationsNb {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Legg til eller fjern URL-er for ${serverName}. PlenTV vil bruke den nåbare URL-en med lavest ventetid.',
 			'accountPreferences.sectionTitle' => 'Kontoinnstillinger',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Lyd-, undertekst- og bibliotekalternativer lagret på ${account}',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Lyd-, undertekst- og bibliotekalternativer lagret på ${count} kontoer',
 			'accountPreferences.pickAccount' => 'Hver konto lagrer sine egne innstillinger. Velg hvilken du vil redigere.',
 			'accountPreferences.storedOnAccount' => 'Disse alternativene lagres på selve kontoen, så alle apper som er logget på den, bruker dem — inkludert PlenTV på de andre enhetene dine.',
@@ -4374,6 +4354,8 @@ extension on TranslationsNb {
 			'accountPreferences.loadFailed' => 'Kunne ikke laste inn disse innstillingene',
 			'accountPreferences.noPreference' => 'Ingen preferanse',
 			'accountPreferences.notSet' => 'Ikke angitt',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Lyd og undertekster',
 			'accountPreferences.groups.libraryDisplay' => 'Bibliotek',
 			'accountPreferences.groups.personalMedia' => 'Personlige medier',
@@ -4877,8 +4859,6 @@ extension on TranslationsNb {
 			'collections.deleteCollection' => 'Slett samling',
 			'collections.deleteConfirm' => ({required Object title}) => 'Slette "${title}"? Dette kan ikke angres.',
 			'collections.deleted' => 'Samling slettet',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Kunne ikke slette samling',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Kunne ikke slette samling: ${error}',
 			'collections.selectCollection' => 'Velg samling',
@@ -4888,6 +4868,8 @@ extension on TranslationsNb {
 			'collections.errorAddingToCollection' => 'Kunne ikke legge til i samling',
 			'collections.created' => 'Samling opprettet',
 			'collections.removeFromCollection' => 'Fjern fra samling',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Fjerne "${title}" fra denne samlingen?',
 			'collections.removedFromCollection' => 'Fjernet fra samling',
 			'collections.removeFromCollectionFailed' => 'Kunne ikke fjerne fra samling',
@@ -5391,8 +5373,6 @@ extension on TranslationsNb {
 			'externalPlayer.playerNameHint' => 'Min spiller',
 			'externalPlayer.playerCommand' => 'Kommando',
 			'externalPlayer.playerPackage' => 'Pakkenavn',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-skjema',
 			'externalPlayer.off' => 'Av',
 			'externalPlayer.launchFailed' => 'Kunne ikke åpne ekstern spiller',
@@ -5402,6 +5382,8 @@ extension on TranslationsNb {
 			'metadataEdit.screenTitle' => 'Rediger metadata',
 			'metadataEdit.basicInfo' => 'Grunnleggende informasjon',
 			'metadataEdit.artwork' => 'Grafikk',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Avanserte innstillinger',
 			'metadataEdit.title' => 'Tittel',
 			'metadataEdit.sortTitle' => 'Sorteringstittel',

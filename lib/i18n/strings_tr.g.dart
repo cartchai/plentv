@@ -407,15 +407,6 @@ class _Translations$settings$tr extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Varsayılan ayarları geri yükler. Bu işlem geri alınamaz.';
 	@override String get resetSettingsSuccess => 'Ayarlar başarıyla sıfırlandı';
 	@override String get backup => 'Yedekle';
-	@override String get exportSettings => 'Ayarları Dışa Aktar';
-	@override String get exportSettingsDescription => 'Tercihlerinizi bir dosyaya kaydedin';
-	@override String get exportSettingsSuccess => 'Ayarlar dışa aktarıldı';
-	@override String get importSettings => 'Ayarları İçe Aktar';
-	@override String get importSettingsDescription => 'Tercihleri bir dosyadan geri yükleyin';
-	@override String get importSettingsConfirm => 'Bu işlem mevcut ayarlarınızın üzerine yazacak. Devam edilsin mi?';
-	@override String get importSettingsSuccess => 'Ayarlar içe aktarıldı';
-	@override String get importSettingsInvalidFile => 'Bu dosya geçerli bir PlenTV ayar dosyası değil';
-	@override String get importSettingsNoUser => 'Ayarları içe aktarmadan önce giriş yapın';
 	@override String get shortcutsReset => 'Kısayollar varsayılana sıfırlandı';
 	@override String get resetShortcutsConfirm => 'Bu işlem özel kısayollarınızı varsayılanlarla değiştirecek. Devam edilsin mi?';
 	@override String get about => 'Hakkında';
@@ -3626,15 +3617,6 @@ extension on TranslationsTr {
 			'settings.resetSettingsDescription' => 'Varsayılan ayarları geri yükler. Bu işlem geri alınamaz.',
 			'settings.resetSettingsSuccess' => 'Ayarlar başarıyla sıfırlandı',
 			'settings.backup' => 'Yedekle',
-			'settings.exportSettings' => 'Ayarları Dışa Aktar',
-			'settings.exportSettingsDescription' => 'Tercihlerinizi bir dosyaya kaydedin',
-			'settings.exportSettingsSuccess' => 'Ayarlar dışa aktarıldı',
-			'settings.importSettings' => 'Ayarları İçe Aktar',
-			'settings.importSettingsDescription' => 'Tercihleri bir dosyadan geri yükleyin',
-			'settings.importSettingsConfirm' => 'Bu işlem mevcut ayarlarınızın üzerine yazacak. Devam edilsin mi?',
-			'settings.importSettingsSuccess' => 'Ayarlar içe aktarıldı',
-			'settings.importSettingsInvalidFile' => 'Bu dosya geçerli bir PlenTV ayar dosyası değil',
-			'settings.importSettingsNoUser' => 'Ayarları içe aktarmadan önce giriş yapın',
 			'settings.shortcutsReset' => 'Kısayollar varsayılana sıfırlandı',
 			'settings.resetShortcutsConfirm' => 'Bu işlem özel kısayollarınızı varsayılanlarla değiştirecek. Devam edilsin mi?',
 			'settings.about' => 'Hakkında',
@@ -3849,8 +3831,6 @@ extension on TranslationsTr {
 			'themeEditor.contrast.textMutedOnSurface' => 'Yüzey üzerinde ikincil metin',
 			'themeEditor.contrast.accentOnBg' => 'Arka plan üzerinde vurgu',
 			'themeEditor.contrast.accentOnSurface' => 'Yüzey üzerinde vurgu',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Vurgu üzerinde düğme etiketi',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, önerilen ${minimum}:1 değerinin altında',
 			'themeEditor.discardTitle' => 'Değişiklikler atılsın mı?',
@@ -3860,6 +3840,8 @@ extension on TranslationsTr {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} dk kaldı',
 			'themeEditor.previewSwitch' => 'Otomatik oynatma',
 			'themeEditor.previewMutedText' => 'İkincil metin böyle görünür',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Film, dizi, müzik ara...',
 			'search.tryDifferentTerm' => 'Farklı bir arama terimi deneyin',
 			'search.searchYourMedia' => 'Medyanızda arayın',
@@ -4363,8 +4345,6 @@ extension on TranslationsTr {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => '${serverName} için URL ekleyin veya kaldırın. PlenTV, erişilebilir olan en düşük gecikmeli URL\'yi kullanacak.',
 			'accountPreferences.sectionTitle' => 'Hesap tercihleri',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Ses, altyazı ve kitaplık seçenekleri ${account} hesabına kaydedildi',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Ses, altyazı ve kitaplık seçenekleri ${count} hesaba kaydedildi',
 			'accountPreferences.pickAccount' => 'Her hesap kendi tercihlerini saklar. Düzenlemek için birini seçin.',
 			'accountPreferences.storedOnAccount' => 'Bu seçenekler hesabın kendisine kaydedilir; böylece hesaba giriş yapan her uygulama bunları kullanır — diğer cihazlarınızdaki PlenTV dahil.',
@@ -4374,6 +4354,8 @@ extension on TranslationsTr {
 			'accountPreferences.loadFailed' => 'Bu tercihler yüklenemedi',
 			'accountPreferences.noPreference' => 'Tercih yok',
 			'accountPreferences.notSet' => 'Ayarlanmadı',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Ses ve altyazılar',
 			'accountPreferences.groups.libraryDisplay' => 'Kitaplık',
 			'accountPreferences.groups.personalMedia' => 'Kişisel medya',
@@ -4877,8 +4859,6 @@ extension on TranslationsTr {
 			'collections.deleteCollection' => 'Koleksiyonu Sil',
 			'collections.deleteConfirm' => ({required Object title}) => '"${title}" silinsin mi? Bu işlem geri alınamaz.',
 			'collections.deleted' => 'Koleksiyon silindi',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Koleksiyon silinemedi',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Koleksiyon silinemedi: ${error}',
 			'collections.selectCollection' => 'Koleksiyon Seç',
@@ -4888,6 +4868,8 @@ extension on TranslationsTr {
 			'collections.errorAddingToCollection' => 'Koleksiyona eklenemedi',
 			'collections.created' => 'Koleksiyon oluşturuldu',
 			'collections.removeFromCollection' => 'Koleksiyondan kaldır',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" bu koleksiyondan kaldırılsın mı?',
 			'collections.removedFromCollection' => 'Koleksiyondan kaldırıldı',
 			'collections.removeFromCollectionFailed' => 'Koleksiyondan kaldırılamadı',
@@ -5391,8 +5373,6 @@ extension on TranslationsTr {
 			'externalPlayer.playerNameHint' => 'Oynatıcım',
 			'externalPlayer.playerCommand' => 'Komut',
 			'externalPlayer.playerPackage' => 'Paket Adı',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL Şeması',
 			'externalPlayer.off' => 'Kapalı',
 			'externalPlayer.launchFailed' => 'Harici oynatıcı açılamadı',
@@ -5402,6 +5382,8 @@ extension on TranslationsTr {
 			'metadataEdit.screenTitle' => 'Meta Verileri Düzenle',
 			'metadataEdit.basicInfo' => 'Temel Bilgiler',
 			'metadataEdit.artwork' => 'Görseller',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Gelişmiş Ayarlar',
 			'metadataEdit.title' => 'Başlık',
 			'metadataEdit.sortTitle' => 'Sıralama Başlığı',

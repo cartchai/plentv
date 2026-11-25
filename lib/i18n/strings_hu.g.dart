@@ -407,15 +407,6 @@ class _Translations$settings$hu extends Translations$settings$en {
 	@override String get resetSettingsDescription => 'Az alapértelmezett beállítások visszaállítása. Ez a művelet nem vonható vissza.';
 	@override String get resetSettingsSuccess => 'A beállítások sikeresen visszaállítva';
 	@override String get backup => 'Biztonsági mentés';
-	@override String get exportSettings => 'Beállítások exportálása';
-	@override String get exportSettingsDescription => 'Beállítások mentése fájlba';
-	@override String get exportSettingsSuccess => 'Beállítások exportálva';
-	@override String get importSettings => 'Beállítások importálása';
-	@override String get importSettingsDescription => 'Beállítások visszaállítása fájlból';
-	@override String get importSettingsConfirm => 'Ez felülírja a jelenlegi beállításaidat. Folytatod?';
-	@override String get importSettingsSuccess => 'Beállítások importálva';
-	@override String get importSettingsInvalidFile => 'Ez a fájl nem érvényes PlenTV-beállításexport';
-	@override String get importSettingsNoUser => 'Jelentkezz be a beállítások importálása előtt';
 	@override String get shortcutsReset => 'A billentyűparancsok visszaálltak az alapértelmezettekre';
 	@override String get resetShortcutsConfirm => 'Ezzel az egyéni billentyűparancsaid helyére az alapértelmezettek kerülnek. Folytatod?';
 	@override String get about => 'Névjegy';
@@ -3626,15 +3617,6 @@ extension on TranslationsHu {
 			'settings.resetSettingsDescription' => 'Az alapértelmezett beállítások visszaállítása. Ez a művelet nem vonható vissza.',
 			'settings.resetSettingsSuccess' => 'A beállítások sikeresen visszaállítva',
 			'settings.backup' => 'Biztonsági mentés',
-			'settings.exportSettings' => 'Beállítások exportálása',
-			'settings.exportSettingsDescription' => 'Beállítások mentése fájlba',
-			'settings.exportSettingsSuccess' => 'Beállítások exportálva',
-			'settings.importSettings' => 'Beállítások importálása',
-			'settings.importSettingsDescription' => 'Beállítások visszaállítása fájlból',
-			'settings.importSettingsConfirm' => 'Ez felülírja a jelenlegi beállításaidat. Folytatod?',
-			'settings.importSettingsSuccess' => 'Beállítások importálva',
-			'settings.importSettingsInvalidFile' => 'Ez a fájl nem érvényes PlenTV-beállításexport',
-			'settings.importSettingsNoUser' => 'Jelentkezz be a beállítások importálása előtt',
 			'settings.shortcutsReset' => 'A billentyűparancsok visszaálltak az alapértelmezettekre',
 			'settings.resetShortcutsConfirm' => 'Ezzel az egyéni billentyűparancsaid helyére az alapértelmezettek kerülnek. Folytatod?',
 			'settings.about' => 'Névjegy',
@@ -3849,8 +3831,6 @@ extension on TranslationsHu {
 			'themeEditor.contrast.textMutedOnSurface' => 'Másodlagos szöveg a felületen',
 			'themeEditor.contrast.accentOnBg' => 'Kiemelőszín a háttéren',
 			'themeEditor.contrast.accentOnSurface' => 'Kiemelőszín a felületen',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.contrast.labelOnAccent' => 'Gombfelirat a kiemelőszínen',
 			'themeEditor.lowContrast' => ({required Object pair, required Object ratio, required Object minimum}) => '${pair}: ${ratio}:1, az ajánlott ${minimum}:1 alatt',
 			'themeEditor.discardTitle' => 'Elveted a módosításokat?',
@@ -3860,6 +3840,8 @@ extension on TranslationsHu {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} perc van hátra',
 			'themeEditor.previewSwitch' => 'Automatikus lejátszás',
 			'themeEditor.previewMutedText' => 'Így néz ki a másodlagos szöveg',
+			_ => null,
+		} ?? switch (path) {
 			'search.hint' => 'Keresés filmek, sorozatok és zenék között...',
 			'search.tryDifferentTerm' => 'Próbálj másik keresési kifejezést',
 			'search.searchYourMedia' => 'Keresés a saját médiatartalmak között',
@@ -4363,8 +4345,6 @@ extension on TranslationsHu {
 			'connections.editMediaBrowserIntro' => ({required Object serverName}) => 'Adjon hozzá vagy távolítson el URL-eket a(z) ${serverName} esetén. A PlenTV a legkisebb késleltetésű, elérhető URL-t fogja használni.',
 			'accountPreferences.sectionTitle' => 'Fiókbeállítások',
 			'accountPreferences.hubSubtitleSingle' => ({required Object account}) => 'Hang-, felirat- és könyvtárbeállítások mentve a(z) ${account} fiókra',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.hubSubtitleMultiple' => ({required Object count}) => 'Hang-, felirat- és könyvtárbeállítások mentve ${count} fiókra',
 			'accountPreferences.pickAccount' => 'Minden fiók a saját beállításait tárolja. Válaszd ki a szerkesztendőt.',
 			'accountPreferences.storedOnAccount' => 'Ezek a beállítások magán a fiókon tárolódnak, így minden bejelentkezett alkalmazás használja őket — beleértve a PlenTVt a többi eszközödön.',
@@ -4374,6 +4354,8 @@ extension on TranslationsHu {
 			'accountPreferences.loadFailed' => 'Nem sikerült betölteni ezeket a beállításokat',
 			'accountPreferences.noPreference' => 'Nincs preferencia',
 			'accountPreferences.notSet' => 'Nincs beállítva',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Hang és feliratok',
 			'accountPreferences.groups.libraryDisplay' => 'Könyvtár',
 			'accountPreferences.groups.personalMedia' => 'Személyes média',
@@ -4877,8 +4859,6 @@ extension on TranslationsHu {
 			'collections.deleteCollection' => 'Gyűjtemény törlése',
 			'collections.deleteConfirm' => ({required Object title}) => 'Törlöd a következőt: "${title}"? Ez nem vonható vissza.',
 			'collections.deleted' => 'Gyűjtemény törölve',
-			_ => null,
-		} ?? switch (path) {
 			'collections.deleteFailed' => 'Nem sikerült a gyűjtemény törlése',
 			'collections.deleteFailedWithError' => ({required Object error}) => 'Nem sikerült a gyűjtemény törlése: ${error}',
 			'collections.selectCollection' => 'Gyűjtemény kiválasztása',
@@ -4888,6 +4868,8 @@ extension on TranslationsHu {
 			'collections.errorAddingToCollection' => 'Nem sikerült a gyűjteményhez adni',
 			'collections.created' => 'Gyűjtemény létrehozva',
 			'collections.removeFromCollection' => 'Eltávolítás a gyűjteményből',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Eltávolítod a következőt: "${title}" ebből a gyűjteményből?',
 			'collections.removedFromCollection' => 'Eltávolítva a gyűjteményből',
 			'collections.removeFromCollectionFailed' => 'Nem sikerült az eltávolítás a gyűjteményből',
@@ -5391,8 +5373,6 @@ extension on TranslationsHu {
 			'externalPlayer.playerNameHint' => 'Saját lejátszó',
 			'externalPlayer.playerCommand' => 'Parancs',
 			'externalPlayer.playerPackage' => 'Csomagnév',
-			_ => null,
-		} ?? switch (path) {
 			'externalPlayer.playerUrlScheme' => 'URL-séma',
 			'externalPlayer.off' => 'Ki',
 			'externalPlayer.launchFailed' => 'Nem sikerült megnyitni a külső lejátszót',
@@ -5402,6 +5382,8 @@ extension on TranslationsHu {
 			'metadataEdit.screenTitle' => 'Metaadatok szerkesztése',
 			'metadataEdit.basicInfo' => 'Alapinformációk',
 			'metadataEdit.artwork' => 'Borítók és képek',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Haladó beállítások',
 			'metadataEdit.title' => 'Cím',
 			'metadataEdit.sortTitle' => 'Rendezési cím',
