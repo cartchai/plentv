@@ -80,7 +80,7 @@ const testPassword = 'pa' 'ss';
 /// request counts are the series leg's alone.
 const _seriesOnlyScope = {'iptv:conn-xt-1:movies'};
 
-enum _UserInfoMode { ok, timeout, socket, tooManyRequests, forbidden, unauthorized }
+enum _UserInfoMode { ok, timeout, socket, tooManyRequests, forbidden, unauthorized, notFound }
 
 /// A fake panel (http.Client) that counts every request, tracks peak
 /// concurrency, honours AbortableRequest.abortTrigger, and answers each
@@ -97,6 +97,7 @@ class _CountingPanel extends http.BaseClient {
     this.unfilteredSeriesRows = const [],
     this.unfilteredSeriesLatency = Duration.zero,
     this.userInfoMode = _UserInfoMode.ok,
+    this.userInfoLatency = Duration.zero,
     this.seriesRowForCategory,
   });
 
@@ -104,6 +105,7 @@ class _CountingPanel extends http.BaseClient {
   final Duration categoryLatency;
   final List<XtreamSeries> unfilteredSeriesRows;
   final Duration unfilteredSeriesLatency;
+  final Duration userInfoLatency;
   _UserInfoMode userInfoMode;
   final List<XtreamSeries> Function(String categoryId)? seriesRowForCategory;
 
@@ -164,12 +166,15 @@ class _CountingPanel extends http.BaseClient {
           case _UserInfoMode.tooManyRequests:
           case _UserInfoMode.forbidden:
           case _UserInfoMode.unauthorized:
+          case _UserInfoMode.notFound:
             break;
         }
       }
       final latency = isCategory
           ? categoryLatency
-          : (action == 'get_series' ? unfilteredSeriesLatency : Duration.zero);
+          : (action == 'get_series'
+                ? unfilteredSeriesLatency
+                : (action == null ? userInfoLatency : Duration.zero));
       final abortTrigger = request is http.AbortableRequest ? request.abortTrigger : null;
       if (abortTrigger != null && latency > Duration.zero) {
         // Race the response delay against the abort: a section whose
@@ -239,6 +244,7 @@ class _CountingPanel extends http.BaseClient {
         _UserInfoMode.tooManyRequests => 429,
         _UserInfoMode.forbidden => 403,
         _UserInfoMode.unauthorized => 401,
+        _UserInfoMode.notFound => 404,
         _ => 200,
       };
     }
@@ -350,6 +356,34 @@ void main() {
       panel.userInfoMode = _UserInfoMode.timeout;
       expect(await client.checkHealth(), HealthStatus.online, reason: 'streak reset by the success');
       expect(panel.userInfoRequests, 5, reason: 'every probe made a request — none was suppressed');
+    });
+
+    test('1.6.25 Q-2: a 404 is transient like a 429 — three in a row publish offline', () async {
+      final panel = _CountingPanel(categories: const [], userInfoMode: _UserInfoMode.notFound);
+      final client = _clientWith(panel);
+
+      expect(await client.checkHealth(), HealthStatus.online, reason: '1st 404 keeps last-known-online');
+      expect(await client.checkHealth(), HealthStatus.online, reason: '2nd 404 keeps last-known-online');
+      expect(await client.checkHealth(), HealthStatus.offline, reason: '3rd consecutive 404 publishes offline');
+      // A genuinely wrong URL still goes offline after 3 strikes; a
+      // success resets the streak, like the timeout case above.
+      panel.userInfoMode = _UserInfoMode.ok;
+      expect(await client.checkHealth(), HealthStatus.online);
+      panel.userInfoMode = _UserInfoMode.notFound;
+      expect(await client.checkHealth(), HealthStatus.online, reason: 'streak reset by the success');
+    });
+
+    test('1.6.25 Q-7: two concurrent probes share one panel request', () async {
+      final panel = _CountingPanel(
+        categories: const [],
+        userInfoMode: _UserInfoMode.ok,
+        userInfoLatency: const Duration(milliseconds: 300),
+      );
+      final client = _clientWith(panel);
+
+      final results = await Future.wait([client.checkHealth(), client.checkHealth()]);
+      expect(results, [HealthStatus.online, HealthStatus.online]);
+      expect(panel.userInfoRequests, 1, reason: 'concurrent callers share the in-flight probe');
     });
 
     test('429 is transient like a timeout; 403 stays access denied; 401 stays auth error', () async {

@@ -331,8 +331,12 @@ void main() {
     expect(info, isNull);
   });
 
+  // 1.6.25 Q-9: the cooldown used to be recorded BEFORE the request, so
+  // a failed startup check burned the 6-hour window and the next launch
+  // never retried. The cooldown is now recorded only after a response
+  // is received and parsed — a failed check leaves nothing behind.
   for (final failure in failedResponses.entries) {
-    test('startup ${failure.key} records cooldown before request and manual check bypasses it', () async {
+    test('1.6.25 Q-9: a failed startup ${failure.key} records no cooldown, so the next launch retries', () async {
       final prefs = await BaseSharedPreferencesService.sharedCache();
       final cooldownAtRequest = <String?>[];
       var requestCount = 0;
@@ -347,21 +351,72 @@ void main() {
 
       expect(await UpdateService.debugPerformUpdateCheck(respectCooldown: true, client: client), isNull);
       expect(requestCount, 1);
-      expect(cooldownAtRequest.single, isNotNull);
-      final recordedCooldown = prefs.getString(lastCheckKey);
-      expect(recordedCooldown, cooldownAtRequest.single);
-      expect(DateTime.now().difference(DateTime.parse(recordedCooldown!)), lessThan(const Duration(minutes: 1)));
+      expect(cooldownAtRequest.single, isNull, reason: 'nothing is recorded before the request');
+      expect(prefs.getString(lastCheckKey), isNull, reason: 'a failed check leaves no cooldown behind');
 
       expect(await UpdateService.debugPerformUpdateCheck(respectCooldown: true, client: client), isNull);
-      expect(requestCount, 1, reason: 'a simulated next launch must honor the failed attempt cooldown');
+      expect(requestCount, 2, reason: 'with no cooldown recorded, the next launch retries the check');
+      expect(prefs.getString(lastCheckKey), isNull);
+    });
+  }
+
+  test('1.6.25 Q-9: a successful startup check records the cooldown after the response', () async {
+    final prefs = await BaseSharedPreferencesService.sharedCache();
+    final cooldownAtRequest = <String?>[];
+    var requestCount = 0;
+    final client = MediaServerHttpClient(
+      client: MockClient((_) async {
+        requestCount++;
+        cooldownAtRequest.add(prefs.getString(lastCheckKey));
+        return http.Response(
+          jsonEncode({'tag_name': 'v1.0.0', 'html_url': 'https://example.com', 'published_at': '2026-01-01'}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+    addTearDown(client.close);
+
+    expect(await UpdateService.debugPerformUpdateCheck(respectCooldown: true, client: client), isNull);
+    expect(requestCount, 1);
+    expect(cooldownAtRequest.single, isNull, reason: 'nothing is recorded before the request');
+    final recordedCooldown = prefs.getString(lastCheckKey);
+    expect(recordedCooldown, isNotNull, reason: 'a successful check records the cooldown');
+    expect(DateTime.now().difference(DateTime.parse(recordedCooldown!)), lessThan(const Duration(minutes: 1)));
+
+    expect(await UpdateService.debugPerformUpdateCheck(respectCooldown: true, client: client), isNull);
+    expect(requestCount, 1, reason: 'a recorded cooldown suppresses the duplicate startup check');
+  });
+
+  for (final failure in failedResponses.entries) {
+    test('startup ${failure.key} records no cooldown and manual check bypasses nothing', () async {
+      // 1.6.25 Q-9: a failed check records nothing, so the next launch
+      // retries instead of waiting out a cooldown for a check that never
+      // got an answer. A manual check bypasses the cooldown gate, but
+      // still records nothing on failure.
+      final prefs = await BaseSharedPreferencesService.sharedCache();
+      final cooldownAtRequest = <String?>[];
+      var requestCount = 0;
+      final client = MediaServerHttpClient(
+        client: MockClient((_) async {
+          requestCount++;
+          cooldownAtRequest.add(prefs.getString(lastCheckKey));
+          return failure.value();
+        }),
+      );
+      addTearDown(client.close);
+
+      expect(await UpdateService.debugPerformUpdateCheck(respectCooldown: true, client: client), isNull);
+      expect(requestCount, 1);
+      expect(cooldownAtRequest.single, isNull);
+      expect(prefs.getString(lastCheckKey), isNull);
+
+      expect(await UpdateService.debugPerformUpdateCheck(respectCooldown: true, client: client), isNull);
+      expect(requestCount, 2, reason: 'a failed attempt leaves no cooldown to suppress the retry');
 
       expect(await UpdateService.debugPerformUpdateCheck(respectCooldown: false, client: client), isNull);
-      expect(requestCount, 2, reason: 'an explicit manual check must bypass a recent startup cooldown');
-      expect(
-        prefs.getString(lastCheckKey),
-        recordedCooldown,
-        reason: 'manual checks must not rewrite startup cooldown',
-      );
+      expect(requestCount, 3, reason: 'an explicit manual check also fires when no cooldown exists');
+      expect(prefs.getString(lastCheckKey), isNull, reason: 'a failed manual check records nothing either');
     });
   }
 

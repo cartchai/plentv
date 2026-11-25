@@ -383,6 +383,12 @@ class MultiServerManager {
     _serverStatus[client.serverId] = online;
   }
 
+  /// Test-only read of the per-connection IPTV health map (1.6.25 Q-5):
+  /// the map is what the filter-only rebind reads, so a health verdict
+  /// that never lands here leaves the rebind reading stale.
+  @visibleForTesting
+  Map<String, HealthStatus> get iptvHealthByConnectionId => Map.unmodifiable(_iptvHealthByConnectionId);
+
   /// Resume-time due-check (build v1.0.13, R4.2): after the app was
   /// backgrounded, each bound IPTV client's catalog may be due for its
   /// interval sync — run the existing coalesced
@@ -1336,6 +1342,13 @@ class MultiServerManager {
       if (!identical(_clients[serverId], client)) {
         appLogger.d('Ignoring stale health result for $serverId');
         return;
+      }
+      // 1.6.25 Q-5: the bind and the deferred probe both file the
+      // verdict here, but this path never did — so a health flip the
+      // manager itself measured never reached the map the filter-only
+      // rebind reads, and the rebind kept answering from stale state.
+      if (client is IptvClient) {
+        _iptvHealthByConnectionId[serverId] = status;
       }
       _applyHealth(ServerId(serverId), status);
       if (status != HealthStatus.online) {

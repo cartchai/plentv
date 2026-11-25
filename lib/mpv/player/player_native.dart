@@ -628,6 +628,11 @@ class PlayerNative extends PlayerBase {
     final tunnel = WarpTunnelService.instance;
     final proxyPort = tunnel.isOn ? tunnel.proxyPort : -1;
     final proxyUrl = (isIptv && proxyPort > 0) ? 'http://127.0.0.1:$proxyPort' : null;
+    // 1.6.25 Q-10: a refused `del` must not pass silently — set below
+    // when the reset is proven stuck, and thrown after the try/catch
+    // (which only warns) so the open fails instead of proceeding with
+    // the tunnel proxy still in effect for non-IPTV media.
+    String? stuckProxy;
     try {
       if (proxyUrl != null) {
         await setProperty('http-proxy', proxyUrl);
@@ -645,15 +650,38 @@ class PlayerNative extends PlayerBase {
       } else {
         _lastOpenUsedProxy = false;
         await command(['del', 'http-proxy']);
+        String? landed;
         try {
-          final landed = await getProperty('http-proxy');
-          appLogger.i('MPV: http-proxy reset, mpv now reports "${landed ?? 'null'}"');
+          landed = await getProperty('http-proxy');
         } catch (e) {
           appLogger.w('MPV: http-proxy reset read-back failed', error: e);
+        }
+        if (landed != null && landed.isNotEmpty) {
+          // The reset did not land: retry the `del` once.
+          appLogger.w('MPV: http-proxy reset did not land (mpv still reports "$landed") — retrying the reset once');
+          try {
+            await command(['del', 'http-proxy']);
+            landed = await getProperty('http-proxy');
+          } catch (e) {
+            // The retry (or its read-back) failed: `landed` still holds
+            // the stuck value from the first read-back, so the open
+            // fails below rather than proceeding on an unverified reset.
+            appLogger.w('MPV: http-proxy reset retry failed', error: e);
+          }
+        }
+        if (landed != null && landed.isNotEmpty) {
+          stuckProxy = landed;
+        } else {
+          appLogger.i('MPV: http-proxy reset, mpv now reports "${landed ?? 'null'}"');
         }
       }
     } catch (e) {
       appLogger.w('MPV: http-proxy not applied', error: e);
+    }
+    if (stuckProxy != null) {
+      throw StateError(
+        'MPV: http-proxy reset failed — proxy still set to "$stuckProxy" after retry; refusing to open non-IPTV media through the tunnel proxy',
+      );
     }
 
     // Convert content:// URIs to fdclose:// for MPV on Android (SAF SD card

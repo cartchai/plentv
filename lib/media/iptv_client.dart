@@ -2316,6 +2316,11 @@ class IptvClient implements MediaServerClient {
 
   int _consecutiveTransientHealthFailures = 0;
 
+  /// The in-flight health probe, if one is running (1.6.25 Q-7).
+  /// Concurrent [checkHealth] callers share this future instead of
+  /// firing a second probe at the same panel.
+  Future<HealthStatus>? _inFlightHealthCheck;
+
   /// The last health verdict this client published (build #21). A
   /// transient probe failure returns this instead of offline, so the app
   /// keeps the last-known state while the panel struggles.
@@ -3033,6 +3038,26 @@ class IptvClient implements MediaServerClient {
       appLogger.d('IPTV health probe deferred: search in flight, cached verdict');
       return _lastHealthStatus;
     }
+    // 1.6.25 Q-7: coalesce concurrent probes — two callers racing a slow
+    // panel used to fire two probes (two panel requests, and the second
+    // one's streak write could land on the first one's verdict). The
+    // first caller runs the probe; later callers share its future and
+    // get the same verdict. The cheap cached returns above (tunnel gate,
+    // unreachable, refusal, search-deferred) stay outside the guard:
+    // they cost no request and must still answer immediately.
+    if (_inFlightHealthCheck != null) return _inFlightHealthCheck!;
+    final probe = _probeHealth();
+    _inFlightHealthCheck = probe;
+    try {
+      return await probe;
+    } finally {
+      _inFlightHealthCheck = null;
+    }
+  }
+
+  /// The panel probe itself, extracted so [checkHealth] can coalesce
+  /// concurrent callers onto one in-flight probe (1.6.25 Q-7).
+  Future<HealthStatus> _probeHealth() async {
     if (_isXtream) {
       try {
         final info = await _xtreamApi.getUserInfo();
@@ -3061,10 +3086,15 @@ class IptvClient implements MediaServerClient {
           // skip.
           return _recordTransientHealthFailure(networkShaped: e.isTransient);
         }
-        // Any other 4xx (400/404/405/410...) is definitive: the request
-        // reached the panel and was refused for a reason a retry will not
-        // fix. Publish offline immediately.
-        return _publishHealth(HealthStatus.offline);
+        // Any other 4xx (400/404/405/410...) is NOT definitive (1.6.25
+        // Q-2): a 404 can be a transient panel state, and publishing
+        // offline on the first one dropped Trex on a single bad probe.
+        // They count as strikes instead — three in a row still publishes
+        // offline, so a genuinely wrong URL goes offline, just not on
+        // the first probe. A 4xx answered, so it never records the
+        // panel-unreachable verdict (networkShaped is false for an
+        // HTTP verdict, same as the 429/5xx branch above).
+        return _recordTransientHealthFailure(networkShaped: e.isTransient);
       } catch (e) {
         appLogger.d('IPTV health probe failed', error: e);
         // Not an HTTP verdict at all (defensive: getUserInfo only throws
@@ -3082,6 +3112,9 @@ class IptvClient implements MediaServerClient {
       if (response.statusCode == 401) return _publishHealth(HealthStatus.authError);
       if (response.statusCode == 403) return _publishHealth(HealthStatus.accessDenied);
       if (response.statusCode == 429 || response.statusCode >= 500) return _recordTransientHealthFailure();
+      // 1.6.25 Q-2: any other 4xx counts as a strike, like the Xtream
+      // path above — a single 404 must not publish offline on its own.
+      if (response.statusCode >= 400 && response.statusCode < 500) return _recordTransientHealthFailure();
       return _publishHealth(HealthStatus.offline);
     } catch (e) {
       appLogger.d('IPTV health probe failed', error: e);

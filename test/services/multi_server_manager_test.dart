@@ -13,8 +13,10 @@ import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:plezy/connection/connection.dart';
 import 'package:plezy/connection/connection_registry.dart';
+import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/database/app_database.dart';
 import 'package:plezy/models/plex/plex_config.dart';
+import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/plex_api_cache.dart';
 import 'package:plezy/services/plex_auth_service.dart';
 import 'package:plezy/services/plex_client.dart';
@@ -103,6 +105,19 @@ class _LoopbackJellyfinServer {
     _closed = true;
     await _server.close(force: true);
   }
+}
+
+/// Fake Xtream API whose health probe always answers "Active" (no panel).
+class _OkUserInfoApi extends XtreamApi {
+  _OkUserInfoApi()
+    : super(serverUrl: 'https://panel.example.com:8080', username: 'user', password: 'test-password');
+
+  @override
+  Future<Map<String, dynamic>?> getUserInfo() async => {
+    'status': 'Active',
+    'exp_date': '1790000000',
+    'max_connections': '1',
+  };
 }
 
 void main() {
@@ -1164,6 +1179,31 @@ void main() {
   });
 
   group('checkServerHealth', () {
+    test('1.6.25 Q-5: an IPTV probe verdict lands in the health map the filter-only rebind reads', () async {
+      final connection = XtreamConnection(
+        id: 'conn-xt-1',
+        name: 'Trex',
+        serverUrl: 'https://panel.example.com:8080',
+        username: 'user',
+        password: 'test-password',
+        createdAt: DateTime.utc(2026, 11, 5),
+      );
+      final client = IptvClient.forConnection(connection);
+      client.testXtreamApi = _OkUserInfoApi();
+      addTearDown(client.close);
+      final manager = MultiServerManager();
+      addTearDown(manager.dispose);
+      manager.debugRegisterIptvClientForTesting(client, online: false);
+
+      await manager.checkServerHealth();
+
+      expect(
+        manager.iptvHealthByConnectionId['conn-xt-1'],
+        HealthStatus.online,
+        reason: 'the probe said online, so the map must say online too',
+      );
+    });
+
     test('a probe result from a client replaced mid-probe is not applied', () async {
       final probeStarted = Completer<void>();
       final original = testPlexClient(

@@ -25,6 +25,13 @@ class _MpvCoreMock {
   final calls = <MethodCall>[];
   bool failHttpProxyWrite = false;
 
+  /// When > 0, the next [failHttpProxyDelTimes] `del http-proxy`
+  /// commands do NOT clear the stored value — mpv refused the reset
+  /// without throwing, so the read-back still reports the old proxy.
+  /// 1.6.25 Q-10: the open must retry the `del` once, then fail loudly
+  /// instead of proceeding with the proxy still set.
+  int failHttpProxyDelTimes = 0;
+
   /// When set, `getProperty('http-proxy')` returns this instead of the
   /// stored value — a read-back mismatch, like a write mpv refused
   /// without throwing.
@@ -53,7 +60,13 @@ class _MpvCoreMock {
         return null;
       case 'command':
         final args = (_args(call)['args'] as List).cast<Object?>();
-        if (args.length == 2 && args.first == 'del' && args[1] == 'http-proxy') _proxyValue = null;
+        if (args.length == 2 && args.first == 'del' && args[1] == 'http-proxy') {
+          if (failHttpProxyDelTimes > 0) {
+            failHttpProxyDelTimes--;
+          } else {
+            _proxyValue = null;
+          }
+        }
         if (args.isNotEmpty && args.first == 'loadfile') {
           return {'playlistEntryId': 1};
         }
@@ -384,6 +397,45 @@ void main() {
         lessThan(core.indexOfLoadfile()),
         reason: 'the read-back happens before the file loads',
       );
+    });
+  });
+
+  test('1.6.25 Q-10: a refused proxy reset is retried once, then the open proceeds', () async {
+    // The first `del` does not land (mpv refused it without throwing);
+    // the retry clears it, so the non-IPTV open goes ahead — with the
+    // proxy genuinely gone, not just assumed gone.
+    final core = _MpvCoreMock()..failHttpProxyDelTimes = 1;
+    WarpTunnelService.instance.debugSetTunnelForTest(on: true, proxyPort: 18081);
+    await _run(core, (player) async {
+      await player.open(
+        Media('https://example.test/live.m3u8', headers: const {'Accept-Language': 'en'}),
+        isLive: true,
+        isIptv: true,
+      );
+      await player.open(Media('https://example.test/next.mkv'));
+
+      expect(core.httpProxyEvents(), ['set:http://127.0.0.1:18081', 'del', 'del']);
+      expect(core.loadfileIndices(), hasLength(2), reason: 'the retry cleared the proxy, so the open proceeds');
+      expect(player.lastOpenUsedProxy, isFalse);
+    });
+  });
+
+  test('1.6.25 Q-10: a proxy reset that never lands fails the open loudly', () async {
+    // `del` is refused twice in a row: the proxy is still set for a
+    // non-IPTV open, which would route the Plex file through the tunnel
+    // proxy. The open must fail instead of proceeding silently.
+    final core = _MpvCoreMock()..failHttpProxyDelTimes = 99;
+    WarpTunnelService.instance.debugSetTunnelForTest(on: true, proxyPort: 18081);
+    await _run(core, (player) async {
+      await player.open(
+        Media('https://example.test/live.m3u8', headers: const {'Accept-Language': 'en'}),
+        isLive: true,
+        isIptv: true,
+      );
+
+      await expectLater(player.open(Media('https://example.test/next.mkv')), throwsA(isA<StateError>()));
+      expect(core.httpProxyEvents(), ['set:http://127.0.0.1:18081', 'del', 'del']);
+      expect(core.loadfileIndices(), hasLength(1), reason: 'no loadfile ran with the proxy stuck');
     });
   });
 }

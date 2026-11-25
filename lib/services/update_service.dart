@@ -85,7 +85,10 @@ class UpdateService {
   }
 
   /// Internal method that performs the actual update check
-  /// [respectCooldown] - if true, checks cooldown and records the attempt before the request
+  /// [respectCooldown] - if true, checks cooldown and records the attempt
+  /// only after a response is received and parsed (1.6.25 Q-9: a failed
+  /// check used to burn the 6-hour cooldown before the request went out,
+  /// so the next launch never retried)
   /// [throwOnFailure] - if true, a failed check (network, non-200, bad payload)
   /// is rethrown instead of reading as "no update"
   /// [deviceAbi] - test seam for the per-ABI asset pick (1.2.21): production
@@ -110,10 +113,6 @@ class UpdateService {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      if (respectCooldown) {
-        await _updateLastCheckTime();
-      }
-
       final response = await (client ?? httpClient).get(
         'https://api.github.com/repos/$_githubRepo/releases/latest',
         headers: {'Accept': 'application/vnd.github+json'},
@@ -135,6 +134,14 @@ class UpdateService {
       }
 
       final hasUpdate = _isNewerVersion(cleanVersion, currentVersion);
+
+      // 1.6.25 Q-9: the check succeeded (a response arrived and parsed),
+      // so the attempt is worth recording now. A timeout, non-200 or
+      // bad payload returns above/throws below without reaching here,
+      // so a failed check leaves no cooldown behind.
+      if (respectCooldown) {
+        await _updateLastCheckTime();
+      }
 
       if (hasUpdate) {
         // Check if this version was skipped
