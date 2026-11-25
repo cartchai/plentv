@@ -199,6 +199,7 @@ class _RecordingLivePlayer implements Player {
     Media media, {
     bool play = true,
     bool isLive = false,
+    bool isIptv = false,
     List<SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,

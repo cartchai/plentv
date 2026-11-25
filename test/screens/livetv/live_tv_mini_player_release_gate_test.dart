@@ -107,6 +107,7 @@ final class _ReleaseRecordingPlayer implements Player {
     mpv_models.Media media, {
     bool play = true,
     bool isLive = false,
+    bool isIptv = false,
     List<mpv_models.SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,

@@ -138,6 +138,7 @@ extension _VideoPlayerPlaybackStartMethods on VideoPlayerScreenState {
           play: !holdPlaybackStart && !PlatformDetector.isAutomotive(),
           timeShifted: offsetSeconds != null,
           channelKey: channel.key,
+          isIptv: session is IptvLiveTvPlaybackSession,
         );
         if (opened) openedStream = _live.streamGeneration;
         if (!attempt.isCurrent) return;

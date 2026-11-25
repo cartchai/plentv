@@ -515,6 +515,13 @@ class _LiveShell {
 }
 
 class _LiveMediaSessionPlayer implements Player {
+  // 1.6.22: fakes never route through the tunnel proxy. Declared here
+  // (not left to noSuchMethod) because the failure view reads it on
+  // every fatal player error — a throwing noSuchMethod would break the
+  // failure view itself.
+  @override
+  bool get lastOpenUsedProxy => false;
+
   _LiveMediaSessionPlayer()
     : _state = const PlayerState(position: Duration.zero, duration: Duration.zero, seekable: false);
 
@@ -575,6 +582,7 @@ class _FailingOpenLivePlayer extends _LiveMediaSessionPlayer {
     Media media, {
     bool play = true,
     bool isLive = false,
+    bool isIptv = false,
     List<SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,
@@ -736,6 +744,7 @@ class _CadenceLivePlayer extends _LiveMediaSessionPlayer {
     Media media, {
     bool play = true,
     bool isLive = false,
+    bool isIptv = false,
     List<SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,

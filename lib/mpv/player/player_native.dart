@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show mapEquals, visibleForTesting;
 import 'package:flutter/services.dart';
 
 import '../../models/audio_channel_limit.dart';
+import '../../services/iptv/warp_tunnel_service.dart';
 import '../../services/settings_service.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/platform_detector.dart';
@@ -74,6 +75,16 @@ class PlayerNative extends PlayerBase {
 
   String _dvConversionMode = 'auto';
   String _dvConversionLog = 'no';
+
+  /// Whether the most recent [open] on this player went through the
+  /// tunnel proxy (1.6.22). Set only when the proxy write was confirmed
+  /// by read-back in [_loadReplacement]; reset at the start of every
+  /// [open] so a throw before the load cannot leave a stale true. The
+  /// failure view reads it via [lastOpenUsedProxy].
+  bool _lastOpenUsedProxy = false;
+
+  @override
+  bool get lastOpenUsedProxy => _lastOpenUsedProxy;
 
   // Gapless-audio arming state (audioOnly). The native playlist is always
   // [current, next?]; these track whether entry 1 exists and what it plays.
@@ -407,6 +418,7 @@ class PlayerNative extends PlayerBase {
     Media media, {
     bool play = true,
     bool isLive = false,
+    bool isIptv = false,
     List<SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,
@@ -416,6 +428,10 @@ class PlayerNative extends PlayerBase {
     if (_nativeCoreUnavailable) return null;
     await _ensureInitialized();
     if (_nativeCoreUnavailable) return null;
+    // 1.6.22: every open starts with the proxy latch clear, so a throw
+    // before the load cannot leave a stale "used the proxy" behind for
+    // the failure view to read.
+    _lastOpenUsedProxy = false;
     // `loadfile replace` (below) clears the native playlist, dropping any
     // gapless entry armed via setNext — settle its content-fd claim first.
     // No transition is surfaced: the caller is replacing playback anyway.
@@ -446,6 +462,7 @@ class PlayerNative extends PlayerBase {
         startPosition: sourcePositionFor(startPosition),
         play: play,
         isLive: isLive,
+        isIptv: isIptv,
         externalSubtitles: externalSubtitles,
         startLivePlaylistFromBeginning: startLivePlaylistFromBeginning,
         startOnGlVo: startOnGlVo,
@@ -486,6 +503,7 @@ class PlayerNative extends PlayerBase {
     required Duration startPosition,
     required bool play,
     required bool isLive,
+    required bool isIptv,
     required List<SubtitleTrack>? externalSubtitles,
     required bool startLivePlaylistFromBeginning,
     required bool startOnGlVo,
@@ -588,6 +606,54 @@ class PlayerNative extends PlayerBase {
       }
     } catch (e) {
       appLogger.w('MPV: pre-open playback defaults not applied', error: e);
+    }
+
+    // 1.6.22: route IPTV streams through the in-app tunnel proxy. The
+    // default MPV path had no proxy wiring at all, so the player opened
+    // streams straight from the panel and got the home-Wi-Fi 403 even
+    // while the tunnel beside it carried the API calls. The shape copies
+    // the user-agent block above (set + read-back + explicit reset so
+    // the proxy can never leak into a Plex/Jellyfin open), but it has
+    // its own try/catch so a refused user-agent write cannot skip the
+    // proxy decision. A refused write degrades to a warning, never
+    // aborts the open — the loadfile below still runs, direct. The port
+    // is read fresh at each open, never cached. The latch is set only
+    // when the read-back confirms the value landed; the failure view
+    // reads it to name the tunnel. mpv's `http-proxy` applies to
+    // `http://` streams only on this build (the bundled libmpv has no
+    // libcurl); the panel's streams are `http://` and are covered, any
+    // `https://` stream stays direct — a documented limitation, not a
+    // surprise. The proxy address is loopback and safe to log; the
+    // stream URL is never logged.
+    final tunnel = WarpTunnelService.instance;
+    final proxyPort = tunnel.isOn ? tunnel.proxyPort : -1;
+    final proxyUrl = (isIptv && proxyPort > 0) ? 'http://127.0.0.1:$proxyPort' : null;
+    try {
+      if (proxyUrl != null) {
+        await setProperty('http-proxy', proxyUrl);
+        try {
+          final landed = await getProperty('http-proxy');
+          if (landed == proxyUrl) {
+            _lastOpenUsedProxy = true;
+            appLogger.i('MPV: http-proxy applied: $proxyUrl');
+          } else {
+            appLogger.w('MPV: http-proxy write did not land (wanted "$proxyUrl", mpv reports "${landed ?? 'null'}") — stream will go direct');
+          }
+        } catch (e) {
+          appLogger.w('MPV: http-proxy read-back failed — could not verify the write landed', error: e);
+        }
+      } else {
+        _lastOpenUsedProxy = false;
+        await command(['del', 'http-proxy']);
+        try {
+          final landed = await getProperty('http-proxy');
+          appLogger.i('MPV: http-proxy reset, mpv now reports "${landed ?? 'null'}"');
+        } catch (e) {
+          appLogger.w('MPV: http-proxy reset read-back failed', error: e);
+        }
+      }
+    } catch (e) {
+      appLogger.w('MPV: http-proxy not applied', error: e);
     }
 
     // Convert content:// URIs to fdclose:// for MPV on Android (SAF SD card

@@ -155,6 +155,7 @@ final class _RectFakePlayer extends Fake implements Player, VideoRectSupport {
     mpv_models.Media media, {
     bool play = true,
     bool isLive = false,
+    bool isIptv = false,
     List<mpv_models.SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,

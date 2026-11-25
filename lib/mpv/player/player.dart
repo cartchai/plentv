@@ -79,6 +79,14 @@ abstract class Player {
   /// The type of player backend being used (e.g., 'mpv', 'exoplayer').
   String get playerType;
 
+  /// Whether the most recent [open] on this player went through the
+  /// in-app tunnel proxy (1.6.22). Set only when the proxy write was
+  /// confirmed by read-back; false for direct opens, for opens where the
+  /// write was refused, and before any open. The failure view reads it
+  /// to name the tunnel instead of showing the generic text. Backends
+  /// that never apply the proxy always report false.
+  bool get lastOpenUsedProxy => false;
+
   /// Open a media source for playback.
   ///
   /// [media] - The media source to open. Its [Media.start] is timeline time.
@@ -96,6 +104,13 @@ abstract class Player {
     Media media, {
     bool play = true,
     bool isLive = false,
+
+    /// Whether this open is an IPTV stream (1.6.22). Only an IPTV open
+    /// routes through the tunnel proxy — a Plex/Jellyfin/Emby/local open
+    /// must never be proxied, and the flag is explicit at every call
+    /// site so a shared open path cannot guess wrong. Computed from the
+    /// session/item's own backend, never from the URL or the headers.
+    bool isIptv = false,
     List<SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,

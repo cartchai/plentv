@@ -480,6 +480,18 @@ class WarpTunnelService extends ChangeNotifier {
   bool get isOn => _state == WarpTunnelState.on;
   bool get isStarting => _state == WarpTunnelState.starting;
 
+  /// Test-only driver for the tunnel state the player reads at open
+  /// time (1.6.22). The player checks [isOn] and [proxyPort] fresh on
+  /// every open; tests use this to put the singleton in the on/off
+  /// states instead of starting a real tunnel. It never touches the
+  /// stored registration and never starts, stops or probes anything —
+  /// production code must not call it.
+  @visibleForTesting
+  void debugSetTunnelForTest({required bool on, int proxyPort = -1}) {
+    _state = on ? WarpTunnelState.on : WarpTunnelState.off;
+    _proxyPort = proxyPort;
+  }
+
   /// The selected tunnel transport (1.6.21): MASQUE by default,
   /// WireGuard when the user picked it. An unknown stored value
   /// heals to MASQUE.

@@ -877,6 +877,10 @@ extension _VideoPlayerOpenMethods on VideoPlayerScreenState {
     required String videoUrl,
     required bool isTranscoding,
     required bool isLocalMedia,
+    // 1.6.22: whether this item is IPTV, computed by [_openResolvedMedia]
+    // from the item's own backend (m3u/xtream) — never from the URL or
+    // the headers. Only an IPTV open routes through the tunnel proxy.
+    required bool isIptv,
     required MediaVersion? selectedVersion,
     required _PlaybackOpenTiming timing,
     required PlaybackOpenOutcome outcome,
@@ -924,6 +928,7 @@ extension _VideoPlayerOpenMethods on VideoPlayerScreenState {
       return player.open(
         media,
         startOnGlVo: startOnGlVo,
+        isIptv: isIptv,
         // The last word on the vehicle and the resume profile picker, taken here because this is
         // the only place media actually starts: callers decide `play` before awaiting resolve,
         // tuning and track work, and a car that starts driving in between has already spent its
@@ -1149,6 +1154,9 @@ extension _VideoPlayerOpenMethods on VideoPlayerScreenState {
         videoUrl: result.videoUrl!,
         isTranscoding: result.isTranscoding,
         isLocalMedia: isLocalMedia,
+        // 1.6.22: the item's own backend decides IPTV-ness — m3u/xtream
+        // go through the tunnel proxy, Plex/Jellyfin/local never do.
+        isIptv: metadata.backend == MediaBackend.m3u || metadata.backend == MediaBackend.xtream,
         selectedVersion: result.selectedVersion,
         timing: openTiming,
         outcome: outcome,

@@ -81,6 +81,10 @@ class _CallGate {
 /// In-memory audio player: records calls, exposes manual stream controllers
 /// so tests drive transitions/completion/errors deterministically.
 class FakePlayer implements Player {
+  // 1.6.22: fakes never route through the tunnel proxy.
+  @override
+  bool get lastOpenUsedProxy => false;
+
   final playingCtrl = StreamController<bool>.broadcast(sync: true);
   final completedCtrl = StreamController<bool>.broadcast(sync: true);
   final bufferingCtrl = StreamController<bool>.broadcast(sync: true);
@@ -263,6 +267,7 @@ class FakePlayer implements Player {
     Media media, {
     bool play = true,
     bool isLive = false,
+    bool isIptv = false,
     List<SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,

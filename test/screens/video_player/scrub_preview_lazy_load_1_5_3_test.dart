@@ -263,6 +263,7 @@ class _LazyPlayer extends FakeSyncPlayer {
     Media media, {
     bool play = true,
     bool isLive = false,
+    bool isIptv = false,
     List<SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,

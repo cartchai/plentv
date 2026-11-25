@@ -9,6 +9,13 @@ import 'package:plezy/mpv/mpv.dart';
 /// drive externally-caused transitions with the `emit*` helpers. Designed to
 /// run under `fakeAsync` — nothing here uses wall-clock time.
 class FakeSyncPlayer implements Player {
+  // 1.6.22: fakes never route through the tunnel proxy. Declared here
+  // (not left to noSuchMethod) because the failure view reads it on
+  // every fatal player error — a throwing noSuchMethod would break the
+  // failure view itself.
+  @override
+  bool get lastOpenUsedProxy => false;
+
   FakeSyncPlayer({
     bool playing = false,
     bool buffering = false,

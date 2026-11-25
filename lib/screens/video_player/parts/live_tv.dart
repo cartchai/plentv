@@ -325,6 +325,7 @@ extension _VideoPlayerLiveTvMethods on VideoPlayerScreenState {
           headers: recovered.streamHeaders,
           targetEpoch: targetEpoch,
           applyOptions: false,
+          isIptv: recovered is IptvLiveTvPlaybackSession,
         );
       },
       isCurrent: isCurrent,
@@ -392,6 +393,11 @@ extension _VideoPlayerLiveTvMethods on VideoPlayerScreenState {
     bool? play,
     bool applyOptions = true,
     bool timeShifted = false,
+    // 1.6.22: whether this open is an IPTV stream, decided by the caller
+    // from the session's own type — the live path also opens Plex/Jellyfin
+    // live, so the flag is per-open, never hardcoded. Only an IPTV open
+    // routes through the tunnel proxy.
+    required bool isIptv,
     void Function()? onOpenStarted,
     // 1.2.18 C-10: the channel being tuned (launch/zap pass it; recovery,
     // catch-up and subtitle re-opens leave it out — the channel has not
@@ -425,7 +431,7 @@ extension _VideoPlayerLiveTvMethods on VideoPlayerScreenState {
       if (applyOptions) await _setLiveStreamOptions(player);
       if (_shuttingDown || !_launchCurrent) return false;
       onOpenStarted?.call();
-      await player.open(media, play: playNow, isLive: true, startOnGlVo: startOnGlVo);
+      await player.open(media, play: playNow, isLive: true, isIptv: isIptv, startOnGlVo: startOnGlVo);
       // 1.2.19 L-11: the tune committed — arm the one-shot
       // software-decode check for this channel.
       _armSoftwareDecodeTriage(player);
@@ -443,6 +449,7 @@ extension _VideoPlayerLiveTvMethods on VideoPlayerScreenState {
         media,
         play: playNow,
         isLive: true,
+        isIptv: isIptv,
         startLivePlaylistFromBeginning: timeShifted,
         startOnGlVo: startOnGlVo,
       );
@@ -584,6 +591,7 @@ extension _VideoPlayerLiveTvMethods on VideoPlayerScreenState {
       targetEpoch: clamped,
       awaitClock: currentPlayer is PlayerNative,
       timeShifted: true,
+      isIptv: session is IptvLiveTvPlaybackSession,
     );
     if (!mounted || player != currentPlayer) return false;
     _setPlayerState(() {});
@@ -637,6 +645,7 @@ extension _VideoPlayerLiveTvMethods on VideoPlayerScreenState {
       streamUrl,
       headers: session.streamHeaders,
       targetEpoch: _live.captureBuffer == null ? null : _live.streamStartEpoch.round(),
+      isIptv: session is IptvLiveTvPlaybackSession,
     );
     if (mounted) _setPlayerState(() {});
     return PlaybackSourceChangeOutcome.applied;
@@ -896,6 +905,7 @@ extension _VideoPlayerLiveTvMethods on VideoPlayerScreenState {
         targetEpoch: targetEpoch,
         play: (frameRatePlan?.holdPlaybackStart ?? false) ? false : null,
         channelKey: channel.key,
+        isIptv: session is IptvLiveTvPlaybackSession,
         onOpenStarted: () {
           replacementOpenStarted = true;
           // The native state belongs to the replacement from this point,

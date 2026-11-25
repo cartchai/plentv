@@ -1033,6 +1033,7 @@
     "playbackCancelled": "Playback was canceled.",
     "playbackFailed": "Playback could not be started.",
     "playbackFailedDetail": "Playback could not be started: ${error}",
+    "playbackFailedViaTunnel": "Playback could not be started. The tunnel was on but the stream did not load — check the tunnel is still connected and try again.",
     "audioOutputFailed": "The audio output stopped responding. Check the TV or receiver's audio connection; if other apps have no sound either, restart the device.",
     "mediaUnavailable": "This content is no longer available.",
     "errorLoadingFileInfo": "Error loading file info: ${error}",
@@ -1606,6 +1607,9 @@
       "Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime",
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
+    ],
+    "changelog2341": [
+      "New: the player now opens IPTV streams through the in-app tunnel instead of straight from the panel — that's why shows still showed 403 even when the tunnel was connected. Note: this covers http:// streams only; the bundled player can't use the proxy for https:// streams, so those still go direct"
     ],
     "changelog2340": [
       "New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard in Settings under Advanced, under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it"

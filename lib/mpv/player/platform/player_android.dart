@@ -183,6 +183,10 @@ class PlayerAndroid extends PlayerBase with VideoRectSupport {
     Media media, {
     bool play = true,
     bool isLive = false,
+    // 1.6.22: accepted for the shared contract, ignored here — the
+    // ExoPlayer opt-in path is out of scope for this build; the tunnel
+    // proxy applies to the MPV path only (see `PlayerNative.open`).
+    bool isIptv = false,
     List<SubtitleTrack>? externalSubtitles,
     Duration? timelineDuration,
     Duration timelineOffset = Duration.zero,

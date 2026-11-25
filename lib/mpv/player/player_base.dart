@@ -79,6 +79,12 @@ abstract class PlayerBase with PlayerStreamControllersMixin implements Player {
   @override
   bool get audioPassthroughActive => false;
 
+  /// Whether the most recent open went through the tunnel proxy
+  /// (1.6.22). Meaningful only on the MPV backend, which overrides
+  /// this; every other backend always reports false.
+  @override
+  bool get lastOpenUsedProxy => false;
+
   /// Gapless-audio arming — meaningful only on the audio players, which
   /// override this. Video backends ignore it.
   @override

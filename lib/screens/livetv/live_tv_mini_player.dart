@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../i18n/strings.g.dart';
 import '../../media/ids.dart';
 import '../../media/live_tv_support.dart';
+import '../../media/media_backend.dart';
 import '../../models/livetv_channel.dart';
 import '../../mpv/models.dart';
 import '../../mpv/player/player.dart';
@@ -487,7 +488,15 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
       // User-Agent for IPTV, so the stream carries the same identity as
       // the API calls. Covers the live edge and catch-up alike — both
       // open through this session.
-      await player.open(Media(url, headers: session.streamHeaders), play: true, isLive: true);
+      // 1.6.22: the client's own backend decides IPTV-ness — m3u/xtream
+      // go through the tunnel proxy, Plex/Jellyfin never do. The session
+      // only exists when the client did, so a null client reads as direct.
+      await player.open(
+        Media(url, headers: session.streamHeaders),
+        play: true,
+        isLive: true,
+        isIptv: client?.backend == MediaBackend.m3u || client?.backend == MediaBackend.xtream,
+      );
     } catch (e) {
       if (generation != _generation) return;
       _fail('open failed (${e.runtimeType})');

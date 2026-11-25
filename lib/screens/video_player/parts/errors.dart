@@ -107,13 +107,24 @@ extension _VideoPlayerErrorMethods on VideoPlayerScreenState {
         // on the way to the stall (a chain that failed, a stream that never
         // produced) is the only diagnosis there is, so it rides along too.
         final lastLogError = _lastLogError;
-        final message = switch (err.cause) {
-          PlayerError.playerInitFailed => t.messages.playbackFailed,
-          PlayerError.openTimedOut =>
-            lastLogError == null ? t.messages.playbackFailed : t.messages.playbackFailedDetail(error: lastLogError),
-          PlayerError.audioOutputFailed => t.messages.audioOutputFailed,
-          _ => t.messages.playbackFailedDetail(error: _redactPlayerError(lastLogError ?? err.message)),
-        };
+        // 1.6.22: the open went through the tunnel proxy — say so plainly
+        // instead of the generic text. The latch is set only when the
+        // proxy write landed for THIS open; a direct-mode failure keeps
+        // the current generic text. The screen's `player` field is the
+        // current player, and a fresh instance's latch starts false, so
+        // a stale read can only fall back to generic, never name the
+        // tunnel wrongly.
+        final message = (player?.lastOpenUsedProxy ?? false)
+            ? t.messages.playbackFailedViaTunnel
+            : switch (err.cause) {
+                PlayerError.playerInitFailed => t.messages.playbackFailed,
+                PlayerError.openTimedOut =>
+                  lastLogError == null
+                      ? t.messages.playbackFailed
+                      : t.messages.playbackFailedDetail(error: lastLogError),
+                PlayerError.audioOutputFailed => t.messages.audioOutputFailed,
+                _ => t.messages.playbackFailedDetail(error: _redactPlayerError(lastLogError ?? err.message)),
+              };
         // Live TV has no in-place reload to retry through: its own start
         // flow leaves the route on failure, so a dead live session does too.
         if (widget.isLive) {
