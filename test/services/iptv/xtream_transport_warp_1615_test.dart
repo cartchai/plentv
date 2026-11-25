@@ -220,6 +220,10 @@ void main() {
       );
       await SettingsService.instance.write(SettingsService.iptvWarpTermsAccepted, true);
       await SettingsService.instance.write(SettingsService.iptvWarpVpn, true);
+      // 1.6.21: this test pins the WireGuard path — the stored
+      // registration is a WireGuard account, and the app default
+      // (MASQUE) would re-register + enroll on start.
+      await SettingsService.instance.write(SettingsService.iptvWarpTransport, 'wireguard');
       await SettingsService.instance.write(
         SettingsService.iptvWarpRegistration,
         jsonEncode(

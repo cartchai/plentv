@@ -16,7 +16,10 @@
 package warpbox_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -225,6 +228,149 @@ func TestCheckConfigRejectsBadEndpoint(t *testing.T) {
 	bad := `{"inbounds": [{"type": "mixed", "tag": "proxy-in", "listen": "127.0.0.1", "listen_port": 18082}], "endpoints": [{"type": "wireguard", "tag": "wg-ep", "address": ["172.16.0.2/32"], "private_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "mtu": 1408, "peers": [{"address": "engage.cloudflareclient.com", "port": 2408, "public_key": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=", "allowed_ips": ["0.0.0.0/0"], "persistent_keepalive_interval": 25}]}], "route": {"rules": [{"outbound": "no-such-tag"}]}}`
 	if err := warpbox.CheckConfig(bad); err == nil {
 		t.Fatal("CheckConfig(bad route) = nil, want an error")
+	}
+}
+
+// masqueConfig builds a MASQUE tunnel config for the given local proxy
+// port, with freshly generated throwaway ECDSA P-256 keypairs: one for
+// the local private key (SEC1 DER, what the fork's masque outbound
+// parses with x509.ParseECPrivateKey) and one for the endpoint public
+// key (SPKI DER, what it parses with x509.ParsePKIXPublicKey for
+// pinning). The server is a literal IP, so no DNS is needed for it.
+// The values only need to parse — no live Cloudflare dial is possible
+// in this sandbox, and the handshake is proven on Matt's phone only.
+// The config carries the same explicit DNS section as the WireGuard
+// config (the userspace stack resolves proxied hostnames through it).
+func masqueConfig(t *testing.T, proxyPort int, logPath string, vhttp string) string {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate P-256 key: %v", err)
+	}
+	privDER, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		t.Fatalf("marshal SEC1 private key: %v", err)
+	}
+	privB64 := base64.StdEncoding.EncodeToString(privDER)
+	endpoint, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate endpoint key: %v", err)
+	}
+	pubDER, err := x509.MarshalPKIXPublicKey(&endpoint.PublicKey)
+	if err != nil {
+		t.Fatalf("marshal SPKI public key: %v", err)
+	}
+	pubB64 := base64.StdEncoding.EncodeToString(pubDER)
+	logOutput := ""
+	if logPath != "" {
+		logOutput = fmt.Sprintf(`, "output": %q`, logPath)
+	}
+	return fmt.Sprintf(`{
+  "log": {"level": "warn"%s},
+  "inbounds": [
+    {"type": "mixed", "tag": "proxy-in", "listen": "127.0.0.1", "listen_port": %d}
+  ],
+  "dns": {
+    "servers": [
+      {"type": "udp", "tag": "dns-direct", "server": "1.1.1.1", "server_port": 53}
+    ],
+    "final": "dns-direct"
+  },
+  "outbounds": [
+    {
+      "type": "masque", "tag": "warp",
+      "server": "162.159.198.2", "server_port": 443,
+      "profile": "cloudflare", "vhttp": %q,
+      "private_key": %q, "public_key": %q,
+      "ip": "172.16.0.2/32", "ipv6": "2606:4700:110:8000::2/128",
+      "mtu": 1280
+    }
+  ],
+  "route": {"rules": [{"outbound": "warp"}]}
+}`, logOutput, proxyPort, vhttp, privB64, pubB64)
+}
+
+// TestCheckConfigMasqueAccepts (1.6.21): a MASQUE config must parse
+// and construct — the masque outbound type is registered only when
+// the AAR is built with the `with_quic` tag (fork: include/quic.go).
+// On the upstream base this test FAILS with "unknown outbound type:
+// masque" — the fork (sing-box-lx v1.14.4-lx.36) is what provides it.
+func TestCheckConfigMasqueAccepts(t *testing.T) {
+	for _, vhttp := range []string{"auto", "h3", "h2"} {
+		if err := warpbox.CheckConfig(masqueConfig(t, 18081, "", vhttp)); err != nil {
+			t.Fatalf("CheckConfig(masque vhttp=%s) = %v, want nil", vhttp, err)
+		}
+	}
+}
+
+// TestCheckConfigMasqueRejectsBadKeys (1.6.21): the fork validates the
+// masque key material fail-fast at load (cloudflare profile without
+// parseable private_key/public_key) — a bad key must fail CheckConfig,
+// not start a tunnel that can never authenticate.
+func TestCheckConfigMasqueRejectsBadKeys(t *testing.T) {
+	bad := masqueConfig(t, 18081, "", "auto")
+	bad = strings.Replace(bad, `"private_key": "`, `"private_key": "!!!not-base64!!!`, 1)
+	if err := warpbox.CheckConfig(bad); err == nil {
+		t.Fatal("CheckConfig(masque bad private_key) = nil, want an error")
+	}
+	badPub := masqueConfig(t, 18081, "", "auto")
+	badPub = strings.Replace(badPub, `"public_key": "`, `"public_key": "!!!not-base64!!!`, 1)
+	if err := warpbox.CheckConfig(badPub); err == nil {
+		t.Fatal("CheckConfig(masque bad public_key) = nil, want an error")
+	}
+}
+
+// TestStartMasqueAndFailClosed (1.6.21): the box starts with a MASQUE
+// outbound and the proxy fails closed when the tunnel cannot connect.
+// The server is 127.0.0.1 with vhttp h2 (TCP only — the auto mode's
+// h3 leg needs outbound UDP, which this sandbox forbids even to
+// loopback): the TCP dial is refused, so a request through the proxy
+// must error or 5xx — it must never come back as a successful direct
+// fetch. Same shape as TestStartStopAndFailClosed, on the MASQUE path.
+func TestStartMasqueAndFailClosed(t *testing.T) {
+	base := t.TempDir()
+	if err := warpbox.Setup(base, base+"/work", base+"/tmp"); err != nil {
+		t.Fatalf("Setup = %v", err)
+	}
+	logPath := filepath.Join(base, "singbox.log")
+	const port = 18085
+	config := strings.Replace(
+		masqueConfig(t, port, logPath, "h2"),
+		`"server": "162.159.198.2"`,
+		`"server": "127.0.0.1"`,
+		1,
+	)
+	if err := warpbox.Start(config); err != nil {
+		t.Fatalf("Start(masque) = %v, want nil", err)
+	}
+	defer func() {
+		if err := warpbox.Stop(); err != nil {
+			t.Errorf("Stop = %v", err)
+		}
+	}()
+	if got := warpbox.Status(); got != "on" {
+		t.Fatalf("Status() = %q, want %q", got, "on")
+	}
+	proxyURL, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", port))
+	client := &http.Client{
+		Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)},
+		Timeout:   20 * time.Second,
+	}
+	resp, err := client.Get("http://example.com/")
+	if err == nil {
+		_ = resp.Body.Close()
+		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+			t.Fatalf("GET via proxy = %s, want an error or a 5xx (fail-closed)", resp.Status)
+		}
+		t.Logf("GET via proxy = %s (fail-closed)", resp.Status)
+	} else {
+		t.Logf("proxy request failed as expected (fail-closed): %v", err)
+	}
+	if err := warpbox.Stop(); err != nil {
+		t.Fatalf("Stop = %v", err)
+	}
+	if got := warpbox.Status(); got != "off" {
+		t.Fatalf("Status() after Stop = %q, want %q", got, "off")
 	}
 }
 

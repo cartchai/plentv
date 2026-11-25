@@ -113,6 +113,10 @@ void _mockWarpChannel(_ChannelCalls calls) {
 Future<void> _acceptTermsAndEnable() async {
   await SettingsService.instance.write(SettingsService.iptvWarpTermsAccepted, true);
   await SettingsService.instance.write(SettingsService.iptvWarpVpn, true);
+  // 1.6.21: these suites pin the WireGuard path (1.6.15–1.6.20
+  // behaviour). The app default is MASQUE, which would enroll on
+  // start — and these files' mock APIs answer register only.
+  await SettingsService.instance.write(SettingsService.iptvWarpTransport, 'wireguard');
 }
 
 void main() {

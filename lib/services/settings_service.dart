@@ -1122,6 +1122,24 @@ class SettingsService extends BaseSharedPreferencesService {
   /// carries the Xtream login. In `_portableOnlyPrefs`.
   static const iptvWarpRegistration = StringPref('iptv_warp_registration', defaultValue: '');
 
+  /// Which tunnel transport the app uses (1.6.21): 'masque' (Cloudflare
+  /// WARP over CONNECT-IP on port 443 — the only transport that works
+  /// on a network that blocks UDP 2408) or 'wireguard' (the 1.6.15–
+  /// 1.6.20 transport, UDP 2408). Default MASQUE; WireGuard is the
+  /// fallback. One stored account is ONE transport — enrolling MASQUE
+  /// converts the account, so switching transport re-registers a fresh
+  /// account for the new transport (see WarpTunnelService.start). In
+  /// `_portableOnlyPrefs`.
+  static const iptvWarpTransport = StringPref('iptv_warp_transport', defaultValue: 'masque');
+
+  /// Which MASQUE transport the tunnel uses (1.6.21): 'auto' (try H3
+  /// over QUIC/UDP 443, fall back to H2 over TCP 443 when the QUIC
+  /// handshake does not complete within 3 s), 'h3' (QUIC only), or
+  /// 'h2' (TCP 443 only — the safe leg on a network that filters UDP).
+  /// Default Auto. Only read when the transport is MASQUE. In
+  /// `_portableOnlyPrefs`.
+  static const iptvWarpMasqueVhttp = StringPref('iptv_warp_masque_vhttp', defaultValue: 'auto');
+
   /// Hours between IPTV catalog syncs (build #23): how often the whole
   /// catalog (live channels, movies, series) is re-downloaded into the
   /// local search index. 6 / 12 / 24 / 168 (once a week), or 0 for
@@ -1924,6 +1942,8 @@ class SettingsService extends BaseSharedPreferencesService {
     iptvWarpVpn,
     iptvWarpTermsAccepted,
     iptvWarpRegistration,
+    iptvWarpTransport,
+    iptvWarpMasqueVhttp,
     iptvCatalogSyncIntervalHours,
     iptvLargeDownloadsWifiOnly,
     iptvCatalogMode,

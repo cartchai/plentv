@@ -1,7 +1,7 @@
 name: plezy
 description: "PlenTV — a Plex, Jellyfin and Emby client for Flutter with IPTV: M3U and Xtream Codes, live TV, movies and series."
 publish_to: "none"
-version: 1.6.20-2.26.0+246
+version: 1.6.21-2.26.0+247
 
 environment:
   # Dart floor stays 3.12: freezed 3.x emits `final` constructor parameters,
@@ -55,6 +55,14 @@ dependencies:
   sqlite3: ^3.5.0
   crypto: ^3.0.7
   cryptography: ^2.9.0
+  # 1.6.21 (MASQUE): ECDSA P-256 key generation. The `cryptography`
+  # package's pure-Dart ECDSA implements sign/verify but NOT key
+  # generation — `Ecdsa.p256(Sha256()).newKeyPair()` throws
+  # UnimplementedError on every platform, including the phone — so
+  # the enroll step generates its keypair with pointycastle (pure
+  # Dart, no platform code) and feeds the raw d/x/y into the
+  # hand-rolled SEC1/SPKI DER builders (see WarpTunnelService).
+  pointycastle: ^4.0.0
   file_picker: ^11.0.2
   saf_util:
     # Vendored 3.1.0: fixes upstream's duplicate MethodChannel result.

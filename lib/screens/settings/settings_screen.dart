@@ -603,6 +603,23 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
     _ => t.settings.superSpoofTransportDart,
   };
 
+  /// Subtitle for the WARP transport row (1.6.21): the label of the
+  /// chosen tunnel transport.
+  String _warpTransportSubtitle(String choice) => switch (choice) {
+    'wireguard' => t.settings.warpTransportWireguard,
+    'masque' => t.settings.warpTransportMasque,
+    _ => t.settings.warpTransportMasque,
+  };
+
+  /// Subtitle for the MASQUE transport row (1.6.21): the label of
+  /// the chosen MASQUE transport.
+  String _warpMasqueVhttpSubtitle(String choice) => switch (choice) {
+    'h3' => t.settings.warpMasqueVhttpH3,
+    'h2' => t.settings.warpMasqueVhttpH2,
+    'auto' => t.settings.warpMasqueVhttpAuto,
+    _ => t.settings.warpMasqueVhttpAuto,
+  };
+
   /// The VPN (WARP) row (1.6.15): a switch bound to the opt-in pref
   /// whose subtitle is the live tunnel state (off / starting / on /
   /// failed), with the terms gate on turn-on. A plain SettingSwitchTile
@@ -958,6 +975,52 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
         // static description. Independent of Super Spoof and Prefer
         // IPv4; while it is on, Cronet is forced off (no proxy API).
         _warpVpnRow(),
+        // 1.6.21 (MASQUE transport): which tunnel transport the app
+        // uses — MASQUE (WARP over port 443, the only transport that
+        // works on a network that blocks UDP 2408) or WireGuard (the
+        // 1.6.15–1.6.20 transport). It takes effect on the next start;
+        // one stored account is one transport, so the first start on
+        // the new transport re-registers a fresh account for it.
+        SettingSelectionTile<String>(
+          pref: settings.SettingsService.iptvWarpTransport,
+          icon: Symbols.swap_horiz_rounded,
+          title: t.settings.warpTransport,
+          subtitleBuilder: _warpTransportSubtitle,
+          options: [
+            DialogOption(
+              value: 'masque',
+              title: t.settings.warpTransportMasque,
+            ),
+            DialogOption(
+              value: 'wireguard',
+              title: t.settings.warpTransportWireguard,
+            ),
+          ],
+        ),
+        // 1.6.21 (MASQUE transport): which MASQUE transport the
+        // tunnel uses — Auto (H3 over QUIC, fall back to H2 over
+        // TCP), H3 only, or H2 only. Only used when the transport
+        // above is MASQUE.
+        SettingSelectionTile<String>(
+          pref: settings.SettingsService.iptvWarpMasqueVhttp,
+          icon: Symbols.lan_rounded,
+          title: t.settings.warpMasqueVhttp,
+          subtitleBuilder: _warpMasqueVhttpSubtitle,
+          options: [
+            DialogOption(
+              value: 'auto',
+              title: t.settings.warpMasqueVhttpAuto,
+            ),
+            DialogOption(
+              value: 'h3',
+              title: t.settings.warpMasqueVhttpH3,
+            ),
+            DialogOption(
+              value: 'h2',
+              title: t.settings.warpMasqueVhttpH2,
+            ),
+          ],
+        ),
         // 1.6.19 (Reset WARP registration): signs the app up for a
         // fresh free WARP account, replacing the stored one — only
         // for when the tunnel still won't connect. The fresh sign-up

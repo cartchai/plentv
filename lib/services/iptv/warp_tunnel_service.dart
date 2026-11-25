@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show File, HttpClient, InternetAddress, Platform;
+import 'dart:math' show Random;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pointycastle/export.dart';
 
 import '../../utils/app_logger.dart';
 import '../settings_service.dart';
@@ -16,6 +18,18 @@ import '../settings_service.dart';
 /// [failed] carries the reason in [WarpTunnelService.lastError]; the
 /// toggle itself stays off until a start succeeds (see [WarpTunnelService.start]).
 enum WarpTunnelState { off, starting, on, failed }
+
+/// Which tunnel transport the app uses (1.6.21): MASQUE (Cloudflare
+/// WARP over CONNECT-IP on port 443 — the only transport that works
+/// on a network that blocks UDP 2408, proven by the official app
+/// failing on WireGuard on the same WiFi) or WireGuard (the
+/// 1.6.15–1.6.20 transport, UDP 2408). Default MASQUE; WireGuard is
+/// the fallback. One stored account is ONE transport: enrolling
+/// MASQUE converts the account (the API's peer list then holds only
+/// the MASQUE peer), so switching transport re-registers a fresh
+/// account for the new transport — the old account is abandoned,
+/// never reused.
+enum WarpTunnelTransport { masque, wireguard }
 
 /// A WARP peer the tunnel can connect to (1.6.15): the endpoint + keys
 /// for one WireGuard peer, structured so an Oracle WireGuard peer can
@@ -74,6 +88,16 @@ class WarpPeer {
 /// JSON object in [SettingsService.iptvWarpRegistration] (see that
 /// pref's comment for why it lives in settings). Empty fields mean
 /// "not registered".
+///
+/// 1.6.21 (MASQUE): the account carries BOTH transports' fields, but
+/// one account is ONE transport — see [tunnelType]. A WireGuard
+/// account (tunnelType 'wireguard') has the WireGuard fields and
+/// empty MASQUE fields; a MASQUE account (tunnelType 'masque') has
+/// the MASQUE fields AND the pre-enroll WireGuard fields, which are
+/// STALE (enroll converted the account — the WireGuard peer is gone
+/// server-side) and must never be used for a WireGuard start. The
+/// tunnelType marker is what tells the two apart; without it the
+/// stale fields would look like a working WireGuard account.
 class WarpRegistration {
   const WarpRegistration({
     required this.privateKey,
@@ -82,6 +106,12 @@ class WarpRegistration {
     required this.token,
     required this.accountId,
     required this.clientId,
+    this.deviceId = '',
+    this.tunnelType = 'wireguard',
+    this.masquePrivateKey = '',
+    this.masqueEndpointPubKey = '',
+    this.masqueServerV4 = '',
+    this.masqueServerV6 = '',
   });
 
   /// Our base64 Curve25519 private key (generated in-app at registration).
@@ -124,6 +154,38 @@ class WarpRegistration {
   final String accountId;
   final String clientId;
 
+  /// The device id the registration API returned (`id` in the
+  /// response). The enroll PATCH needs it (`PATCH /reg/{device-id}`),
+  /// and the 1.6.20 model never stored it — that is why a stored
+  /// WireGuard account cannot be enrolled as-is and must be
+  /// re-registered first (see [WarpTunnelService.start]).
+  final String deviceId;
+
+  /// Which transport this account is: 'wireguard' (a fresh
+  /// registration) or 'masque' (enrolled — the WireGuard fields are
+  /// stale). Pre-1.6.21 stored registrations have no such field and
+  /// heal to 'wireguard' on load.
+  final String tunnelType;
+
+  /// Our ECDSA P-256 private key for MASQUE (generated in-app at
+  /// enroll), base64 SEC1 DER — the exact bytes Go's
+  /// x509.MarshalECPrivateKey produces (see [buildSec1DerBase64]).
+  /// As sensitive as the WireGuard private key: stored in prefs,
+  /// never logged, never in fixtures.
+  final String masquePrivateKey;
+
+  /// The MASQUE endpoint's ECDSA public key (from the enroll
+  /// response), base64 PKIX DER — the fork's masque outbound pins
+  /// the server's certificate against it. Public (it is Cloudflare's
+  /// server key), safe to log.
+  final String masqueEndpointPubKey;
+
+  /// The MASQUE server's literal IPv4 / IPv6 from the enroll
+  /// response (e.g. `162.159.198.2`), port stripped. At least one is
+  /// present on a MASQUE account.
+  final String masqueServerV4;
+  final String masqueServerV6;
+
   Map<String, dynamic> toJson() => {
         'privateKey': privateKey,
         'addresses': addresses,
@@ -131,6 +193,12 @@ class WarpRegistration {
         'token': token,
         'accountId': accountId,
         'clientId': clientId,
+        'deviceId': deviceId,
+        'tunnelType': tunnelType,
+        'masquePrivateKey': masquePrivateKey,
+        'masqueEndpointPubKey': masqueEndpointPubKey,
+        'masqueServerV4': masqueServerV4,
+        'masqueServerV6': masqueServerV6,
       };
 
   factory WarpRegistration.fromJson(Map<String, dynamic> json) {
@@ -158,6 +226,18 @@ class WarpRegistration {
       token: json['token'] as String? ?? '',
       accountId: json['accountId'] as String? ?? '',
       clientId: json['clientId'] as String? ?? '',
+      deviceId: json['deviceId'] as String? ?? '',
+      // Pre-1.6.21 stored registrations have no tunnelType: they
+      // are WireGuard accounts.
+      tunnelType: json['tunnelType'] as String? ?? 'wireguard',
+      masquePrivateKey: json['masquePrivateKey'] as String? ?? '',
+      masqueEndpointPubKey: json['masqueEndpointPubKey'] as String? ?? '',
+      masqueServerV4: WarpTunnelService.stripEndpointPort(
+        json['masqueServerV4'] as String? ?? '',
+      ),
+      masqueServerV6: WarpTunnelService.stripEndpointPort(
+        json['masqueServerV6'] as String? ?? '',
+      ),
     );
   }
 
@@ -166,6 +246,21 @@ class WarpRegistration {
       addresses.isNotEmpty &&
       peer.endpointHost.isNotEmpty &&
       peer.publicKey.isNotEmpty;
+
+  /// Whether this registration can run the MASQUE tunnel: the
+  /// enrolled fields are all present (and the addresses, which the
+  /// enroll response supplies — they rotate on enroll, so the
+  /// registration's addresses are not the enrolled ones).
+  bool get masqueComplete =>
+      deviceId.isNotEmpty &&
+      masquePrivateKey.isNotEmpty &&
+      masqueEndpointPubKey.isNotEmpty &&
+      (masqueServerV4.isNotEmpty || masqueServerV6.isNotEmpty) &&
+      addresses.isNotEmpty;
+
+  /// Whether this account is a MASQUE account (enrolled). Its
+  /// WireGuard fields are stale — see the class comment.
+  bool get isMasqueAccount => tunnelType == 'masque';
 }
 
 /// A WARP registration failure with the HTTP status Cloudflare
@@ -355,6 +450,11 @@ class WarpTunnelService extends ChangeNotifier {
   WarpTunnelState _state = WarpTunnelState.off;
   String? _lastError;
 
+  /// The transport the running tunnel is using (null when off). Set
+  /// on a successful start; the diagnostics use it to explain what
+  /// the probe did.
+  WarpTunnelTransport? _runningTransport;
+
   /// The local proxy port while the tunnel is on, -1 otherwise. The
   /// Kotlin singleton reads the same port (the `start` channel call
   /// carries it); Dart clients build their `PROXY 127.0.0.1:<port>`
@@ -379,6 +479,46 @@ class WarpTunnelService extends ChangeNotifier {
   int get proxyPort => _proxyPort;
   bool get isOn => _state == WarpTunnelState.on;
   bool get isStarting => _state == WarpTunnelState.starting;
+
+  /// The selected tunnel transport (1.6.21): MASQUE by default,
+  /// WireGuard when the user picked it. An unknown stored value
+  /// heals to MASQUE.
+  WarpTunnelTransport get selectedTransport {
+    switch (SettingsService.instance
+        .read(SettingsService.iptvWarpTransport)
+        .trim()
+        .toLowerCase()) {
+      case 'wireguard':
+        return WarpTunnelTransport.wireguard;
+      case 'masque':
+      default:
+        return WarpTunnelTransport.masque;
+    }
+  }
+
+  /// The selected MASQUE transport (1.6.21): 'auto' (try H3 over
+  /// QUIC/UDP 443, fall back to H2 over TCP 443), 'h3', or 'h2'.
+  /// Default 'auto'; an unknown stored value heals to 'auto'. Only
+  /// read when the transport is MASQUE.
+  String get selectedVhttp {
+    switch (SettingsService.instance
+        .read(SettingsService.iptvWarpMasqueVhttp)
+        .trim()
+        .toLowerCase()) {
+      case 'h3':
+        return 'h3';
+      case 'h2':
+        return 'h2';
+      case 'auto':
+      default:
+        return 'auto';
+    }
+  }
+
+  /// The transport the running tunnel is using (or null when off).
+  /// Recorded on a successful start; the diagnostics use it to
+  /// explain what the probe did.
+  WarpTunnelTransport? get runningTransport => _runningTransport;
 
   bool get termsAccepted =>
       SettingsService.instance.read(SettingsService.iptvWarpTermsAccepted);
@@ -474,13 +614,38 @@ class WarpTunnelService extends ChangeNotifier {
       if (!termsAccepted) {
         throw StateError('WARP terms have not been accepted');
       }
+      // 1.6.21 (MASQUE): one stored account is ONE transport — the
+      // enroll step converts the account, so the account for the
+      // selected transport must be the one that starts. MASQUE: no
+      // account, or a WireGuard account, or an incomplete MASQUE
+      // account → enroll (re-registering first when there is no
+      // device id to enroll against — the 1.6.20 model never stored
+      // one, so the phone's account takes this path on its first
+      // MASQUE start). WireGuard: no account, or a MASQUE account
+      // (its WireGuard fields are stale), or an incomplete WireGuard
+      // account → fresh registration. The fresh account is stored
+      // only on success; a failed enroll/register never clobbers the
+      // stored account.
+      final transport = selectedTransport;
       var reg = registration;
-      if (reg == null || !reg.isComplete) {
-        reg = await _register();
-        await SettingsService.instance.write(
-          SettingsService.iptvWarpRegistration,
-          jsonEncode(reg.toJson()),
-        );
+      if (transport == WarpTunnelTransport.masque) {
+        if (reg == null || !reg.masqueComplete) {
+          reg = reg != null && reg.deviceId.isNotEmpty
+              ? await _enrollMasque(reg)
+              : await _registerAndEnrollMasque();
+          await SettingsService.instance.write(
+            SettingsService.iptvWarpRegistration,
+            jsonEncode(reg.toJson()),
+          );
+        }
+      } else {
+        if (reg == null || !reg.isComplete || reg.isMasqueAccount) {
+          reg = await _register();
+          await SettingsService.instance.write(
+            SettingsService.iptvWarpRegistration,
+            jsonEncode(reg.toJson()),
+          );
+        }
       }
       // 1.6.19 diagnostics: the next phone log must show what was
       // actually sent and what resolved. The derived reserved bytes
@@ -496,22 +661,46 @@ class WarpTunnelService extends ChangeNotifier {
       // it for the log and the lookup — printing it as-is with the
       // port appended again gave `host:port:port`, and looking up
       // `host:port` always fails.
-      final endpointHost = stripEndpointPort(reg.peer.endpointHost);
-      appLogger.i('WARP tunnel starting', error: {
-        'endpoint': '$endpointHost:${reg.peer.endpointPort}',
-        'reserved': reservedBytesForClientId(reg.clientId),
-      });
-      final resolved = await resolveEndpointHost(endpointHost);
-      if (resolved.isEmpty) {
-        appLogger.w(
-          'WARP endpoint does not resolve (Dart-side system resolver)',
-          error: {'host': endpointHost},
+      // 1.6.21: MASQUE's server is a literal IP from the enroll
+      // response, so there is no hostname to resolve — the
+      // Dart-side resolution check is skipped and the log says so
+      // (the 1.6.18 lesson: a missing resolution line is ambiguous).
+      // The start line names the transport and what it dials — never
+      // the keys.
+      if (transport == WarpTunnelTransport.masque) {
+        final server = reg.masqueServerV4.isNotEmpty
+            ? reg.masqueServerV4
+            : reg.masqueServerV6;
+        appLogger.i('WARP tunnel starting', error: {
+          'transport': 'masque',
+          'server': server,
+          'serverPort': 443,
+          'profile': 'cloudflare',
+          'vhttp': selectedVhttp,
+        });
+        appLogger.i(
+          'MASQUE server is a literal IP, skipping Dart-side resolution check',
+          error: {'server': server},
         );
       } else {
-        appLogger.i(
-          'WARP endpoint resolves (Dart-side system resolver)',
-          error: {'host': endpointHost, 'addresses': resolved},
-        );
+        final endpointHost = stripEndpointPort(reg.peer.endpointHost);
+        appLogger.i('WARP tunnel starting', error: {
+          'transport': 'wireguard',
+          'endpoint': '$endpointHost:${reg.peer.endpointPort}',
+          'reserved': reservedBytesForClientId(reg.clientId),
+        });
+        final resolved = await resolveEndpointHost(endpointHost);
+        if (resolved.isEmpty) {
+          appLogger.w(
+            'WARP endpoint does not resolve (Dart-side system resolver)',
+            error: {'host': endpointHost},
+          );
+        } else {
+          appLogger.i(
+            'WARP endpoint resolves (Dart-side system resolver)',
+            error: {'host': endpointHost, 'addresses': resolved},
+          );
+        }
       }
       // 1.6.19: sing-box's own logs go to a file when the config
       // carries log.output — truncate it so each start gets a fresh
@@ -536,14 +725,21 @@ class WarpTunnelService extends ChangeNotifier {
             registration: reg,
             proxyPort: port,
             singboxLogPath: logPath,
+            transport: transport,
+            vhttp: selectedVhttp,
           );
           await _channel.invokeMethod<String>('start', {
             'configJson': config,
             'proxyPort': port,
           });
           _proxyPort = port;
+          _runningTransport = transport;
           _setState(WarpTunnelState.on);
-          appLogger.i('WARP tunnel on', error: {'proxyPort': port, 'peer': reg.peer.type});
+          appLogger.i('WARP tunnel on', error: {
+            'proxyPort': port,
+            'peer': reg.peer.type,
+            'transport': transport.name,
+          });
           // 1.6.18: "tunnel on" must mean the tunnel carries traffic —
           // Start() returning nil only proves the box started, not that
           // the handshake completed (the 1.6.17 phone log: on, yet every
@@ -576,6 +772,7 @@ class WarpTunnelService extends ChangeNotifier {
     } catch (e, st) {
       _lastError = e.toString();
       _proxyPort = -1;
+      _runningTransport = null;
       _setState(WarpTunnelState.failed);
       // The toggle stays off until a start succeeds: a failed start
       // must not leave the switch showing ON.
@@ -599,6 +796,7 @@ class WarpTunnelService extends ChangeNotifier {
       appLogger.w('WARP tunnel stop failed (ignored)', error: e, stackTrace: st);
     }
     _proxyPort = -1;
+    _runningTransport = null;
     _setState(WarpTunnelState.off);
     appLogger.i('WARP tunnel off');
   }
@@ -617,10 +815,17 @@ class WarpTunnelService extends ChangeNotifier {
   /// anything else). The terms acceptance is kept: the user already
   /// accepted Cloudflare's terms, and a fresh sign-up does not need a
   /// new accept. Explicit only: nothing calls this automatically.
+  ///
+  /// 1.6.21 (MASQUE): when the transport is MASQUE, the fresh
+  /// sign-up is register → enroll (the enroll step converts the
+  /// fresh account to MASQUE). A 429 on either step reports
+  /// rate-limited and the old account stays.
   Future<WarpResetResult> resetRegistration() async {
     await stop();
     try {
-      final reg = await _register();
+      final reg = selectedTransport == WarpTunnelTransport.masque
+          ? await _registerAndEnrollMasque()
+          : await _register();
       await SettingsService.instance.write(
         SettingsService.iptvWarpRegistration,
         jsonEncode(reg.toJson()),
@@ -806,6 +1011,27 @@ class WarpTunnelService extends ChangeNotifier {
           'WARP tunnel probe OK after $attempt attempt(s): traffic flows through the proxy',
           error: {'attempts': attempt, 'proxyPort': port},
         );
+        // 1.6.21 (MASQUE): with vhttp auto, the first dial tries H3
+        // over QUIC (UDP 443) and falls back to H2 over TCP 443 when
+        // the QUIC handshake does not complete within 3 s — so a
+        // first attempt failing and a later one succeeding is the
+        // expected cold-start / h3→h2 fallback shape, not a flaky
+        // tunnel. The sing-box log tail (level warn) never shows the
+        // fallback — the masque session lines are Info — so this
+        // Dart-side line is the only record of it. Only for MASQUE:
+        // a WireGuard probe succeeding late says nothing about a
+        // fallback.
+        if (attempt > 1 &&
+            _runningTransport == WarpTunnelTransport.masque) {
+          appLogger.i(
+            'WARP MASQUE probe succeeded on attempt $attempt: first attempt(s) failed — consistent with the h3 cold start or the auto h3→h2 fallback',
+            error: {
+              'attempt': attempt,
+              'vhttp': selectedVhttp,
+              'proxyPort': port,
+            },
+          );
+        }
         return true;
       }
       appLogger.d(
@@ -848,6 +1074,148 @@ class WarpTunnelService extends ChangeNotifier {
       // Unreachable in practice — the probe swallows its own
       // failures — but a probe must never surface as a start failure.
     }
+  }
+
+  /// Generate a fresh ECDSA P-256 keypair for the MASQUE enroll
+  /// step (1.6.21) and return its raw components — the 32-byte
+  /// scalar d and the 32-byte public coordinates x/y — ready for
+  /// the DER builders ([buildSec1DerBase64] / [buildSpkiDerBase64]).
+  /// pointycastle (pure Dart): the `cryptography` package's
+  /// pure-Dart ECDSA implements sign/verify but NOT key generation
+  /// (`Ecdsa.p256(Sha256()).newKeyPair()` throws UnimplementedError
+  /// on every platform, including the phone), so the enroll step
+  /// cannot use it. The Fortuna PRNG is seeded from
+  /// [Random.secure] (32 bytes); the private scalar is never logged.
+  @visibleForTesting
+  static ({List<int> d, List<int> x, List<int> y}) generateMasqueKeypair() {
+    final secureRandom = FortunaRandom();
+    secureRandom.seed(
+      KeyParameter(
+        Uint8List.fromList(
+          List<int>.generate(32, (_) => Random.secure().nextInt(256)),
+        ),
+      ),
+    );
+    final keyGenerator = ECKeyGenerator()
+      ..init(
+        ParametersWithRandom(
+          ECKeyGeneratorParameters(ECDomainParameters('prime256v1')),
+          secureRandom,
+        ),
+      );
+    final keyPair = keyGenerator.generateKeyPair();
+    final privateKey = keyPair.privateKey;
+    final publicKey = keyPair.publicKey;
+    return (
+      d: _bigIntToBytes32(privateKey.d!),
+      x: _bigIntToBytes32(publicKey.Q!.x!.toBigInteger()!),
+      y: _bigIntToBytes32(publicKey.Q!.y!.toBigInteger()!),
+    );
+  }
+
+  /// A [BigInt] as exactly 32 big-endian bytes (left-padded with
+  /// zeros): the P-256 scalar and coordinates are always 32 bytes.
+  static List<int> _bigIntToBytes32(BigInt value) {
+    final hex = value.toRadixString(16).padLeft(64, '0');
+    final bytes = <int>[];
+    for (var i = 0; i < hex.length; i += 2) {
+      bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
+    }
+    return bytes;
+  }
+
+  /// The SEC1 DER encoding of an ECDSA P-256 private key, base64
+  /// (1.6.21, MASQUE): the exact bytes Go's `x509.MarshalECPrivateKey`
+  /// produces, which the fork's masque outbound parses with
+  /// `x509.ParseECPrivateKey`. [d] is the 32-byte scalar, [x]/[y] the
+  /// 32-byte public-key coordinates — all straight from
+  /// `Ecdsa.p256(Sha256())`'s `extract()` (`EcKeyPairData.d/x/y`).
+  /// `SEQUENCE { INTEGER 1, OCTET STRING d, [0] OID prime256v1,
+  /// [1] BIT STRING 00 04||x||y }`. The lengths are fixed for P-256
+  /// (the scalar and both coordinates are exactly 32 bytes; a
+  /// leading 0x00 on a high-bit scalar keeps the INTEGER unsigned),
+  /// so the length bytes are constants here, not computed. Do NOT
+  /// use `EcKeyPairData.toDer()` — it emits PKCS#8, which the
+  /// fork's parser rejects. Verified byte-exact against openssl for
+  /// d=1 (see `warp_tunnel_service_1621_test.dart`).
+  @visibleForTesting
+  static String buildSec1DerBase64(List<int> d, List<int> x, List<int> y) {
+    if (d.length != 32 || x.length != 32 || y.length != 32) {
+      throw ArgumentError('P-256 keys need 32-byte d/x/y');
+    }
+    final out = <int>[];
+    // SEQUENCE header: total content 119 bytes (0x77).
+    out.addAll([0x30, 0x77]);
+    // INTEGER 1 (version).
+    out.addAll([0x02, 0x01, 0x01]);
+    // OCTET STRING: the 32-byte scalar, as-is. (No sign padding:
+    // that rule is for INTEGERs, not octet strings; Go's marshaller
+    // writes the scalar raw, padded to 32 bytes with leading zeros
+    // when the value is short — and `extractPrivateKeyBytes()` always
+    // hands us exactly 32 bytes.)
+    out.addAll([0x04, 0x20]);
+    out.addAll(d);
+    // [0] OID prime256v1 (1.2.840.10045.3.1.7).
+    out.addAll([0xa0, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07]);
+    // [1] BIT STRING: 0x00 (unused-bits) || 0x04 (uncompressed)
+    // || x || y. 67 bytes content (0x43).
+    out.addAll([0xa1, 0x44, 0x03, 0x42, 0x00, 0x04]);
+    out.addAll(x);
+    out.addAll(y);
+    return base64Encode(out);
+  }
+
+  /// The SPKI DER encoding of an ECDSA P-256 public key, base64
+  /// (1.6.21, MASQUE): the bytes the enroll API wants in the `key`
+  /// field (`key_type: secp256r1`), and the same bytes Go's
+  /// `x509.MarshalPKIXPublicKey` produces. Layout (91 bytes total):
+  /// a fixed 27-byte prefix (the P-256 algorithm identifier) followed
+  /// by `0x04||x||y` — the last 3 bytes of the prefix are the BIT
+  /// STRING header (0x03 0x42 0x00), so the 65-byte uncompressed
+  /// point follows immediately. Cross-checked against
+  /// `EcPublicKey.toDer()` (same bytes). [x]/[y] are the 32-byte
+  /// coordinates from `extractPublicKey()`.
+  @visibleForTesting
+  static String buildSpkiDerBase64(List<int> x, List<int> y) {
+    if (x.length != 32 || y.length != 32) {
+      throw ArgumentError('P-256 keys need 32-byte x/y');
+    }
+    final out = <int>[
+      // SEQUENCE, length 89 (0x59).
+      0x30, 0x59,
+      // SEQUENCE, length 19 (0x13): AlgorithmIdentifier.
+      0x30, 0x13,
+      // OID ecPublicKey (1.2.840.10045.2.1).
+      0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
+      // OID prime256v1 (1.2.840.10045.3.1.7).
+      0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07,
+      // BIT STRING, length 66 (0x42): 0x00 unused-bits, 0x04
+      // uncompressed point, then x and y.
+      0x03, 0x42, 0x00, 0x04,
+    ];
+    out.addAll(x);
+    out.addAll(y);
+    return base64Encode(out);
+  }
+
+  /// Strip the PEM armor from an endpoint public key (1.6.21): the
+  /// enroll API returns the MASQUE endpoint's public key as a
+  /// PEM-armored SPKI (`-----BEGIN PUBLIC KEY-----` …), while the
+  /// fork's masque outbound wants the bare base64 DER. A bare base64
+  /// DER passes through unchanged.
+  @visibleForTesting
+  static String pemToBase64Der(String pemOrBase64) {
+    final lines = pemOrBase64
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty && !line.startsWith('-----'))
+        .toList();
+    if (lines.length == 1) {
+      // One line and no armor lines seen: either a bare base64 DER
+      // (pass through) or a single-line PEM body (same thing).
+      return lines.first;
+    }
+    return lines.join();
   }
 
   /// Strip a trailing `:port` from a stored endpoint host, so the
@@ -1034,6 +1402,186 @@ class WarpTunnelService extends ChangeNotifier {
     return _registrationFromResponse(decoded, privateKeyB64);
   }
 
+  /// Enroll a registered WARP account for MASQUE (1.6.21): generate
+  /// an ECDSA P-256 keypair, then PATCH the registration API with
+  /// the account's device id, asking it to convert the account to
+  /// MASQUE (`key_type: secp256r1`, `tunnel_type: masque`). The
+  /// response carries the MASQUE endpoint (literal IPs + the
+  /// endpoint's ECDSA public key for pinning) and the interface
+  /// addresses the tunnel must use.
+  ///
+  /// The returned registration keeps the WireGuard fields and the
+  /// token from [registration] — the enroll response carries NO
+  /// token, and the WireGuard fields are the pre-enroll state — and
+  /// adds the MASQUE fields with `tunnelType: 'masque'`. The
+  /// WireGuard fields are STALE after enroll (the API's peer list
+  /// holds only the MASQUE peer — the account converted), so a
+  /// WireGuard start must never use them (see [start]).
+  ///
+  /// One PATCH, no retries on failure. A 429 throws
+  /// [WarpRegistrationException] (429) so the caller can tell a
+  /// throttle from any other failure. The request goes out DIRECT
+  /// (a plain HttpClient, no proxy): it runs before any tunnel
+  /// exists, and it is a Cloudflare API call, not provider traffic.
+  Future<WarpRegistration> _enrollMasque(
+    WarpRegistration registration,
+  ) async {
+    if (registration.deviceId.isEmpty) {
+      throw StateError('WARP enroll needs a device id — re-register first');
+    }
+    final keyPair = generateMasqueKeypair();
+    final publicKeyB64 = buildSpkiDerBase64(keyPair.x, keyPair.y);
+    final privateKeyB64 =
+        buildSec1DerBase64(keyPair.d, keyPair.x, keyPair.y);
+
+    final body = jsonEncode(<String, dynamic>{
+      'key': publicKeyB64,
+      'key_type': 'secp256r1',
+      'tunnel_type': 'masque',
+      'name': 'PlenTV (Android)',
+    });
+
+    final response = await _httpClient
+        .patch(
+          Uri.parse('$_registerUrl/${registration.deviceId}'),
+          headers: {
+            'User-Agent': _registerUserAgent,
+            'CF-Client-Version': _registerClientVersion,
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer ${registration.token}',
+          },
+          body: body,
+        )
+        .timeout(const Duration(seconds: 30));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw WarpRegistrationException(response.statusCode);
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw StateError('WARP enroll failed: unexpected response');
+    }
+    return _enrollResponseToRegistration(
+      decoded,
+      registration,
+      privateKeyB64,
+    );
+  }
+
+  /// Register a fresh WARP account and enroll it for MASQUE in one
+  /// go (1.6.21): the register-then-enroll path for a first MASQUE
+  /// start, and for Reset when the transport is MASQUE. The fresh
+  /// account is returned only when BOTH steps succeed; a failure on
+  /// either step throws and nothing is stored.
+  Future<WarpRegistration> _registerAndEnrollMasque() async {
+    final registered = await _register();
+    return _enrollMasque(registered);
+  }
+
+  /// Parse an enroll response into a [WarpRegistration] (1.6.21).
+  /// Pure (no I/O) so tests can drive it with canned responses.
+  /// The response's peer list holds exactly ONE peer — the MASQUE
+  /// peer — whose endpoint carries the literal v4/v6 WITH a `:0`
+  /// port suffix (strip it) and whose public key is PEM-armored
+  /// SPKI (strip the armor to the base64 DER the fork's masque
+  /// outbound wants). The interface addresses are the ENROLL
+  /// response's — the v6 rotates on every enroll, so the
+  /// registration's addresses are not the enrolled ones. The
+  /// response carries NO token: keep the one from [registration].
+  /// The WireGuard fields are kept from [registration] (pre-enroll
+  /// state) and the MASQUE fields are added; `tunnelType` becomes
+  /// 'masque' so the stale WireGuard fields are never mistaken for
+  /// a working WireGuard account.
+  @visibleForTesting
+  static WarpRegistration enrollResponseToRegistration(
+    Map<String, dynamic> decoded,
+    WarpRegistration registration,
+    String masquePrivateKeyB64,
+  ) =>
+      _enrollResponseToRegistration(
+        decoded,
+        registration,
+        masquePrivateKeyB64,
+      );
+
+  static WarpRegistration _enrollResponseToRegistration(
+    Map<String, dynamic> decoded,
+    WarpRegistration registration,
+    String masquePrivateKeyB64,
+  ) {
+    final config = decoded['config'];
+    if (config is! Map) {
+      throw StateError('WARP enroll failed: no config in response');
+    }
+    final configMap = config is Map<String, dynamic>
+        ? config
+        : Map<String, dynamic>.from(config);
+    final interfaceMap = configMap['interface'];
+    final interfaceJson = interfaceMap is Map<String, dynamic>
+        ? interfaceMap
+        : interfaceMap is Map
+            ? Map<String, dynamic>.from(interfaceMap)
+            : <String, dynamic>{};
+    final addressesJson = interfaceJson['addresses'];
+    final addressesMap = addressesJson is Map<String, dynamic>
+        ? addressesJson
+        : addressesJson is Map
+            ? Map<String, dynamic>.from(addressesJson)
+            : <String, dynamic>{};
+    final addresses = <String>[];
+    final v4 = addressesMap['v4']?.toString() ?? '';
+    final v6 = addressesMap['v6']?.toString() ?? '';
+    if (v4.isNotEmpty) addresses.add(v4);
+    if (v6.isNotEmpty) addresses.add(v6);
+
+    final peers = configMap['peers'];
+    final peersList = peers is List ? peers : const <dynamic>[];
+    if (peersList.isEmpty) {
+      throw StateError('WARP enroll failed: no peers in response');
+    }
+    final peerJson = peersList.first;
+    final peerMap = peerJson is Map<String, dynamic>
+        ? peerJson
+        : peerJson is Map
+            ? Map<String, dynamic>.from(peerJson)
+            : <String, dynamic>{};
+    final endpointJson = peerMap['endpoint'];
+    final endpointMap = endpointJson is Map<String, dynamic>
+        ? endpointJson
+        : endpointJson is Map
+            ? Map<String, dynamic>.from(endpointJson)
+            : <String, dynamic>{};
+    // The enroll response's endpoint v4/v6 carry a `:0` port suffix
+    // (`162.159.198.2:0`, `[2606:4700:103::2]:0`) — strip it; the
+    // MASQUE outbound takes the literal IP and its own port (443).
+    final serverV4 = stripEndpointPort(endpointMap['v4']?.toString() ?? '');
+    final serverV6 = stripEndpointPort(endpointMap['v6']?.toString() ?? '');
+    final endpointPubKey = pemToBase64Der(
+      peerMap['public_key']?.toString() ?? '',
+    );
+    if (addresses.isEmpty ||
+        endpointPubKey.isEmpty ||
+        (serverV4.isEmpty && serverV6.isEmpty)) {
+      throw StateError('WARP enroll failed: incomplete config in response');
+    }
+    return WarpRegistration(
+      privateKey: registration.privateKey,
+      addresses: WarpRegistration.normalizeAddresses(addresses),
+      peer: registration.peer,
+      token: registration.token,
+      accountId: (decoded['account'] is Map)
+          ? (decoded['account'] as Map)['id']?.toString() ??
+              registration.accountId
+          : registration.accountId,
+      clientId: configMap['client_id']?.toString() ?? registration.clientId,
+      deviceId: decoded['id']?.toString() ?? registration.deviceId,
+      tunnelType: 'masque',
+      masquePrivateKey: masquePrivateKeyB64,
+      masqueEndpointPubKey: endpointPubKey,
+      masqueServerV4: serverV4,
+      masqueServerV6: serverV6,
+    );
+  }
+
   /// Parse a registration response into a [WarpRegistration]. Pure
   /// (no I/O) so tests can drive it with canned responses. The peer
   /// endpoint prefers the `host` field and falls back to the `v4`
@@ -1126,6 +1674,10 @@ class WarpTunnelService extends ChangeNotifier {
           ? (decoded['account'] as Map)['id']?.toString() ?? ''
           : '',
       clientId: configMap['client_id']?.toString() ?? '',
+      // 1.6.21: the device id the enroll PATCH needs
+      // (`PATCH /reg/{device-id}`). The 1.6.20 model never stored
+      // it, so a stored WireGuard account cannot be enrolled as-is.
+      deviceId: decoded['id']?.toString() ?? '',
     );
   }
 
@@ -1139,13 +1691,26 @@ class WarpTunnelService extends ChangeNotifier {
   /// directory` — the log file's parent dir did not exist). A bind
   /// failure or any other start error is NOT a config error,
   /// so the port retry still runs for real port problems.
+  ///
+  /// 1.6.21 (MASQUE): the fork's masque validation strings — a
+  /// config using the masque outbound when the AAR was built without
+  /// the `with_quic` tag (`unknown outbound type: masque`), a
+  /// cloudflare-profile config without parseable keys, and Go x509
+  /// parse failures for either key. All fail on every port, so they
+  /// fail fast at load.
   @visibleForTesting
   static bool isConfigError(Object e) {
     final message = e.toString();
     return message.contains('cannot unmarshal') ||
         message.contains('ParsePrefix') ||
         message.contains('initialize network') ||
-        message.contains('start logger');
+        message.contains('start logger') ||
+        message.contains('unknown outbound type: masque') ||
+        message.contains(
+          'masque: private_key and public_key are required',
+        ) ||
+        message.contains('public_key is not an ECDSA key') ||
+        message.contains('x509:');
   }
 
   /// The tag of the explicit DNS server (1.6.19): the `dns.final`
@@ -1160,14 +1725,27 @@ class WarpTunnelService extends ChangeNotifier {
   static const String dnsServerAddress = '1.1.1.1';
 
   /// The sing-box config for the tunnel: one mixed inbound (the local
-  /// HTTP proxy on 127.0.0.1), one WireGuard endpoint (the peer), one
-  /// explicit DNS server (1.6.19 — see below), and one route rule
-  /// sending everything to the endpoint. The endpoint runs on gVisor's
-  /// userspace stack (`system` off — the default), so no TUN and no
-  /// kernel WireGuard are involved. Pure (no I/O) so tests can assert
-  /// the exact shape. The config is built from the peer struct, so a
-  /// future Oracle peer is a different [WarpPeer], not a different
-  /// builder.
+  /// HTTP proxy on 127.0.0.1), one WireGuard endpoint (the peer) or
+  /// one MASQUE outbound (1.6.21), one explicit DNS server (1.6.19 —
+  /// see below), and one route rule sending everything to the
+  /// endpoint/outbound. The endpoint runs on gVisor's userspace stack
+  /// (`system` off — the default), so no TUN and no kernel WireGuard
+  /// are involved. Pure (no I/O) so tests can assert the exact shape.
+  /// The config is built from the peer struct, so a future Oracle
+  /// peer is a different [WarpPeer], not a different builder.
+  ///
+  /// 1.6.21 (MASQUE): [transport] picks the shape — 'masque' emits
+  /// the fork's `masque` outbound (`profile: cloudflare`, server =
+  /// the literal IP from enroll, port 443, `vhttp` from Settings)
+  /// and NO `endpoints` key; 'wireguard' (the default, so every
+  /// 1.6.20 test still passes unchanged) emits the WireGuard endpoint
+  /// and NO `outbounds` key. A MASQUE config for a registration that
+  /// is not [WarpRegistration.masqueComplete] throws [StateError] —
+  /// the tunnel must never start with half the MASQUE fields.
+  /// `vhttp` is 'auto' (try H3 over QUIC/UDP 443, fall back to H2
+  /// over TCP 443), 'h3', or 'h2'. The dns section, the mixed
+  /// inbound, the log section, and the proxy port loop carry over
+  /// unchanged between the two shapes.
   ///
   /// The `dns` section (1.6.19): without it sing-box falls back to its
   /// `local` DNS transport, which reads /etc/resolv.conf — a file that
@@ -1192,6 +1770,8 @@ class WarpTunnelService extends ChangeNotifier {
     required WarpRegistration registration,
     required int proxyPort,
     String? singboxLogPath,
+    WarpTunnelTransport transport = WarpTunnelTransport.wireguard,
+    String vhttp = 'auto',
   }) {
     final peer = registration.peer;
     final logSection = <String, dynamic>{'level': 'warn'};
@@ -1233,7 +1813,61 @@ class WarpTunnelService extends ChangeNotifier {
         // had it: broken.
         'final': dnsServerTag,
       },
-      'endpoints': [
+    };
+    if (transport == WarpTunnelTransport.masque) {
+      if (!registration.masqueComplete) {
+        throw StateError(
+          'WARP MASQUE config needs a complete MASQUE registration '
+          '(enroll first)',
+        );
+      }
+      // The server is the literal IP from the enroll response —
+      // never a hostname, so sing-box needs no DNS for it. Prefer
+      // the v4 address (the same anycast the official app dials);
+      // fall back to the v6 when there is no v4.
+      final server = registration.masqueServerV4.isNotEmpty
+          ? registration.masqueServerV4
+          : registration.masqueServerV6;
+      config['outbounds'] = [
+        {
+          'type': 'masque',
+          'tag': 'warp',
+          'server': server,
+          'server_port': 443,
+          'profile': 'cloudflare',
+          'vhttp': vhttp,
+          'private_key': registration.masquePrivateKey,
+          'public_key': registration.masqueEndpointPubKey,
+          // Normalized again at the point of use (the 1.6.15
+          // failure was a bare address reaching sing-box).
+          'ip': WarpRegistration.normalizeAddresses(
+            registration.addresses.where(
+              (address) => !address.contains(':'),
+            ),
+          ).firstOrNull,
+          'ipv6': WarpRegistration.normalizeAddresses(
+            registration.addresses.where(
+              (address) => address.contains(':'),
+            ),
+          ).firstOrNull,
+          'mtu': 1280,
+        },
+      ];
+      // No 'ip'/'ipv6' key when the account has no address of that
+      // family: the fork treats a null value as absent, and a
+      // dangling empty string would be a config error.
+      final outbound =
+          (config['outbounds'] as List<dynamic>).first as Map<String, dynamic>;
+      if (outbound['ip'] == null) outbound.remove('ip');
+      if (outbound['ipv6'] == null) outbound.remove('ipv6');
+      config['route'] = {
+        'rules': [
+          {'outbound': 'warp'},
+        ],
+      };
+      return jsonEncode(config);
+    }
+    config['endpoints'] = [
         {
           'type': 'wireguard',
           'tag': 'wg-ep',
@@ -1271,12 +1905,11 @@ class WarpTunnelService extends ChangeNotifier {
             },
           ],
         },
+      ];
+    config['route'] = {
+      'rules': [
+        {'outbound': 'wg-ep'},
       ],
-      'route': {
-        'rules': [
-          {'outbound': 'wg-ep'},
-        ],
-      },
     };
     return jsonEncode(config);
   }

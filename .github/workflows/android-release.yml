@@ -69,7 +69,10 @@ jobs:
       # committed — the NDK lives on the runner (ANDROID_NDK_HOME), not
       # in this repo. Tags: with_wireguard (the WireGuard endpoint) +
       # with_gvisor (the userspace TCP/IP stack the endpoint runs on —
-      # without it the endpoint fails to construct). gomobile init
+      # without it the endpoint fails to construct) + with_quic
+      # (1.6.21: the MASQUE outbound — the fork's masque type is only
+      # registered with this tag; without it a MASQUE config fails at
+      # load with "unknown outbound type: masque"). gomobile init
       # finds the NDK from ANDROID_NDK_HOME, which the runner image
       # sets. The Gradle build fails loudly if this step produced
       # nothing, so a missing AAR can never ship as a silent no-VPN.
@@ -85,7 +88,7 @@ jobs:
           mkdir -p android/app/libs
           cd android/warpbox
           gomobile init
-          gomobile bind -androidapi 25 -target android/arm64,android/arm,android/amd64 -tags with_wireguard,with_gvisor -o ../app/libs/libbox.aar .
+          gomobile bind -androidapi 25 -target android/arm64,android/arm,android/amd64 -tags with_wireguard,with_gvisor,with_quic -o ../app/libs/libbox.aar .
           ls -lh ../app/libs/libbox.aar
 
       # 1.6.13 (R1: Cronet behind Super Spoof): cronetHttpNoPlay=true

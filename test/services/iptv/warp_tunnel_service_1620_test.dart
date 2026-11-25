@@ -157,6 +157,10 @@ Future<void> _acceptTermsAndEnable() async {
   await SettingsService.instance
       .write(SettingsService.iptvWarpTermsAccepted, true);
   await SettingsService.instance.write(SettingsService.iptvWarpVpn, true);
+  // 1.6.21: this suite pins the WireGuard path (1.6.15–1.6.20
+  // behaviour). The app default is MASQUE, which would enroll on
+  // start — and this file's mock APIs answer register only.
+  await SettingsService.instance.write(SettingsService.iptvWarpTransport, 'wireguard');
 }
 
 /// A service wired for fast tests: the post-start probe answers 200

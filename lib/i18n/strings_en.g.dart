@@ -664,6 +664,27 @@ class Translations$settings$en {
 	/// en: 'The VPN stays off until you accept Cloudflare's terms.'
 	String get warpTermsRequired => 'The VPN stays off until you accept Cloudflare\'s terms.';
 
+	/// en: 'Tunnel transport'
+	String get warpTransport => 'Tunnel transport';
+
+	/// en: 'MASQUE (port 443)'
+	String get warpTransportMasque => 'MASQUE (port 443)';
+
+	/// en: 'WireGuard (UDP 2408)'
+	String get warpTransportWireguard => 'WireGuard (UDP 2408)';
+
+	/// en: 'MASQUE transport'
+	String get warpMasqueVhttp => 'MASQUE transport';
+
+	/// en: 'Auto (H3, fall back to H2)'
+	String get warpMasqueVhttpAuto => 'Auto (H3, fall back to H2)';
+
+	/// en: 'H3 (QUIC)'
+	String get warpMasqueVhttpH3 => 'H3 (QUIC)';
+
+	/// en: 'H2 (TCP 443)'
+	String get warpMasqueVhttpH2 => 'H2 (TCP 443)';
+
 	/// en: 'Reset WARP registration'
 	String get resetWarpRegistration => 'Reset WARP registration';
 
@@ -4019,6 +4040,9 @@ class Translations$about$en {
 		'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 		'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 		'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+	];
+	List<String> get changelog2340 => [
+		'New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard in Settings under Advanced, under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it',
 	];
 	List<String> get changelog2339 => [
 		'Fixed: the tunnel wouldn\'t start at all — its log file pointed at a folder that didn\'t exist, because the app and the tunnel named two different folders. The app now makes the folder before starting, and if it ever can\'t, it starts without the log file instead of failing. Also fixed the tunnel\'s address, which had the port number stuck on it so it could never resolve, and the address check, which made the same mistake and wrongly said it doesn\'t resolve',
@@ -10472,6 +10496,13 @@ extension on Translations {
 			'settings.warpTermsAccept' => 'I accept',
 			'settings.warpTermsDecline' => 'Not now',
 			'settings.warpTermsRequired' => 'The VPN stays off until you accept Cloudflare\'s terms.',
+			'settings.warpTransport' => 'Tunnel transport',
+			'settings.warpTransportMasque' => 'MASQUE (port 443)',
+			'settings.warpTransportWireguard' => 'WireGuard (UDP 2408)',
+			'settings.warpMasqueVhttp' => 'MASQUE transport',
+			'settings.warpMasqueVhttpAuto' => 'Auto (H3, fall back to H2)',
+			'settings.warpMasqueVhttpH3' => 'H3 (QUIC)',
+			'settings.warpMasqueVhttpH2' => 'H2 (TCP 443)',
 			'settings.resetWarpRegistration' => 'Reset WARP registration',
 			'settings.resetWarpRegistrationDescription' => 'Sign up for a fresh free WARP account, replacing the current one. Only use this if the tunnel still won\'t connect — a fresh sign-up gets a new account, a new ID and new keys. If it fails, the current account stays put.',
 			'settings.resetWarpRegistrationSuccess' => 'WARP registration reset — turn the VPN on to use the fresh account.',
@@ -10765,6 +10796,8 @@ extension on Translations {
 			'settings.hdrSdrConversionDeviceDescription' => 'Your device\'s video hardware converts it. Fastest, but colors depend on the device',
 			'settings.hdrSdrConversionPlayer' => 'Player',
 			'settings.hdrSdrConversionPlayerDescription' => 'The player converts it. Consistent colors, but 4K may stutter on low-end TV boxes',
+			_ => null,
+		} ?? switch (path) {
 			'settings.deinterlace' => 'Deinterlacing',
 			'settings.deinterlaceDescription' => 'Remove combing artifacts from interlaced video (mpv player only)',
 			'settings.deinterlaceOff' => 'Off',
@@ -10772,8 +10805,6 @@ extension on Translations {
 			'settings.deinterlaceVideo' => 'Video',
 			'settings.deinterlaceVideoDescription' => 'Turn each field into a full frame. For video shot for TV, like sports, news, and concerts',
 			'settings.deinterlaceFilm' => 'Film',
-			_ => null,
-		} ?? switch (path) {
 			'settings.deinterlaceFilmDescription' => 'Restore the original frames of film and animation telecined to 29.97 fps, common on NTSC DVDs. Video shot for TV stutters. Live TV uses Video',
 			'settings.requireProfileSelectionOnOpen' => 'Ask for profile on app open',
 			'settings.requireProfileSelectionOnOpenDescription' => 'Show profile selection every time the app is opened',
@@ -11279,6 +11310,8 @@ extension on Translations {
 			'subtitlingStyling.assOverride' => 'ASS Override',
 			'subtitlingStyling.overrideScale' => 'Scale',
 			'subtitlingStyling.overrideForce' => 'Force',
+			_ => null,
+		} ?? switch (path) {
 			'subtitlingStyling.overrideStrip' => 'Remove styling',
 			'subtitlingStyling.positionTop' => 'Top',
 			'subtitlingStyling.positionBottom' => 'Bottom',
@@ -11286,8 +11319,6 @@ extension on Translations {
 			'subtitlingStyling.useMarginsDescription' => 'Allow text subtitles in the space outside the video. Styled subtitles may keep their original placement.',
 			'subtitlingStyling.anchorToScreen' => 'Anchor to Screen',
 			'subtitlingStyling.anchorToScreenDescription' => 'Show text subtitles in the black bars below widescreen video',
-			_ => null,
-		} ?? switch (path) {
 			'subtitlingStyling.bold' => 'Bold',
 			'subtitlingStyling.italic' => 'Italic',
 			'subtitlingStyling.renderResolution' => 'Render Resolution',
@@ -11715,6 +11746,7 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
+			'about.changelog2340.0' => 'New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard in Settings under Advanced, under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it',
 			'about.changelog2339.0' => 'Fixed: the tunnel wouldn\'t start at all — its log file pointed at a folder that didn\'t exist, because the app and the tunnel named two different folders. The app now makes the folder before starting, and if it ever can\'t, it starts without the log file instead of failing. Also fixed the tunnel\'s address, which had the port number stuck on it so it could never resolve, and the address check, which made the same mistake and wrongly said it doesn\'t resolve',
 			'about.changelog2338.0' => 'Fixed: the VPN tunnel started but couldn\'t reach anything — it couldn\'t look up Cloudflare\'s address, because the app gave it no DNS of its own and the phone\'s DNS feed was switched off. The tunnel now uses its own DNS (1.1.1.1) to find Cloudflare, logs what it finds, and the startup check waits a few seconds instead of deciding instantly. Also added a Reset WARP registration button in Settings under Advanced, in case the sign-up itself ever needs a fresh start',
 			'about.changelog2337.0' => 'Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts',
@@ -11792,6 +11824,8 @@ extension on Translations {
 			'about.changelog2320.3' => 'Fixed: Reload now keeps showing the guide you already have while the new one downloads in the background, instead of emptying the guide for a minute',
 			'about.changelog2320.4' => 'New: a setting under Settings, IPTV lets you choose whether downloads keep running while you watch something, or pause until you stop watching — downloads keep running by default',
 			'about.changelog2320.5' => 'Fixed: the Downloads screen now shows the real progress of a show\'s episode while it downloads, instead of saying nothing is queued',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2319.0' => 'Fixed: once the panel refuses access, the app now stops asking it again for five minutes instead of retrying for minutes on end — retrying during a block can stretch it out',
 			'about.changelog2319.1' => 'Fixed: the guide now spaces out its channel requests so it stays under the panel\'s flood limit instead of firing them all at once',
 			'about.changelog2319.2' => 'New: when the guide can\'t reach the panel it now shows the last guide it downloaded, with the date it was last updated, instead of empty rows',
@@ -11800,8 +11834,6 @@ extension on Translations {
 			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
 			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
 			'about.changelog2317.1' => 'Fixed: loading the channel, movie and series lists for the first time no longer holds each whole list in memory at once, so a fresh install is much less likely to run out of memory on a TV',
 			'about.changelog2317.2' => 'Fixed: the weekly catalog refresh now reads the lists one row at a time instead of all at once, cutting its biggest memory spike',
@@ -12306,6 +12338,8 @@ extension on Translations {
 			'liveTv.staleFeedBanner' => 'The TV guide is out of date — it has not updated in over a day.',
 			'liveTv.staleFeedReload' => 'Reload guide',
 			'liveTv.loadingGuide' => 'Loading guide…',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.guideLoadFailed' => 'Guide couldn\'t load — tap to retry',
 			'liveTv.searchGuide' => 'Search Guide',
 			'liveTv.searchHint' => 'Search channels & programs',
@@ -12314,8 +12348,6 @@ extension on Translations {
 			'liveTv.channelsSection' => 'Channels',
 			'liveTv.programsSection' => 'Programs',
 			'liveTv.now' => 'Now',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.today' => 'Today',
 			'liveTv.tomorrow' => 'Tomorrow',
 			'liveTv.midnight' => 'Midnight',
@@ -12820,6 +12852,8 @@ extension on Translations {
 			'companionRemote.remote.stop' => 'Stop',
 			'companionRemote.remote.seekForward' => 'Seek Fwd',
 			'companionRemote.remote.volume' => 'Volume',
+			_ => null,
+		} ?? switch (path) {
 			'companionRemote.remote.volumeDown' => 'Down',
 			'companionRemote.remote.volumeUp' => 'Up',
 			'companionRemote.remote.fullscreen' => 'Fullscreen',
@@ -12828,8 +12862,6 @@ extension on Translations {
 			'companionRemote.remote.searchHint' => 'Search on desktop...',
 			'companionRemote.errors.noNetworkInterface' => 'No network interface found',
 			'companionRemote.errors.authenticationFailed' => 'Authentication failed',
-			_ => null,
-		} ?? switch (path) {
 			'companionRemote.errors.serverStartFailed' => ({required Object error}) => 'Failed to start remote server: ${error}',
 			'companionRemote.errors.commandFailed' => ({required Object error}) => 'Failed to send remote command: ${error}',
 			'companionRemote.errors.joinTimedOut' => 'Timed out joining session',
@@ -13334,6 +13366,8 @@ extension on Translations {
 			'iptv.epgReloadCheckNoGain' => 'Playlist check: the playlist adds no guide IDs',
 			'iptv.epgReloadCheckFailed' => ({required Object reason}) => 'Playlist check failed: ${reason}',
 			'iptv.epgReloadWindowSlideReady' => ({required Object count}) => 'Guide rows ready: ${count} channels',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgReloadWindowSlideSkipped' => ({required Object reason}) => 'Guide rows will fill in as you scroll (slide skipped: ${reason})',
 			'iptv.epgReloadWindowSlideReasonStoreUnavailable' => 'store not built yet',
 			'iptv.epgReloadWindowSlideReasonSlideFailed' => 'slide failed',
@@ -13342,8 +13376,6 @@ extension on Translations {
 			'iptv.epgM3uTvgIdCheckDescription' => 'One-time check: fetch the provider\'s playlist once and see how many channels without a guide ID gain one from it — and how many of those IDs are in the guide',
 			'iptv.epgM3uTvgIdResult' => ({required Object checked, required Object noId, required Object gained, required Object inFeed}) => '${checked} channels checked · ${noId} without a guide ID · ${gained} gain one from the playlist · ${inFeed} of those are in the guide',
 			'iptv.epgM3uTvgIdSample' => ({required Object samples}) => 'Examples: ${samples}',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgM3uTvgIdFeedNotLoaded' => 'The guide feed was not loaded, so the in-guide count could not be checked — reload the TV details first',
 			'iptv.epgM3uTvgIdFailed' => ({required Object reason}) => 'The playlist check failed: ${reason}',
 			'iptv.epgM3uTvgIdApply' => 'Apply these guide IDs',

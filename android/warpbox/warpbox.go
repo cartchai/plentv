@@ -1,9 +1,18 @@
 // Package warpbox is a minimal gomobile binding around sing-box, built for
 // PlenTV's in-app VPN (1.6.15): it runs one sing-box instance with a
-// "mixed" (HTTP proxy) inbound on 127.0.0.1 and a WireGuard endpoint as
-// the only outbound path — no TUN, no VpnService, no system proxy, no
-// notification. Only the app's own HTTP clients are pointed at the local
-// proxy; everything else on the phone is untouched.
+// "mixed" (HTTP proxy) inbound on 127.0.0.1 and a WireGuard endpoint
+// (1.6.15–1.6.20) or a MASQUE outbound (1.6.21, Cloudflare WARP over
+// CONNECT-IP on port 443 — the only transport that works on a network
+// that blocks UDP 2408) as the only outbound path — no TUN, no
+// VpnService, no system proxy, no notification. Only the app's own
+// HTTP clients are pointed at the local proxy; everything else on the
+// phone is untouched.
+//
+// 1.6.21: sing-box comes from the sing-box-lx fork (see go.mod), not
+// upstream — upstream v1.14.4 has no MASQUE outbound. The fork keeps
+// the module path, so the imports below are unchanged; the MASQUE
+// outbound is compiled in by the `with_quic` build tag (see
+// android-release.yml).
 //
 // This is deliberately NOT the full libbox API (experimental/libbox):
 // that package drives the whole SFA app through a gRPC command server.
@@ -16,7 +25,7 @@
 // the runner, not in this repo):
 //
 //	gomobile bind -target android/arm64,android/armv7,android/amd64 \
-//	  -tags with_wireguard,with_gvisor -o libbox.aar .
+//	  -tags with_wireguard,with_gvisor,with_quic -o libbox.aar .
 //
 // The `with_wireguard` tag is what compiles the WireGuard endpoint in
 // (include/wireguard.go); `with_gvisor` compiles in gVisor's userspace
@@ -24,9 +33,11 @@
 // config leaves `system` off (the default): the tunnel's packets are
 // routed through the gVisor netstack entirely in-process — no TUN, no
 // kernel WireGuard, no root. Without `with_gvisor` the endpoint fails
-// to construct ("gVisor is not included in this build"). No other
-// tags: the config uses only the mixed inbound (always compiled in)
-// and the WireGuard endpoint.
+// to construct ("gVisor is not included in this build"). `with_quic`
+// (1.6.21) compiles in the fork's MASQUE outbound (include/quic.go);
+// without it a MASQUE config fails at load with "unknown outbound
+// type: masque". No other tags: the config uses only the mixed inbound
+// (always compiled in) and the WireGuard endpoint or MASQUE outbound.
 //
 // License: sing-box is GPL-3.0-or-later, same license family as PlenTV;
 // this wrapper is part of PlenTV under the same license.
@@ -74,7 +85,8 @@ func Setup(basePath, workingPath, tempPath string) error {
 // Start parses configJSON and starts the tunnel. The config must carry
 // exactly the shape PlenTV generates: one mixed inbound listening on
 // 127.0.0.1 (the local proxy), one WireGuard endpoint (WARP, or later
-// an Oracle peer), and a route rule sending everything to the endpoint.
+// an Oracle peer) or one MASQUE outbound (1.6.21, WARP over CONNECT-IP),
+// and a route rule sending everything to the endpoint/outbound.
 // Starting while a tunnel is up stops the old one first. On any failure
 // the box is closed and the error is returned — a failed start never
 // leaves a half-running tunnel behind, and it never falls back to a
