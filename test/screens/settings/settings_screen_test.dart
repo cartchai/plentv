@@ -737,6 +737,42 @@ void main() {
     expect(find.text(t.settings.lastCrashNone), findsOneWidget);
   });
 
+  testWidgets('Advanced section links to the Super Spoof page', (tester) async {
+    final harness = await _pumpSettingsScreen(tester);
+    addTearDown(() => harness.dispose(tester));
+
+    await tester.scrollUntilVisible(find.text(t.settings.superSpoof), 200);
+    await tester.pump();
+    // The entry tile is the only Super Spoof row on Advanced now — the
+    // sub-settings live on their own page, even with the master on.
+    await SettingsService.instance.write(SettingsService.iptvSuperSpoof, true);
+    await _pumpUi(tester);
+    expect(find.text(t.settings.superSpoofUserAgent), findsNothing);
+    expect(find.text(t.settings.superSpoofTransport), findsNothing);
+    expect(find.text(t.settings.superSpoofHeaders), findsNothing);
+    expect(find.text(t.settings.superSpoofStreams), findsNothing);
+
+    await tester.tap(find.text(t.settings.superSpoof));
+    await _pumpUi(tester);
+    // The new page shows the moved rows.
+    expect(find.text(t.settings.superSpoofUserAgent), findsOneWidget);
+    expect(find.text(t.settings.superSpoofTransport), findsOneWidget);
+    expect(find.text(t.settings.superSpoofHeaders), findsOneWidget);
+    expect(find.text(t.settings.superSpoofStreams), findsOneWidget);
+
+    // Back returns to Advanced, at the entry tile. (The escape +
+    // handlePopRoute dance leaves the pushed route mid-pop — its app
+    // bar and master tile both say "Super Spoof", so the finder below
+    // sees two; the app-bar back button plus a pump past the 300 ms
+    // transition removes the route first.)
+    await tester.pageBack();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.scrollUntilVisible(find.text(t.settings.superSpoof), 200);
+    expect(find.text(t.settings.superSpoof), findsOneWidget);
+    expect(find.text(t.settings.superSpoofUserAgent), findsNothing);
+  });
+
   testWidgets('restoring a fork backup re-resolves the active profile before rebinding', (tester) async {
     // 1.3.25 §68 (d): the restore writes the restored active-profile id
     // to storage, but the in-memory provider never learns it — so the

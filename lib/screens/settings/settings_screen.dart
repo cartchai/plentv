@@ -33,8 +33,6 @@ import '../../services/account_preferences_accounts.dart';
 import '../../services/keyboard_shortcuts_service.dart';
 import '../../services/background_work_diagnostics_service.dart';
 import '../../services/settings_service.dart' as settings;
-import '../../services/iptv/xtream_api.dart';
-import '../../services/iptv/xtream_transport.dart';
 import '../../services/iptv/warp_tunnel_service.dart';
 import '../../services/settings_mutation_service.dart';
 import '../../services/supporter/supporter_mode.dart';
@@ -71,6 +69,7 @@ import 'playback_settings_screen.dart';
 import '../profile/profile_switch_screen.dart';
 import 'services_settings_screen.dart';
 import 'settings_utils.dart';
+import 'super_spoof_settings_screen.dart';
 import 'supporter_settings_tile.dart';
 import 'tracker_service_info.dart';
 import '../../widgets/loading_indicator_box.dart';
@@ -573,35 +572,6 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
     return SettingsGroup(title: t.settings.controls, children: children);
   }
 
-  /// Subtitle for the Super Spoof User-Agent row: the name the mimic
-  /// sends, or the Off line when the piece leaves the normal choice
-  /// alone. Custom shows the shared custom text — or `Custom · <base>`
-  /// when the text is blank, which is the fallback the resolver
-  /// applies (the normal UA choice). Reads the custom pref
-  /// synchronously; the row rebuilds when the text changes (see the
-  /// group wrapper below).
-  String _superSpoofUserAgentSubtitle(String choice) {
-    if (choice == XtreamSuperSpoof.userAgentOff) return t.settings.superSpoofUserAgentOff;
-    final instance = settings.SettingsService.instance;
-    final custom = instance.read(settings.SettingsService.iptvXtreamUserAgentCustom);
-    final mimic = XtreamSuperSpoof.userAgentForChoice(choice, custom);
-    if (mimic != null) return mimic;
-    final fallback = XtreamUserAgent.resolve(
-      instance.read(settings.SettingsService.iptvXtreamUserAgent),
-      custom,
-    );
-    return '${t.iptv.xtreamUserAgentCustom} · $fallback';
-  }
-
-  /// Subtitle for the Super Spoof Transport row: the label of the
-  /// chosen network stack.
-  String _superSpoofTransportSubtitle(String choice) => switch (choice) {
-    XtreamTransportChoice.dart => t.settings.superSpoofTransportDart,
-    XtreamTransportChoice.ipv4 => t.settings.superSpoofTransportIpv4,
-    XtreamTransportChoice.cronet => t.settings.superSpoofTransportCronet,
-    XtreamTransportChoice.platform => t.settings.superSpoofTransportPlatform,
-    _ => t.settings.superSpoofTransportDart,
-  };
 
   /// Subtitle for the WARP transport row (1.6.21): the label of the
   /// chosen tunnel transport.
@@ -814,136 +784,15 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           title: t.settings.autoHidePerformanceOverlay,
           subtitle: t.settings.autoHidePerformanceOverlayDescription,
         ),
-        // 1.6.11 (Super Spoof): one master toggle that turns on ALL the
-        // request-spoofing pieces at once, with the per-piece
-        // sub-settings underneath it while it is on. The subs tune which
-        // pieces are active and how they behave; the master still turns
-        // the whole thing on/off at once.
-        // 1.6.14 (unified spoof): the pieces are separate sub-settings
-        // — the UA mimic (the same list as the base Xtream User-Agent
-        // choice, Custom included, sharing the one custom text), the
-        // transport (Dart / IPv4-only / Cronet / Platform (Android)),
-        // the headers piece and the streams piece — so one piece can
-        // change without touching the others.
-        SettingSwitchTile(
+        // 1.6.23: Super Spoof moved to its own page — this row opens
+        // it. The master toggle and the four sub-settings live in
+        // SuperSpoofSettingsScreen now.
+        SettingNavigationTile(
           focusNode: _focusTracker.get(_kSuperSpoof),
-          pref: settings.SettingsService.iptvSuperSpoof,
           icon: Symbols.theater_comedy_rounded,
           title: t.settings.superSpoof,
           subtitle: t.settings.superSpoofDescription,
-        ),
-        ValueListenableBuilder<bool>(
-          valueListenable: settings.SettingsService.instance.listenable(
-            settings.SettingsService.iptvSuperSpoof,
-          ),
-          builder: (_, spoofOn, _) {
-            if (!spoofOn) return const SizedBox.shrink();
-            return Column(
-              children: [
-                ValueListenableBuilder<String>(
-                  // The UA row's subtitle shows the resolved value, so
-                  // it must rebuild when the custom text changes too —
-                  // not just when the choice changes (the selection
-                  // tile only listens to the choice pref).
-                  valueListenable: settings.SettingsService.instance.listenable(
-                    settings.SettingsService.iptvXtreamUserAgentCustom,
-                  ),
-                  builder: (_, _, _) => Column(
-                    children: [
-                      SettingSelectionTile<String>(
-                        pref: settings.SettingsService.iptvSuperSpoofUserAgent,
-                        icon: Symbols.badge_rounded,
-                        title: t.settings.superSpoofUserAgent,
-                        subtitleBuilder: _superSpoofUserAgentSubtitle,
-                        options: [
-                          DialogOption(
-                            value: XtreamSuperSpoof.userAgentOff,
-                            title: t.settings.superSpoofUserAgentOff,
-                          ),
-                          DialogOption(
-                            value: XtreamUserAgent.choicePlayer,
-                            title: t.iptv.xtreamUserAgentPlayer,
-                          ),
-                          DialogOption(
-                            value: XtreamUserAgent.choiceVlc,
-                            title: t.iptv.xtreamUserAgentVlc,
-                          ),
-                          DialogOption(
-                            value: XtreamUserAgent.choiceSmarters,
-                            title: t.iptv.xtreamUserAgentSmarters,
-                          ),
-                          DialogOption(
-                            value: XtreamUserAgent.choiceBrowser,
-                            title: t.iptv.xtreamUserAgentBrowser,
-                          ),
-                          DialogOption(
-                            value: XtreamSuperSpoof.userAgentCustom,
-                            title: t.iptv.xtreamUserAgentCustom,
-                          ),
-                        ],
-                      ),
-                      ValueListenableBuilder<String>(
-                        valueListenable: settings.SettingsService.instance.listenable(
-                          settings.SettingsService.iptvSuperSpoofUserAgent,
-                        ),
-                        builder: (_, choice, _) {
-                          if (choice != XtreamSuperSpoof.userAgentCustom) {
-                            return const SizedBox.shrink();
-                          }
-                          // The custom text is ONE shared pref with the
-                          // base Xtream User-Agent choice — typed once,
-                          // used by whichever list picks Custom.
-                          return SettingTextTile(
-                            pref: settings.SettingsService.iptvXtreamUserAgentCustom,
-                            icon: Symbols.edit_rounded,
-                            title: t.iptv.xtreamUserAgentCustomTitle,
-                            emptyHint: t.iptv.xtreamUserAgentCustomHint,
-                            emptyError: t.iptv.xtreamUserAgentCustomEmpty,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SettingSelectionTile<String>(
-                  pref: settings.SettingsService.iptvSuperSpoofTransport,
-                  icon: Symbols.swap_horiz_rounded,
-                  title: t.settings.superSpoofTransport,
-                  subtitleBuilder: _superSpoofTransportSubtitle,
-                  options: [
-                    DialogOption(
-                      value: XtreamTransportChoice.dart,
-                      title: t.settings.superSpoofTransportDart,
-                    ),
-                    DialogOption(
-                      value: XtreamTransportChoice.ipv4,
-                      title: t.settings.superSpoofTransportIpv4,
-                    ),
-                    DialogOption(
-                      value: XtreamTransportChoice.cronet,
-                      title: t.settings.superSpoofTransportCronet,
-                    ),
-                    DialogOption(
-                      value: XtreamTransportChoice.platform,
-                      title: t.settings.superSpoofTransportPlatform,
-                    ),
-                  ],
-                ),
-                SettingSwitchTile(
-                  pref: settings.SettingsService.iptvSuperSpoofHeaders,
-                  icon: Symbols.article_rounded,
-                  title: t.settings.superSpoofHeaders,
-                  subtitle: t.settings.superSpoofHeadersDescription,
-                ),
-                SettingSwitchTile(
-                  pref: settings.SettingsService.iptvSuperSpoofStreams,
-                  icon: Symbols.play_circle_rounded,
-                  title: t.settings.superSpoofStreams,
-                  subtitle: t.settings.superSpoofStreamsDescription,
-                ),
-              ],
-            );
-          },
+          destinationBuilder: (context) => const SuperSpoofSettingsScreen(),
         ),
         // 1.6.12 (MPEG-TS live streams): a plain switch, always visible —
         // it is independent of Super Spoof (which only changes what the

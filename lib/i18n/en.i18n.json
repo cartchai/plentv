@@ -1608,6 +1608,9 @@
       "New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does",
       "Fixed: the Discover banner and Continue Watching cards now show the show's art instead of a black panel"
     ],
+    "changelog2342": [
+      "New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed"
+    ],
     "changelog2341": [
       "New: the player now opens IPTV streams through the in-app tunnel instead of straight from the panel — that's why shows still showed 403 even when the tunnel was connected. Note: this covers http:// streams only; the bundled player can't use the proxy for https:// streams, so those still go direct"
     ],
