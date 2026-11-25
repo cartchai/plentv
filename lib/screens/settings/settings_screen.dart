@@ -33,7 +33,6 @@ import '../../services/account_preferences_accounts.dart';
 import '../../services/keyboard_shortcuts_service.dart';
 import '../../services/background_work_diagnostics_service.dart';
 import '../../services/settings_service.dart' as settings;
-import '../../services/iptv/warp_tunnel_service.dart';
 import '../../services/settings_mutation_service.dart';
 import '../../services/supporter/supporter_mode.dart';
 import '../../widgets/background_download_warning_banner.dart';
@@ -72,6 +71,7 @@ import 'settings_utils.dart';
 import 'super_spoof_settings_screen.dart';
 import 'supporter_settings_tile.dart';
 import 'tracker_service_info.dart';
+import 'warp_settings_rows.dart';
 import '../../widgets/loading_indicator_box.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -573,199 +573,6 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   }
 
 
-  /// Subtitle for the WARP transport row (1.6.21): the label of the
-  /// chosen tunnel transport.
-  String _warpTransportSubtitle(String choice) => switch (choice) {
-    'wireguard' => t.settings.warpTransportWireguard,
-    'masque' => t.settings.warpTransportMasque,
-    _ => t.settings.warpTransportMasque,
-  };
-
-  /// Subtitle for the MASQUE transport row (1.6.21): the label of
-  /// the chosen MASQUE transport.
-  String _warpMasqueVhttpSubtitle(String choice) => switch (choice) {
-    'h3' => t.settings.warpMasqueVhttpH3,
-    'h2' => t.settings.warpMasqueVhttpH2,
-    'auto' => t.settings.warpMasqueVhttpAuto,
-    _ => t.settings.warpMasqueVhttpAuto,
-  };
-
-  /// The VPN (WARP) row (1.6.15): a switch bound to the opt-in pref
-  /// whose subtitle is the live tunnel state (off / starting / on /
-  /// failed), with the terms gate on turn-on. A plain SettingSwitchTile
-  /// cannot do this: it writes the pref first and reports after, but
-  /// the terms gate must run BEFORE the pref flips — declining leaves
-  /// the switch off, and registration never runs without an explicit
-  /// accept. Turning off writes the pref false and stops the tunnel.
-  Widget _warpVpnRow() {
-    return ListenableBuilder(
-      listenable: WarpTunnelService.instance,
-      builder: (context, _) {
-        final service = WarpTunnelService.instance;
-        final subtitle = switch (service.state) {
-          WarpTunnelState.on => t.settings.warpVpnStateOn,
-          WarpTunnelState.starting => t.settings.warpVpnStateStarting,
-          WarpTunnelState.failed => t.settings.warpVpnStateFailed,
-          WarpTunnelState.off => t.settings.warpVpnDescription,
-        };
-        return ValueListenableBuilder<bool>(
-          valueListenable: settings.SettingsService.instance.listenable(
-            settings.SettingsService.iptvWarpVpn,
-          ),
-          builder: (_, value, _) => FocusableSwitchListTile(
-            focusNode: _focusTracker.get(_kWarpVpn),
-            secondary: const AppIcon(Symbols.vpn_key_rounded, fill: 1),
-            title: Text(t.settings.warpVpn),
-            subtitle: Text(subtitle),
-            value: value,
-            onChanged: (v) => _onWarpVpnChanged(context, v),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _onWarpVpnChanged(BuildContext context, bool value) async {
-    final service = WarpTunnelService.instance;
-    if (!value) {
-      final failure = await const SettingsMutationService().write(
-        context,
-        settings.SettingsService.iptvWarpVpn,
-        false,
-      );
-      if (failure != null && context.mounted) {
-        showErrorSnackBar(context, failure.display);
-      }
-      await service.stop();
-      return;
-    }
-    // The terms gate runs BEFORE the pref flips: declining leaves the
-    // switch off, and registration never runs without an explicit
-    // accept. The acceptance is recorded first, then the pref, then
-    // the tunnel starts (registration runs inside the start).
-    if (!service.termsAccepted) {
-      final accepted = await _showWarpTermsDialog(context);
-      if (accepted != true) {
-        // Declining is not an error — but the switch stays off, and the
-        // user should hear why instead of wondering what happened.
-        if (context.mounted) showSnackBar(context, t.settings.warpTermsRequired);
-        return;
-      }
-      await service.acceptTerms();
-      if (!context.mounted) return;
-    }
-    final failure = await const SettingsMutationService().write(
-      context,
-      settings.SettingsService.iptvWarpVpn,
-      true,
-    );
-    if (failure != null) {
-      if (context.mounted) showErrorSnackBar(context, failure.display);
-      return;
-    }
-    await service.start();
-  }
-
-  /// The WARP terms dialog: the summary of what turning the VPN on
-  /// does, with links to Cloudflare's full terms and privacy policy.
-  /// Barrier-dismissible is off — the user must pick Accept or Not now,
-  /// so a tap outside cannot silently decline (or accept) for them.
-  Future<bool?> _showWarpTermsDialog(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(t.settings.warpTermsTitle),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(t.settings.warpTermsBody),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => launchUrl(
-                  Uri.parse('https://www.cloudflare.com/application/terms/'),
-                  mode: LaunchMode.externalApplication,
-                ),
-                child: Text(t.settings.warpTermsReadTerms),
-              ),
-              TextButton(
-                onPressed: () => launchUrl(
-                  Uri.parse(
-                    'https://www.cloudflare.com/application/privacypolicy/',
-                  ),
-                  mode: LaunchMode.externalApplication,
-                ),
-                child: Text(t.settings.warpTermsReadPrivacy),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(t.settings.warpTermsDecline),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(t.settings.warpTermsAccept),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// The Reset WARP registration action (1.6.19): signs the app up
-  /// for a fresh free WARP account, replacing the stored one. The
-  /// tunnel is stopped first (and the switch turned off), and the
-  /// fresh sign-up runs before anything is replaced — if it fails,
-  /// the current account stays put. A 429 is surfaced plainly as
-  /// "wait a minute and try again" instead of a generic failure.
-  Future<void> _showResetWarpRegistrationDialog() async {
-    final confirmed = await showConfirmDialog(
-      context,
-      title: t.settings.resetWarpRegistration,
-      message: t.settings.resetWarpRegistrationDescription,
-      confirmText: t.common.reset,
-      isDestructive: true,
-    );
-    if (!mounted || !confirmed) return;
-    final service = WarpTunnelService.instance;
-    // The tunnel must be stopped first: a reset while it is on would
-    // leave a running tunnel with no account behind it.
-    if (service.isOn) {
-      final failure = await const SettingsMutationService().write(
-        context,
-        settings.SettingsService.iptvWarpVpn,
-        false,
-      );
-      if (failure != null && mounted) {
-        showErrorSnackBar(context, failure.display);
-      }
-      await service.stop();
-    }
-    final result = await service.resetRegistration();
-    if (!mounted) return;
-    switch (result) {
-      case WarpResetResult.replaced:
-        showSuccessSnackBar(
-          context,
-          t.settings.resetWarpRegistrationSuccess,
-        );
-      case WarpResetResult.rateLimited:
-        showErrorSnackBar(
-          context,
-          t.settings.resetWarpRegistrationRateLimited,
-        );
-      case WarpResetResult.failed:
-        showErrorSnackBar(
-          context,
-          t.settings.resetWarpRegistrationFailed,
-        );
-    }
-  }
-
   Widget _buildAdvancedSection() {
     return SettingsGroup(
       title: t.settings.advanced,
@@ -823,7 +630,8 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
         // live tunnel state (off / starting / on / failed) instead of a
         // static description. Independent of Super Spoof and Prefer
         // IPv4; while it is on, Cronet is forced off (no proxy API).
-        _warpVpnRow(),
+        // 1.6.24: shared with the Super Spoof page (warp_settings_rows.dart).
+        WarpVpnRow(focusNode: _focusTracker.get(_kWarpVpn)),
         // 1.6.21 (MASQUE transport): which tunnel transport the app
         // uses — MASQUE (WARP over port 443, the only transport that
         // works on a network that blocks UDP 2408) or WireGuard (the
@@ -834,7 +642,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           pref: settings.SettingsService.iptvWarpTransport,
           icon: Symbols.swap_horiz_rounded,
           title: t.settings.warpTransport,
-          subtitleBuilder: _warpTransportSubtitle,
+          subtitleBuilder: warpTransportSubtitle,
           options: [
             DialogOption(
               value: 'masque',
@@ -854,7 +662,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           pref: settings.SettingsService.iptvWarpMasqueVhttp,
           icon: Symbols.lan_rounded,
           title: t.settings.warpMasqueVhttp,
-          subtitleBuilder: _warpMasqueVhttpSubtitle,
+          subtitleBuilder: warpMasqueVhttpSubtitle,
           options: [
             DialogOption(
               value: 'auto',
@@ -880,7 +688,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           icon: Symbols.restart_alt_rounded,
           title: t.settings.resetWarpRegistration,
           subtitle: t.settings.resetWarpRegistrationDescription,
-          onTap: () => _showResetWarpRegistrationDialog(),
+          onTap: () => showResetWarpRegistrationDialog(context),
         ),
         SettingNavigationTile(
           focusNode: _focusTracker.get(_kViewLogs),

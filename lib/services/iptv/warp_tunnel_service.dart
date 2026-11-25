@@ -485,11 +485,14 @@ class WarpTunnelService extends ChangeNotifier {
   /// every open; tests use this to put the singleton in the on/off
   /// states instead of starting a real tunnel. It never touches the
   /// stored registration and never starts, stops or probes anything —
-  /// production code must not call it.
+  /// production code must not call it. It notifies listeners, like
+  /// [_setState] does, so UI bound to the tunnel state (the VPN row's
+  /// live subtitle) rebuilds when a test drives it.
   @visibleForTesting
   void debugSetTunnelForTest({required bool on, int proxyPort = -1}) {
     _state = on ? WarpTunnelState.on : WarpTunnelState.off;
     _proxyPort = proxyPort;
+    notifyListeners();
   }
 
   /// The selected tunnel transport (1.6.21): MASQUE by default,

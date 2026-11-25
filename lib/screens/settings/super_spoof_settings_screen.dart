@@ -9,6 +9,7 @@ import '../../widgets/focused_scroll_scaffold.dart';
 import '../../widgets/setting_tile.dart';
 import '../../widgets/settings_section.dart';
 import 'settings_utils.dart';
+import 'warp_settings_rows.dart';
 
 /// Super Spoof settings (Settings → Advanced → Super Spoof).
 ///
@@ -29,6 +30,12 @@ import 'settings_utils.dart';
 /// included, sharing the one custom text), the transport (Dart /
 /// IPv4-only / Cronet / Platform (Android)), the headers piece and the
 /// streams piece — so one piece can change without touching the others.
+/// 1.6.24: a second group underneath holds the six Advanced rows
+/// (MPEG-TS, Prefer IPv4, VPN (WARP), Tunnel transport, MASQUE
+/// transport, Reset WARP registration) — duplicated here, not moved:
+/// they stay in Advanced too, and both pages write the same prefs,
+/// so a change in either place shows in the other. No focus nodes
+/// on this page (the 1.6.23 precedent — sub-page tiles own theirs).
 class SuperSpoofSettingsScreen extends StatelessWidget {
   const SuperSpoofSettingsScreen({super.key});
 
@@ -160,6 +167,74 @@ class SuperSpoofSettingsScreen extends StatelessWidget {
                       ],
                     );
                   },
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SliverPadding(padding: EdgeInsets.only(top: 24)),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverToBoxAdapter(
+            child: SettingsGroup(
+              children: [
+                // 1.6.24: the six Advanced rows, duplicated here in
+                // Advanced order — same prefs, icons, titles,
+                // subtitles and options as Advanced, no focus nodes.
+                SettingSwitchTile(
+                  pref: settings.SettingsService.iptvLiveTs,
+                  icon: Symbols.live_tv_rounded,
+                  title: t.settings.iptvLiveTs,
+                  subtitle: t.settings.iptvLiveTsDescription,
+                ),
+                SettingSwitchTile(
+                  pref: settings.SettingsService.iptvPreferIpv4,
+                  icon: Symbols.lan_rounded,
+                  title: t.settings.preferIpv4,
+                  subtitle: t.settings.preferIpv4Description,
+                ),
+                const WarpVpnRow(),
+                SettingSelectionTile<String>(
+                  pref: settings.SettingsService.iptvWarpTransport,
+                  icon: Symbols.swap_horiz_rounded,
+                  title: t.settings.warpTransport,
+                  subtitleBuilder: warpTransportSubtitle,
+                  options: [
+                    DialogOption(
+                      value: 'masque',
+                      title: t.settings.warpTransportMasque,
+                    ),
+                    DialogOption(
+                      value: 'wireguard',
+                      title: t.settings.warpTransportWireguard,
+                    ),
+                  ],
+                ),
+                SettingSelectionTile<String>(
+                  pref: settings.SettingsService.iptvWarpMasqueVhttp,
+                  icon: Symbols.lan_rounded,
+                  title: t.settings.warpMasqueVhttp,
+                  subtitleBuilder: warpMasqueVhttpSubtitle,
+                  options: [
+                    DialogOption(
+                      value: 'auto',
+                      title: t.settings.warpMasqueVhttpAuto,
+                    ),
+                    DialogOption(
+                      value: 'h3',
+                      title: t.settings.warpMasqueVhttpH3,
+                    ),
+                    DialogOption(
+                      value: 'h2',
+                      title: t.settings.warpMasqueVhttpH2,
+                    ),
+                  ],
+                ),
+                SettingNavigationTile(
+                  icon: Symbols.restart_alt_rounded,
+                  title: t.settings.resetWarpRegistration,
+                  subtitle: t.settings.resetWarpRegistrationDescription,
+                  onTap: () => showResetWarpRegistrationDialog(context),
                 ),
               ],
             ),

@@ -31,6 +31,7 @@ import 'package:plezy/providers/seerr_account_provider.dart';
 import 'package:plezy/providers/theme_provider.dart';
 import 'package:plezy/providers/trackers_provider.dart';
 import 'package:plezy/screens/settings/settings_screen.dart';
+import 'package:plezy/screens/settings/super_spoof_settings_screen.dart';
 import 'package:plezy/services/background_work_diagnostics_service.dart';
 import 'package:plezy/services/download_storage_service.dart';
 import 'package:plezy/services/download_manager_service.dart';
@@ -771,6 +772,61 @@ void main() {
     await tester.scrollUntilVisible(find.text(t.settings.superSpoof), 200);
     expect(find.text(t.settings.superSpoof), findsOneWidget);
     expect(find.text(t.settings.superSpoofUserAgent), findsNothing);
+  });
+
+  testWidgets('Super Spoof page extra rows sync both ways with Advanced (1.6.24)', (tester) async {
+    final harness = await _pumpSettingsScreen(tester);
+    addTearDown(() => harness.dispose(tester));
+
+    // The shared rows exist on both pages, so every finder below is
+    // scoped to the page it means — the pushed sub-page stays mounted
+    // above Advanced in the Navigator stack.
+    Finder rowOn(Type page, String title) => find.descendant(
+          of: find.byType(page),
+          matching: find.text(title),
+        );
+    bool switchValueOn(Type page, String title) {
+      final tile = find.descendant(
+        of: find.byType(page),
+        matching: find.ancestor(
+          of: find.text(title),
+          matching: find.byType(SwitchListTile),
+        ),
+      );
+      final sw = find.descendant(of: tile, matching: find.byType(Switch));
+      return tester.widget<Switch>(sw).value;
+    }
+
+    // Open the Super Spoof page and flip MPEG-TS on there.
+    await tester.scrollUntilVisible(find.text(t.settings.superSpoof), 200);
+    await tester.pump();
+    await tester.tap(find.text(t.settings.superSpoof));
+    await _pumpUi(tester);
+    expect(rowOn(SuperSpoofSettingsScreen, t.settings.iptvLiveTs), findsOneWidget);
+
+    await tester.tap(rowOn(SuperSpoofSettingsScreen, t.settings.iptvLiveTs));
+    await _pumpUi(tester);
+    expect(SettingsService.instance.read(SettingsService.iptvLiveTs), isTrue);
+    expect(switchValueOn(SuperSpoofSettingsScreen, t.settings.iptvLiveTs), isTrue);
+
+    // Back on Advanced, the same switch shows on.
+    await tester.pageBack();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.scrollUntilVisible(find.text(t.settings.iptvLiveTs), 200);
+    await tester.pump();
+    expect(switchValueOn(SettingsScreen, t.settings.iptvLiveTs), isTrue);
+
+    // Flip it off on Advanced; the sub-page follows.
+    await tester.tap(rowOn(SettingsScreen, t.settings.iptvLiveTs));
+    await _pumpUi(tester);
+    expect(SettingsService.instance.read(SettingsService.iptvLiveTs), isFalse);
+
+    await tester.scrollUntilVisible(find.text(t.settings.superSpoof), 200);
+    await tester.pump();
+    await tester.tap(find.text(t.settings.superSpoof));
+    await _pumpUi(tester);
+    expect(switchValueOn(SuperSpoofSettingsScreen, t.settings.iptvLiveTs), isFalse);
   });
 
   testWidgets('restoring a fork backup re-resolves the active profile before rebinding', (tester) async {

@@ -24,6 +24,7 @@ import 'package:plezy/screens/settings/iptv_settings_screen.dart';
 import 'package:plezy/screens/settings/super_spoof_settings_screen.dart';
 import 'package:plezy/services/credential_vault.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
+import 'package:plezy/services/iptv/warp_tunnel_service.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -73,6 +74,9 @@ void main() {
     await SettingsService.getInstance();
     await StorageService.getInstance();
     LocaleSettings.setLocaleSync(AppLocale.en);
+    // The VPN row listens to the tunnel singleton; reset it to off so
+    // no test inherits another test's driven state.
+    WarpTunnelService.instance.debugSetTunnelForTest(on: false);
     epgTempDir = await Directory.systemTemp.createTemp('plezy_spoof_shared_');
     IptvLiveTvSupport.debugEpgCacheDirectoryProvider = () async => epgTempDir;
     IptvCatalogDiskCache.debugDisableDisk = true;
@@ -196,6 +200,135 @@ void main() {
       // The value shows twice by design: the selection tile subtitle
       // AND the custom text row subtitle both show the stored text.
       expect(find.text('MyAgent/9'), findsWidgets);
+    });
+  });
+
+  group('Super Spoof page extra rows (1.6.24)', () {
+    testWidgets('all six extra rows are present in Advanced order with defaults', (tester) async {
+      await _pumpPage(tester);
+
+      final settings = SettingsService.instance;
+      expect(settings.read(SettingsService.iptvLiveTs), isFalse);
+      expect(settings.read(SettingsService.iptvPreferIpv4), isFalse);
+      expect(settings.read(SettingsService.iptvWarpVpn), isFalse);
+      expect(settings.read(SettingsService.iptvWarpTransport), 'masque');
+      expect(settings.read(SettingsService.iptvWarpMasqueVhttp), 'auto');
+
+      // The extra rows are always visible, even with the master off.
+      expect(find.text(t.settings.iptvLiveTs), findsOneWidget);
+      expect(find.text(t.settings.preferIpv4), findsOneWidget);
+      expect(find.text(t.settings.warpVpn), findsOneWidget);
+      expect(find.text(t.settings.warpTransport), findsOneWidget);
+      expect(find.text(t.settings.warpMasqueVhttp), findsOneWidget);
+      expect(find.text(t.settings.resetWarpRegistration), findsOneWidget);
+
+      // Order matches Advanced: MPEG-TS, Prefer IPv4, VPN, Tunnel
+      // transport, MASQUE transport, Reset last.
+      final tsY = tester.getCenter(find.text(t.settings.iptvLiveTs)).dy;
+      final ipv4Y = tester.getCenter(find.text(t.settings.preferIpv4)).dy;
+      final vpnY = tester.getCenter(find.text(t.settings.warpVpn)).dy;
+      final transportY = tester.getCenter(find.text(t.settings.warpTransport)).dy;
+      final vhttpY = tester.getCenter(find.text(t.settings.warpMasqueVhttp)).dy;
+      final resetY = tester.getCenter(find.text(t.settings.resetWarpRegistration)).dy;
+      expect(tsY < ipv4Y && ipv4Y < vpnY && vpnY < transportY && transportY < vhttpY && vhttpY < resetY, isTrue);
+
+      // The selection rows show their resolved defaults, and the VPN
+      // row shows the static description while the tunnel is off.
+      expect(find.text(t.settings.warpTransportMasque), findsOneWidget);
+      expect(find.text(t.settings.warpMasqueVhttpAuto), findsOneWidget);
+      expect(find.text(t.settings.warpVpnDescription), findsOneWidget);
+    });
+
+    testWidgets('toggling MPEG-TS and Prefer IPv4 on this page writes the shared prefs', (tester) async {
+      await _pumpPage(tester);
+
+      final settings = SettingsService.instance;
+      await tester.tap(find.text(t.settings.iptvLiveTs));
+      await tester.pumpAndSettle();
+      expect(settings.read(SettingsService.iptvLiveTs), isTrue);
+
+      await tester.tap(find.text(t.settings.preferIpv4));
+      await tester.pumpAndSettle();
+      expect(settings.read(SettingsService.iptvPreferIpv4), isTrue);
+    });
+
+    testWidgets('VPN row subtitle follows the tunnel state', (tester) async {
+      await _pumpPage(tester);
+      expect(find.text(t.settings.warpVpnDescription), findsOneWidget);
+
+      // The seam notifies listeners, so the VPN row's live subtitle
+      // rebuilds on the next pump.
+      WarpTunnelService.instance.debugSetTunnelForTest(on: true);
+      await tester.pump();
+      expect(find.text(t.settings.warpVpnStateOn), findsOneWidget);
+      expect(find.text(t.settings.warpVpnDescription), findsNothing);
+    });
+
+    testWidgets('VPN turn-on with terms unaccepted shows the terms dialog; declining leaves it off', (tester) async {
+      await _pumpPage(tester);
+
+      expect(SettingsService.instance.read(SettingsService.iptvWarpTermsAccepted), isFalse);
+      await tester.tap(find.text(t.settings.warpVpn));
+      await tester.pumpAndSettle();
+
+      expect(find.text(t.settings.warpTermsTitle), findsOneWidget);
+      await tester.tap(find.text(t.settings.warpTermsDecline));
+      await tester.pumpAndSettle();
+
+      expect(SettingsService.instance.read(SettingsService.iptvWarpVpn), isFalse);
+      expect(find.text(t.settings.warpTermsRequired), findsOneWidget);
+    });
+
+    testWidgets('VPN turn-off writes the pref false', (tester) async {
+      final settings = SettingsService.instance;
+      await settings.write(SettingsService.iptvWarpVpn, true);
+      await _pumpPage(tester);
+
+      await tester.tap(find.text(t.settings.warpVpn));
+      await tester.pumpAndSettle();
+
+      expect(settings.read(SettingsService.iptvWarpVpn), isFalse);
+    });
+
+    testWidgets('tunnel transport dialog picks WireGuard and writes the pref', (tester) async {
+      await _pumpPage(tester);
+
+      await tester.tap(find.text(t.settings.warpTransport));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(t.settings.warpTransportWireguard));
+      await tester.pumpAndSettle();
+
+      expect(SettingsService.instance.read(SettingsService.iptvWarpTransport), 'wireguard');
+      expect(find.text(t.settings.warpTransportWireguard), findsOneWidget);
+    });
+
+    testWidgets('MASQUE transport dialog picks H2 and writes the pref', (tester) async {
+      await _pumpPage(tester);
+
+      await tester.tap(find.text(t.settings.warpMasqueVhttp));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(t.settings.warpMasqueVhttpH2));
+      await tester.pumpAndSettle();
+
+      expect(SettingsService.instance.read(SettingsService.iptvWarpMasqueVhttp), 'h2');
+      expect(find.text(t.settings.warpMasqueVhttpH2), findsOneWidget);
+    });
+
+    testWidgets('Reset row shows the confirm dialog; cancelling leaves registration and VPN pref untouched', (tester) async {
+      final settings = SettingsService.instance;
+      await settings.write(SettingsService.iptvWarpRegistration, 'sentinel-registration');
+      await settings.write(SettingsService.iptvWarpVpn, true);
+      await _pumpPage(tester);
+
+      await tester.tap(find.text(t.settings.resetWarpRegistration));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.text(t.common.cancel));
+      await tester.pumpAndSettle();
+
+      expect(settings.read(SettingsService.iptvWarpRegistration), 'sentinel-registration');
+      expect(settings.read(SettingsService.iptvWarpVpn), isTrue);
     });
   });
 }
