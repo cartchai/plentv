@@ -58,13 +58,14 @@ List<LibraryTabType> visibleLibraryTabs(MediaLibrary library) {
   // in TV/Series. Every other backend keeps Collections.
   if (library.backend == MediaBackend.m3u || library.backend == MediaBackend.xtream) {
     return [
+      // 1.6.25: Favourites is the first tab for IPTV libraries — the
+      // area the owner named — and is IPTV-only: Plex favourites are
+      // server-side, not a local tab. The landing tab follows: with no
+      // saved tab the page opens on Favourites (index 0).
+      LibraryTabType.favorites,
       LibraryTabType.recommended,
       LibraryTabType.browse,
       LibraryTabType.categories,
-      // Favourites (build #15, item 7) sits right after Categories — the
-      // area the owner named — and is IPTV-only: Plex favourites are
-      // server-side, not a local tab.
-      LibraryTabType.favorites,
       LibraryTabType.playlists,
     ];
   }
@@ -443,7 +444,16 @@ class _LibrariesScreenState extends State<LibrariesScreen>
   void _updateVisibleTabs(List<LibraryTabType> newTabs) {
     if (listEquals(_visibleTabs, newTabs)) return;
 
-    final currentTabType = _visibleTabs.length > tabController.index ? _visibleTabs[tabController.index] : null;
+    // First load has no user-picked tab to preserve: the initial list is
+    // just the enum placeholder, and carrying its index-0 (Recommended)
+    // over would defeat the first-tab landing (1.6.25: IPTV libraries
+    // land on Favourites). Carry over only when switching away from an
+    // already-loaded library — _selectedLibraryGlobalKey is still the
+    // previous library here, set after this call.
+    final isFirstLoad = _selectedLibraryGlobalKey == null;
+    final currentTabType = !isFirstLoad && _visibleTabs.length > tabController.index
+        ? _visibleTabs[tabController.index]
+        : null;
 
     for (final node in _tabFocusNodes) {
       node.dispose();

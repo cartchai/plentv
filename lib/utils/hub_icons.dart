@@ -49,6 +49,9 @@ const _titleKeywordIcons = <(List<String>, IconData)>[
   (['adventure', 'äventyr'], Symbols.explore_rounded),
   // Watchlist/Playlists
   (['playlist', 'watchlist'], Symbols.playlist_play_rounded),
+  // Favourites (1.6.25): the Home favourites hub is titled "Favourites"
+  // and gets the heart, not the default sparkle.
+  (['favourite', 'favorite'], Symbols.favorite_rounded),
   (['unwatched', 'unplayed'], Symbols.visibility_off_rounded),
   (['watched', 'played'], Symbols.visibility_rounded),
   // Network/Studio

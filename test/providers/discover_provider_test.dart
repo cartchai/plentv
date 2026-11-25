@@ -17,6 +17,12 @@ import 'package:plezy/providers/multi_server_provider.dart';
 import 'package:plezy/services/data_aggregation_service.dart';
 import 'package:plezy/services/library_events/library_event_service.dart';
 import 'package:plezy/services/multi_server_manager.dart';
+import 'package:plezy/connection/connection.dart';
+import 'package:plezy/i18n/strings.g.dart';
+import 'package:plezy/media/iptv_client.dart';
+import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
+import 'package:plezy/services/iptv/iptv_item_favorites_repository.dart';
+import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/settings_service.dart';
 import 'package:plezy/utils/deletion_notifier.dart';
 import 'package:plezy/utils/watch_state_notifier.dart';
@@ -188,6 +194,54 @@ class _PushChannel implements LibraryEventChannel {
 
   @override
   void dispose() => unawaited(_events.close());
+}
+
+/// Fake Xtream API returning a canned catalog (no network) — same shape
+/// as the library favourites tab tests.
+class _FakeXtreamApi extends XtreamApi {
+  _FakeXtreamApi()
+    : super(serverUrl: 'https://panel.example.com:8080', username: 'user', password: 'test-password');
+
+  @override
+  Future<List<XtreamVodStream>> getVodStreams({String? categoryId, Future<void>? abortTrigger}) async => const [
+    XtreamVodStream(streamId: 1, name: 'Alpha Movie', containerExtension: 'mp4', categoryId: '1'),
+    XtreamVodStream(streamId: 2, name: 'Beta Movie', containerExtension: 'mkv', categoryId: '2'),
+  ];
+
+  @override
+  Future<List<XtreamSeries>> getSeries({String? categoryId, Future<void>? abortTrigger}) async => const [
+    XtreamSeries(seriesId: 10, name: 'Alpha Show', categoryId: '1'),
+  ];
+}
+
+/// In-memory favourites store: the real repo reads SharedPreferences,
+/// whose async platform channel never completes inside `testWidgets`'
+/// fake async zone when started from a widget load.
+class _InMemoryItemFavoritesRepository implements IptvItemFavoritesRepository {
+  Map<String, IptvFavoriteItem> _items = {};
+
+  @override
+  Future<Map<String, IptvFavoriteItem>> read({required String key}) async => Map.of(_items);
+
+  @override
+  Future<void> write(String key, Map<String, IptvFavoriteItem> items) async {
+    _items = Map.of(items);
+  }
+}
+
+IptvClient _iptvClient(_InMemoryItemFavoritesRepository repo) {
+  final connection = XtreamConnection(
+    id: 'conn-xt-1',
+    name: 'Trex',
+    serverUrl: 'https://panel.example.com:8080',
+    username: 'user',
+    password: 'test-password',
+    createdAt: DateTime.utc(2026, 11, 5),
+  );
+  final client = IptvClient.forConnection(connection);
+  client.testXtreamApi = _FakeXtreamApi();
+  client.testItemFavoritesRepository = repo;
+  return client;
 }
 
 void main() {
@@ -1558,6 +1612,72 @@ void main() {
       scoped.dispose();
       await settle();
       expect(aggregation.hubCalls, 1);
+    });
+  });
+
+  group('IPTV favourites hub on Home (1.6.25)', () {
+    setUp(() {
+      // Same as the library favourites tab tests: the catalog disk
+      // cache's real dart:io never completes in fake async, and its
+      // behaviour is covered by its own unit tests.
+      IptvCatalogDiskCache.debugDisableDisk = true;
+    });
+
+    tearDown(() {
+      IptvCatalogDiskCache.debugDisableDisk = false;
+    });
+
+    Future<IptvClient> _addIptvLibrary({required Map<String, IptvFavoriteItem> favourites}) async {
+      final repo = _InMemoryItemFavoritesRepository();
+      await repo.write('iptv_fav_items:conn-xt-1', favourites);
+      final client = _iptvClient(repo);
+      addTearDown(client.close);
+      manager.debugRegisterClientForTesting(client);
+      await libraries.updateLibraryOrder([
+        const MediaLibrary(
+          id: 'iptv-movies',
+          backend: MediaBackend.xtream,
+          title: 'trex — Movies',
+          kind: MediaKind.movie,
+          serverId: 'conn-xt-1',
+        ),
+      ]);
+      return client;
+    }
+
+    test('favourites lead Home, ahead of the Plex hubs', () async {
+      await _addIptvLibrary(favourites: {
+        'movie:1': const IptvFavoriteItem(
+          id: 'movie:1',
+          kind: 'movie',
+          title: 'Alpha Movie',
+          libraryId: 'iptv:conn-xt-1:movies',
+        ),
+        'series:10': const IptvFavoriteItem(
+          id: 'series:10',
+          kind: 'show',
+          title: 'Alpha Show',
+          libraryId: 'iptv:conn-xt-1:series',
+        ),
+      });
+      aggregation.hubsResult = () => [_hub('plex-hub')];
+
+      await provider.load();
+
+      expect(provider.hubs.map((h) => h.id), ['favorites', 'plex-hub']);
+      final favHub = provider.hubs.first;
+      expect(favHub.title, t.libraries.tabs.favorites);
+      expect(favHub.more, isTrue);
+      expect(favHub.items.map((i) => i.title), containsAll(['Alpha Movie', 'Alpha Show']));
+    });
+
+    test('no favourites means no Favourites row on Home', () async {
+      await _addIptvLibrary(favourites: {});
+      aggregation.hubsResult = () => [_hub('plex-hub')];
+
+      await provider.load();
+
+      expect(provider.hubs.map((h) => h.id), ['plex-hub']);
     });
   });
 }

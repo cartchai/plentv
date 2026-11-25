@@ -134,14 +134,14 @@ void main() {
     IptvCatalogDiskCache.debugDisableDisk = false;
   });
 
-  test('Favourites sits after Categories for IPTV, and Plex gets neither', () {
+  test('Favourites sits first for IPTV, and Plex gets neither', () {
     expect(
       visibleLibraryTabs(_moviesLibrary),
       [
+        LibraryTabType.favorites,
         LibraryTabType.recommended,
         LibraryTabType.browse,
         LibraryTabType.categories,
-        LibraryTabType.favorites,
         LibraryTabType.playlists,
       ],
     );

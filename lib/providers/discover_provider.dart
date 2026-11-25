@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../i18n/strings.g.dart';
 import '../media/ids.dart';
+import '../media/iptv_client.dart';
+import '../media/media_backend.dart';
 import '../media/media_hub.dart';
 import '../media/library_change_event.dart';
 import '../media/media_item.dart';
@@ -570,6 +573,12 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       final filteredHubs = _filterDiscoverHubs(fetchedHubs.hubs);
       sortMediaHubsByLibraryOrder(filteredHubs, _libraries.libraries);
 
+      // 1.6.25: IPTV favourites lead the home rows (first after Continue
+      // Watching). Built here so both layouts get it and it rides the
+      // normal load/refresh passes; hidden when there are no favourites.
+      final favoritesHub = await _loadIptvFavoritesHub();
+      if (favoritesHub != null) filteredHubs.insert(0, favoritesHub);
+
       appLogger.d('DiscoverProvider: ${_onDeck.length} on-deck items, ${filteredHubs.length} hubs');
       _replaceHubs(filteredHubs);
       ++expectedCommitRevision;
@@ -726,6 +735,9 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
           ..._filterDiscoverHubs(freshHubs.hubs),
         ];
         sortMediaHubsByLibraryOrder(mergedHubs, _libraries.libraries);
+        // The favourites hub is not a library hub, so the sort above
+        // would sink it among the library rows — re-assert first.
+        _moveFavoritesHubFirst(mergedHubs);
         _replaceHubs(mergedHubs);
         _loadedHubServerIds = {..._loadedHubServerIds, ...succeededHubIds}
           ..removeAll(freshHubs.failedServerIds)
@@ -752,9 +764,58 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     }
   }
 
+  /// The Home favourites hub id. It is a synthesized row, not a server hub.
+  static const _favoritesHubId = 'favorites';
+
+  /// The IPTV favourites hub for Home (1.6.25): favourited movies, series
+  /// and episodes across the visible IPTV connections, newest first — the
+  /// same set the library Favourites tabs show (live channels are not
+  /// in it, and neither are Plex favourites). Null when there are no
+  /// favourites, so Home stays clean until the user long-presses
+  /// something. A single client's failure never kills the row.
+  Future<MediaHub?> _loadIptvFavoritesHub() async {
+    final hiddenKeys = _hiddenLibraries.hiddenLibraryKeys;
+    final iptvClients = <IptvClient>[];
+    for (final library in _libraries.libraries) {
+      if (library.backend != MediaBackend.m3u && library.backend != MediaBackend.xtream) continue;
+      if (hiddenKeys.contains(library.globalKey)) continue;
+      final serverId = serverIdOrNull(library.serverId);
+      if (serverId == null) continue;
+      final client = _multiServer.getClientForServer(serverId);
+      if (client is IptvClient && !iptvClients.contains(client)) iptvClients.add(client);
+    }
+    if (iptvClients.isEmpty) return null;
+    final items = <MediaItem>[];
+    for (final client in iptvClients) {
+      try {
+        items.addAll(await client.favoriteItems());
+      } catch (e) {
+        appLogger.w('DiscoverProvider: favourites for ${client.connection.id} failed', error: e);
+      }
+    }
+    if (items.isEmpty) return null;
+    return MediaHub(
+      id: _favoritesHubId,
+      title: t.libraries.tabs.favorites,
+      type: 'mixed',
+      items: items,
+      size: items.length,
+      more: true,
+    );
+  }
+
+  /// The favourites hub always leads the home rows (first after Continue
+  /// Watching) — re-assert after every sort, full pass or delta merge.
+  void _moveFavoritesHubFirst(List<MediaHub> hubs) {
+    final index = hubs.indexWhere((hub) => hub.id == _favoritesHubId);
+    if (index > 0) {
+      final hub = hubs.removeAt(index);
+      hubs.insert(0, hub);
+    }
+  }
+
   /// Playback-progress hubs duplicate the top Continue Watching row.
-  List<MediaHub> _filterDiscoverHubs(List<MediaHub> hubs) {
-    return hubs.where((hub) {
+  List<MediaHub> _filterDiscoverHubs(List<MediaHub> hubs) {    return hubs.where((hub) {
       final hubId = hub.identifier?.toLowerCase() ?? '';
       final title = hub.title.toLowerCase();
       return !hubId.contains('ondeck') &&

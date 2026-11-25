@@ -183,25 +183,24 @@ void main() {
   });
 
   test('IPTV libraries replace Collections with Categories', () {
-    // Build #15, item 7: every IPTV library also gets a Favourites tab
-    // after Categories.
+    // 1.6.25: Favourites is the first tab for IPTV libraries.
     expect(
       visibleLibraryTabs(_moviesLibrary),
       [
+        LibraryTabType.favorites,
         LibraryTabType.recommended,
         LibraryTabType.browse,
         LibraryTabType.categories,
-        LibraryTabType.favorites,
         LibraryTabType.playlists,
       ],
     );
     expect(
       visibleLibraryTabs(_seriesLibrary),
       [
+        LibraryTabType.favorites,
         LibraryTabType.recommended,
         LibraryTabType.browse,
         LibraryTabType.categories,
-        LibraryTabType.favorites,
         LibraryTabType.playlists,
       ],
     );
@@ -209,10 +208,10 @@ void main() {
     expect(
       visibleLibraryTabs(m3u),
       [
+        LibraryTabType.favorites,
         LibraryTabType.recommended,
         LibraryTabType.browse,
         LibraryTabType.categories,
-        LibraryTabType.favorites,
         LibraryTabType.playlists,
       ],
     );

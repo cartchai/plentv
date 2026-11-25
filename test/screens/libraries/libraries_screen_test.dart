@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:plezy/connection/connection.dart';
 import 'package:plezy/exceptions/media_server_exceptions.dart';
+import 'package:plezy/media/iptv_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plezy/focus/input_mode_tracker.dart';
 import 'package:plezy/i18n/strings.g.dart';
@@ -32,6 +34,8 @@ import 'package:plezy/screens/collection_detail_screen.dart';
 import 'package:plezy/screens/libraries/tabs/library_browse_tab.dart';
 import 'package:plezy/screens/libraries/tabs/library_recommended_tab.dart';
 import 'package:plezy/screens/libraries/tabs/base_library_tab.dart';
+import 'package:plezy/services/iptv/iptv_item_favorites_repository.dart';
+import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/library_events/library_event_service.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -40,6 +44,7 @@ import 'package:plezy/theme/mono_theme.dart';
 import 'package:plezy/utils/media_server_http_client.dart';
 import 'package:plezy/utils/library_content_notifier.dart';
 import 'package:plezy/media/library_change_event.dart';
+import 'package:plezy/widgets/focusable_tab_chip.dart';
 import 'package:plezy/widgets/hub_section.dart';
 import 'package:plezy/widgets/overlay_sheet.dart';
 import 'package:plezy/utils/platform_detector.dart';
@@ -96,6 +101,59 @@ const _jellyfinMovies = MediaLibrary(
   kind: MediaKind.movie,
   serverId: 'server-c',
 );
+
+// An IPTV Movies library with no registered client: its Favourites tab
+// renders the defensive empty state, which is all the order/landing
+// tests below need.
+const _iptvMoviesLibrary = MediaLibrary(
+  id: 'iptv-movies',
+  backend: MediaBackend.xtream,
+  title: 'trex — Movies',
+  kind: MediaKind.movie,
+  serverId: 'trex',
+);
+
+/// Fake Xtream API returning an empty catalog (no network).
+class _FakeXtreamApi extends XtreamApi {
+  _FakeXtreamApi()
+    : super(serverUrl: 'https://panel.example.com:8080', username: 'user', password: 'test-password');
+
+  @override
+  Future<List<XtreamVodStream>> getVodStreams({String? categoryId, Future<void>? abortTrigger}) async => const [];
+
+  @override
+  Future<List<XtreamSeries>> getSeries({String? categoryId, Future<void>? abortTrigger}) async => const [];
+}
+
+/// In-memory favourites store: the real repo reads SharedPreferences,
+/// whose async platform channel never completes inside `testWidgets`'
+/// fake async zone when started from a widget load.
+class _InMemoryItemFavoritesRepository implements IptvItemFavoritesRepository {
+  Map<String, IptvFavoriteItem> _items = {};
+
+  @override
+  Future<Map<String, IptvFavoriteItem>> read({required String key}) async => Map.of(_items);
+
+  @override
+  Future<void> write(String key, Map<String, IptvFavoriteItem> items) async {
+    _items = Map.of(items);
+  }
+}
+
+IptvClient _iptvClient(_InMemoryItemFavoritesRepository repo) {
+  final connection = XtreamConnection(
+    id: 'trex',
+    name: 'Trex',
+    serverUrl: 'https://panel.example.com:8080',
+    username: 'user',
+    password: 'test-password',
+    createdAt: DateTime.utc(2026, 11, 5),
+  );
+  final client = IptvClient.forConnection(connection);
+  client.testXtreamApi = _FakeXtreamApi();
+  client.testItemFavoritesRepository = repo;
+  return client;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -238,6 +296,53 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(harness.controller(tester).index, 0);
+  });
+
+  testWidgets('IPTV libraries open on Favourites first, with no saved tab', (tester) async {
+    final preferences = _GatedPreferences({'selected_library_key': _iptvMoviesLibrary.globalKey});
+    final client = _iptvClient(_InMemoryItemFavoritesRepository());
+    addTearDown(client.close);
+    final harness = await _Harness.create(
+      preferences,
+      clients: [client],
+      libraryOrder: const [_iptvMoviesLibrary],
+    );
+    addTearDown(harness.dispose);
+
+    await harness.pump(tester);
+
+    // 1.6.25: Favourites is the first chip and the landing tab.
+    final chips = tester.widgetList<FocusableTabChip>(find.byType(FocusableTabChip)).toList();
+    expect(chips.map((c) => c.label).toList(), [
+      t.libraries.tabs.favorites,
+      t.libraries.tabs.recommended,
+      t.libraries.tabs.browse,
+      t.libraries.tabs.categories,
+      t.libraries.tabs.playlists,
+    ]);
+    expect(harness.controller(tester).index, 0);
+    // The repo holds no favourites, so the landing tab shows its empty state.
+    expect(find.text(t.libraries.noFavorites), findsOneWidget);
+  });
+
+  testWidgets('a saved Recommended tab still restores after the reorder', (tester) async {
+    final preferences = _GatedPreferences({
+      'selected_library_key': _iptvMoviesLibrary.globalKey,
+      'library_tab_${_iptvMoviesLibrary.globalKey}': LibraryTabType.recommended.name,
+    });
+    final client = _iptvClient(_InMemoryItemFavoritesRepository());
+    addTearDown(client.close);
+    final harness = await _Harness.create(
+      preferences,
+      clients: [client],
+      libraryOrder: const [_iptvMoviesLibrary],
+    );
+    addTearDown(harness.dispose);
+
+    await harness.pump(tester);
+
+    // Recommended moved from index 0 to index 1; the name-based restore follows.
+    expect(harness.controller(tester).index, 1);
   });
 
   testWidgets('disposal rejects a pending saved-tab continuation', (tester) async {
