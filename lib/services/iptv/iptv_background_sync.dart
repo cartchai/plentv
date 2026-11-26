@@ -196,7 +196,8 @@ class IptvBackgroundSync {
   /// the record is unreadable). Shape:
   /// `{ranAtMs, connections: {id: {live|movie|series: outcome}},
   /// requests, retry, skipped}` where `skipped` is null or one of
-  /// 'playing' | 'already-running' | 'load-failed' | 'storage-full'
+  /// 'playing' | 'already-running' | 'load-failed' | 'storage-full' |
+  /// 'tunnel-on'
   /// (L-20: refused below 200 MB free).
   static Future<Map<String, Object?>?> readLastRun() async {
     try {
@@ -235,6 +236,8 @@ class IptvBackgroundSync {
   /// - playing, or another isolate already syncing → false for playing
   ///   (retry later), true for already-running (the UI sync is doing
   ///   the same work);
+  /// - tunnel toggle on → true (skip; the foreground sync rides the
+  ///   tunnel and does the same work, 1.6.28 G2);
   /// - aborted (the platform stopped the worker) → false;
   /// - no connections, or everything up-to-date → true.
   ///
@@ -304,6 +307,25 @@ class IptvBackgroundSync {
     );
     final superSpoofHeaders =
         superSpoofOn && (prefs.getBool(SettingsService.iptvSuperSpoofHeaders.key) ?? true);
+
+    // 1.6.28 (G2): the tunnel toggle is on — the background isolate
+    // has no tunnel state (its WarpTunnelService is a fresh singleton,
+    // isOn == false), so a sync here would fetch the catalog DIRECT
+    // on a schedule while the user believes everything is tunneled.
+    // Skip this run instead: the foreground sync rides the tunnel and
+    // does the same work when the app is opened. No retry — the next
+    // scheduled run re-reads the toggle.
+    if (prefs.getBool(SettingsService.iptvWarpVpn.key) ?? false) {
+      appLogger.i('IPTV background sync: skipped — VPN tunnel is on; the foreground sync covers it');
+      await _writeLastRun({
+        'ranAtMs': DateTime.now().millisecondsSinceEpoch,
+        'connections': <String, Object?>{},
+        'requests': 0,
+        'retry': false,
+        'skipped': 'tunnel-on',
+      });
+      return true;
+    }
 
     // D3: connections are encrypted in Drift behind the OS keystore.
     // A vault-unavailable load is a retry, never a crash, never a

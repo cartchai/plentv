@@ -1664,6 +1664,8 @@
     "changelog2347": [
       "New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file"
     ],
+    "changelog2346": [
+      "Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too"    ],
     "changelog2345": [
       "Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently"
     ],
@@ -3402,6 +3404,7 @@
     "m3uPlaylistEmpty": "That playlist has no channels.",
     "m3uInvalidUrl": "Enter a valid playlist URL starting with http:// or https://.",
     "xtreamProbeFailed": "Could not sign in to that Xtream server. Check the server URL, username, and password.",
+   "tunnelStillStarting": "The VPN tunnel is still starting. Please wait a moment and try again.",
     "addIptv": "Add"
   },
   "deepLinks": {

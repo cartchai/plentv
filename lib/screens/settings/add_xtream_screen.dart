@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:uuid/uuid.dart';
@@ -180,6 +181,67 @@ class _AddXtreamScreenState extends State<AddXtreamScreen> with AsyncFormStateMi
   /// is off.
   static bool _tunnelOn() => WarpTunnelService.instance.isOn;
 
+  /// 1.6.28 (G1): when the tunnel toggle is on, wait for the tunnel to
+  /// finish starting/restoring before the sign-in probe fires, bounded
+  /// to 5 s in total (same bound as the health gate in
+  /// `IptvClient.checkHealth`). Returns true when the probe may fire:
+  /// the tunnel is on, or the toggle is off (direct, as today).
+  /// Returns false when the toggle is on but the tunnel is still
+  /// starting after the bound — the caller must NOT probe direct in
+  /// that case. Never throws: a gate failure proceeds as today (the
+  /// health gate has the same best-effort shape).
+  Future<bool> _waitForTunnelReady() async {
+    final service = WarpTunnelService.instance;
+    if (service.isOn) return true;
+    bool toggleOn;
+    try {
+      toggleOn = service.toggleOn;
+    } catch (_) {
+      // Settings not initialized: no tunnel could be restoring —
+      // proceed as today.
+      return true;
+    }
+    if (!toggleOn) return true;
+    final deadline = DateTime.now().add(const Duration(seconds: 5));
+    // Cold-start restore in flight (the 1.6.18 gate): the restore
+    // future settles when start() finishes.
+    await service.waitForRestoreSettled(
+      timeout: deadline.difference(DateTime.now()),
+    );
+    if (service.isOn) return true;
+    // Manual start in flight (state == starting, no restore future —
+    // the Settings toggle calls start() directly): wait for the state
+    // to leave `starting`, same overall bound.
+    if (service.isStarting) {
+      await _waitForTunnelStateSettled(deadline);
+      if (service.isOn) return true;
+    }
+    return false;
+  }
+
+  /// Wait for the tunnel state to leave `starting`, bounded by
+  /// [deadline]. Returns when the state settles or the deadline
+  /// passes; never throws.
+  Future<void> _waitForTunnelStateSettled(DateTime deadline) async {
+    final service = WarpTunnelService.instance;
+    if (!service.isStarting) return;
+    final completer = Completer<void>();
+    void listener() {
+      if (!service.isStarting && !completer.isCompleted) completer.complete();
+    }
+    service.addListener(listener);
+    try {
+      final remaining = deadline.difference(DateTime.now());
+      if (remaining <= Duration.zero) return;
+      await completer.future.timeout(remaining);
+    } on TimeoutException {
+      // Still starting after the bound: the caller fails instead of
+      // probing direct.
+    } finally {
+      service.removeListener(listener);
+    }
+  }
+
   Future<void> _signIn() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final name = _nameController.text.trim();
@@ -188,6 +250,15 @@ class _AddXtreamScreenState extends State<AddXtreamScreen> with AsyncFormStateMi
     final password = _passwordController.text;
     await runAsync<void>(
       () async {
+        // 1.6.28 (G1): never send the sign-in probe direct while the
+        // tunnel is still starting — on home WiFi it 403s and records
+        // a refusal. If the tunnel is still starting after the
+        // bounded wait, fail with a clear message instead.
+        if (!await _waitForTunnelReady()) {
+          if (!mounted) return;
+          setErrorText(t.addServer.tunnelStillStarting);
+          return;
+        }
         final authed = await _probe(serverUrl, username, password, name);
         if (!mounted) return;
         if (!authed) {

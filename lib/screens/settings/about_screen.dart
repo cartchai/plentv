@@ -60,6 +60,7 @@ class AboutScreen extends StatelessWidget {
                     title: t.about.changelogTitle,
                     children: [
                       _ChangelogEntry(version: '1.6.29-2.26.0', changes: t.about.changelog2347),
+                      _ChangelogEntry(version: '1.6.28-2.26.0', changes: t.about.changelog2346),
                       _ChangelogEntry(version: '1.6.27-2.26.0', changes: t.about.changelog2345),
                       _ChangelogEntry(version: '1.6.26-2.26.0', changes: t.about.changelog2344),
                       _ChangelogEntry(version: '1.6.25-2.26.0', changes: t.about.changelog2343),

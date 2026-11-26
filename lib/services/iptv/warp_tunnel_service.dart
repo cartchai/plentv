@@ -488,9 +488,13 @@ class WarpTunnelService extends ChangeNotifier {
   /// production code must not call it. It notifies listeners, like
   /// [_setState] does, so UI bound to the tunnel state (the VPN row's
   /// live subtitle) rebuilds when a test drives it.
+  ///
+  /// 1.6.28: [starting] puts the singleton in the `starting` state
+  /// (a restore or a manual start in flight) so tests can prove the
+  /// sign-in probe waits for the tunnel instead of going direct.
   @visibleForTesting
-  void debugSetTunnelForTest({required bool on, int proxyPort = -1}) {
-    _state = on ? WarpTunnelState.on : WarpTunnelState.off;
+  void debugSetTunnelForTest({required bool on, int proxyPort = -1, bool starting = false}) {
+    _state = starting ? WarpTunnelState.starting : (on ? WarpTunnelState.on : WarpTunnelState.off);
     _proxyPort = proxyPort;
     notifyListeners();
   }

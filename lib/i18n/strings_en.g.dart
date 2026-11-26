@@ -4204,6 +4204,9 @@ class Translations$about$en {
 	List<String> get changelog2347 => [
 		'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
 	];
+	List<String> get changelog2346 => [
+		'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
+	];
 	List<String> get changelog2345 => [
 		'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 	];
@@ -7423,6 +7426,9 @@ class Translations$addServer$en {
 
 	/// en: 'Could not sign in to that Xtream server. Check the server URL, username, and password.'
 	String get xtreamProbeFailed => 'Could not sign in to that Xtream server. Check the server URL, username, and password.';
+
+	/// en: 'The VPN tunnel is still starting. Please wait a moment and try again.'
+	String get tunnelStillStarting => 'The VPN tunnel is still starting. Please wait a moment and try again.';
 
 	/// en: 'Add'
 	String get addIptv => 'Add';
@@ -11975,6 +11981,7 @@ extension on Translations {
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
 			'about.changelog2347.0' => 'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
+			'about.changelog2346.0' => 'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
 			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
@@ -12001,9 +12008,9 @@ extension on Translations {
 			'about.changelog2331.1' => 'New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi',
 			'about.changelog2331.2' => 'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
 			'about.changelog2331.3' => 'Fixed: opening Movies or TV shows with no saved catalogue no longer fires a burst of requests at once — the load is paced, and it stops if the provider refuses',
-			'about.changelog2331.4' => 'Fixed: a background catalogue sync that gets refused is never retried',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2331.4' => 'Fixed: a background catalogue sync that gets refused is never retried',
 			'about.changelog2330.0' => 'New: the catalog refresh keeps going when you lock the phone or switch to another app, and no longer says “failed” just because the screen went off — come back to a loaded catalog',
 			'about.changelog2330.1' => 'Fixed: the catalog refresh now shows how much has downloaded while it runs, and each section (live, then movies, then series) appears as soon as it lands',
 			'about.changelog2330.2' => 'Fixed: a movie page opens right away and fills in its details as they arrive, instead of making you wait for them first',
@@ -12515,9 +12522,9 @@ extension on Translations {
 			'explore.broadcastWithZone' => ({required Object day, required Object time, required Object timezone}) => 'Airs ${day} at ${time} ${timezone}',
 			'explore.detail.originalTitle' => 'Original title',
 			'explore.detail.alsoKnownAs' => 'Also known as',
-			'explore.detail.studios' => 'Studios',
 			_ => null,
 		} ?? switch (path) {
+			'explore.detail.studios' => 'Studios',
 			'explore.detail.country' => 'Country',
 			'explore.detail.language' => 'Language',
 			'explore.detail.released' => 'Released',
@@ -13029,9 +13036,9 @@ extension on Translations {
 			'shaders.qualityFast' => 'Fast',
 			'shaders.qualityHQ' => 'High Quality',
 			'shaders.mode' => 'Mode',
-			'shaders.importShader' => 'Import Shader',
 			_ => null,
 		} ?? switch (path) {
+			'shaders.importShader' => 'Import Shader',
 			'shaders.customShaderDescription' => 'Custom GLSL shader',
 			'shaders.shaderImported' => 'Shader imported',
 			'shaders.shaderImportFailed' => 'Failed to import shader',
@@ -13432,6 +13439,7 @@ extension on Translations {
 			'addServer.m3uPlaylistEmpty' => 'That playlist has no channels.',
 			'addServer.m3uInvalidUrl' => 'Enter a valid playlist URL starting with http:// or https://.',
 			'addServer.xtreamProbeFailed' => 'Could not sign in to that Xtream server. Check the server URL, username, and password.',
+			'addServer.tunnelStillStarting' => 'The VPN tunnel is still starting. Please wait a moment and try again.',
 			'addServer.addIptv' => 'Add',
 			'deepLinks.invalid' => 'This PlenTV link isn\'t valid.',
 			'deepLinks.profileNotFound' => ({required Object profile}) => 'No profile matches "${profile}".',
@@ -13542,10 +13550,10 @@ extension on Translations {
 			'iptv.epgPastDays' => 'Past days to keep',
 			'iptv.epgPastDaysNone' => 'None',
 			'iptv.epgUpdateOnStart' => 'Update on app start',
-			'iptv.epgUpdateOnStartDescription' => 'Refresh the guide when the app starts',
-			'iptv.epgTimeOffset' => 'Time offset',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.epgUpdateOnStartDescription' => 'Refresh the guide when the app starts',
+			'iptv.epgTimeOffset' => 'Time offset',
 			'iptv.epgNoOffset' => 'No offset',
 			'iptv.epgOffsetMinutes' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} minute', other: '${n} minutes', ), 
 			'iptv.epgUpdateNow' => 'Update now',
