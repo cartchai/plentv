@@ -551,8 +551,6 @@ class _Translations$settings$ru extends Translations$settings$en {
 	@override String get startupSection => 'Начальный раздел';
 	@override String get showExploreTab => 'Показывать вкладку «Обзор»';
 	@override String get showExploreTabDescription => 'Показывать вкладку «Обзор» с контентом из Plex Discover и подключённых трекеров';
-	@override String get liveTvDefaultFavorites => 'Избранные каналы по умолчанию';
-	@override String get liveTvDefaultFavoritesDescription => 'Показывать только избранные каналы при открытии ТВ';
 	@override String get general => 'Основные';
 	@override String get generalDescription => 'Язык, запуск и поведение окна';
 	@override String get languageAndRegion => 'Язык и регион';
@@ -562,7 +560,6 @@ class _Translations$settings$ru extends Translations$settings$en {
 	@override String get homeScreen => 'Главный экран';
 	@override String get navigation => 'Навигация';
 	@override String get window => 'Окно';
-	@override String get liveTv => 'Прямой эфир';
 	@override String get player => 'Плеер';
 	@override String get videoAndDisplay => 'Видео и экран';
 	@override String get audio => 'Аудио';
@@ -3785,8 +3782,6 @@ extension on TranslationsRu {
 			'settings.startupSection' => 'Начальный раздел',
 			'settings.showExploreTab' => 'Показывать вкладку «Обзор»',
 			'settings.showExploreTabDescription' => 'Показывать вкладку «Обзор» с контентом из Plex Discover и подключённых трекеров',
-			'settings.liveTvDefaultFavorites' => 'Избранные каналы по умолчанию',
-			'settings.liveTvDefaultFavoritesDescription' => 'Показывать только избранные каналы при открытии ТВ',
 			'settings.general' => 'Основные',
 			'settings.generalDescription' => 'Язык, запуск и поведение окна',
 			'settings.languageAndRegion' => 'Язык и регион',
@@ -3796,7 +3791,6 @@ extension on TranslationsRu {
 			'settings.homeScreen' => 'Главный экран',
 			'settings.navigation' => 'Навигация',
 			'settings.window' => 'Окно',
-			'settings.liveTv' => 'Прямой эфир',
 			'settings.player' => 'Плеер',
 			'settings.videoAndDisplay' => 'Видео и экран',
 			'settings.audio' => 'Аудио',
@@ -3864,11 +3858,11 @@ extension on TranslationsRu {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Осталось ${minutes} мин',
 			'themeEditor.previewSwitch' => 'Автовоспроизведение',
 			'themeEditor.previewMutedText' => 'Так выглядит второстепенный текст',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Поиск фильмов, сериалов, музыки...',
 			'search.tryDifferentTerm' => 'Попробуйте другой запрос',
 			'search.searchYourMedia' => 'Поиск в вашей медиатеке',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Введите название, актёра или ключевое слово',
 			'search.people' => 'Люди',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Назначить клавишу для ${actionName}',
@@ -4378,11 +4372,11 @@ extension on TranslationsRu {
 			'accountPreferences.loadFailed' => 'Не удалось загрузить эти настройки',
 			'accountPreferences.noPreference' => 'Без предпочтений',
 			'accountPreferences.notSet' => 'Не задано',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Аудио и субтитры',
 			'accountPreferences.groups.libraryDisplay' => 'Библиотека',
 			'accountPreferences.groups.personalMedia' => 'Личные медиа',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Предпочитаемый язык аудио',
 			'accountPreferences.autoSelectAudio' => 'Выбирать аудиодорожку по языку',
 			'accountPreferences.autoSelectAudioDescription' => 'В выключенном состоянии используется аудиодорожка, помеченная в файле как дорожка по умолчанию.',
@@ -4892,11 +4886,11 @@ extension on TranslationsRu {
 			'collections.errorAddingToCollection' => 'Не удалось добавить в коллекцию',
 			'collections.created' => 'Коллекция создана',
 			'collections.removeFromCollection' => 'Удалить из коллекции',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Удалить "${title}" из этой коллекции?',
 			'collections.removedFromCollection' => 'Удалено из коллекции',
 			'collections.removeFromCollectionFailed' => 'Не удалось удалить из коллекции',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Ошибка удаления из коллекции: ${error}',
 			'collections.searchCollections' => 'Поиск коллекций...',
 			'playlists.title' => 'Плейлисты',
@@ -5406,11 +5400,11 @@ extension on TranslationsRu {
 			'metadataEdit.screenTitle' => 'Редактировать метаданные',
 			'metadataEdit.basicInfo' => 'Основная информация',
 			'metadataEdit.artwork' => 'Обложка',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Дополнительные настройки',
 			'metadataEdit.title' => 'Название',
 			'metadataEdit.sortTitle' => 'Название для сортировки',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Оригинальное название',
 			'metadataEdit.releaseDate' => 'Дата выпуска',
 			'metadataEdit.contentRating' => 'Возрастной рейтинг',

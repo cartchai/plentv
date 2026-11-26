@@ -551,8 +551,6 @@ class _Translations$settings$it extends Translations$settings$en {
 	@override String get startupSection => 'Sezione di avvio';
 	@override String get showExploreTab => 'Mostra la scheda Esplora';
 	@override String get showExploreTabDescription => 'Visualizza la scheda Esplora con contenuti di Esplora di Plex e dei tracker collegati';
-	@override String get liveTvDefaultFavorites => 'Apri sui canali preferiti';
-	@override String get liveTvDefaultFavoritesDescription => 'Mostra solo i canali preferiti quando apri la TV in diretta';
 	@override String get general => 'Generali';
 	@override String get generalDescription => 'Lingua, avvio e comportamento della finestra';
 	@override String get languageAndRegion => 'Lingua e regione';
@@ -562,7 +560,6 @@ class _Translations$settings$it extends Translations$settings$en {
 	@override String get homeScreen => 'Schermata iniziale';
 	@override String get navigation => 'Navigazione';
 	@override String get window => 'Finestra';
-	@override String get liveTv => 'TV in diretta';
 	@override String get player => 'Lettore';
 	@override String get videoAndDisplay => 'Video e schermo';
 	@override String get audio => 'Audio';
@@ -3761,8 +3758,6 @@ extension on TranslationsIt {
 			'settings.startupSection' => 'Sezione di avvio',
 			'settings.showExploreTab' => 'Mostra la scheda Esplora',
 			'settings.showExploreTabDescription' => 'Visualizza la scheda Esplora con contenuti di Esplora di Plex e dei tracker collegati',
-			'settings.liveTvDefaultFavorites' => 'Apri sui canali preferiti',
-			'settings.liveTvDefaultFavoritesDescription' => 'Mostra solo i canali preferiti quando apri la TV in diretta',
 			'settings.general' => 'Generali',
 			'settings.generalDescription' => 'Lingua, avvio e comportamento della finestra',
 			'settings.languageAndRegion' => 'Lingua e regione',
@@ -3772,7 +3767,6 @@ extension on TranslationsIt {
 			'settings.homeScreen' => 'Schermata iniziale',
 			'settings.navigation' => 'Navigazione',
 			'settings.window' => 'Finestra',
-			'settings.liveTv' => 'TV in diretta',
 			'settings.player' => 'Lettore',
 			'settings.videoAndDisplay' => 'Video e schermo',
 			'settings.audio' => 'Audio',
@@ -3840,11 +3834,11 @@ extension on TranslationsIt {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} min rimanenti',
 			'themeEditor.previewSwitch' => 'Riproduzione automatica',
 			'themeEditor.previewMutedText' => 'Così appare il testo secondario',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Cerca film, serie TV e musica...',
 			'search.tryDifferentTerm' => 'Prova altri termini di ricerca',
 			'search.searchYourMedia' => 'Cerca nei tuoi media',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Inserisci un titolo, attore o parola chiave',
 			'search.people' => 'Persone',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Imposta una scorciatoia per ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsIt {
 			'accountPreferences.loadFailed' => 'Impossibile caricare queste preferenze',
 			'accountPreferences.noPreference' => 'Nessuna preferenza',
 			'accountPreferences.notSet' => 'Non impostato',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Audio e sottotitoli',
 			'accountPreferences.groups.libraryDisplay' => 'Libreria',
 			'accountPreferences.groups.personalMedia' => 'Media personali',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Lingua audio preferita',
 			'accountPreferences.autoSelectAudio' => 'Scegli l\'audio in base alla lingua',
 			'accountPreferences.autoSelectAudioDescription' => 'Se disattivata, viene mantenuta la traccia audio che il file indica come predefinita.',
@@ -4868,11 +4862,11 @@ extension on TranslationsIt {
 			'collections.errorAddingToCollection' => 'Impossibile aggiungere l\'elemento alla raccolta',
 			'collections.created' => 'Raccolta creata',
 			'collections.removeFromCollection' => 'Rimuovi dalla raccolta',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Rimuovere "${title}" da questa raccolta?',
 			'collections.removedFromCollection' => 'Elemento rimosso dalla raccolta',
 			'collections.removeFromCollectionFailed' => 'Impossibile rimuovere dalla raccolta',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Errore durante la rimozione dell\'elemento dalla raccolta: ${error}',
 			'collections.searchCollections' => 'Cerca raccolte...',
 			'playlists.title' => 'Playlist',
@@ -5382,11 +5376,11 @@ extension on TranslationsIt {
 			'metadataEdit.screenTitle' => 'Modifica metadati',
 			'metadataEdit.basicInfo' => 'Informazioni di base',
 			'metadataEdit.artwork' => 'Immagini',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Impostazioni avanzate',
 			'metadataEdit.title' => 'Titolo',
 			'metadataEdit.sortTitle' => 'Titolo di ordinamento',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Titolo originale',
 			'metadataEdit.releaseDate' => 'Data di uscita',
 			'metadataEdit.contentRating' => 'Classificazione per età',

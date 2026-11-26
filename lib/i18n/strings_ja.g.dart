@@ -551,8 +551,6 @@ class _Translations$settings$ja extends Translations$settings$en {
 	@override String get startupSection => '起動時のセクション';
 	@override String get showExploreTab => '「探す」タブを表示';
 	@override String get showExploreTabDescription => 'Plex Discoverと接続済みのトラッカーのコンテンツを「探す」タブに表示します';
-	@override String get liveTvDefaultFavorites => 'お気に入りチャンネルをデフォルトに';
-	@override String get liveTvDefaultFavoritesDescription => 'ライブTVを開いたときにお気に入りチャンネルのみ表示';
 	@override String get general => '一般';
 	@override String get generalDescription => '言語、起動、ウィンドウの動作';
 	@override String get languageAndRegion => '言語と地域';
@@ -562,7 +560,6 @@ class _Translations$settings$ja extends Translations$settings$en {
 	@override String get homeScreen => 'ホーム画面';
 	@override String get navigation => 'ナビゲーション';
 	@override String get window => 'ウィンドウ';
-	@override String get liveTv => 'ライブTV';
 	@override String get player => 'プレーヤー';
 	@override String get videoAndDisplay => '映像とディスプレイ';
 	@override String get audio => '音声';
@@ -3749,8 +3746,6 @@ extension on TranslationsJa {
 			'settings.startupSection' => '起動時のセクション',
 			'settings.showExploreTab' => '「探す」タブを表示',
 			'settings.showExploreTabDescription' => 'Plex Discoverと接続済みのトラッカーのコンテンツを「探す」タブに表示します',
-			'settings.liveTvDefaultFavorites' => 'お気に入りチャンネルをデフォルトに',
-			'settings.liveTvDefaultFavoritesDescription' => 'ライブTVを開いたときにお気に入りチャンネルのみ表示',
 			'settings.general' => '一般',
 			'settings.generalDescription' => '言語、起動、ウィンドウの動作',
 			'settings.languageAndRegion' => '言語と地域',
@@ -3760,7 +3755,6 @@ extension on TranslationsJa {
 			'settings.homeScreen' => 'ホーム画面',
 			'settings.navigation' => 'ナビゲーション',
 			'settings.window' => 'ウィンドウ',
-			'settings.liveTv' => 'ライブTV',
 			'settings.player' => 'プレーヤー',
 			'settings.videoAndDisplay' => '映像とディスプレイ',
 			'settings.audio' => '音声',
@@ -3828,11 +3822,11 @@ extension on TranslationsJa {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '残り${minutes}分',
 			'themeEditor.previewSwitch' => '自動再生',
 			'themeEditor.previewMutedText' => '補助テキストはこのように表示されます',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => '映画、番組、音楽を検索…',
 			'search.tryDifferentTerm' => '別の検索語をお試しください',
 			'search.searchYourMedia' => 'メディアを検索',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'タイトル、俳優、またはキーワードを入力',
 			'search.people' => '人物',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '${actionName}のショートカットを設定',
@@ -4342,11 +4336,11 @@ extension on TranslationsJa {
 			'accountPreferences.loadFailed' => 'この設定を読み込めませんでした',
 			'accountPreferences.noPreference' => '指定なし',
 			'accountPreferences.notSet' => '未設定',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => '音声と字幕',
 			'accountPreferences.groups.libraryDisplay' => 'ライブラリ',
 			'accountPreferences.groups.personalMedia' => '個人メディア',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => '優先音声言語',
 			'accountPreferences.autoSelectAudio' => '言語で音声を選択',
 			'accountPreferences.autoSelectAudioDescription' => 'オフにすると、ファイルでデフォルトとマークされた音声トラックがそのまま使われます。',
@@ -4856,11 +4850,11 @@ extension on TranslationsJa {
 			'collections.errorAddingToCollection' => 'コレクションへの追加に失敗しました',
 			'collections.created' => 'コレクションを作成しました',
 			'collections.removeFromCollection' => 'コレクションから削除',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '「${title}」をこのコレクションから削除しますか？',
 			'collections.removedFromCollection' => 'コレクションから削除しました',
 			'collections.removeFromCollectionFailed' => 'コレクションからの削除に失敗しました',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'コレクションからの削除エラー: ${error}',
 			'collections.searchCollections' => 'コレクションを検索…',
 			'playlists.title' => 'プレイリスト',
@@ -5370,11 +5364,11 @@ extension on TranslationsJa {
 			'metadataEdit.screenTitle' => 'メタデータを編集',
 			'metadataEdit.basicInfo' => '基本情報',
 			'metadataEdit.artwork' => 'アートワーク',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => '詳細設定',
 			'metadataEdit.title' => 'タイトル',
 			'metadataEdit.sortTitle' => 'ソートタイトル',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => '原題',
 			'metadataEdit.releaseDate' => '公開日',
 			'metadataEdit.contentRating' => 'コンテンツレーティング',

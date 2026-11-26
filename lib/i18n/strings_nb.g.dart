@@ -551,8 +551,6 @@ class _Translations$settings$nb extends Translations$settings$en {
 	@override String get startupSection => 'Startseksjon';
 	@override String get showExploreTab => 'Vis Oppdag-fanen';
 	@override String get showExploreTabDescription => 'Vis Oppdag-fanen med innhold fra Plex Discover og tilkoblede sporingstjenester';
-	@override String get liveTvDefaultFavorites => 'Vis favorittkanaler som standard';
-	@override String get liveTvDefaultFavoritesDescription => 'Vis bare favorittkanaler når du åpner Direkte-TV';
 	@override String get general => 'Generelt';
 	@override String get generalDescription => 'Språk, oppstart og vindusatferd';
 	@override String get languageAndRegion => 'Språk og region';
@@ -562,7 +560,6 @@ class _Translations$settings$nb extends Translations$settings$en {
 	@override String get homeScreen => 'Hjemmeskjerm';
 	@override String get navigation => 'Navigering';
 	@override String get window => 'Vindu';
-	@override String get liveTv => 'Direkte-TV';
 	@override String get player => 'Spiller';
 	@override String get videoAndDisplay => 'Video og skjerm';
 	@override String get audio => 'Lyd';
@@ -3761,8 +3758,6 @@ extension on TranslationsNb {
 			'settings.startupSection' => 'Startseksjon',
 			'settings.showExploreTab' => 'Vis Oppdag-fanen',
 			'settings.showExploreTabDescription' => 'Vis Oppdag-fanen med innhold fra Plex Discover og tilkoblede sporingstjenester',
-			'settings.liveTvDefaultFavorites' => 'Vis favorittkanaler som standard',
-			'settings.liveTvDefaultFavoritesDescription' => 'Vis bare favorittkanaler når du åpner Direkte-TV',
 			'settings.general' => 'Generelt',
 			'settings.generalDescription' => 'Språk, oppstart og vindusatferd',
 			'settings.languageAndRegion' => 'Språk og region',
@@ -3772,7 +3767,6 @@ extension on TranslationsNb {
 			'settings.homeScreen' => 'Hjemmeskjerm',
 			'settings.navigation' => 'Navigering',
 			'settings.window' => 'Vindu',
-			'settings.liveTv' => 'Direkte-TV',
 			'settings.player' => 'Spiller',
 			'settings.videoAndDisplay' => 'Video og skjerm',
 			'settings.audio' => 'Lyd',
@@ -3840,11 +3834,11 @@ extension on TranslationsNb {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} min igjen',
 			'themeEditor.previewSwitch' => 'Autospill',
 			'themeEditor.previewMutedText' => 'Sekundærtekst ser slik ut',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Søk i filmer, serier, musikk...',
 			'search.tryDifferentTerm' => 'Prøv et annet søkeord',
 			'search.searchYourMedia' => 'Søk i mediene dine',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Skriv inn tittel, skuespiller eller nøkkelord',
 			'search.people' => 'Personer',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Angi snarvei for ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsNb {
 			'accountPreferences.loadFailed' => 'Kunne ikke laste inn disse innstillingene',
 			'accountPreferences.noPreference' => 'Ingen preferanse',
 			'accountPreferences.notSet' => 'Ikke angitt',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Lyd og undertekster',
 			'accountPreferences.groups.libraryDisplay' => 'Bibliotek',
 			'accountPreferences.groups.personalMedia' => 'Personlige medier',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Foretrukket lydspråk',
 			'accountPreferences.autoSelectAudio' => 'Velg lyd etter språk',
 			'accountPreferences.autoSelectAudioDescription' => 'Av beholder det lydsporet filen markerer som standard.',
@@ -4868,11 +4862,11 @@ extension on TranslationsNb {
 			'collections.errorAddingToCollection' => 'Kunne ikke legge til i samling',
 			'collections.created' => 'Samling opprettet',
 			'collections.removeFromCollection' => 'Fjern fra samling',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Fjerne "${title}" fra denne samlingen?',
 			'collections.removedFromCollection' => 'Fjernet fra samling',
 			'collections.removeFromCollectionFailed' => 'Kunne ikke fjerne fra samling',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Feil ved fjerning fra samling: ${error}',
 			'collections.searchCollections' => 'Søk i samlinger...',
 			'playlists.title' => 'Spillelister',
@@ -5382,11 +5376,11 @@ extension on TranslationsNb {
 			'metadataEdit.screenTitle' => 'Rediger metadata',
 			'metadataEdit.basicInfo' => 'Grunnleggende informasjon',
 			'metadataEdit.artwork' => 'Grafikk',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Avanserte innstillinger',
 			'metadataEdit.title' => 'Tittel',
 			'metadataEdit.sortTitle' => 'Sorteringstittel',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Originaltittel',
 			'metadataEdit.releaseDate' => 'Utgivelsesdato',
 			'metadataEdit.contentRating' => 'Aldersgrense',

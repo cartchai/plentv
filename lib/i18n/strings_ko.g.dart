@@ -551,8 +551,6 @@ class _Translations$settings$ko extends Translations$settings$en {
 	@override String get startupSection => '시작 섹션';
 	@override String get showExploreTab => '둘러보기 탭 표시';
 	@override String get showExploreTabDescription => 'Plex Discover와 연결된 트래커의 콘텐츠가 포함된 둘러보기 탭을 표시합니다';
-	@override String get liveTvDefaultFavorites => '즐겨찾기 채널 기본 설정';
-	@override String get liveTvDefaultFavoritesDescription => '라이브 TV를 열 때 즐겨찾기 채널만 표시';
 	@override String get general => '일반';
 	@override String get generalDescription => '언어, 시작 및 창 동작';
 	@override String get languageAndRegion => '언어 및 지역';
@@ -562,7 +560,6 @@ class _Translations$settings$ko extends Translations$settings$en {
 	@override String get homeScreen => '홈 화면';
 	@override String get navigation => '탐색';
 	@override String get window => '창';
-	@override String get liveTv => '라이브 TV';
 	@override String get player => '플레이어';
 	@override String get videoAndDisplay => '비디오 및 디스플레이';
 	@override String get audio => '오디오';
@@ -3749,8 +3746,6 @@ extension on TranslationsKo {
 			'settings.startupSection' => '시작 섹션',
 			'settings.showExploreTab' => '둘러보기 탭 표시',
 			'settings.showExploreTabDescription' => 'Plex Discover와 연결된 트래커의 콘텐츠가 포함된 둘러보기 탭을 표시합니다',
-			'settings.liveTvDefaultFavorites' => '즐겨찾기 채널 기본 설정',
-			'settings.liveTvDefaultFavoritesDescription' => '라이브 TV를 열 때 즐겨찾기 채널만 표시',
 			'settings.general' => '일반',
 			'settings.generalDescription' => '언어, 시작 및 창 동작',
 			'settings.languageAndRegion' => '언어 및 지역',
@@ -3760,7 +3755,6 @@ extension on TranslationsKo {
 			'settings.homeScreen' => '홈 화면',
 			'settings.navigation' => '탐색',
 			'settings.window' => '창',
-			'settings.liveTv' => '라이브 TV',
 			'settings.player' => '플레이어',
 			'settings.videoAndDisplay' => '비디오 및 디스플레이',
 			'settings.audio' => '오디오',
@@ -3828,11 +3822,11 @@ extension on TranslationsKo {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes}분 남음',
 			'themeEditor.previewSwitch' => '자동 재생',
 			'themeEditor.previewMutedText' => '보조 텍스트는 이렇게 표시됩니다',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => '영화, 시리즈, 음악 등을 검색하세요...',
 			'search.tryDifferentTerm' => '다른 검색어를 시도해 보세요',
 			'search.searchYourMedia' => '미디어 검색',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => '제목, 배우 또는 키워드를 입력하세요',
 			'search.people' => '인물',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '${actionName}에 대한 단축키 설정',
@@ -4342,11 +4336,11 @@ extension on TranslationsKo {
 			'accountPreferences.loadFailed' => '이 기본 설정을 불러올 수 없습니다',
 			'accountPreferences.noPreference' => '기본 설정 없음',
 			'accountPreferences.notSet' => '설정되지 않음',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => '오디오 및 자막',
 			'accountPreferences.groups.libraryDisplay' => '라이브러리',
 			'accountPreferences.groups.personalMedia' => '개인 미디어',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => '선호 오디오 언어',
 			'accountPreferences.autoSelectAudio' => '언어별로 오디오 선택',
 			'accountPreferences.autoSelectAudioDescription' => '끄면 파일이 기본으로 표시한 오디오 트랙을 유지합니다.',
@@ -4856,11 +4850,11 @@ extension on TranslationsKo {
 			'collections.errorAddingToCollection' => '컬렉션에 추가 실패',
 			'collections.created' => '컬렉션 생성됨',
 			'collections.removeFromCollection' => '컬렉션에서 제거',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '${title}을(를) 이 컬렉션에서 제거하시겠습니까?',
 			'collections.removedFromCollection' => '컬렉션에서 제거됨',
 			'collections.removeFromCollectionFailed' => '컬렉션에서 제거 실패',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => '컬렉션에서 제거 중 오류 발생: ${error}',
 			'collections.searchCollections' => '컬렉션 검색...',
 			'playlists.title' => '플레이리스트',
@@ -5370,11 +5364,11 @@ extension on TranslationsKo {
 			'metadataEdit.screenTitle' => '메타데이터 편집',
 			'metadataEdit.basicInfo' => '기본 정보',
 			'metadataEdit.artwork' => '아트워크',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => '고급 설정',
 			'metadataEdit.title' => '제목',
 			'metadataEdit.sortTitle' => '정렬 제목',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => '원제',
 			'metadataEdit.releaseDate' => '출시일',
 			'metadataEdit.contentRating' => '콘텐츠 등급',

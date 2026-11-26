@@ -551,8 +551,6 @@ class _Translations$settings$hu extends Translations$settings$en {
 	@override String get startupSection => 'Indítási oldal';
 	@override String get showExploreTab => 'Felfedezés lap megjelenítése';
 	@override String get showExploreTabDescription => 'A Plex Discover és a csatlakoztatott követők tartalmait megjelenítő Felfedezés lap megjelenítése';
-	@override String get liveTvDefaultFavorites => 'Kedvenc csatornák alapértelmezés szerint';
-	@override String get liveTvDefaultFavoritesDescription => 'Csak a kedvenc csatornák megjelenítése az Élő TV megnyitásakor';
 	@override String get general => 'Általános';
 	@override String get generalDescription => 'Nyelv, indítás és ablakviselkedés';
 	@override String get languageAndRegion => 'Nyelv és régió';
@@ -562,7 +560,6 @@ class _Translations$settings$hu extends Translations$settings$en {
 	@override String get homeScreen => 'Kezdőképernyő';
 	@override String get navigation => 'Navigáció';
 	@override String get window => 'Ablak';
-	@override String get liveTv => 'Élő TV';
 	@override String get player => 'Lejátszó';
 	@override String get videoAndDisplay => 'Videó és kijelző';
 	@override String get audio => 'Hang';
@@ -3761,8 +3758,6 @@ extension on TranslationsHu {
 			'settings.startupSection' => 'Indítási oldal',
 			'settings.showExploreTab' => 'Felfedezés lap megjelenítése',
 			'settings.showExploreTabDescription' => 'A Plex Discover és a csatlakoztatott követők tartalmait megjelenítő Felfedezés lap megjelenítése',
-			'settings.liveTvDefaultFavorites' => 'Kedvenc csatornák alapértelmezés szerint',
-			'settings.liveTvDefaultFavoritesDescription' => 'Csak a kedvenc csatornák megjelenítése az Élő TV megnyitásakor',
 			'settings.general' => 'Általános',
 			'settings.generalDescription' => 'Nyelv, indítás és ablakviselkedés',
 			'settings.languageAndRegion' => 'Nyelv és régió',
@@ -3772,7 +3767,6 @@ extension on TranslationsHu {
 			'settings.homeScreen' => 'Kezdőképernyő',
 			'settings.navigation' => 'Navigáció',
 			'settings.window' => 'Ablak',
-			'settings.liveTv' => 'Élő TV',
 			'settings.player' => 'Lejátszó',
 			'settings.videoAndDisplay' => 'Videó és kijelző',
 			'settings.audio' => 'Hang',
@@ -3840,11 +3834,11 @@ extension on TranslationsHu {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} perc van hátra',
 			'themeEditor.previewSwitch' => 'Automatikus lejátszás',
 			'themeEditor.previewMutedText' => 'Így néz ki a másodlagos szöveg',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Keresés filmek, sorozatok és zenék között...',
 			'search.tryDifferentTerm' => 'Próbálj másik keresési kifejezést',
 			'search.searchYourMedia' => 'Keresés a saját médiatartalmak között',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Adj meg egy címet, színészt vagy kulcsszót',
 			'search.people' => 'Személyek',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Billentyűparancs beállítása ehhez: ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsHu {
 			'accountPreferences.loadFailed' => 'Nem sikerült betölteni ezeket a beállításokat',
 			'accountPreferences.noPreference' => 'Nincs preferencia',
 			'accountPreferences.notSet' => 'Nincs beállítva',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Hang és feliratok',
 			'accountPreferences.groups.libraryDisplay' => 'Könyvtár',
 			'accountPreferences.groups.personalMedia' => 'Személyes média',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Elsődleges hangnyelv',
 			'accountPreferences.autoSelectAudio' => 'Hangsáv kiválasztása nyelv alapján',
 			'accountPreferences.autoSelectAudioDescription' => 'Ki kapcsolásnál a fájl által alapértelmezettként megjelölt hangsáv marad.',
@@ -4868,11 +4862,11 @@ extension on TranslationsHu {
 			'collections.errorAddingToCollection' => 'Nem sikerült a gyűjteményhez adni',
 			'collections.created' => 'Gyűjtemény létrehozva',
 			'collections.removeFromCollection' => 'Eltávolítás a gyűjteményből',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Eltávolítod a következőt: "${title}" ebből a gyűjteményből?',
 			'collections.removedFromCollection' => 'Eltávolítva a gyűjteményből',
 			'collections.removeFromCollectionFailed' => 'Nem sikerült az eltávolítás a gyűjteményből',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Hiba a gyűjteményből való eltávolításkor: ${error}',
 			'collections.searchCollections' => 'Gyűjtemények keresése...',
 			'playlists.title' => 'Lejátszási listák',
@@ -5382,11 +5376,11 @@ extension on TranslationsHu {
 			'metadataEdit.screenTitle' => 'Metaadatok szerkesztése',
 			'metadataEdit.basicInfo' => 'Alapinformációk',
 			'metadataEdit.artwork' => 'Borítók és képek',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Haladó beállítások',
 			'metadataEdit.title' => 'Cím',
 			'metadataEdit.sortTitle' => 'Rendezési cím',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Eredeti cím',
 			'metadataEdit.releaseDate' => 'Bemutató dátuma',
 			'metadataEdit.contentRating' => 'Korhatár-besorolás',

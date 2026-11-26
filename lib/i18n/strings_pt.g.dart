@@ -551,8 +551,6 @@ class _Translations$settings$pt extends Translations$settings$en {
 	@override String get startupSection => 'Seção inicial';
 	@override String get showExploreTab => 'Mostrar aba Explorar';
 	@override String get showExploreTabDescription => 'Exibir a aba Explorar com conteúdo do Plex Discover e dos rastreadores conectados';
-	@override String get liveTvDefaultFavorites => 'Canais favoritos por padrão';
-	@override String get liveTvDefaultFavoritesDescription => 'Mostrar apenas os canais favoritos ao abrir a TV ao vivo';
 	@override String get general => 'Geral';
 	@override String get generalDescription => 'Idioma, inicialização e comportamento da janela';
 	@override String get languageAndRegion => 'Idioma e Região';
@@ -562,7 +560,6 @@ class _Translations$settings$pt extends Translations$settings$en {
 	@override String get homeScreen => 'Tela inicial';
 	@override String get navigation => 'Navegação';
 	@override String get window => 'Janela';
-	@override String get liveTv => 'TV ao Vivo';
 	@override String get player => 'Reprodutor';
 	@override String get videoAndDisplay => 'Vídeo e Tela';
 	@override String get audio => 'Áudio';
@@ -3761,8 +3758,6 @@ extension on TranslationsPt {
 			'settings.startupSection' => 'Seção inicial',
 			'settings.showExploreTab' => 'Mostrar aba Explorar',
 			'settings.showExploreTabDescription' => 'Exibir a aba Explorar com conteúdo do Plex Discover e dos rastreadores conectados',
-			'settings.liveTvDefaultFavorites' => 'Canais favoritos por padrão',
-			'settings.liveTvDefaultFavoritesDescription' => 'Mostrar apenas os canais favoritos ao abrir a TV ao vivo',
 			'settings.general' => 'Geral',
 			'settings.generalDescription' => 'Idioma, inicialização e comportamento da janela',
 			'settings.languageAndRegion' => 'Idioma e Região',
@@ -3772,7 +3767,6 @@ extension on TranslationsPt {
 			'settings.homeScreen' => 'Tela inicial',
 			'settings.navigation' => 'Navegação',
 			'settings.window' => 'Janela',
-			'settings.liveTv' => 'TV ao Vivo',
 			'settings.player' => 'Reprodutor',
 			'settings.videoAndDisplay' => 'Vídeo e Tela',
 			'settings.audio' => 'Áudio',
@@ -3840,11 +3834,11 @@ extension on TranslationsPt {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} min restantes',
 			'themeEditor.previewSwitch' => 'Reprodução automática',
 			'themeEditor.previewMutedText' => 'O texto secundário fica assim',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Buscar filmes, séries, músicas...',
 			'search.tryDifferentTerm' => 'Tente um termo de busca diferente',
 			'search.searchYourMedia' => 'Buscar suas mídias',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Insira um título, ator ou palavra-chave',
 			'search.people' => 'Pessoas',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Definir Atalho para ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsPt {
 			'accountPreferences.loadFailed' => 'Não foi possível carregar estas preferências',
 			'accountPreferences.noPreference' => 'Sem preferência',
 			'accountPreferences.notSet' => 'Não definido',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Áudio e legendas',
 			'accountPreferences.groups.libraryDisplay' => 'Biblioteca',
 			'accountPreferences.groups.personalMedia' => 'Mídia pessoal',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Idioma de áudio preferido',
 			'accountPreferences.autoSelectAudio' => 'Escolher áudio pelo idioma',
 			'accountPreferences.autoSelectAudioDescription' => 'Desativado mantém a faixa de áudio que o arquivo marca como padrão.',
@@ -4868,11 +4862,11 @@ extension on TranslationsPt {
 			'collections.errorAddingToCollection' => 'Falha ao adicionar à coleção',
 			'collections.created' => 'Coleção criada',
 			'collections.removeFromCollection' => 'Remover da coleção',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Remover "${title}" desta coleção?',
 			'collections.removedFromCollection' => 'Removido da coleção',
 			'collections.removeFromCollectionFailed' => 'Falha ao remover da coleção',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Erro ao remover da coleção: ${error}',
 			'collections.searchCollections' => 'Pesquisar coleções...',
 			'playlists.title' => 'Playlists',
@@ -5382,11 +5376,11 @@ extension on TranslationsPt {
 			'metadataEdit.screenTitle' => 'Editar Metadados',
 			'metadataEdit.basicInfo' => 'Informações Básicas',
 			'metadataEdit.artwork' => 'Arte',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Configurações Avançadas',
 			'metadataEdit.title' => 'Título',
 			'metadataEdit.sortTitle' => 'Título para Ordenação',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Título Original',
 			'metadataEdit.releaseDate' => 'Data de Lançamento',
 			'metadataEdit.contentRating' => 'Classificação Indicativa',

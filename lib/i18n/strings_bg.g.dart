@@ -551,8 +551,6 @@ class _Translations$settings$bg extends Translations$settings$en {
 	@override String get startupSection => 'Начален раздел';
 	@override String get showExploreTab => 'Показване на раздела „Открий“';
 	@override String get showExploreTabDescription => 'Показва раздела „Открий“ със съдържание от Plex Discover и свързаните тракери';
-	@override String get liveTvDefaultFavorites => 'По подразбиране към любими канали';
-	@override String get liveTvDefaultFavoritesDescription => 'Показвай само любими канали при отваряне на телевизия на живо';
 	@override String get general => 'Общи';
 	@override String get generalDescription => 'Език, стартиране и поведение на прозореца';
 	@override String get languageAndRegion => 'Език и регион';
@@ -562,7 +560,6 @@ class _Translations$settings$bg extends Translations$settings$en {
 	@override String get homeScreen => 'Начален екран';
 	@override String get navigation => 'Навигация';
 	@override String get window => 'Прозорец';
-	@override String get liveTv => 'Телевизия на живо';
 	@override String get player => 'Плейър';
 	@override String get videoAndDisplay => 'Видео и дисплей';
 	@override String get audio => 'Аудио';
@@ -3761,8 +3758,6 @@ extension on TranslationsBg {
 			'settings.startupSection' => 'Начален раздел',
 			'settings.showExploreTab' => 'Показване на раздела „Открий“',
 			'settings.showExploreTabDescription' => 'Показва раздела „Открий“ със съдържание от Plex Discover и свързаните тракери',
-			'settings.liveTvDefaultFavorites' => 'По подразбиране към любими канали',
-			'settings.liveTvDefaultFavoritesDescription' => 'Показвай само любими канали при отваряне на телевизия на живо',
 			'settings.general' => 'Общи',
 			'settings.generalDescription' => 'Език, стартиране и поведение на прозореца',
 			'settings.languageAndRegion' => 'Език и регион',
@@ -3772,7 +3767,6 @@ extension on TranslationsBg {
 			'settings.homeScreen' => 'Начален екран',
 			'settings.navigation' => 'Навигация',
 			'settings.window' => 'Прозорец',
-			'settings.liveTv' => 'Телевизия на живо',
 			'settings.player' => 'Плейър',
 			'settings.videoAndDisplay' => 'Видео и дисплей',
 			'settings.audio' => 'Аудио',
@@ -3840,11 +3834,11 @@ extension on TranslationsBg {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Остават ${minutes} мин',
 			'themeEditor.previewSwitch' => 'Автоматично пускане',
 			'themeEditor.previewMutedText' => 'Вторичният текст изглежда така',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Търсене на филми, сериали, музика...',
 			'search.tryDifferentTerm' => 'Опитайте с различна дума за търсене',
 			'search.searchYourMedia' => 'Търсете в медийното си съдържание',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Въведете заглавие, актьор или ключова дума',
 			'search.people' => 'Хора',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Задай клавишна комбинация за ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsBg {
 			'accountPreferences.loadFailed' => 'Предпочитанията не можаха да бъдат заредени',
 			'accountPreferences.noPreference' => 'Без предпочитание',
 			'accountPreferences.notSet' => 'Не е зададено',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Аудио и субтитри',
 			'accountPreferences.groups.libraryDisplay' => 'Библиотека',
 			'accountPreferences.groups.personalMedia' => 'Лична медия',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Предпочитан аудио език',
 			'accountPreferences.autoSelectAudio' => 'Избирай аудио по език',
 			'accountPreferences.autoSelectAudioDescription' => 'При изключено се запазва аудиопътечката, която файлът маркира като подразбираща се.',
@@ -4868,11 +4862,11 @@ extension on TranslationsBg {
 			'collections.errorAddingToCollection' => 'Неуспешно добавяне към колекция',
 			'collections.created' => 'Колекцията е създадена',
 			'collections.removeFromCollection' => 'Премахни от колекция',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Да се премахне ли "${title}" от тази колекция?',
 			'collections.removedFromCollection' => 'Премахнато от колекция',
 			'collections.removeFromCollectionFailed' => 'Неуспешно премахване от колекция',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Грешка при премахване от колекция: ${error}',
 			'collections.searchCollections' => 'Търсене на колекции...',
 			'playlists.title' => 'Плейлисти',
@@ -5382,11 +5376,11 @@ extension on TranslationsBg {
 			'metadataEdit.screenTitle' => 'Редактиране на метаданни',
 			'metadataEdit.basicInfo' => 'Основна информация',
 			'metadataEdit.artwork' => 'Обложка',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Разширени настройки',
 			'metadataEdit.title' => 'Заглавие',
 			'metadataEdit.sortTitle' => 'Заглавие за сортиране',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Оригинално заглавие',
 			'metadataEdit.releaseDate' => 'Дата на излизане',
 			'metadataEdit.contentRating' => 'Възрастов рейтинг',

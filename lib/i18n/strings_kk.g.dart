@@ -551,8 +551,6 @@ class _Translations$settings$kk extends Translations$settings$en {
 	@override String get startupSection => 'Бастапқы бөлім';
 	@override String get showExploreTab => '«Шолу» қойындысын көрсету';
 	@override String get showExploreTabDescription => 'Plex шолуынан және қосылған трекерлерден алынған контенті бар «Шолу» қойындысын көрсету';
-	@override String get liveTvDefaultFavorites => 'Тікелей TV-де таңдаулы арналарды әдепкі ету';
-	@override String get liveTvDefaultFavoritesDescription => 'Тікелей TV ашылғанда тек таңдаулы арналарды көрсету';
 	@override String get general => 'Жалпы';
 	@override String get generalDescription => 'Тіл, іске қосу және терезе мінез-құлқы';
 	@override String get languageAndRegion => 'Тіл және аймақ';
@@ -562,7 +560,6 @@ class _Translations$settings$kk extends Translations$settings$en {
 	@override String get homeScreen => 'Басты экран';
 	@override String get navigation => 'Навигация';
 	@override String get window => 'Терезе';
-	@override String get liveTv => 'Тікелей TV';
 	@override String get player => 'Ойнатқыш';
 	@override String get videoAndDisplay => 'Видео және дисплей';
 	@override String get audio => 'Аудио';
@@ -3761,8 +3758,6 @@ extension on TranslationsKk {
 			'settings.startupSection' => 'Бастапқы бөлім',
 			'settings.showExploreTab' => '«Шолу» қойындысын көрсету',
 			'settings.showExploreTabDescription' => 'Plex шолуынан және қосылған трекерлерден алынған контенті бар «Шолу» қойындысын көрсету',
-			'settings.liveTvDefaultFavorites' => 'Тікелей TV-де таңдаулы арналарды әдепкі ету',
-			'settings.liveTvDefaultFavoritesDescription' => 'Тікелей TV ашылғанда тек таңдаулы арналарды көрсету',
 			'settings.general' => 'Жалпы',
 			'settings.generalDescription' => 'Тіл, іске қосу және терезе мінез-құлқы',
 			'settings.languageAndRegion' => 'Тіл және аймақ',
@@ -3772,7 +3767,6 @@ extension on TranslationsKk {
 			'settings.homeScreen' => 'Басты экран',
 			'settings.navigation' => 'Навигация',
 			'settings.window' => 'Терезе',
-			'settings.liveTv' => 'Тікелей TV',
 			'settings.player' => 'Ойнатқыш',
 			'settings.videoAndDisplay' => 'Видео және дисплей',
 			'settings.audio' => 'Аудио',
@@ -3840,11 +3834,11 @@ extension on TranslationsKk {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} мин қалды',
 			'themeEditor.previewSwitch' => 'Автоойнату',
 			'themeEditor.previewMutedText' => 'Қосалқы мәтін осылай көрінеді',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Фильмдер, сериалдар, музыка іздеу...',
 			'search.tryDifferentTerm' => 'Басқа іздеу сөзін байқап көріңіз',
 			'search.searchYourMedia' => 'Медиафайлдардан іздеу',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Атауын, актерді немесе кілт сөзді енгізіңіз',
 			'search.people' => 'Адамдар',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '${actionName} үшін пернелер тіркесін орнату',
@@ -4354,11 +4348,11 @@ extension on TranslationsKk {
 			'accountPreferences.loadFailed' => 'Бұл баптауларды жүктеу мүмкін болмады',
 			'accountPreferences.noPreference' => 'Таңдау жоқ',
 			'accountPreferences.notSet' => 'Орнатылмаған',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Аудио және субтитрлер',
 			'accountPreferences.groups.libraryDisplay' => 'Кітапхана',
 			'accountPreferences.groups.personalMedia' => 'Жеке медиа',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Қалаулы аудио тілі',
 			'accountPreferences.autoSelectAudio' => 'Аудионы тілі бойынша таңдау',
 			'accountPreferences.autoSelectAudioDescription' => 'Өшірулі күйде файл әдепкі деп белгілеген аудио трек қолданылады.',
@@ -4868,11 +4862,11 @@ extension on TranslationsKk {
 			'collections.errorAddingToCollection' => 'Топтамаға қосу мүмкін болмады',
 			'collections.created' => 'Топтама жасалды',
 			'collections.removeFromCollection' => 'Топтамадан өшіру',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" осы топтамадан өшірілсін бе?',
 			'collections.removedFromCollection' => 'Топтамадан өшірілді',
 			'collections.removeFromCollectionFailed' => 'Топтамадан өшіру мүмкін болмады',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Өшіру қатесі: ${error}',
 			'collections.searchCollections' => 'Топтамалардан іздеу...',
 			'playlists.title' => 'Ойнату тізімдері',
@@ -5382,11 +5376,11 @@ extension on TranslationsKk {
 			'metadataEdit.screenTitle' => 'Метадеректерді өңдеу',
 			'metadataEdit.basicInfo' => 'Негізгі ақпарат',
 			'metadataEdit.artwork' => 'Суреттер/Постерлер',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Кеңейтілген баптаулар',
 			'metadataEdit.title' => 'Атауы',
 			'metadataEdit.sortTitle' => 'Сұрыптау атауы',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Түпнұсқа атауы',
 			'metadataEdit.releaseDate' => 'Шыққан күні',
 			'metadataEdit.contentRating' => 'Мазмұн рейтингі',

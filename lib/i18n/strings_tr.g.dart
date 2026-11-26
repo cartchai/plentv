@@ -551,8 +551,6 @@ class _Translations$settings$tr extends Translations$settings$en {
 	@override String get startupSection => 'Başlangıç Bölümü';
 	@override String get showExploreTab => 'Keşfet sekmesini göster';
 	@override String get showExploreTabDescription => 'Plex Keşfet ve bağlı takip hizmetlerinden gelen içeriklerle Keşfet sekmesini göster';
-	@override String get liveTvDefaultFavorites => 'Canlı TV\'de Favorileri Varsayılan Yap';
-	@override String get liveTvDefaultFavoritesDescription => 'Canlı TV açıldığında yalnızca favori kanalları göster';
 	@override String get general => 'Genel';
 	@override String get generalDescription => 'Dil, başlangıç ve pencere davranışı';
 	@override String get languageAndRegion => 'Dil ve Bölge';
@@ -562,7 +560,6 @@ class _Translations$settings$tr extends Translations$settings$en {
 	@override String get homeScreen => 'Ana Ekran';
 	@override String get navigation => 'Gezinme';
 	@override String get window => 'Pencere';
-	@override String get liveTv => 'Canlı TV';
 	@override String get player => 'Oynatıcı';
 	@override String get videoAndDisplay => 'Video ve Ekran';
 	@override String get audio => 'Ses';
@@ -3761,8 +3758,6 @@ extension on TranslationsTr {
 			'settings.startupSection' => 'Başlangıç Bölümü',
 			'settings.showExploreTab' => 'Keşfet sekmesini göster',
 			'settings.showExploreTabDescription' => 'Plex Keşfet ve bağlı takip hizmetlerinden gelen içeriklerle Keşfet sekmesini göster',
-			'settings.liveTvDefaultFavorites' => 'Canlı TV\'de Favorileri Varsayılan Yap',
-			'settings.liveTvDefaultFavoritesDescription' => 'Canlı TV açıldığında yalnızca favori kanalları göster',
 			'settings.general' => 'Genel',
 			'settings.generalDescription' => 'Dil, başlangıç ve pencere davranışı',
 			'settings.languageAndRegion' => 'Dil ve Bölge',
@@ -3772,7 +3767,6 @@ extension on TranslationsTr {
 			'settings.homeScreen' => 'Ana Ekran',
 			'settings.navigation' => 'Gezinme',
 			'settings.window' => 'Pencere',
-			'settings.liveTv' => 'Canlı TV',
 			'settings.player' => 'Oynatıcı',
 			'settings.videoAndDisplay' => 'Video ve Ekran',
 			'settings.audio' => 'Ses',
@@ -3840,11 +3834,11 @@ extension on TranslationsTr {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} dk kaldı',
 			'themeEditor.previewSwitch' => 'Otomatik oynatma',
 			'themeEditor.previewMutedText' => 'İkincil metin böyle görünür',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Film, dizi, müzik ara...',
 			'search.tryDifferentTerm' => 'Farklı bir arama terimi deneyin',
 			'search.searchYourMedia' => 'Medyanızda arayın',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Başlık, oyuncu veya anahtar kelime girin',
 			'search.people' => 'Kişiler',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '${actionName} için Kısayol Ayarla',
@@ -4354,11 +4348,11 @@ extension on TranslationsTr {
 			'accountPreferences.loadFailed' => 'Bu tercihler yüklenemedi',
 			'accountPreferences.noPreference' => 'Tercih yok',
 			'accountPreferences.notSet' => 'Ayarlanmadı',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Ses ve altyazılar',
 			'accountPreferences.groups.libraryDisplay' => 'Kitaplık',
 			'accountPreferences.groups.personalMedia' => 'Kişisel medya',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Tercih Edilen Ses Dili',
 			'accountPreferences.autoSelectAudio' => 'Sesi dile göre seç',
 			'accountPreferences.autoSelectAudioDescription' => 'Kapalıyken dosyanın varsayılan olarak işaretlediği ses parçası kullanılır.',
@@ -4868,11 +4862,11 @@ extension on TranslationsTr {
 			'collections.errorAddingToCollection' => 'Koleksiyona eklenemedi',
 			'collections.created' => 'Koleksiyon oluşturuldu',
 			'collections.removeFromCollection' => 'Koleksiyondan kaldır',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" bu koleksiyondan kaldırılsın mı?',
 			'collections.removedFromCollection' => 'Koleksiyondan kaldırıldı',
 			'collections.removeFromCollectionFailed' => 'Koleksiyondan kaldırılamadı',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Koleksiyondan kaldırılırken hata: ${error}',
 			'collections.searchCollections' => 'Koleksiyonlarda ara...',
 			'playlists.title' => 'Oynatma Listeleri',
@@ -5382,11 +5376,11 @@ extension on TranslationsTr {
 			'metadataEdit.screenTitle' => 'Meta Verileri Düzenle',
 			'metadataEdit.basicInfo' => 'Temel Bilgiler',
 			'metadataEdit.artwork' => 'Görseller',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Gelişmiş Ayarlar',
 			'metadataEdit.title' => 'Başlık',
 			'metadataEdit.sortTitle' => 'Sıralama Başlığı',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Orijinal Başlık',
 			'metadataEdit.releaseDate' => 'Yayınlanma Tarihi',
 			'metadataEdit.contentRating' => 'İçerik Derecelendirmesi',

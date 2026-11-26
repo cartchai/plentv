@@ -551,8 +551,6 @@ class _Translations$settings$uz extends Translations$settings$en {
 	@override String get startupSection => 'Boshlangʻich boʻlim';
 	@override String get showExploreTab => 'Kashf qilish varagʻini koʻrsatish';
 	@override String get showExploreTabDescription => 'Plex Discover va ulangan kuzatuvchilardagi kontent bilan Kashf qilish varagʻini koʻrsatish';
-	@override String get liveTvDefaultFavorites => 'Jonli TV-da tanlangan kanallarni standart qilish';
-	@override String get liveTvDefaultFavoritesDescription => 'Jonli TV ochilganda faqat tanlangan kanallarni koʻrsatish';
 	@override String get general => 'Umumiy';
 	@override String get generalDescription => 'Til, ishga tushirish va oyna xatti-harakati';
 	@override String get languageAndRegion => 'Til va mintaqa';
@@ -562,7 +560,6 @@ class _Translations$settings$uz extends Translations$settings$en {
 	@override String get homeScreen => 'Bosh ekran';
 	@override String get navigation => 'Navigatsiya';
 	@override String get window => 'Oyna';
-	@override String get liveTv => 'Jonli TV';
 	@override String get player => 'Pleyer';
 	@override String get videoAndDisplay => 'Video va displey';
 	@override String get audio => 'Audio';
@@ -3761,8 +3758,6 @@ extension on TranslationsUz {
 			'settings.startupSection' => 'Boshlangʻich boʻlim',
 			'settings.showExploreTab' => 'Kashf qilish varagʻini koʻrsatish',
 			'settings.showExploreTabDescription' => 'Plex Discover va ulangan kuzatuvchilardagi kontent bilan Kashf qilish varagʻini koʻrsatish',
-			'settings.liveTvDefaultFavorites' => 'Jonli TV-da tanlangan kanallarni standart qilish',
-			'settings.liveTvDefaultFavoritesDescription' => 'Jonli TV ochilganda faqat tanlangan kanallarni koʻrsatish',
 			'settings.general' => 'Umumiy',
 			'settings.generalDescription' => 'Til, ishga tushirish va oyna xatti-harakati',
 			'settings.languageAndRegion' => 'Til va mintaqa',
@@ -3772,7 +3767,6 @@ extension on TranslationsUz {
 			'settings.homeScreen' => 'Bosh ekran',
 			'settings.navigation' => 'Navigatsiya',
 			'settings.window' => 'Oyna',
-			'settings.liveTv' => 'Jonli TV',
 			'settings.player' => 'Pleyer',
 			'settings.videoAndDisplay' => 'Video va displey',
 			'settings.audio' => 'Audio',
@@ -3840,11 +3834,11 @@ extension on TranslationsUz {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} daq qoldi',
 			'themeEditor.previewSwitch' => 'Avtomatik ijro',
 			'themeEditor.previewMutedText' => 'Ikkilamchi matn shunday koʻrinadi',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Filmlar, seriallar, musiqa qidirish...',
 			'search.tryDifferentTerm' => 'Boshqa qidiruv soʻzini kiriting',
 			'search.searchYourMedia' => 'Medialaringizdan qidiring',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Nomini, aktyorni yoki kalit soʻzni kiriting',
 			'search.people' => 'Odamlar',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '${actionName} uchun tugmalar birlashmasini oʻrnatish',
@@ -4354,11 +4348,11 @@ extension on TranslationsUz {
 			'accountPreferences.loadFailed' => 'Bu sozlamalarni yuklab boʻlmadi',
 			'accountPreferences.noPreference' => 'Afzallik yoʻq',
 			'accountPreferences.notSet' => 'Oʻrnatilmagan',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Audio va subtitrlar',
 			'accountPreferences.groups.libraryDisplay' => 'Kutubxona',
 			'accountPreferences.groups.personalMedia' => 'Shaxsiy media',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Afzal koʻrilgan audio tili',
 			'accountPreferences.autoSelectAudio' => 'Audioni til boʻyicha tanlash',
 			'accountPreferences.autoSelectAudioDescription' => 'Oʻchirilgan holatda faylda standart deb belgilangan audio trek ishlatiladi.',
@@ -4868,11 +4862,11 @@ extension on TranslationsUz {
 			'collections.errorAddingToCollection' => 'Toʻplamga qoʻshib boʻlmadi',
 			'collections.created' => 'Toʻplam yaratildi',
 			'collections.removeFromCollection' => 'Toʻplamdan oʻchirish',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" ushbu toʻplamdan oʻchirilsinmi?',
 			'collections.removedFromCollection' => 'Toʻplamdan oʻchirildi',
 			'collections.removeFromCollectionFailed' => 'Toʻplamdan oʻchirib boʻlmadi',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Oʻchirish xatoligi: ${error}',
 			'collections.searchCollections' => 'Toʻplamlardan qidirish...',
 			'playlists.title' => 'Ijro roʻyxatlari',
@@ -5382,11 +5376,11 @@ extension on TranslationsUz {
 			'metadataEdit.screenTitle' => 'Metamaʼlumotlarni tahrirlash',
 			'metadataEdit.basicInfo' => 'Asosiy maʼlumotlar',
 			'metadataEdit.artwork' => 'Rasmlar/Posterlar',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Kengaytirilgan sozlamalar',
 			'metadataEdit.title' => 'Nomi',
 			'metadataEdit.sortTitle' => 'Saralash nomi',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Asl nomi',
 			'metadataEdit.releaseDate' => 'Chiqqan sanasi',
 			'metadataEdit.contentRating' => 'Kontent reytingi',

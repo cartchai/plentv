@@ -551,8 +551,6 @@ class _Translations$settings$de extends Translations$settings$en {
 	@override String get startupSection => 'Startbereich';
 	@override String get showExploreTab => 'Tab „Entdecken“ anzeigen';
 	@override String get showExploreTabDescription => 'Zeigt den Tab „Entdecken“ mit Inhalten aus Plex Discover und verbundenen Trackern an';
-	@override String get liveTvDefaultFavorites => 'Standardmäßig Favoritenkanäle';
-	@override String get liveTvDefaultFavoritesDescription => 'Beim Öffnen von Live TV nur Favoritenkanäle anzeigen';
 	@override String get general => 'Allgemein';
 	@override String get generalDescription => 'Sprache, Start und Fensterverhalten';
 	@override String get languageAndRegion => 'Sprache & Region';
@@ -562,7 +560,6 @@ class _Translations$settings$de extends Translations$settings$en {
 	@override String get homeScreen => 'Startseite';
 	@override String get navigation => 'Navigation';
 	@override String get window => 'Fenster';
-	@override String get liveTv => 'Live-TV';
 	@override String get player => 'Wiedergabe';
 	@override String get videoAndDisplay => 'Video & Anzeige';
 	@override String get audio => 'Audio';
@@ -3761,8 +3758,6 @@ extension on TranslationsDe {
 			'settings.startupSection' => 'Startbereich',
 			'settings.showExploreTab' => 'Tab „Entdecken“ anzeigen',
 			'settings.showExploreTabDescription' => 'Zeigt den Tab „Entdecken“ mit Inhalten aus Plex Discover und verbundenen Trackern an',
-			'settings.liveTvDefaultFavorites' => 'Standardmäßig Favoritenkanäle',
-			'settings.liveTvDefaultFavoritesDescription' => 'Beim Öffnen von Live TV nur Favoritenkanäle anzeigen',
 			'settings.general' => 'Allgemein',
 			'settings.generalDescription' => 'Sprache, Start und Fensterverhalten',
 			'settings.languageAndRegion' => 'Sprache & Region',
@@ -3772,7 +3767,6 @@ extension on TranslationsDe {
 			'settings.homeScreen' => 'Startseite',
 			'settings.navigation' => 'Navigation',
 			'settings.window' => 'Fenster',
-			'settings.liveTv' => 'Live-TV',
 			'settings.player' => 'Wiedergabe',
 			'settings.videoAndDisplay' => 'Video & Anzeige',
 			'settings.audio' => 'Audio',
@@ -3840,11 +3834,11 @@ extension on TranslationsDe {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Noch ${minutes} Min.',
 			'themeEditor.previewSwitch' => 'Autoplay',
 			'themeEditor.previewMutedText' => 'So sieht Sekundärtext aus',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Filme, Serien und Musik suchen …',
 			'search.tryDifferentTerm' => 'Anderen Suchbegriff versuchen',
 			'search.searchYourMedia' => 'In den eigenen Medien suchen',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Titel, Schauspieler oder Stichwort eingeben',
 			'search.people' => 'Personen',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Tastenkürzel festlegen für ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsDe {
 			'accountPreferences.loadFailed' => 'Diese Einstellungen konnten nicht geladen werden',
 			'accountPreferences.noPreference' => 'Keine Einstellung',
 			'accountPreferences.notSet' => 'Nicht festgelegt',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Audio & Untertitel',
 			'accountPreferences.groups.libraryDisplay' => 'Mediathek',
 			'accountPreferences.groups.personalMedia' => 'Persönliche Medien',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Bevorzugte Audiosprache',
 			'accountPreferences.autoSelectAudio' => 'Audio nach Sprache auswählen',
 			'accountPreferences.autoSelectAudioDescription' => 'Bei „Aus“ wird die Audiospur verwendet, die die Datei als Standard markiert.',
@@ -4868,11 +4862,11 @@ extension on TranslationsDe {
 			'collections.errorAddingToCollection' => 'Fehler beim Hinzufügen zur Sammlung',
 			'collections.created' => 'Sammlung erstellt',
 			'collections.removeFromCollection' => 'Aus Sammlung entfernen',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '„${title}“ aus dieser Sammlung entfernen?',
 			'collections.removedFromCollection' => 'Aus Sammlung entfernt',
 			'collections.removeFromCollectionFailed' => 'Entfernen aus Sammlung fehlgeschlagen',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Fehler beim Entfernen aus der Sammlung: ${error}',
 			'collections.searchCollections' => 'Sammlungen durchsuchen...',
 			'playlists.title' => 'Wiedergabelisten',
@@ -5382,11 +5376,11 @@ extension on TranslationsDe {
 			'metadataEdit.screenTitle' => 'Metadaten bearbeiten',
 			'metadataEdit.basicInfo' => 'Grundinformationen',
 			'metadataEdit.artwork' => 'Grafiken',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Erweiterte Einstellungen',
 			'metadataEdit.title' => 'Titel',
 			'metadataEdit.sortTitle' => 'Sortiertitel',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Originaltitel',
 			'metadataEdit.releaseDate' => 'Erscheinungsdatum',
 			'metadataEdit.contentRating' => 'Altersfreigabe',

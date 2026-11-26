@@ -551,8 +551,6 @@ class _Translations$settings$az extends Translations$settings$en {
 	@override String get startupSection => 'Başlanğıc bölməsi';
 	@override String get showExploreTab => 'Kəşf et nişanını göstər';
 	@override String get showExploreTabDescription => 'Plex Discover və qoşulmuş izləmə xidmətlərindəki məzmunla Kəşf et nişanını göstər';
-	@override String get liveTvDefaultFavorites => 'Canlı TV-də sevimli kanalları defolt et';
-	@override String get liveTvDefaultFavoritesDescription => 'Canlı TV açıldıqda yalnız sevimli kanalları göstər';
 	@override String get general => 'Ümumi';
 	@override String get generalDescription => 'Dil, başlanğıc və pəncərə davranışı';
 	@override String get languageAndRegion => 'Dil və Region';
@@ -562,7 +560,6 @@ class _Translations$settings$az extends Translations$settings$en {
 	@override String get homeScreen => 'Ana ekran';
 	@override String get navigation => 'Naviqasiya';
 	@override String get window => 'Pəncərə';
-	@override String get liveTv => 'Canlı TV';
 	@override String get player => 'Oynadıcı';
 	@override String get videoAndDisplay => 'Video və Ekran';
 	@override String get audio => 'Səs';
@@ -3761,8 +3758,6 @@ extension on TranslationsAz {
 			'settings.startupSection' => 'Başlanğıc bölməsi',
 			'settings.showExploreTab' => 'Kəşf et nişanını göstər',
 			'settings.showExploreTabDescription' => 'Plex Discover və qoşulmuş izləmə xidmətlərindəki məzmunla Kəşf et nişanını göstər',
-			'settings.liveTvDefaultFavorites' => 'Canlı TV-də sevimli kanalları defolt et',
-			'settings.liveTvDefaultFavoritesDescription' => 'Canlı TV açıldıqda yalnız sevimli kanalları göstər',
 			'settings.general' => 'Ümumi',
 			'settings.generalDescription' => 'Dil, başlanğıc və pəncərə davranışı',
 			'settings.languageAndRegion' => 'Dil və Region',
@@ -3772,7 +3767,6 @@ extension on TranslationsAz {
 			'settings.homeScreen' => 'Ana ekran',
 			'settings.navigation' => 'Naviqasiya',
 			'settings.window' => 'Pəncərə',
-			'settings.liveTv' => 'Canlı TV',
 			'settings.player' => 'Oynadıcı',
 			'settings.videoAndDisplay' => 'Video və Ekran',
 			'settings.audio' => 'Səs',
@@ -3840,11 +3834,11 @@ extension on TranslationsAz {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} dəq qaldı',
 			'themeEditor.previewSwitch' => 'Avtomatik oynatma',
 			'themeEditor.previewMutedText' => 'Köməkçi mətn belə görünür',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Kino, serial, musiqi axtar...',
 			'search.tryDifferentTerm' => 'Fərqli axtarış sözü cəhd edin',
 			'search.searchYourMedia' => 'Mediyanızda axtarın',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Ad, aktyor və ya açar söz daxil edin',
 			'search.people' => 'Şəxslər',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '${actionName} üçün qısayol təyin et',
@@ -4354,11 +4348,11 @@ extension on TranslationsAz {
 			'accountPreferences.loadFailed' => 'Bu tərcihlər yüklənə bilmədi',
 			'accountPreferences.noPreference' => 'Tərcih yoxdur',
 			'accountPreferences.notSet' => 'Təyin edilməyib',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Səs və altyazılar',
 			'accountPreferences.groups.libraryDisplay' => 'Kitabxana',
 			'accountPreferences.groups.personalMedia' => 'Şəxsi media',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Üstünlük verilən səs dili',
 			'accountPreferences.autoSelectAudio' => 'Səsi dilə görə seç',
 			'accountPreferences.autoSelectAudioDescription' => 'Söndürüldükdə faylın defolt olaraq işarələdiyi səs treki istifadə olunur.',
@@ -4868,11 +4862,11 @@ extension on TranslationsAz {
 			'collections.errorAddingToCollection' => 'Kolleksiyaya əlavə edilə bilmədi',
 			'collections.created' => 'Kolleksiya yaradıldı',
 			'collections.removeFromCollection' => 'Kolleksiyadan sil',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" bu kolleksiyadan silinsin?',
 			'collections.removedFromCollection' => 'Kolleksiyadan silindi',
 			'collections.removeFromCollectionFailed' => 'Kolleksiyadan silinə bilmədi',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Kolleksiyadan silinərkən xəta: ${error}',
 			'collections.searchCollections' => 'Kolleksiyalarda axtar...',
 			'playlists.title' => 'Oynatma siyahıları',
@@ -5382,11 +5376,11 @@ extension on TranslationsAz {
 			'metadataEdit.screenTitle' => 'Meta-məlumatlara düzəliş et',
 			'metadataEdit.basicInfo' => 'Əsas məlumatlar',
 			'metadataEdit.artwork' => 'Şəkillər/Posterlər',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Təkmilləşdirilmiş tənzimləmələr',
 			'metadataEdit.title' => 'Başlıq',
 			'metadataEdit.sortTitle' => 'Sıralama başlığı',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Orijinal başlıq',
 			'metadataEdit.releaseDate' => 'Buraxılış tarixi',
 			'metadataEdit.contentRating' => 'Məzmun reytinqi',

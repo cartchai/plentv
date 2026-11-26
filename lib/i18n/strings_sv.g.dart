@@ -551,8 +551,6 @@ class _Translations$settings$sv extends Translations$settings$en {
 	@override String get startupSection => 'Startsida';
 	@override String get showExploreTab => 'Visa fliken Utforska';
 	@override String get showExploreTabDescription => 'Visa fliken Utforska med innehåll från Plex Discover och anslutna spårningstjänster';
-	@override String get liveTvDefaultFavorites => 'Öppna med favoriter';
-	@override String get liveTvDefaultFavoritesDescription => 'Visa endast favoritkanaler när Live-TV öppnas';
 	@override String get general => 'Allmänt';
 	@override String get generalDescription => 'Språk, start och fönsterbeteende';
 	@override String get languageAndRegion => 'Språk och region';
@@ -562,7 +560,6 @@ class _Translations$settings$sv extends Translations$settings$en {
 	@override String get homeScreen => 'Hemskärm';
 	@override String get navigation => 'Navigering';
 	@override String get window => 'Fönster';
-	@override String get liveTv => 'Live-TV';
 	@override String get player => 'Spelare';
 	@override String get videoAndDisplay => 'Video och skärm';
 	@override String get audio => 'Ljud';
@@ -3761,8 +3758,6 @@ extension on TranslationsSv {
 			'settings.startupSection' => 'Startsida',
 			'settings.showExploreTab' => 'Visa fliken Utforska',
 			'settings.showExploreTabDescription' => 'Visa fliken Utforska med innehåll från Plex Discover och anslutna spårningstjänster',
-			'settings.liveTvDefaultFavorites' => 'Öppna med favoriter',
-			'settings.liveTvDefaultFavoritesDescription' => 'Visa endast favoritkanaler när Live-TV öppnas',
 			'settings.general' => 'Allmänt',
 			'settings.generalDescription' => 'Språk, start och fönsterbeteende',
 			'settings.languageAndRegion' => 'Språk och region',
@@ -3772,7 +3767,6 @@ extension on TranslationsSv {
 			'settings.homeScreen' => 'Hemskärm',
 			'settings.navigation' => 'Navigering',
 			'settings.window' => 'Fönster',
-			'settings.liveTv' => 'Live-TV',
 			'settings.player' => 'Spelare',
 			'settings.videoAndDisplay' => 'Video och skärm',
 			'settings.audio' => 'Ljud',
@@ -3840,11 +3834,11 @@ extension on TranslationsSv {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} min kvar',
 			'themeEditor.previewSwitch' => 'Autouppspelning',
 			'themeEditor.previewMutedText' => 'Sekundär text ser ut så här',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Sök filmer, serier, musik...',
 			'search.tryDifferentTerm' => 'Prova en annan sökterm',
 			'search.searchYourMedia' => 'Sök i dina media',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Ange en titel, skådespelare eller nyckelord',
 			'search.people' => 'Personer',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Sätt genväg för ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsSv {
 			'accountPreferences.loadFailed' => 'Det gick inte att läsa in dessa inställningar',
 			'accountPreferences.noPreference' => 'Ingen preferens',
 			'accountPreferences.notSet' => 'Inte angiven',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Ljud och undertexter',
 			'accountPreferences.groups.libraryDisplay' => 'Bibliotek',
 			'accountPreferences.groups.personalMedia' => 'Personliga media',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Föredraget ljudspråk',
 			'accountPreferences.autoSelectAudio' => 'Välj ljud efter språk',
 			'accountPreferences.autoSelectAudioDescription' => 'Av behåller det ljudspår som filen markerar som standard.',
@@ -4868,11 +4862,11 @@ extension on TranslationsSv {
 			'collections.errorAddingToCollection' => 'Det gick inte att lägga till objektet i samlingen',
 			'collections.created' => 'Samlingen har skapats',
 			'collections.removeFromCollection' => 'Ta bort från samlingen',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Ta bort "${title}" från den här samlingen?',
 			'collections.removedFromCollection' => 'Objektet har tagits bort från samlingen',
 			'collections.removeFromCollectionFailed' => 'Det gick inte att ta bort objektet från samlingen',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Fel när objektet skulle tas bort från samlingen: ${error}',
 			'collections.searchCollections' => 'Sök samlingar...',
 			'playlists.title' => 'Spellistor',
@@ -5382,11 +5376,11 @@ extension on TranslationsSv {
 			'metadataEdit.screenTitle' => 'Redigera metadata',
 			'metadataEdit.basicInfo' => 'Grundläggande information',
 			'metadataEdit.artwork' => 'Bildmaterial',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Avancerade inställningar',
 			'metadataEdit.title' => 'Titel',
 			'metadataEdit.sortTitle' => 'Sorteringstitel',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Originaltitel',
 			'metadataEdit.releaseDate' => 'Utgivningsdatum',
 			'metadataEdit.contentRating' => 'Åldersgräns',

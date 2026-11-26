@@ -551,8 +551,6 @@ class Translations$settings$zh extends Translations$settings$en {
 	@override String get startupSection => '启动页面';
 	@override String get showExploreTab => '显示“探索”标签页';
 	@override String get showExploreTabDescription => '显示“探索”标签页，其中包含来自 Plex Discover 和已连接追踪服务的内容';
-	@override String get liveTvDefaultFavorites => '默认显示收藏频道';
-	@override String get liveTvDefaultFavoritesDescription => '打开直播电视时仅显示收藏频道';
 	@override String get general => '通用';
 	@override String get generalDescription => '语言、启动和窗口行为';
 	@override String get languageAndRegion => '语言与地区';
@@ -562,7 +560,6 @@ class Translations$settings$zh extends Translations$settings$en {
 	@override String get homeScreen => '主屏幕';
 	@override String get navigation => '导航';
 	@override String get window => '窗口';
-	@override String get liveTv => '直播电视';
 	@override String get player => '播放器';
 	@override String get videoAndDisplay => '视频与显示';
 	@override String get audio => '音频';
@@ -3749,8 +3746,6 @@ extension on TranslationsZh {
 			'settings.startupSection' => '启动页面',
 			'settings.showExploreTab' => '显示“探索”标签页',
 			'settings.showExploreTabDescription' => '显示“探索”标签页，其中包含来自 Plex Discover 和已连接追踪服务的内容',
-			'settings.liveTvDefaultFavorites' => '默认显示收藏频道',
-			'settings.liveTvDefaultFavoritesDescription' => '打开直播电视时仅显示收藏频道',
 			'settings.general' => '通用',
 			'settings.generalDescription' => '语言、启动和窗口行为',
 			'settings.languageAndRegion' => '语言与地区',
@@ -3760,7 +3755,6 @@ extension on TranslationsZh {
 			'settings.homeScreen' => '主屏幕',
 			'settings.navigation' => '导航',
 			'settings.window' => '窗口',
-			'settings.liveTv' => '直播电视',
 			'settings.player' => '播放器',
 			'settings.videoAndDisplay' => '视频与显示',
 			'settings.audio' => '音频',
@@ -3828,11 +3822,11 @@ extension on TranslationsZh {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '剩余 ${minutes} 分钟',
 			'themeEditor.previewSwitch' => '自动播放',
 			'themeEditor.previewMutedText' => '次要文字看起来是这样的',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => '搜索电影、剧集、音乐…',
 			'search.tryDifferentTerm' => '尝试不同的搜索词',
 			'search.searchYourMedia' => '搜索媒体',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => '输入标题、演员或关键词',
 			'search.people' => '人物',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '为 ${actionName} 设置快捷键',
@@ -4342,11 +4336,11 @@ extension on TranslationsZh {
 			'accountPreferences.loadFailed' => '无法加载这些偏好设置',
 			'accountPreferences.noPreference' => '无偏好',
 			'accountPreferences.notSet' => '未设置',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => '音频与字幕',
 			'accountPreferences.groups.libraryDisplay' => '媒体库',
 			'accountPreferences.groups.personalMedia' => '个人媒体',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => '首选音频语言',
 			'accountPreferences.autoSelectAudio' => '按语言选择音频',
 			'accountPreferences.autoSelectAudioDescription' => '关闭后保留文件标记为默认的音轨。',
@@ -4856,11 +4850,11 @@ extension on TranslationsZh {
 			'collections.errorAddingToCollection' => '添加到合集失败',
 			'collections.created' => '已创建合集',
 			'collections.removeFromCollection' => '从合集移除',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '将“${title}”从此合集移除？',
 			'collections.removedFromCollection' => '已从合集移除',
 			'collections.removeFromCollectionFailed' => '从合集移除失败',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => '从合集移除时出错：${error}',
 			'collections.searchCollections' => '搜索合集…',
 			'playlists.title' => '播放列表',
@@ -5370,11 +5364,11 @@ extension on TranslationsZh {
 			'metadataEdit.screenTitle' => '编辑元数据',
 			'metadataEdit.basicInfo' => '基本信息',
 			'metadataEdit.artwork' => '封面图片',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => '高级设置',
 			'metadataEdit.title' => '标题',
 			'metadataEdit.sortTitle' => '排序标题',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => '原始标题',
 			'metadataEdit.releaseDate' => '上映日期',
 			'metadataEdit.contentRating' => '内容分级',

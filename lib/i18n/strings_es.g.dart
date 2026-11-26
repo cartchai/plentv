@@ -551,8 +551,6 @@ class _Translations$settings$es extends Translations$settings$en {
 	@override String get startupSection => 'Sección de inicio';
 	@override String get showExploreTab => 'Mostrar pestaña Explorar';
 	@override String get showExploreTabDescription => 'Muestra la pestaña Explorar con contenido de Plex Discover y servicios de seguimiento conectados';
-	@override String get liveTvDefaultFavorites => 'Canales favoritos por defecto';
-	@override String get liveTvDefaultFavoritesDescription => 'Mostrar solo canales favoritos al abrir TV en vivo';
 	@override String get general => 'General';
 	@override String get generalDescription => 'Idioma, inicio y comportamiento de la ventana';
 	@override String get languageAndRegion => 'Idioma y región';
@@ -562,7 +560,6 @@ class _Translations$settings$es extends Translations$settings$en {
 	@override String get homeScreen => 'Pantalla de inicio';
 	@override String get navigation => 'Navegación';
 	@override String get window => 'Ventana';
-	@override String get liveTv => 'TV en vivo';
 	@override String get player => 'Reproductor';
 	@override String get videoAndDisplay => 'Video y pantalla';
 	@override String get audio => 'Audio';
@@ -3761,8 +3758,6 @@ extension on TranslationsEs {
 			'settings.startupSection' => 'Sección de inicio',
 			'settings.showExploreTab' => 'Mostrar pestaña Explorar',
 			'settings.showExploreTabDescription' => 'Muestra la pestaña Explorar con contenido de Plex Discover y servicios de seguimiento conectados',
-			'settings.liveTvDefaultFavorites' => 'Canales favoritos por defecto',
-			'settings.liveTvDefaultFavoritesDescription' => 'Mostrar solo canales favoritos al abrir TV en vivo',
 			'settings.general' => 'General',
 			'settings.generalDescription' => 'Idioma, inicio y comportamiento de la ventana',
 			'settings.languageAndRegion' => 'Idioma y región',
@@ -3772,7 +3767,6 @@ extension on TranslationsEs {
 			'settings.homeScreen' => 'Pantalla de inicio',
 			'settings.navigation' => 'Navegación',
 			'settings.window' => 'Ventana',
-			'settings.liveTv' => 'TV en vivo',
 			'settings.player' => 'Reproductor',
 			'settings.videoAndDisplay' => 'Video y pantalla',
 			'settings.audio' => 'Audio',
@@ -3840,11 +3834,11 @@ extension on TranslationsEs {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Quedan ${minutes} min',
 			'themeEditor.previewSwitch' => 'Reproducción automática',
 			'themeEditor.previewMutedText' => 'Así se ve el texto secundario',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Buscar películas, series, música...',
 			'search.tryDifferentTerm' => 'Prueba con un término de búsqueda diferente',
 			'search.searchYourMedia' => 'Busca en tu contenido',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Introduce un título, actor o palabra clave',
 			'search.people' => 'Personas',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Establecer atajo para ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsEs {
 			'accountPreferences.loadFailed' => 'No se pudieron cargar estas preferencias',
 			'accountPreferences.noPreference' => 'Sin preferencia',
 			'accountPreferences.notSet' => 'No establecido',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Audio y subtítulos',
 			'accountPreferences.groups.libraryDisplay' => 'Biblioteca',
 			'accountPreferences.groups.personalMedia' => 'Medios personales',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Idioma de audio preferido',
 			'accountPreferences.autoSelectAudio' => 'Elegir audio por idioma',
 			'accountPreferences.autoSelectAudioDescription' => 'Desactivado mantiene la pista de audio que el archivo marca como predeterminada.',
@@ -4868,11 +4862,11 @@ extension on TranslationsEs {
 			'collections.errorAddingToCollection' => 'Error al añadir a la colección',
 			'collections.created' => 'Colección creada',
 			'collections.removeFromCollection' => 'Eliminar de la colección',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '¿Eliminar "${title}" de esta colección?',
 			'collections.removedFromCollection' => 'Eliminado de la colección',
 			'collections.removeFromCollectionFailed' => 'Error al eliminar de la colección',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Error al eliminar de la colección: ${error}',
 			'collections.searchCollections' => 'Buscar colecciones...',
 			'playlists.title' => 'Listas de reproducción',
@@ -5382,11 +5376,11 @@ extension on TranslationsEs {
 			'metadataEdit.screenTitle' => 'Editar metadatos',
 			'metadataEdit.basicInfo' => 'Información básica',
 			'metadataEdit.artwork' => 'Imágenes',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Ajustes avanzados',
 			'metadataEdit.title' => 'Título',
 			'metadataEdit.sortTitle' => 'Título de ordenación',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Título original',
 			'metadataEdit.releaseDate' => 'Fecha de estreno',
 			'metadataEdit.contentRating' => 'Clasificación de contenido',

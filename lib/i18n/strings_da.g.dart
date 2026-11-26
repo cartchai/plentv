@@ -551,8 +551,6 @@ class _Translations$settings$da extends Translations$settings$en {
 	@override String get startupSection => 'Startsektion';
 	@override String get showExploreTab => 'Vis fanen Opdag';
 	@override String get showExploreTabDescription => 'Vis fanen Opdag med indhold fra Plex Discover og tilknyttede trackere';
-	@override String get liveTvDefaultFavorites => 'Vis favoritkanaler som standard';
-	@override String get liveTvDefaultFavoritesDescription => 'Vis kun favoritkanaler ved åbning af Live TV';
 	@override String get general => 'Generelt';
 	@override String get generalDescription => 'Sprog, opstart og vinduesadfærd';
 	@override String get languageAndRegion => 'Sprog og region';
@@ -562,7 +560,6 @@ class _Translations$settings$da extends Translations$settings$en {
 	@override String get homeScreen => 'Startskærm';
 	@override String get navigation => 'Navigation';
 	@override String get window => 'Vindue';
-	@override String get liveTv => 'Live TV';
 	@override String get player => 'Afspiller';
 	@override String get videoAndDisplay => 'Video og skærm';
 	@override String get audio => 'Lyd';
@@ -3761,8 +3758,6 @@ extension on TranslationsDa {
 			'settings.startupSection' => 'Startsektion',
 			'settings.showExploreTab' => 'Vis fanen Opdag',
 			'settings.showExploreTabDescription' => 'Vis fanen Opdag med indhold fra Plex Discover og tilknyttede trackere',
-			'settings.liveTvDefaultFavorites' => 'Vis favoritkanaler som standard',
-			'settings.liveTvDefaultFavoritesDescription' => 'Vis kun favoritkanaler ved åbning af Live TV',
 			'settings.general' => 'Generelt',
 			'settings.generalDescription' => 'Sprog, opstart og vinduesadfærd',
 			'settings.languageAndRegion' => 'Sprog og region',
@@ -3772,7 +3767,6 @@ extension on TranslationsDa {
 			'settings.homeScreen' => 'Startskærm',
 			'settings.navigation' => 'Navigation',
 			'settings.window' => 'Vindue',
-			'settings.liveTv' => 'Live TV',
 			'settings.player' => 'Afspiller',
 			'settings.videoAndDisplay' => 'Video og skærm',
 			'settings.audio' => 'Lyd',
@@ -3840,11 +3834,11 @@ extension on TranslationsDa {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '${minutes} min tilbage',
 			'themeEditor.previewSwitch' => 'Autoafspilning',
 			'themeEditor.previewMutedText' => 'Sådan ser sekundær tekst ud',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Søg film, serier, musik...',
 			'search.tryDifferentTerm' => 'Prøv en anden søgning',
 			'search.searchYourMedia' => 'Søg i dine medier',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Indtast titel, skuespiller eller nøgleord',
 			'search.people' => 'Personer',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Indstil genvej for ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsDa {
 			'accountPreferences.loadFailed' => 'Kunne ikke indlæse disse præferencer',
 			'accountPreferences.noPreference' => 'Ingen præference',
 			'accountPreferences.notSet' => 'Ikke indstillet',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Lyd og undertekster',
 			'accountPreferences.groups.libraryDisplay' => 'Bibliotek',
 			'accountPreferences.groups.personalMedia' => 'Personlige medier',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Foretrukket lydsprog',
 			'accountPreferences.autoSelectAudio' => 'Vælg lyd ud fra sprog',
 			'accountPreferences.autoSelectAudioDescription' => 'Fra beholder det lydspor, som filen markerer som standard.',
@@ -4868,11 +4862,11 @@ extension on TranslationsDa {
 			'collections.errorAddingToCollection' => 'Kunne ikke tilføje til samling',
 			'collections.created' => 'Samling oprettet',
 			'collections.removeFromCollection' => 'Fjern fra samling',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => 'Fjern "${title}" fra denne samling?',
 			'collections.removedFromCollection' => 'Fjernet fra samling',
 			'collections.removeFromCollectionFailed' => 'Kunne ikke fjerne fra samling',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Fejl ved fjernelse fra samling: ${error}',
 			'collections.searchCollections' => 'Søg i samlinger...',
 			'playlists.title' => 'Playlister',
@@ -5382,11 +5376,11 @@ extension on TranslationsDa {
 			'metadataEdit.screenTitle' => 'Rediger metadata',
 			'metadataEdit.basicInfo' => 'Grundlæggende oplysninger',
 			'metadataEdit.artwork' => 'Grafik',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Avancerede indstillinger',
 			'metadataEdit.title' => 'Titel',
 			'metadataEdit.sortTitle' => 'Sorteringstitel',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Originaltitel',
 			'metadataEdit.releaseDate' => 'Udgivelsesdato',
 			'metadataEdit.contentRating' => 'Aldersgrænse',

@@ -552,8 +552,6 @@ class _Translations$settings$zh_Hant extends Translations$settings$zh {
 	@override String get startupSection => '啟動頁面';
 	@override String get showExploreTab => '顯示探索分頁';
 	@override String get showExploreTabDescription => '顯示探索分頁，其中包含來自 Plex Discover 和已連結追蹤服務的內容';
-	@override String get liveTvDefaultFavorites => '預設顯示最愛頻道';
-	@override String get liveTvDefaultFavoritesDescription => '開啟直播電視時僅顯示最愛頻道';
 	@override String get general => '一般';
 	@override String get generalDescription => '語言、啟動與視窗行為';
 	@override String get languageAndRegion => '語言與地區';
@@ -563,7 +561,6 @@ class _Translations$settings$zh_Hant extends Translations$settings$zh {
 	@override String get homeScreen => '主畫面';
 	@override String get navigation => '導覽';
 	@override String get window => '視窗';
-	@override String get liveTv => '直播電視';
 	@override String get player => '播放器';
 	@override String get videoAndDisplay => '影片與顯示器';
 	@override String get audio => '音訊';
@@ -3750,8 +3747,6 @@ extension on TranslationsZhHant {
 			'settings.startupSection' => '啟動頁面',
 			'settings.showExploreTab' => '顯示探索分頁',
 			'settings.showExploreTabDescription' => '顯示探索分頁，其中包含來自 Plex Discover 和已連結追蹤服務的內容',
-			'settings.liveTvDefaultFavorites' => '預設顯示最愛頻道',
-			'settings.liveTvDefaultFavoritesDescription' => '開啟直播電視時僅顯示最愛頻道',
 			'settings.general' => '一般',
 			'settings.generalDescription' => '語言、啟動與視窗行為',
 			'settings.languageAndRegion' => '語言與地區',
@@ -3761,7 +3756,6 @@ extension on TranslationsZhHant {
 			'settings.homeScreen' => '主畫面',
 			'settings.navigation' => '導覽',
 			'settings.window' => '視窗',
-			'settings.liveTv' => '直播電視',
 			'settings.player' => '播放器',
 			'settings.videoAndDisplay' => '影片與顯示器',
 			'settings.audio' => '音訊',
@@ -3829,11 +3823,11 @@ extension on TranslationsZhHant {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => '剩餘 ${minutes} 分鐘',
 			'themeEditor.previewSwitch' => '自動播放',
 			'themeEditor.previewMutedText' => '次要文字看起來像這樣',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => '搜尋電影、影集、音樂…',
 			'search.tryDifferentTerm' => '嘗試不同的關鍵字',
 			'search.searchYourMedia' => '搜尋媒體庫',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => '輸入標題、演員或關鍵字',
 			'search.people' => '人物',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => '為 ${actionName} 設定快速鍵',
@@ -4343,11 +4337,11 @@ extension on TranslationsZhHant {
 			'accountPreferences.loadFailed' => '無法載入這些偏好設定',
 			'accountPreferences.noPreference' => '無偏好',
 			'accountPreferences.notSet' => '未設定',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => '音訊與字幕',
 			'accountPreferences.groups.libraryDisplay' => '媒體庫',
 			'accountPreferences.groups.personalMedia' => '個人媒體',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => '偏好音訊語言',
 			'accountPreferences.autoSelectAudio' => '依語言選擇音訊',
 			'accountPreferences.autoSelectAudioDescription' => '關閉時會使用檔案標記為預設的音訊軌。',
@@ -4857,11 +4851,11 @@ extension on TranslationsZhHant {
 			'collections.errorAddingToCollection' => '新增至收藏集失敗',
 			'collections.created' => '已建立收藏集',
 			'collections.removeFromCollection' => '從收藏集移除',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '將「${title}」從此收藏集移除？',
 			'collections.removedFromCollection' => '已從收藏集移除',
 			'collections.removeFromCollectionFailed' => '從收藏集移除失敗',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => '從收藏集移除時發生錯誤：${error}',
 			'collections.searchCollections' => '搜尋收藏集…',
 			'playlists.title' => '播放清單',
@@ -5371,11 +5365,11 @@ extension on TranslationsZhHant {
 			'metadataEdit.screenTitle' => '編輯中繼資料',
 			'metadataEdit.basicInfo' => '基本資訊',
 			'metadataEdit.artwork' => '海報與背景',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => '進階設定',
 			'metadataEdit.title' => '標題',
 			'metadataEdit.sortTitle' => '排序標題',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => '原始標題',
 			'metadataEdit.releaseDate' => '上映日期',
 			'metadataEdit.contentRating' => '內容分級',

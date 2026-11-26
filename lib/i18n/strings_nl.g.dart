@@ -551,8 +551,6 @@ class _Translations$settings$nl extends Translations$settings$en {
 	@override String get startupSection => 'Opstartsectie';
 	@override String get showExploreTab => 'Tabblad Ontdekken tonen';
 	@override String get showExploreTabDescription => 'Toon het tabblad Ontdekken met content uit Plex Discover en gekoppelde trackers';
-	@override String get liveTvDefaultFavorites => 'Standaard favoriete zenders';
-	@override String get liveTvDefaultFavoritesDescription => 'Toon alleen favoriete zenders bij het openen van Live TV';
 	@override String get general => 'Algemeen';
 	@override String get generalDescription => 'Taal, opstart- en venstergedrag';
 	@override String get languageAndRegion => 'Taal en regio';
@@ -562,7 +560,6 @@ class _Translations$settings$nl extends Translations$settings$en {
 	@override String get homeScreen => 'Startscherm';
 	@override String get navigation => 'Navigatie';
 	@override String get window => 'Venster';
-	@override String get liveTv => 'Live-tv';
 	@override String get player => 'Speler';
 	@override String get videoAndDisplay => 'Video en weergave';
 	@override String get audio => 'Audio';
@@ -3761,8 +3758,6 @@ extension on TranslationsNl {
 			'settings.startupSection' => 'Opstartsectie',
 			'settings.showExploreTab' => 'Tabblad Ontdekken tonen',
 			'settings.showExploreTabDescription' => 'Toon het tabblad Ontdekken met content uit Plex Discover en gekoppelde trackers',
-			'settings.liveTvDefaultFavorites' => 'Standaard favoriete zenders',
-			'settings.liveTvDefaultFavoritesDescription' => 'Toon alleen favoriete zenders bij het openen van Live TV',
 			'settings.general' => 'Algemeen',
 			'settings.generalDescription' => 'Taal, opstart- en venstergedrag',
 			'settings.languageAndRegion' => 'Taal en regio',
@@ -3772,7 +3767,6 @@ extension on TranslationsNl {
 			'settings.homeScreen' => 'Startscherm',
 			'settings.navigation' => 'Navigatie',
 			'settings.window' => 'Venster',
-			'settings.liveTv' => 'Live-tv',
 			'settings.player' => 'Speler',
 			'settings.videoAndDisplay' => 'Video en weergave',
 			'settings.audio' => 'Audio',
@@ -3840,11 +3834,11 @@ extension on TranslationsNl {
 			'themeEditor.previewCardSubtitle' => ({required Object minutes}) => 'Nog ${minutes} min',
 			'themeEditor.previewSwitch' => 'Automatisch afspelen',
 			'themeEditor.previewMutedText' => 'Secundaire tekst ziet er zo uit',
-			_ => null,
-		} ?? switch (path) {
 			'search.hint' => 'Zoek films, series, muziek...',
 			'search.tryDifferentTerm' => 'Probeer een andere zoekterm',
 			'search.searchYourMedia' => 'Zoek in je media',
+			_ => null,
+		} ?? switch (path) {
 			'search.enterTitleActorOrKeyword' => 'Voer een titel, acteur of trefwoord in',
 			'search.people' => 'Personen',
 			'hotkeys.setShortcutFor' => ({required Object actionName}) => 'Stel sneltoets in voor ${actionName}',
@@ -4354,11 +4348,11 @@ extension on TranslationsNl {
 			'accountPreferences.loadFailed' => 'Deze voorkeuren konden niet worden geladen',
 			'accountPreferences.noPreference' => 'Geen voorkeur',
 			'accountPreferences.notSet' => 'Niet ingesteld',
-			_ => null,
-		} ?? switch (path) {
 			'accountPreferences.groups.audioAndSubtitles' => 'Audio en ondertitels',
 			'accountPreferences.groups.libraryDisplay' => 'Bibliotheek',
 			'accountPreferences.groups.personalMedia' => 'Persoonlijke media',
+			_ => null,
+		} ?? switch (path) {
 			'accountPreferences.preferredAudioLanguage' => 'Voorkeurstaal voor audio',
 			'accountPreferences.autoSelectAudio' => 'Kies audio op taal',
 			'accountPreferences.autoSelectAudioDescription' => 'Bij \'Uit\' wordt de audiotrack gebruikt die het bestand als standaard markeert.',
@@ -4868,11 +4862,11 @@ extension on TranslationsNl {
 			'collections.errorAddingToCollection' => 'Fout bij toevoegen aan collectie',
 			'collections.created' => 'Collectie gemaakt',
 			'collections.removeFromCollection' => 'Verwijderen uit collectie',
-			_ => null,
-		} ?? switch (path) {
 			'collections.removeFromCollectionConfirm' => ({required Object title}) => '"${title}" uit deze collectie verwijderen?',
 			'collections.removedFromCollection' => 'Uit collectie verwijderd',
 			'collections.removeFromCollectionFailed' => 'Verwijderen uit collectie mislukt',
+			_ => null,
+		} ?? switch (path) {
 			'collections.removeFromCollectionError' => ({required Object error}) => 'Fout bij verwijderen uit collectie: ${error}',
 			'collections.searchCollections' => 'Collecties zoeken...',
 			'playlists.title' => 'Afspeellijsten',
@@ -5382,11 +5376,11 @@ extension on TranslationsNl {
 			'metadataEdit.screenTitle' => 'Metadata bewerken',
 			'metadataEdit.basicInfo' => 'Basisinformatie',
 			'metadataEdit.artwork' => 'Illustraties',
-			_ => null,
-		} ?? switch (path) {
 			'metadataEdit.advancedSettings' => 'Geavanceerde instellingen',
 			'metadataEdit.title' => 'Titel',
 			'metadataEdit.sortTitle' => 'Sorteertitel',
+			_ => null,
+		} ?? switch (path) {
 			'metadataEdit.originalTitle' => 'Oorspronkelijke titel',
 			'metadataEdit.releaseDate' => 'Releasedatum',
 			'metadataEdit.contentRating' => 'Leeftijdsclassificatie',
