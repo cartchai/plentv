@@ -585,7 +585,12 @@ class IptvClient implements MediaServerClient {
   @visibleForTesting
   set testXtreamApi(XtreamApi api) => _api = api;
 
-  http.Client _http = http.Client();
+  /// The M3U playlist client (1.6.28 G4): built through the tunnel
+  /// proxy, so the M3U health HEAD rides the tunnel when it is on and
+  /// goes direct when it is off — like the Xtream health branch beside
+  /// it. The proxy is resolved per request from the live tunnel state,
+  /// so a long-lived client follows tunnel on/off transitions.
+  http.Client _http = WarpTunnelService.instance.proxiedHttpClient();
   final Object _authSessionId = Object();
 
   /// Test-only override for the HTTP client, so unit tests can serve a

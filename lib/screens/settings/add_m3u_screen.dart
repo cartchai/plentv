@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:uuid/uuid.dart';
 
@@ -14,6 +13,7 @@ import '../../mixins/controller_disposer_mixin.dart';
 import '../../profiles/profile.dart';
 import '../../services/iptv/http_file_download.dart';
 import '../../services/iptv/m3u_parser.dart';
+import '../../services/iptv/warp_tunnel_service.dart';
 import '../../utils/app_logger.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/focused_scroll_scaffold.dart';
@@ -73,7 +73,10 @@ class _AddM3uScreenState extends State<AddM3uScreen> with AsyncFormStateMixin, C
     if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
       throw const _ProbeFailure('invalid-url');
     }
-    final client = http.Client();
+    // 1.6.28 (G3): the playlist probe rides the tunnel when it is on,
+    // like the runtime M3U feed fetch does — a bare client would go
+    // direct while the user believes everything is tunneled.
+    final client = WarpTunnelService.instance.proxiedHttpClient();
     final tempDir = await Directory.systemTemp.createTemp('plezy_m3u_probe_');
     final tempPath = '${tempDir.path}/playlist.m3u';
     try {

@@ -1600,6 +1600,9 @@
     "changelog2343": [
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
     ],
+    "changelog2346": [
+      "Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too"
+    ],
     "changelog2345": [
       "Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently"
     ],
@@ -3338,6 +3341,7 @@
     "m3uPlaylistEmpty": "That playlist has no channels.",
     "m3uInvalidUrl": "Enter a valid playlist URL starting with http:// or https://.",
     "xtreamProbeFailed": "Could not sign in to that Xtream server. Check the server URL, username, and password.",
+   "tunnelStillStarting": "The VPN tunnel is still starting. Please wait a moment and try again.",
     "addIptv": "Add"
   },
   "deepLinks": {

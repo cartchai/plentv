@@ -6194,7 +6194,9 @@ class IptvLiveTvSupport implements LiveTvSupport {
     if (uri == null || !(uri.isScheme('http') || uri.isScheme('https')) || uri.host.isEmpty) {
       throw StateError('Not a valid http(s) URL');
     }
-    final client = http.Client();
+    // 1.6.28 (G5): the validation fetch rides the tunnel when it is
+    // on — the URL is often the panel's xmltv.php with credentials.
+    final client = WarpTunnelService.instance.proxiedHttpClient();
     try {
       final response = await client.send(http.Request('GET', uri)).timeout(const Duration(seconds: 15));
       if (response.statusCode < 200 || response.statusCode >= 300) {

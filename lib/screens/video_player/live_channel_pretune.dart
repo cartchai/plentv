@@ -4,10 +4,10 @@
 // private named parameters — so initializing formals cannot be used here.
 import 'dart:async';
 
-import 'package:http/http.dart' as http;
 import 'package:plezy/media/live_tv_support.dart';
 import 'package:plezy/models/livetv_channel.dart';
 import 'package:plezy/mpv/models.dart';
+import 'package:plezy/services/iptv/warp_tunnel_service.dart';
 
 /// One neighbour channel, tuned in the background while the current channel
 /// plays: its session is started and its stream URL resolved, so a zap to it
@@ -47,7 +47,10 @@ class PretunedChannel {
 /// verdict: the zap still opens normally rather than trusting an absent
 /// answer.
 Future<int?> probeIptvPlaylist(String url, Map<String, String> headers) async {
-  final client = http.Client();
+  // 1.6.28 (G5): the probe rides the tunnel when it is on — the URL
+  // carries credentials, so it must never go direct while the tunnel
+  // is up.
+  final client = WarpTunnelService.instance.proxiedHttpClient();
   try {
     final response = await client.get(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 5));
     return response.statusCode;

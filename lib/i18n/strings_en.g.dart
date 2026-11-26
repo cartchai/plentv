@@ -4014,6 +4014,9 @@ class Translations$about$en {
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
 	];
+	List<String> get changelog2346 => [
+		'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
+	];
 	List<String> get changelog2345 => [
 		'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 	];
@@ -7233,6 +7236,9 @@ class Translations$addServer$en {
 
 	/// en: 'Could not sign in to that Xtream server. Check the server URL, username, and password.'
 	String get xtreamProbeFailed => 'Could not sign in to that Xtream server. Check the server URL, username, and password.';
+
+	/// en: 'The VPN tunnel is still starting. Please wait a moment and try again.'
+	String get tunnelStillStarting => 'The VPN tunnel is still starting. Please wait a moment and try again.';
 
 	/// en: 'Add'
 	String get addIptv => 'Add';
@@ -11725,6 +11731,7 @@ extension on Translations {
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			'about.changelog2346.0' => 'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
 			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
@@ -11811,9 +11818,9 @@ extension on Translations {
 			'about.changelog2319.1' => 'Fixed: the guide now spaces out its channel requests so it stays under the panel\'s flood limit instead of firing them all at once',
 			'about.changelog2319.2' => 'New: when the guide can\'t reach the panel it now shows the last guide it downloaded, with the date it was last updated, instead of empty rows',
 			'about.changelog2319.3' => 'New: the access-denied banner now has a button that opens Connection refusals, so you can see exactly what the panel said',
-			'about.changelog2319.4' => 'Fixed: the Retry buttons on a refused connection no longer re-fire the same refused request — they say the connection is refused instead',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2319.4' => 'Fixed: the Retry buttons on a refused connection no longer re-fire the same refused request — they say the connection is refused instead',
 			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
 			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
@@ -12325,9 +12332,9 @@ extension on Translations {
 			'liveTv.guideLoadFailed' => 'Guide couldn\'t load — tap to retry',
 			'liveTv.searchGuide' => 'Search Guide',
 			'liveTv.searchHint' => 'Search channels & programs',
-			'liveTv.searchNoResults' => ({required Object query}) => 'No matches for "${query}"',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.searchNoResults' => ({required Object query}) => 'No matches for "${query}"',
 			'liveTv.searchJumpNotFound' => 'That channel isn\'t in the guide any more — try refreshing it.',
 			'liveTv.channelsSection' => 'Channels',
 			'liveTv.programsSection' => 'Programs',
@@ -12839,9 +12846,9 @@ extension on Translations {
 			'companionRemote.remote.volumeDown' => 'Down',
 			'companionRemote.remote.volumeUp' => 'Up',
 			'companionRemote.remote.fullscreen' => 'Fullscreen',
-			'companionRemote.remote.subtitles' => 'Subtitles',
 			_ => null,
 		} ?? switch (path) {
+			'companionRemote.remote.subtitles' => 'Subtitles',
 			'companionRemote.remote.audio' => 'Audio',
 			'companionRemote.remote.searchHint' => 'Search on desktop...',
 			'companionRemote.errors.noNetworkInterface' => 'No network interface found',
@@ -13182,6 +13189,7 @@ extension on Translations {
 			'addServer.m3uPlaylistEmpty' => 'That playlist has no channels.',
 			'addServer.m3uInvalidUrl' => 'Enter a valid playlist URL starting with http:// or https://.',
 			'addServer.xtreamProbeFailed' => 'Could not sign in to that Xtream server. Check the server URL, username, and password.',
+			'addServer.tunnelStillStarting' => 'The VPN tunnel is still starting. Please wait a moment and try again.',
 			'addServer.addIptv' => 'Add',
 			'deepLinks.invalid' => 'This PlenTV link isn\'t valid.',
 			'deepLinks.profileNotFound' => ({required Object profile}) => 'No profile matches "${profile}".',
@@ -13352,10 +13360,10 @@ extension on Translations {
 			'iptv.epgReloadWindowSlideReady' => ({required Object count}) => 'Guide rows ready: ${count} channels',
 			'iptv.epgReloadWindowSlideSkipped' => ({required Object reason}) => 'Guide rows will fill in as you scroll (slide skipped: ${reason})',
 			'iptv.epgReloadWindowSlideReasonStoreUnavailable' => 'store not built yet',
-			'iptv.epgReloadWindowSlideReasonSlideFailed' => 'slide failed',
-			'iptv.epgSourceDownloadDetail' => ({required Object detail}) => 'Download: ${detail}',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.epgReloadWindowSlideReasonSlideFailed' => 'slide failed',
+			'iptv.epgSourceDownloadDetail' => ({required Object detail}) => 'Download: ${detail}',
 			'iptv.epgM3uTvgIdCheck' => 'Check M3U guide IDs',
 			'iptv.epgM3uTvgIdCheckDescription' => 'One-time check: fetch the provider\'s playlist once and see how many channels without a guide ID gain one from it — and how many of those IDs are in the guide',
 			'iptv.epgM3uTvgIdResult' => ({required Object checked, required Object noId, required Object gained, required Object inFeed}) => '${checked} channels checked · ${noId} without a guide ID · ${gained} gain one from the playlist · ${inFeed} of those are in the guide',
