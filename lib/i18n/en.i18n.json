@@ -1600,6 +1600,9 @@
     "changelog2343": [
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
     ],
+    "changelog2345": [
+      "Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently"
+    ],
     "changelog2344": [
       "New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before"
     ],

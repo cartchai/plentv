@@ -4014,6 +4014,9 @@ class Translations$about$en {
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
 	];
+	List<String> get changelog2345 => [
+		'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
+	];
 	List<String> get changelog2344 => [
 		'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 	];
@@ -11722,6 +11725,7 @@ extension on Translations {
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
 			'about.changelog2341.0' => 'New: the player now opens IPTV streams through the in-app tunnel instead of straight from the panel — that\'s why shows still showed 403 even when the tunnel was connected. Note: this covers http:// streams only; the bundled player can\'t use the proxy for https:// streams, so those still go direct',
@@ -11808,9 +11812,9 @@ extension on Translations {
 			'about.changelog2319.2' => 'New: when the guide can\'t reach the panel it now shows the last guide it downloaded, with the date it was last updated, instead of empty rows',
 			'about.changelog2319.3' => 'New: the access-denied banner now has a button that opens Connection refusals, so you can see exactly what the panel said',
 			'about.changelog2319.4' => 'Fixed: the Retry buttons on a refused connection no longer re-fire the same refused request — they say the connection is refused instead',
-			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
 			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
 			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
@@ -12322,9 +12326,9 @@ extension on Translations {
 			'liveTv.searchGuide' => 'Search Guide',
 			'liveTv.searchHint' => 'Search channels & programs',
 			'liveTv.searchNoResults' => ({required Object query}) => 'No matches for "${query}"',
-			'liveTv.searchJumpNotFound' => 'That channel isn\'t in the guide any more — try refreshing it.',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.searchJumpNotFound' => 'That channel isn\'t in the guide any more — try refreshing it.',
 			'liveTv.channelsSection' => 'Channels',
 			'liveTv.programsSection' => 'Programs',
 			'liveTv.now' => 'Now',
@@ -12836,9 +12840,9 @@ extension on Translations {
 			'companionRemote.remote.volumeUp' => 'Up',
 			'companionRemote.remote.fullscreen' => 'Fullscreen',
 			'companionRemote.remote.subtitles' => 'Subtitles',
-			'companionRemote.remote.audio' => 'Audio',
 			_ => null,
 		} ?? switch (path) {
+			'companionRemote.remote.audio' => 'Audio',
 			'companionRemote.remote.searchHint' => 'Search on desktop...',
 			'companionRemote.errors.noNetworkInterface' => 'No network interface found',
 			'companionRemote.errors.authenticationFailed' => 'Authentication failed',
@@ -13350,9 +13354,9 @@ extension on Translations {
 			'iptv.epgReloadWindowSlideReasonStoreUnavailable' => 'store not built yet',
 			'iptv.epgReloadWindowSlideReasonSlideFailed' => 'slide failed',
 			'iptv.epgSourceDownloadDetail' => ({required Object detail}) => 'Download: ${detail}',
-			'iptv.epgM3uTvgIdCheck' => 'Check M3U guide IDs',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.epgM3uTvgIdCheck' => 'Check M3U guide IDs',
 			'iptv.epgM3uTvgIdCheckDescription' => 'One-time check: fetch the provider\'s playlist once and see how many channels without a guide ID gain one from it — and how many of those IDs are in the guide',
 			'iptv.epgM3uTvgIdResult' => ({required Object checked, required Object noId, required Object gained, required Object inFeed}) => '${checked} channels checked · ${noId} without a guide ID · ${gained} gain one from the playlist · ${inFeed} of those are in the guide',
 			'iptv.epgM3uTvgIdSample' => ({required Object samples}) => 'Examples: ${samples}',
