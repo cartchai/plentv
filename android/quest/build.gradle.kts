@@ -15,6 +15,7 @@
 // the app's 25, so the module manifest overrides it (tools:overrideLibrary)
 // — the code only ever runs on a Quest headset (API 29+).
 
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -48,17 +49,21 @@ android {
     targetCompatibility = JavaVersion.VERSION_17
   }
 
-  kotlin {
-    compilerOptions {
-      jvmTarget = JvmTarget.JVM_17
-    }
-  }
-
   externalNativeBuild {
     cmake {
       path = file("src/main/cpp/CMakeLists.txt")
       version = "4.1.2"
     }
+  }
+}
+
+// Top-level, like :libass and :app — NOT nested inside android {} (the
+// nested form is what made the script fail to compile under AGP 9.3.1:
+// the android {} block then no longer matches the proven library-module
+// shape, and the compiler flagged the android {} call itself).
+kotlin {
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_17)
   }
 }
 
@@ -77,7 +82,7 @@ dependencies {
 // The Flutter engine version for the embedding artifact, read from the
 // Flutter SDK's engine.version (same file the Flutter tool uses).
 fun flutterEngineVersion(): String {
-  val properties = java.util.Properties()
+  val properties = Properties()
   rootProject.file("local.properties").inputStream().use { properties.load(it) }
   val flutterSdk = properties.getProperty("flutter.sdk")
     ?: throw GradleException("flutter.sdk not set in local.properties")

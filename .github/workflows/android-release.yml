@@ -125,6 +125,41 @@ jobs:
           path: build/app/outputs/mapping/**/mapping.txt
           if-no-files-found: warn
 
+      # 1.6.29 (Quest 3D): build the Quest APK — the same app with the
+      # :quest module linked (OpenXR activity + libvr_player.so), so it
+      # runs the VR player on a Quest headset. Placed AFTER the R8
+      # mapping upload on purpose: the Quest build overwrites the
+      # release R8 mapping on disk, so the phone mapping is captured
+      # first. The phone APKs were already copied to
+      # PlenTV.<tag>-<abi>.apk above, so the Quest build overwriting
+      # build/app/outputs/flutter-apk/ is harmless. Only the arm64
+      # slice is kept (Quest is arm64-v8a); the other two Quest slices
+      # are built but not shipped. The Quest APK is named
+      # PlenTV.<tag>-quest-arm64-v8a.apk so the release step's glob
+      # (PlenTV.<tag>-*.apk) picks it up automatically — no change to
+      # the release step. Same dart-defines as the phone build, plus
+      # QUEST_BUILD=true. The NDK is on the runner (ANDROID_NDK_HOME),
+      # and libbox.aar was already built above, so the Quest native
+      # module (OpenXR/C++) can compile here.
+      - name: Build Quest APK
+        run: ORG_GRADLE_PROJECT_questBuild=true flutter build apk --release --split-per-abi --split-debug-info=build/app/outputs/symbols-quest --dart-define=ENABLE_UPDATE_CHECK=true --dart-define=PLENTV_LOG_WORKER_URL=${{ vars.PLENTV_LOG_WORKER_URL }} --dart-define=cronetHttpNoPlay=true --dart-define=QUEST_BUILD=true
+
+      - name: Name the Quest APK for the release
+        run: |
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "PlenTV.${{ github.ref_name }}-quest-arm64-v8a.apk"
+          ls -lh "PlenTV.${{ github.ref_name }}-quest-arm64-v8a.apk"
+
+      # workflow_dispatch builds only (no release): the Quest APK is a
+      # release asset on tag runs, so upload it as a workflow artifact
+      # here so a dispatch run still yields a downloadable Quest APK.
+      - name: Upload Quest APK as workflow artifact
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlenTV-${{ github.ref_name }}-quest-arm64-v8a
+          path: PlenTV.${{ github.ref_name }}-quest-arm64-v8a.apk
+          if-no-files-found: error
+
       - name: Create GitHub Release with the APKs
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
