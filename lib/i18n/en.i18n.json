@@ -1009,6 +1009,8 @@
     "layout2d": "2D",
     "layoutSbs": "Side by side",
     "layoutOu": "Over-under",
+    "layoutVr180": "VR180",
+    "layoutVr360": "VR360",
     "layoutAuto": "Auto (detect)",
     "packing": "Packing",
     "packingHalf": "Half",

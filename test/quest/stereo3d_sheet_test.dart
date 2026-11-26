@@ -29,6 +29,18 @@ void main() {
     source: Stereo3dSource.filename,
   );
 
+  const vr180Detection = Stereo3dDetection(
+    layout: Stereo3dLayout.vr180,
+    packing: Stereo3dPacking.half,
+    source: Stereo3dSource.filename,
+  );
+
+  const vr360Detection = Stereo3dDetection(
+    layout: Stereo3dLayout.vr360,
+    packing: Stereo3dPacking.half,
+    source: Stereo3dSource.filename,
+  );
+
   Future<void> pumpSheet(
     WidgetTester tester, {
     required _FakeStereo3dPlayer player,
@@ -36,6 +48,8 @@ void main() {
     required VrPlayerChannel vrChannel,
     bool isQuest = true,
     Stereo3dDetection detection = sbsDetection,
+    double width = 700,
+    double height = 800,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -43,8 +57,8 @@ void main() {
         home: OverlaySheetHost(
           child: Scaffold(
             body: SizedBox(
-              width: 700,
-              height: 800,
+              width: width,
+              height: height,
               child: Stereo3dSheet(
                 player: player,
                 trackControlsState: const TrackControlsState(
@@ -178,6 +192,112 @@ void main() {
             "Couldn't start the VR player. Make sure you're on a Quest headset."),
         findsOneWidget,
       );
+    });
+
+    testWidgets('detected VR180 shows the VR180 segment selected',
+        (tester) async {
+      final player = _FakeStereo3dPlayer();
+      final store = Stereo3dTitleStore(_MemoryTitleBackend());
+      await pumpSheet(tester,
+          player: player,
+          titleStore: store,
+          vrChannel: VrPlayerChannel(),
+          detection: vr180Detection);
+      expect(find.text('VR180 · half · filename'), findsOneWidget);
+      // The segment label renders (ButtonSegment itself is config, not a
+      // widget in the tree — the label text + selected set prove it).
+      expect(find.text('VR180'), findsOneWidget);
+      final layoutButton = tester.widget<SegmentedButton<Stereo3dLayout>>(
+        find.byType(SegmentedButton<Stereo3dLayout>),
+      );
+      expect(layoutButton.selected, {Stereo3dLayout.vr180});
+    });
+
+    testWidgets('detected VR360 shows the VR360 segment selected',
+        (tester) async {
+      final player = _FakeStereo3dPlayer();
+      final store = Stereo3dTitleStore(_MemoryTitleBackend());
+      await pumpSheet(tester,
+          player: player,
+          titleStore: store,
+          vrChannel: VrPlayerChannel(),
+          detection: vr360Detection);
+      expect(find.text('VR360 · half · filename'), findsOneWidget);
+      expect(find.text('VR360'), findsOneWidget);
+      final layoutButton = tester.widget<SegmentedButton<Stereo3dLayout>>(
+        find.byType(SegmentedButton<Stereo3dLayout>),
+      );
+      expect(layoutButton.selected, {Stereo3dLayout.vr360});
+    });
+
+    testWidgets(
+        'untagged file can be marked VR180 by hand and plays VR180 in VR',
+        (tester) async {
+      final player = _FakeStereo3dPlayer();
+      final store = Stereo3dTitleStore(_MemoryTitleBackend());
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel(VrPlayerChannel.channelName),
+        (MethodCall call) async {
+          calls.add(call);
+          return <String, Object?>{
+            'positionSeconds': 456.25,
+            'completed': false,
+          };
+        },
+      );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+                const MethodChannel(VrPlayerChannel.channelName), null);
+      });
+
+      await pumpSheet(tester,
+          player: player,
+          titleStore: store,
+          vrChannel: VrPlayerChannel(),
+          detection: const Stereo3dDetection.twoD());
+      // The untagged file detects as 2D.
+      expect(find.text('2D'), findsWidgets);
+      // Pick VR180 by hand.
+      await tester.tap(find.text('VR180'));
+      await tester.pump();
+      final layoutButton = tester.widget<SegmentedButton<Stereo3dLayout>>(
+        find.byType(SegmentedButton<Stereo3dLayout>),
+      );
+      expect(layoutButton.selected, {Stereo3dLayout.vr180});
+      // Remember it for this title, then confirm the record sticks.
+      await tester.tap(find.text('Remember for this title'));
+      await tester.pump();
+      final record = store.load('rating-1', '7');
+      expect(record, isNotNull);
+      expect(record!.layout, Stereo3dLayout.vr180);
+      // Watch in VR carries the manual layout.
+      await tester.tap(find.text('Watch in VR'));
+      await tester.pump();
+      await tester.pump();
+      expect(calls, hasLength(1));
+      final args = calls.single.arguments as Map<Object?, Object?>;
+      expect(args['layout'], 'vr180');
+    });
+
+    testWidgets('layout picker does not overflow at phone width',
+        (tester) async {
+      // The sheet's flat rows run on phones too — six layout segments must
+      // fit a narrow phone screen without a RenderFlex overflow.
+      final player = _FakeStereo3dPlayer();
+      final store = Stereo3dTitleStore(_MemoryTitleBackend());
+      await pumpSheet(tester,
+          player: player,
+          titleStore: store,
+          vrChannel: VrPlayerChannel(),
+          detection: vr180Detection,
+          width: 390,
+          height: 844);
+      expect(tester.takeException(), isNull);
+      expect(find.text('VR180'), findsOneWidget);
+      expect(find.text('VR360'), findsOneWidget);
     });
   });
 }

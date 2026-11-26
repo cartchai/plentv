@@ -497,6 +497,12 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                       value: Stereo3dLayout.ou,
                       label: Text(t.stereo3d.layoutOu)),
                   ButtonSegment(
+                      value: Stereo3dLayout.vr180,
+                      label: Text(t.stereo3d.layoutVr180)),
+                  ButtonSegment(
+                      value: Stereo3dLayout.vr360,
+                      label: Text(t.stereo3d.layoutVr360)),
+                  ButtonSegment(
                       value: Stereo3dLayout.auto,
                       label: Text(t.stereo3d.layoutAuto)),
                 ],

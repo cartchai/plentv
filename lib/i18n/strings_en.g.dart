@@ -2827,6 +2827,12 @@ class Translations$stereo3d$en {
 	/// en: 'Over-under'
 	String get layoutOu => 'Over-under';
 
+	/// en: 'VR180'
+	String get layoutVr180 => 'VR180';
+
+	/// en: 'VR360'
+	String get layoutVr360 => 'VR360';
+
 	/// en: 'Auto (detect)'
 	String get layoutAuto => 'Auto (detect)';
 
@@ -11406,6 +11412,8 @@ extension on Translations {
 			'stereo3d.layout2d' => '2D',
 			'stereo3d.layoutSbs' => 'Side by side',
 			'stereo3d.layoutOu' => 'Over-under',
+			'stereo3d.layoutVr180' => 'VR180',
+			'stereo3d.layoutVr360' => 'VR360',
 			'stereo3d.layoutAuto' => 'Auto (detect)',
 			'stereo3d.packing' => 'Packing',
 			'stereo3d.packingHalf' => 'Half',
@@ -11492,10 +11500,10 @@ extension on Translations {
 			'messages.libraryScanFailed' => ({required Object error}) => 'Failed to scan library: ${error}',
 			'messages.metadataRefreshing' => ({required Object title}) => 'Refreshing metadata for "${title}"...',
 			'messages.metadataRefreshStarted' => ({required Object title}) => 'Metadata refresh started for "${title}"',
-			'messages.metadataRefreshFailed' => ({required Object error}) => 'Failed to refresh metadata: ${error}',
-			'messages.logoutConfirm' => 'Are you sure you want to log out? This deletes everything in the app: every connection (including IPTV), every profile, and all settings. To sign out of just one Plex account, use the Sign out entry for that account in this menu instead.',
 			_ => null,
 		} ?? switch (path) {
+			'messages.metadataRefreshFailed' => ({required Object error}) => 'Failed to refresh metadata: ${error}',
+			'messages.logoutConfirm' => 'Are you sure you want to log out? This deletes everything in the app: every connection (including IPTV), every profile, and all settings. To sign out of just one Plex account, use the Sign out entry for that account in this menu instead.',
 			'messages.noSeasonsFound' => 'No seasons found',
 			'messages.seasonsLoadFailed' => 'Couldn\'t load seasons',
 			'messages.noEpisodesFound' => 'No episodes found in first season',
@@ -12006,10 +12014,10 @@ extension on Translations {
 			'about.changelog2332.4' => 'Fixed: Retry works again after a refusal — tapping Retry on a refused show, or Test on the Connection refusals screen, sends one real test with your current settings instead of waiting out the hold',
 			'about.changelog2331.0' => 'Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it',
 			'about.changelog2331.1' => 'New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi',
-			'about.changelog2331.2' => 'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
-			'about.changelog2331.3' => 'Fixed: opening Movies or TV shows with no saved catalogue no longer fires a burst of requests at once — the load is paced, and it stops if the provider refuses',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2331.2' => 'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
+			'about.changelog2331.3' => 'Fixed: opening Movies or TV shows with no saved catalogue no longer fires a burst of requests at once — the load is paced, and it stops if the provider refuses',
 			'about.changelog2331.4' => 'Fixed: a background catalogue sync that gets refused is never retried',
 			'about.changelog2330.0' => 'New: the catalog refresh keeps going when you lock the phone or switch to another app, and no longer says “failed” just because the screen went off — come back to a loaded catalog',
 			'about.changelog2330.1' => 'Fixed: the catalog refresh now shows how much has downloaded while it runs, and each section (live, then movies, then series) appears as soon as it lands',
@@ -12520,10 +12528,10 @@ extension on Translations {
 			'explore.relation.other' => 'Related',
 			'explore.broadcast' => ({required Object day, required Object time}) => 'Airs ${day} at ${time}',
 			'explore.broadcastWithZone' => ({required Object day, required Object time, required Object timezone}) => 'Airs ${day} at ${time} ${timezone}',
-			'explore.detail.originalTitle' => 'Original title',
-			'explore.detail.alsoKnownAs' => 'Also known as',
 			_ => null,
 		} ?? switch (path) {
+			'explore.detail.originalTitle' => 'Original title',
+			'explore.detail.alsoKnownAs' => 'Also known as',
 			'explore.detail.studios' => 'Studios',
 			'explore.detail.country' => 'Country',
 			'explore.detail.language' => 'Language',
@@ -13034,10 +13042,10 @@ extension on Translations {
 			'shaders.artcnnVariantDenoise' => 'Denoise',
 			'shaders.artcnnVariantDenoiseSharpen' => 'Denoise + Sharpen',
 			'shaders.qualityFast' => 'Fast',
-			'shaders.qualityHQ' => 'High Quality',
-			'shaders.mode' => 'Mode',
 			_ => null,
 		} ?? switch (path) {
+			'shaders.qualityHQ' => 'High Quality',
+			'shaders.mode' => 'Mode',
 			'shaders.importShader' => 'Import Shader',
 			'shaders.customShaderDescription' => 'Custom GLSL shader',
 			'shaders.shaderImported' => 'Shader imported',
@@ -13548,10 +13556,10 @@ extension on Translations {
 			'iptv.epgHoursCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'Every ${n} hour', other: 'Every ${n} hours', ), 
 			'iptv.epgManualOnly' => 'Manual only',
 			'iptv.epgPastDays' => 'Past days to keep',
-			'iptv.epgPastDaysNone' => 'None',
-			'iptv.epgUpdateOnStart' => 'Update on app start',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.epgPastDaysNone' => 'None',
+			'iptv.epgUpdateOnStart' => 'Update on app start',
 			'iptv.epgUpdateOnStartDescription' => 'Refresh the guide when the app starts',
 			'iptv.epgTimeOffset' => 'Time offset',
 			'iptv.epgNoOffset' => 'No offset',
