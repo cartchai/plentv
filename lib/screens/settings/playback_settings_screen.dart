@@ -17,6 +17,7 @@ import '../../services/settings_service.dart';
 import '../../services/video_decode_capabilities.dart';
 import '../../utils/codec_utils.dart';
 import '../../utils/platform_detector.dart';
+import '../../utils/snackbar_helper.dart';
 import '../../widgets/setting_tile.dart';
 import '../../widgets/settings_builder.dart';
 import '../../widgets/settings_page.dart';
@@ -488,9 +489,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
   Future<void> _clearDecoderMemo(BuildContext context) async {
     await (await DecoderFailureMemo.getInstance()).clearAll();
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(t.settings.clearDecoderMemoDone)));
+      showSuccessSnackBar(context, t.settings.clearDecoderMemoDone);
     }
   }
 

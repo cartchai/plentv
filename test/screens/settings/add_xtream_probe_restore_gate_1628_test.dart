@@ -83,17 +83,17 @@ void main() {
 
   setUpAll(() => LocaleSettings.setLocaleSync(AppLocale.en));
 
-  late HttpOverrides? _previousOverrides;
+  late HttpOverrides? previousOverrides;
 
   setUp(() async {
     resetSharedPreferencesForTest();
     await SettingsService.getInstance();
     MemoryLogOutput.clearLogs();
-    _previousOverrides = HttpOverrides.current;
+    previousOverrides = HttpOverrides.current;
     HttpOverrides.global = _RealHttpOverrides();
     WarpTunnelService.instance.debugSetTunnelForTest(on: false);
     addTearDown(() {
-      HttpOverrides.global = _previousOverrides;
+      HttpOverrides.global = previousOverrides;
       WarpTunnelService.instance.debugSetTunnelForTest(on: false);
     });
   });

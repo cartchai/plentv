@@ -58,9 +58,6 @@ class _CrashHistoryScreenState extends State<CrashHistoryScreen> {
     showSuccessSnackBar(context, t.startup.detailsCopied);
   }
 
-  String _formatTime(DateTime time) =>
-      '${DateFormat.yMMMd(LocaleSettings.currentLocale.intlLocaleName).format(time)} · '
-      '${formatClockTime(time, is24Hour: MediaQuery.alwaysUse24HourFormatOf(context))}';
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +95,7 @@ class _CrashHistoryScreenState extends State<CrashHistoryScreen> {
               itemBuilder: (context, index) => _CrashTile(
                 record: records[index],
                 index: index,
-                timeText: _formatTime(records[index].timestamp.toLocal()),
+                timeText: formatDateTimeWithClock(records[index].timestamp.toLocal(), context, dateFormat: DateFormat.yMMMd(LocaleSettings.currentLocale.intlLocaleName)),
                 onCopy: () => _copy(records[index]),
               ),
             ),

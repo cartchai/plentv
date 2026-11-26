@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../base_shared_preferences_service.dart';
 import '../connectivity_probe.dart';
+import '../../utils/app_logger.dart';
 import '../../utils/log_redaction_manager.dart';
 import 'panel_reachability_store.dart';
 
@@ -337,9 +338,10 @@ class IptvRefusalLog {
         if (next.length > maxEntries) next.removeRange(maxEntries, next.length);
         await _persist(next);
         entriesNotifier.value = List.unmodifiable(next);
-      } catch (_) {
+      } catch (error, stackTrace) {
         // Recording never throws: a diagnostic must never break the
         // error path it observes.
+        appLogger.d('Could not record the IPTV refusal', error: error, stackTrace: stackTrace);
       }
     });
   }
@@ -352,8 +354,9 @@ class IptvRefusalLog {
         await ensureLoaded();
         await _persist(const []);
         entriesNotifier.value = const [];
-      } catch (_) {
+      } catch (error, stackTrace) {
         // Clearing never throws either.
+        appLogger.d('Could not clear the IPTV refusals', error: error, stackTrace: stackTrace);
       }
     });
   }

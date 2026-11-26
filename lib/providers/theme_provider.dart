@@ -235,7 +235,9 @@ class ThemeProvider extends ChangeNotifier with DisposableChangeNotifierMixin, W
 
   void _updateSplashTheme(MonoPalette? palette) {
     if (!Platform.isAndroid) return;
-    _themeChannel.invokeMethod('setSplashTheme', {'mode': nativeSplashMode(palette)});
+    // Fire-and-forget on a cosmetic path: a missing channel must never
+    // surface as an unhandled async error on a theme change.
+    unawaited(_themeChannel.invokeMethod('setSplashTheme', {'mode': nativeSplashMode(palette)}).catchError((_) {}));
   }
 
   /// Launch-screen mode the Android side understands for [palette]. It only

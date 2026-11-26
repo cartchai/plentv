@@ -73,6 +73,15 @@ class _AddM3uScreenState extends State<AddM3uScreen> with AsyncFormStateMixin, C
     if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
       throw const _ProbeFailure('invalid-url');
     }
+    // 1.6.30 (P0.2/F1): while the tunnel toggle is on but the tunnel
+    // is still starting, do NOT probe — the fetch would go direct and
+    // a 403 would surface as a generic "unreachable" failure verdict.
+    // Inconclusive instead: the user is asked to wait and retry, and
+    // no failure verdict is recorded. Bounded to 5 s by the shared
+    // gate, same bound as the Xtream sign-in probe.
+    if (!await WarpTunnelService.instance.waitForTunnelReady()) {
+      throw const _ProbeFailure('tunnel-starting');
+    }
     // 1.6.28 (G3): the playlist probe rides the tunnel when it is on,
     // like the runtime M3U feed fetch does — a bare client would go
     // direct while the user believes everything is tunneled.
@@ -128,6 +137,9 @@ class _AddM3uScreenState extends State<AddM3uScreen> with AsyncFormStateMixin, C
           return switch (e.message) {
             'invalid-url' => t.addServer.m3uInvalidUrl,
             'empty' => t.addServer.m3uPlaylistEmpty,
+            // 1.6.30 (P0.2/F1): the tunnel was still starting — ask the
+            // user to wait, never a failure verdict.
+            'tunnel-starting' => t.addServer.tunnelStillStarting,
             _ => t.addServer.m3uProbeFailed,
           };
         }

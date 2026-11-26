@@ -2992,18 +2992,30 @@ class IptvClient implements MediaServerClient {
     // probes the panel in the same window, so without this the first
     // probe goes out direct and 403s — then arms the 5-minute refusal
     // backoff (the 1.6.17 phone log: first request 74 ms before
-    // tunnel-on). Bounded to 5 s by [WarpTunnelService
-    // .waitForRestoreSettled]; the gate must never take the health
-    // check down with it, so any failure here is swallowed and the
-    // probe proceeds as it did before.
+    // tunnel-on).
+    // 1.6.30 (P0.3/F3): the gate now FAILS CLOSED through the shared
+    // [WarpTunnelService.waitForTunnelReady]. The old comment ("the
+    // gate must never take the health check down with it") is
+    // superseded: proceeding costs a 403 + backoff, worse than one
+    // skipped probe cycle. When the toggle is on but the tunnel is
+    // still starting after the bound, return the last-known verdict
+    // with no panel call — the same shape as the refusal and
+    // unreachable early returns directly below.
     if (!_startupTunnelGateDone) {
       _startupTunnelGateDone = true;
-      try {
-        if (WarpTunnelService.instance.toggleOn) {
-          await WarpTunnelService.instance.waitForRestoreSettled();
+      final ready = await WarpTunnelService.instance.waitForTunnelReady();
+      if (!ready) {
+        bool tunnelStillStarting = false;
+        try {
+          tunnelStillStarting =
+              WarpTunnelService.instance.toggleOn && !WarpTunnelService.instance.isOn;
+        } catch (_) {
+          // Settings unreadable: proceed as before.
         }
-      } catch (_) {
-        // The gate is best-effort: proceed with the probe.
+        if (tunnelStillStarting) {
+          appLogger.d('IPTV health probe skipped: tunnel still starting, cached verdict');
+          return _lastHealthStatus;
+        }
       }
     }
     // 1.2.19, L-23: a panel remembered unreachable on this network is
@@ -7153,9 +7165,11 @@ class IptvClient implements MediaServerClient {
       }
       await _resumeRepository.write(_resumeKey, current);
       _resumeItemsFuture = Future.value(current);
-    } catch (_) {
+    } catch (e) {
       // A prefs failure drops the write silently — playback must never
-      // crash or queue on a local store failure.
+      // crash or queue on a local store failure. Logged (1.6.30 G-C8)
+      // so a lost resume position leaves a trace in the debug export.
+      appLogger.d('IPTV resume write failed', error: e);
     }
   }
 

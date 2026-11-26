@@ -98,6 +98,21 @@ void main() {
       expect(d.layout, Stereo3dLayout.vr360);
       expect(d.is3d, isTrue);
     });
+
+    test('a folder named SBS does not make every file inside it 3D (B25)', () {
+      // Detection runs on the basename only: the server path
+      // `/Movies/SBS/Avatar.mkv` must read as 2D even though a directory
+      // in the path is named SBS.
+      expect(detectStereo3dFromFilename('/Movies/SBS/Avatar.mkv').is3d, isFalse);
+      expect(detectStereo3dFromFilename('/Movies/OU Collection/Film.mkv').is3d, isFalse);
+      expect(detectStereo3dFromFilename(r'C:\Movies\TAB\Film.mkv').is3d, isFalse);
+    });
+
+    test('a tag in the basename still wins over a plain folder name (B25)', () {
+      final d = detectStereo3dFromFilename('/Movies/SBS/Avatar 3D HSBS.mkv');
+      expect(d.layout, Stereo3dLayout.sbs);
+      expect(d.packing, Stereo3dPacking.half);
+    });
   });
 
   group('detectStereo3dFromResolution', () {
@@ -184,19 +199,11 @@ void main() {
     });
   });
 
-  group('flatPlaybackStereo3dFilter (FLAT decision, §1.9)', () {
-    test('a detected 3D title plays flat with no stereo3d filter', () {
-      final d = detectStereo3dFromFilename('A.3D.HSBS.mkv');
-      expect(d.is3d, isTrue);
-      // Both eyes stay visible on phone/TV — the diagnostic that it is
-      // a 3D file and that it is loading correctly.
-      expect(flatPlaybackStereo3dFilter(d), isNull);
-    });
-
-    test('a 2D title also gets no filter', () {
-      expect(flatPlaybackStereo3dFilter(const Stereo3dDetection.twoD()), isNull);
-    });
-  });
+  // FLAT decision (§1.9): flat playback never converts a 3D title — the
+  // packed frame plays as-is, both eyes visible. There is no filter
+  // function to test (D6 deleted `flatPlaybackStereo3dFilter`); the
+  // decision is documented in stereo3d.dart and the "Watch in 2D"
+  // sheet behaviour is covered in stereo3d_sheet_test.dart.
 
   group('Stereo3dTitleRecord', () {
     test('round-trips through JSON', () {
@@ -247,6 +254,17 @@ void main() {
       store.save('r', 'p', const Stereo3dTitleRecord(layout: Stereo3dLayout.ou));
       store.clear('r', 'p');
       expect(store.load('r', 'p'), isNull);
+    });
+
+    test('a save through one store instance is visible to another live instance (B26)', () {
+      // B26: per-instance caches with no invalidation. Store B reads first
+      // (caching "nothing here"), store A then saves — B must still see it.
+      final backend = _MemoryTitleBackend();
+      final storeA = Stereo3dTitleStore(backend);
+      final storeB = Stereo3dTitleStore(backend);
+      expect(storeB.load('r', 'p'), isNull);
+      storeA.save('r', 'p', const Stereo3dTitleRecord(layout: Stereo3dLayout.sbs));
+      expect(storeB.load('r', 'p')?.layout, Stereo3dLayout.sbs);
     });
   });
 

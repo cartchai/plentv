@@ -61,6 +61,14 @@ import '../../test_helpers/prefs.dart';
 /// recorded call means the flow tried to leave the app for a browser.
 const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
 
+/// The event channel connectivity_plus listens on for connectivity changes.
+/// 1.6.30 (P0.9): the IPTV bind now starts network monitoring, which
+/// subscribes to this channel. The test host has no platform plugin for
+/// it, so a bare listen throws MissingPluginException and fails any test
+/// that binds an IPTV server. Mocked in setUp: listen succeeds and no
+/// connectivity events ever arrive.
+const _connectivityStatusChannel = MethodChannel('dev.fluttercommunity.plus/connectivity_status');
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -83,10 +91,18 @@ void main() {
     PlatformDetector.debugSetIsDesktopOSOverride(false);
     directoryPicker = _FakeDirectoryPicker();
     FilePickerService.setDelegateForTesting(directoryPicker);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      _connectivityStatusChannel,
+      (call) async => null,
+    );
     await SettingsService.getInstance();
   });
 
   tearDown(() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      _connectivityStatusChannel,
+      null,
+    );
     TvDetectionService.debugSetAppleTVOverride(null);
     PlatformDetector.debugSetIsDesktopOSOverride(null);
     DownloadStorageService.resetForTesting();

@@ -3934,6 +3934,11 @@ class PlexClient
   /// Manual per-title record > filename tag > resolution hint. A missing
   /// file path (metadata without checkFiles) reads as 2D, so playback
   /// is unchanged — detection is best-effort here, never blocking.
+  ///
+  /// No container signal here (D7): this decision runs before the file
+  /// is open in mpv, so there is no `video-stereo-mode` to read yet.
+  /// The container tier only feeds the button/sheet path, where the
+  /// file is already playing.
   Stereo3dDetection _detectStereo3dForPlayback(PlexVideoPlaybackData data, String ratingKey) {
     final version = _selectedVersion(data);
     final part = _selectedPart(data);
@@ -3943,7 +3948,7 @@ class PlexClient
       final record = stereo3dTitleStore(settings).load(ratingKey, part.id);
       if (record != null) manual = record.toDetection();
     }
-    return resolveStereo3d(
+    return detectStereo3dForTitle(
       manual: manual,
       filename: part?.file,
       width: version?.width,

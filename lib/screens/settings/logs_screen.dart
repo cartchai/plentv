@@ -215,13 +215,6 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
     _loadAutoDump();
   }
 
-  String _formatTime(DateTime time) {
-    final hour = padNumber(time.hour, 2);
-    final minute = padNumber(time.minute, 2);
-    final second = padNumber(time.second, 2);
-    final millisecond = padNumber(time.millisecond, 3);
-    return '$hour:$minute:$second.$millisecond';
-  }
 
   /// Whether there is anything worth copying, uploading or clearing.
   ///
@@ -261,7 +254,7 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
       }
       isFirst = false;
 
-      logs.write('[${_formatTime(log.timestamp)}] [${log.level.name.toUpperCase()}] ${log.message}');
+      logs.write('[${formatTimeWithMillis(log.timestamp)}] [${log.level.name.toUpperCase()}] ${log.message}');
       if (log.error != null) {
         logs.write('\nError: ${log.error}');
       }
@@ -453,7 +446,7 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
     final color = _getLevelColor(log.level);
     return [
       TextSpan(
-        text: '[${_formatTime(log.timestamp)}] ',
+        text: '[${formatTimeWithMillis(log.timestamp)}] ',
         style: TextStyle(color: color.withValues(alpha: 0.6)),
       ),
       TextSpan(

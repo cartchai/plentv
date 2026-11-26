@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -74,6 +76,7 @@ void main() {
     required MediaVersion version,
     required bool isQuest,
     bool debugToggle = false,
+    Player? player,
   }) async {
     QuestPlatform.debugSetIsQuest(isQuest);
     await SettingsService.instance.write(
@@ -86,7 +89,7 @@ void main() {
         home: OverlaySheetHost(
           child: Scaffold(
             body: TrackChapterControls(
-              player: _FakeButtonPlayer(),
+              player: player ?? _FakeButtonPlayer(),
               chapters: const [],
               chaptersLoaded: false,
               trackControlsState: TrackControlsState(
@@ -148,6 +151,70 @@ void main() {
       // tap reached the real sheet, not a stub.
       expect(find.text('Watch in VR'), findsOneWidget);
     });
+
+    testWidgets('a manual record shows the button for an untagged file (B6/G2)',
+        (tester) async {
+      // The title was hand-marked SBS through the sheet once; the file
+      // itself carries no tag, so only the record can show the button.
+      await SettingsService.instance.write(
+        SettingsService.questStereo3dTitles,
+        jsonEncode({
+          'rating-1|7': {
+            'layout': 'sbs',
+            'packing': 'half',
+            'swapEyes': false,
+          },
+        }),
+      );
+      await pumpControls(tester, version: twoDVersion, isQuest: true);
+      expect(stereo3dButton(), findsOneWidget);
+    });
+
+    testWidgets('a manual flat record hides the button for a tagged file (B6)',
+        (tester) async {
+      // The user marked this title "watch in 2D": the record wins over
+      // the HSBS filename tag.
+      await SettingsService.instance.write(
+        SettingsService.questStereo3dTitles,
+        jsonEncode({
+          'rating-1|7': {
+            'layout': 'twoD',
+            'packing': 'half',
+            'swapEyes': false,
+          },
+        }),
+      );
+      await pumpControls(tester, version: sbsVersion, isQuest: true);
+      expect(stereo3dButton(), findsNothing);
+    });
+
+    testWidgets(
+        'a container-declared SBS file with an untagged filename shows the button once loaded (D7)',
+        (tester) async {
+      await pumpControls(
+        tester,
+        version: twoDVersion,
+        isQuest: true,
+        player: _FakeContainerPlayer(stereoMode: 'left_right'),
+      );
+      // The mpv `video-stereo-mode` read is async; let it land.
+      await tester.pump();
+      await tester.pump();
+      expect(stereo3dButton(), findsOneWidget);
+    });
+
+    testWidgets('a flat container does not show the button (D7)',
+        (tester) async {
+      await pumpControls(
+        tester,
+        version: twoDVersion,
+        isQuest: true,
+        player: _FakeContainerPlayer(stereoMode: 'mono'),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(stereo3dButton(), findsNothing);
+    });
   });
 }
 
@@ -192,4 +259,19 @@ class _FakeButtonPlayer implements Player {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A player whose mpv container declares its stereo mode (D7): the
+/// `video-stereo-mode` property is what the real player reports once the
+/// file is open.
+class _FakeContainerPlayer extends _FakeButtonPlayer {
+  _FakeContainerPlayer({required this.stereoMode});
+
+  final String stereoMode;
+
+  @override
+  Future<String?> getProperty(String name) async {
+    if (name == 'video-stereo-mode') return stereoMode;
+    return null;
+  }
 }

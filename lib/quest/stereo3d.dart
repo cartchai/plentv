@@ -104,16 +104,20 @@ class Stereo3dDetection {
 /// Detect the 3D layout from a server-side file path (the primary signal).
 ///
 /// Uses the scene filename convention, case-insensitive. The path is the
-/// `Media[].Part[].file` value Plex already parses. Never declares a file
-/// 3D on size alone — this is a tag check only.
+/// `Media[].Part[].file` value Plex already parses. Detection runs on the
+/// BASENAME only (B25): a folder named `SBS`/`OU`/`TAB` must not make
+/// every file inside it "3D". Never declares a file 3D on size alone —
+/// this is a tag check only.
 Stereo3dDetection detectStereo3dFromFilename(String? file) {
   if (file == null || file.isEmpty) {
     return const Stereo3dDetection.twoD();
   }
+  // Basename only — strip directories on either separator first.
+  final basename = file.split(RegExp(r'[/\\]')).last;
   // Strip the extension and split into tokens on any non-alphanumeric
   // separator ('.', '-', '_', ' ', ...). 'H-SBS' -> ['h','sbs'],
   // '_LRF_Full_SBS' -> ['lrf','full','sbs'], '3D.HSBS' -> ['3d','hsbs'].
-  final lower = file.toLowerCase();
+  final lower = basename.toLowerCase();
   final withoutExtension = lower.replaceAll(RegExp(r'\.[a-z0-9]{1,5}$'), '');
   final tokens = withoutExtension
       .split(RegExp(r'[^a-z0-9]+'))
@@ -131,9 +135,12 @@ Stereo3dDetection detectStereo3dFromFilename(String? file) {
     );
   }
   if (has('vr360') || has('360') || has('equirect') || has('equirectangular')) {
-    return Stereo3dDetection(
+    // D5: mono 360 (full packing) is NOT detectable from a filename — no
+    // tag distinguishes it — so VR360 is always half-packed here. Do not
+    // re-add a ternary that pretends otherwise.
+    return const Stereo3dDetection(
       layout: Stereo3dLayout.vr360,
-      packing: has('sbs') ? Stereo3dPacking.half : Stereo3dPacking.half,
+      packing: Stereo3dPacking.half,
       source: Stereo3dSource.filename,
     );
   }
@@ -246,7 +253,36 @@ Stereo3dDetection detectStereo3dFromMpvStereoMode(String? mode) {
   }
 }
 
-/// Resolve the final detection from every signal, in precedence order:/// manual per-title choice > filename tag > mpv/container metadata >
+/// One shared detection entry point (U2/B6): every caller that decides
+/// "is this title 3D" goes through here with the same precedence, so the
+/// 3D button, the sheet's detection line and the Plex direct-play rule
+/// cannot disagree about the same title.
+///
+/// Signals, in order: manual per-title choice > filename tag >
+/// mpv/container metadata > resolution hint > 2D default.
+///
+/// The `container` signal only exists once the file is open in mpv, so
+/// the pre-playback Plex direct-play decision passes none — it cannot
+/// read a container that is not open yet. The button/sheet path passes
+/// the live `video-stereo-mode` read.
+Stereo3dDetection detectStereo3dForTitle({
+  Stereo3dDetection? manual,
+  String? filename,
+  Stereo3dDetection? container,
+  int? width,
+  int? height,
+}) {
+  return resolveStereo3d(
+    manual: manual,
+    filename: filename,
+    container: container,
+    width: width,
+    height: height,
+  );
+}
+
+/// Resolve the final detection from every signal, in precedence order:
+/// manual per-title choice > filename tag > mpv/container metadata >
 /// resolution hint > 2D default.
 ///
 /// A manual record whose layout is [Stereo3dLayout.auto] means "no
@@ -283,12 +319,11 @@ Stereo3dDetection resolveStereo3d({
 /// loading correctly). In VR, seeing both sides means the per-eye
 /// splitting failed — each eye must see ONLY its half.
 ///
-/// Returns the mpv `stereo3d` filter argument to apply for flat playback,
-/// or null for "no filter — play the packed frame as-is". This always
-/// returns null: flat playback never converts a 3D title. (A manual
+/// There is deliberately NO filter function here (D6): flat playback
+/// never converts a 3D title, so "no filter — play the packed frame
+/// as-is" is the whole rule and needs no API surface. (A manual
 /// "watch in 2D (left eye)" choice from the 3D sheet is a separate,
 /// explicit user action, not an automatic conversion.)
-String? flatPlaybackStereo3dFilter(Stereo3dDetection detection) => null;
 
 /// Whether the 3D button is shown in the player controls.
 ///
@@ -394,17 +429,18 @@ abstract class Stereo3dTitleStoreBackend {
 
 /// The per-title 3D store: one JSON object keyed by
 /// `"ratingKey|partId"` holding a [Stereo3dTitleRecord] per title.
+///
+/// No in-memory cache (B26): every read goes through the backend, which
+/// is an in-memory pref read. A per-instance cache with no invalidation
+/// let a save through one live store stay invisible to another.
 class Stereo3dTitleStore {
   final Stereo3dTitleStoreBackend backend;
-  Map<String, Stereo3dTitleRecord>? _cache;
 
   Stereo3dTitleStore(this.backend);
 
   String _key(String ratingKey, String partId) => '$ratingKey|$partId';
 
   Map<String, Stereo3dTitleRecord> _records() {
-    final cached = _cache;
-    if (cached != null) return cached;
     final raw = backend.read();
     final map = <String, Stereo3dTitleRecord>{};
     if (raw != null && raw.isNotEmpty) {
@@ -422,7 +458,6 @@ class Stereo3dTitleStore {
         // A corrupt store reads as empty; the next save overwrites it.
       }
     }
-    _cache = map;
     return map;
   }
 

@@ -119,22 +119,30 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
     _packing = record?.packing ?? widget.detection.packing;
     _swapEyes = record?.swapEyes ?? false;
     final preset = record?.screenPreset;
-    _screenSize = preset != null
+    // B7: a 'custom' preset has no fixed numbers — its values live in
+    // the global prefs (where the sliders wrote them). Only the named
+    // presets (tv/cinema) read from the preset table.
+    _screenSize = preset != null && preset != 'custom'
         ? _presetSize(preset)
         : settings.read(SettingsService.questScreenSize);
-    _screenDistance = preset != null
+    _screenDistance = preset != null && preset != 'custom'
         ? _presetDistance(preset)
         : settings.read(SettingsService.questScreenDistance);
-    _screenCurvature = preset != null
+    _screenCurvature = preset != null && preset != 'custom'
         ? _presetCurvature(preset)
         : settings.read(SettingsService.questScreenCurvature);
     _depthSeparation = settings.read(SettingsService.questDepthSeparation);
     _passthroughBrightness =
         settings.read(SettingsService.questPassthroughBrightness);
     _rememberForTitle = record != null;
+    // T3: subtitle depth has one owner per scope — the per-title record
+    // is the override, the global pref is only the default for titles
+    // with no record. The segment below writes the record only.
     _subtitleDepth = record?.subtitleDepth ??
         settings.read(SettingsService.questSubtitleDepth);
-    _screenLock = 'world';
+    // B17: screen lock is a persisted global pref, not session-only.
+    final screenLock = settings.read(SettingsService.questScreenLock);
+    _screenLock = screenLock == 'head' ? 'head' : 'world';
     _screenPreset = record?.screenPreset ?? _presetFor(_screenSize, _screenDistance, _screenCurvature);
     _autoDim = settings.read(SettingsService.questAutoDimPassthrough);
     _foveated = settings.read(SettingsService.questFoveatedRendering);
@@ -146,24 +154,47 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
     _externalSubtitlePaths = const [];
   }
 
-  double _presetSize(String preset) =>
-      preset == 'cinema' ? 1.6 : preset == 'tv' ? 0.8 : 1.0;
+  /// One source of truth for the screen presets (U4): preset →
+  /// (size, distance, curvature). Every reader below consults this map,
+  /// so a number cannot drift between the preset functions and the
+  /// preset matcher. 'custom' is not in the map — it means "the values
+  /// in the global prefs", read directly in initState.
+  static const _screenPresetValues =
+      <String, ({double size, double distance, double curvature})>{
+    'tv': (size: 0.8, distance: 2.5, curvature: 0.0),
+    'cinema': (size: 1.6, distance: 5.0, curvature: 0.15),
+  };
+
+  double _presetSize(String preset) => _screenPresetValues[preset]?.size ?? 1.0;
   double _presetDistance(String preset) =>
-      preset == 'cinema' ? 5.0 : preset == 'tv' ? 2.5 : 3.0;
-  double _presetCurvature(String preset) => preset == 'cinema' ? 0.15 : 0.0;
+      _screenPresetValues[preset]?.distance ?? 3.0;
+  double _presetCurvature(String preset) =>
+      _screenPresetValues[preset]?.curvature ?? 0.0;
 
   String _presetFor(double size, double distance, double curvature) {
-    if ((size - 0.8).abs() < 0.01 &&
-        (distance - 2.5).abs() < 0.01 &&
-        curvature.abs() < 0.01) {
-      return 'tv';
-    }
-    if ((size - 1.6).abs() < 0.01 &&
-        (distance - 5.0).abs() < 0.01 &&
-        (curvature - 0.15).abs() < 0.01) {
-      return 'cinema';
+    for (final entry in _screenPresetValues.entries) {
+      final values = entry.value;
+      if ((size - values.size).abs() < 0.01 &&
+          (distance - values.distance).abs() < 0.01 &&
+          (curvature - values.curvature).abs() < 0.01) {
+        return entry.key;
+      }
     }
     return 'custom';
+  }
+
+  /// The playback speeds the sheet offers (B27). A panel rate set
+  /// elsewhere (e.g. 1.1x) maps to the nearest offered segment so the
+  /// SegmentedButton's selected set always matches a segment.
+  /// Keep in sync with the speed segments in build().
+  static const _offeredPlaybackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
+  double _nearestPlaybackSpeed(double rate) {
+    var best = _offeredPlaybackSpeeds.first;
+    for (final value in _offeredPlaybackSpeeds) {
+      if ((value - rate).abs() < (best - rate).abs()) best = value;
+    }
+    return best;
   }
 
   Stereo3dLayout _effectiveLayout() {
@@ -190,10 +221,6 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
     }
   }
 
-  Future<void> _writeGlobal<T>(Future<void> Function() write) async {
-    await write();
-  }
-
   double _sleepTimerRemainingSeconds() {
     final timer = SleepTimerService();
     if (!timer.isActive) return 0.0;
@@ -205,6 +232,9 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
   Future<void> _watchInVr() async {
     if (_isLaunchingVr) return;
     setState(() => _isLaunchingVr = true);
+    // The spinner stays up until the activity result returns (Q4): this
+    // flag is only cleared in the finally below, after playInVr answers.
+    var vrStarted = false;
     try {
       // The panel player pauses first: the VR player opens the same URL,
       // and the panel must not keep playing (audio + a second stream) while
@@ -249,6 +279,15 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
         showErrorSnackBar(context, t.stereo3d.vrUnavailable);
         return;
       }
+      if (!result.started) {
+        // P0.4 contract: the native side reports started=false when VR
+        // init failed before any frame. The returned position is
+        // meaningless (0) — do NOT seek the panel to 0, do NOT pop the
+        // sheet. The panel is resumed in the finally below.
+        showErrorSnackBar(context, t.stereo3d.vrUnavailable);
+        return;
+      }
+      vrStarted = true;
       // Back in the panel: restore the watch position the VR session left.
       final position =
           Duration(milliseconds: (result.positionSeconds * 1000).round());
@@ -266,6 +305,15 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
       }
     } finally {
       if (mounted) setState(() => _isLaunchingVr = false);
+      if (!vrStarted) {
+        // P0.12: a failed VR launch leaves playback exactly as it was —
+        // the panel was paused for a session that never started, so
+        // resume it. Best-effort: a resume failure must not mask the
+        // VR error already shown.
+        try {
+          await widget.player.play();
+        } catch (_) {}
+      }
     }
   }
 
@@ -556,6 +604,31 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                 _saveRecord();
               },
             ),
+            // Q6: undo a manual choice entirely — back to auto-detect.
+            // Only meaningful while a record exists (remember on).
+            FocusableListTile(
+              title: Text(t.stereo3d.resetToAutoDetect),
+              leading: const Icon(Symbols.restart_alt_rounded),
+              enabled: _hasTitleIdentity && _rememberForTitle,
+              onTap: () {
+                widget.titleStore.clear(_ratingKey, _partId);
+                setState(() {
+                  _rememberForTitle = false;
+                  _layout = widget.detection.layout;
+                  _packing = widget.detection.packing;
+                  _screenSize =
+                      widget.settings.read(SettingsService.questScreenSize);
+                  _screenDistance = widget.settings
+                      .read(SettingsService.questScreenDistance);
+                  _screenCurvature = widget.settings
+                      .read(SettingsService.questScreenCurvature);
+                  _screenPreset = _presetFor(
+                      _screenSize, _screenDistance, _screenCurvature);
+                  _subtitleDepth = widget.settings
+                      .read(SettingsService.questSubtitleDepth);
+                });
+              },
+            ),
 
             _sectionLabel(t.stereo3d.screenPreset),
             Padding(
@@ -582,14 +655,14 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                     _screenCurvature = _presetCurvature(preset);
                   });
                   _saveRecord();
-                  unawaited(_writeGlobal(() async {
+                  unawaited(() async {
                     final s = widget.settings;
                     await s.write(SettingsService.questScreenSize, _screenSize);
                     await s.write(
                         SettingsService.questScreenDistance, _screenDistance);
                     await s.write(
                         SettingsService.questScreenCurvature, _screenCurvature);
-                  }));
+                  }());
                 },
               ),
             ),
@@ -604,8 +677,12 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                 _screenSize = v;
                 _screenPreset = 'custom';
               }),
-              onChangeEnd: (v) => unawaited(_writeGlobal(() => widget.settings
-                  .write(SettingsService.questScreenSize, v))),
+              onChangeEnd: (v) {
+                _screenPreset = 'custom';
+                _saveRecord();
+                unawaited(widget.settings
+                    .write(SettingsService.questScreenSize, v));
+              },
             ),
             _sliderRow(
               title: t.stereo3d.screenDistance,
@@ -618,8 +695,12 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                 _screenDistance = v;
                 _screenPreset = 'custom';
               }),
-              onChangeEnd: (v) => unawaited(_writeGlobal(() => widget.settings
-                  .write(SettingsService.questScreenDistance, v))),
+              onChangeEnd: (v) {
+                _screenPreset = 'custom';
+                _saveRecord();
+                unawaited(widget.settings
+                    .write(SettingsService.questScreenDistance, v));
+              },
             ),
             _sliderRow(
               title: t.stereo3d.screenCurvature,
@@ -632,8 +713,12 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                 _screenCurvature = v;
                 _screenPreset = 'custom';
               }),
-              onChangeEnd: (v) => unawaited(_writeGlobal(() => widget.settings
-                  .write(SettingsService.questScreenCurvature, v))),
+              onChangeEnd: (v) {
+                _screenPreset = 'custom';
+                _saveRecord();
+                unawaited(widget.settings
+                    .write(SettingsService.questScreenCurvature, v));
+              },
             ),
             _sliderRow(
               title: t.stereo3d.depth,
@@ -643,8 +728,11 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               max: 1.0,
               divisions: 20,
               onChanged: (v) => setState(() => _depthSeparation = v),
-              onChangeEnd: (v) => unawaited(_writeGlobal(() => widget.settings
-                  .write(SettingsService.questDepthSeparation, v))),
+              onChangeEnd: (v) {
+                _saveRecord();
+                unawaited(widget.settings
+                    .write(SettingsService.questDepthSeparation, v));
+              },
             ),
             FocusableListTile(
               title: Text(t.stereo3d.recenter),
@@ -664,8 +752,8 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               enabled: isQuest,
               onChanged: (v) =>
                   setState(() => _passthroughBrightness = v),
-              onChangeEnd: (v) => unawaited(_writeGlobal(() => widget.settings
-                  .write(SettingsService.questPassthroughBrightness, v))),
+              onChangeEnd: (v) => unawaited(widget.settings
+                  .write(SettingsService.questPassthroughBrightness, v)),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -698,10 +786,10 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                 selected: {_subtitleDepth},
                 showSelectedIcon: false,
                 onSelectionChanged: (selection) {
+                  // T3: the record is the per-title override; the global
+                  // pref stays the default for titles never touched here.
                   setState(() => _subtitleDepth = selection.single);
                   _saveRecord();
-                  unawaited(_writeGlobal(() => widget.settings.write(
-                      SettingsService.questSubtitleDepth, _subtitleDepth)));
                 },
               ),
             ),
@@ -721,8 +809,11 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                 ],
                 selected: {_screenLock},
                 showSelectedIcon: false,
-                onSelectionChanged: (selection) =>
-                    setState(() => _screenLock = selection.single),
+                onSelectionChanged: (selection) {
+                  setState(() => _screenLock = selection.single);
+                  unawaited(widget.settings.write(
+                      SettingsService.questScreenLock, _screenLock));
+                },
               ),
             ),
             _sectionLabel(t.stereo3d.refreshRate),
@@ -739,8 +830,8 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                 onSelectionChanged: isQuest
                     ? (selection) {
                         setState(() => _refreshRate = selection.single);
-                        unawaited(_writeGlobal(() => widget.settings.write(
-                            SettingsService.questRefreshRate, _refreshRate)));
+                        unawaited(widget.settings.write(
+                            SettingsService.questRefreshRate, _refreshRate));
                       }
                     : null,
               ),
@@ -753,8 +844,8 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               enabled: isQuest,
               onChanged: (v) {
                 setState(() => _autoDim = v);
-                unawaited(_writeGlobal(() => widget.settings.write(
-                    SettingsService.questAutoDimPassthrough, v)));
+                unawaited(widget.settings.write(
+                    SettingsService.questAutoDimPassthrough, v));
               },
             ),
             _switchRow(
@@ -764,8 +855,8 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               enabled: isQuest,
               onChanged: (v) {
                 setState(() => _foveated = v);
-                unawaited(_writeGlobal(() => widget.settings.write(
-                    SettingsService.questFoveatedRendering, v)));
+                unawaited(widget.settings.write(
+                    SettingsService.questFoveatedRendering, v));
               },
             ),
             _switchRow(
@@ -775,8 +866,8 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               enabled: isQuest,
               onChanged: (v) {
                 setState(() => _dynamicResolution = v);
-                unawaited(_writeGlobal(() => widget.settings.write(
-                    SettingsService.questDynamicResolution, v)));
+                unawaited(widget.settings.write(
+                    SettingsService.questDynamicResolution, v));
               },
             ),
             _switchRow(
@@ -786,8 +877,8 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               enabled: isQuest,
               onChanged: (v) {
                 setState(() => _spatialAudio = v);
-                unawaited(_writeGlobal(() => widget.settings.write(
-                    SettingsService.questSpatialAudio, v)));
+                unawaited(widget.settings.write(
+                    SettingsService.questSpatialAudio, v));
               },
             ),
             _switchRow(
@@ -797,8 +888,8 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               enabled: isQuest,
               onChanged: (v) {
                 setState(() => _handTracking = v);
-                unawaited(_writeGlobal(() => widget.settings.write(
-                    SettingsService.questHandTracking, v)));
+                unawaited(widget.settings.write(
+                    SettingsService.questHandTracking, v));
               },
             ),
             _switchRow(
@@ -808,8 +899,8 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               enabled: isQuest,
               onChanged: (v) {
                 setState(() => _cooperativeOverlay = v);
-                unawaited(_writeGlobal(() => widget.settings.write(
-                    SettingsService.questCooperativeOverlay, v)));
+                unawaited(widget.settings.write(
+                    SettingsService.questCooperativeOverlay, v));
               },
             ),
 
@@ -845,7 +936,7 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                   ButtonSegment(value: 1.5, label: Text('1.5×')),
                   ButtonSegment(value: 2.0, label: Text('2×')),
                 ],
-                selected: {rate},
+                selected: {_nearestPlaybackSpeed(rate)},
                 showSelectedIcon: false,
                 onSelectionChanged: (selection) async {
                   final newRate = selection.single;

@@ -1028,6 +1028,7 @@
     "passthroughBrightness": "Room brightness",
     "passthroughBrightnessDescription": "How bright the real room looks through the headset.",
     "rememberForTitle": "Remember for this title",
+    "resetToAutoDetect": "Reset to auto-detect",
     "subtitleDepth": "Subtitle depth",
     "subtitleDepthBelow": "Below screen",
     "subtitleDepthOnScreen": "On screen",
@@ -1662,6 +1663,9 @@
     ],
     "changelog2343": [
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
+    ],
+    "changelog2348": [
+      "Cleanup: a tidy-up update — error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. Nothing about how the app works has changed"
     ],
     "changelog2347": [
       "New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file"

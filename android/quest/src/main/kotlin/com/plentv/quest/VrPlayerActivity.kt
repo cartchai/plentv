@@ -83,22 +83,25 @@ class VrPlayerActivity : Activity() {
       finish()
       return
     }
-    Log.i(TAG, "VR session started for ${request.videoUrl} (${request.layout}/${request.packing})")
+    Log.i(TAG, "VR session started (video URL received, ${request.layout}/${request.packing})")
   }
 
   /**
    * Called from the native render thread (via JNI) when the VR session
    * ends — user exit, video completed, or a fatal native error. The
    * position is where the video stopped, so the panel can resume there.
+   * `started` is false when VR init failed before any frame (P0.4): the
+   * panel must not seek to 0 on that result.
    */
   @Suppress("unused") // Called from native code.
-  fun onVrFinished(positionSeconds: Double, completed: Boolean) {
+  fun onVrFinished(positionSeconds: Double, completed: Boolean, started: Boolean) {
     runOnUiThread {
       if (finished) return@runOnUiThread
       finished = true
       val data = Intent().apply {
         putExtra(VrPlayerRequest.RESULT_POSITION_SECONDS, positionSeconds)
         putExtra(VrPlayerRequest.RESULT_COMPLETED, completed)
+        putExtra(VrPlayerRequest.RESULT_STARTED, started)
       }
       setResult(RESULT_OK, data)
       finish()

@@ -72,17 +72,34 @@ class PipService {
   /// Tell the native side whether auto-PiP is ready and the current video dimensions
   static Future<void> setAutoPipReady({required bool ready, int? width, int? height}) async {
     if (!_isAvailable) return;
-    await _channel.invokeMethod('setAutoPipReady', {'ready': ready, 'width': width, 'height': height});
+    try {
+      await _channel.invokeMethod('setAutoPipReady', {'ready': ready, 'width': width, 'height': height});
+    } catch (_) {
+      // Best effort: a channel throw (no PiP permission, OEM quirk) must
+      // not surface as an unhandled async error from a state push.
+    }
   }
 
   static Future<void> exit() async {
     if (!_isAvailable) return;
-    await _channel.invokeMethod('exit');
+    try {
+      await _channel.invokeMethod('exit');
+    } catch (_) {
+      // Best effort: exiting PiP is already over when this throws.
+    }
   }
 
   static Future<(bool success, String? error)> enter({int? width, int? height}) async {
     if (!_isAvailable) return (false, null);
-    final result = await _channel.invokeMethod<Map>('enter', {'width': width, 'height': height});
+    Map? result;
+    try {
+      result = await _channel.invokeMethod<Map>('enter', {'width': width, 'height': height});
+    } catch (_) {
+      // A channel throw (MissingPluginException / PlatformException) is a
+      // failed entry, not a crash: return the promised failure tuple so
+      // the caller shows the PiP failure UI instead of an unhandled error.
+      return (false, t.videoControls.pipErrors.unknown(error: t.common.unknown));
+    }
     if (result == null) {
       return (false, t.videoControls.pipErrors.unknown(error: t.common.unknown));
     }

@@ -3,12 +3,31 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../connection/connection.dart';
+import '../../media/ids.dart';
+import '../../media/iptv_client.dart';
 import '../../profiles/active_profile_binder.dart';
 import '../../profiles/active_profile_provider.dart';
 import '../../profiles/profile.dart';
 import '../../profiles/profile_connection.dart';
+import '../../providers/multi_server_provider.dart';
 import '../profile/profile_switch_screen.dart';
 import 'connection_persistence.dart';
+
+/// The bound client for the IPTV [connectionId], if it is bound right now
+/// (1.2.4): notice checks and the "Last search" readout must run against the
+/// bound client's memos, never a throwaway. Null when unbound (the rebind
+/// failed or has not landed) — then no notice and the last-search row reads
+/// "no search yet", never a cold-client load. Never throws: no provider above
+/// us, or the connection isn't bound, both read as unbound.
+IptvClient? boundIptvClient(BuildContext context, String connectionId) {
+  try {
+    final bound = context.read<MultiServerProvider>().getClientForServer(ServerId(connectionId));
+    if (bound is IptvClient) return bound;
+  } catch (_) {
+    // No provider above us, or the connection is not bound.
+  }
+  return null;
+}
 
 /// Shared persistence path for the IPTV add screens (M3U + Xtream Codes):
 /// provision the optional first-run profile, connection, and ownership row,

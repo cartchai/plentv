@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../connection/connection.dart';
 import '../../connection/connection_registry.dart';
+import 'iptv_connection_persistence.dart';
 import '../../i18n/app_locale_utils.dart';
 import '../../i18n/strings.g.dart';
 import '../../media/ids.dart';
@@ -1750,23 +1751,6 @@ class _IptvCatalogDiagnosticsState extends State<_IptvCatalogDiagnostics> {
   bool _failed = false;
   IptvCatalogDiagnostics? _diagnostics;
 
-  /// The BOUND client (the one that ran the searches), resolved without
-  /// awaiting anything — the "Last search" readout is an in-memory getter
-  /// on it, so it renders synchronously (build #14, UI-2). It used to be
-  /// set in [_load] next to the series probe, which meant the row only
-  /// appeared after the probe finished — up to ~40s on a slow panel, never
-  /// if the probe failed (and then it wrongly read "No search yet").
-  IptvClient? _boundClient() {
-    try {
-      final bound = context.read<MultiServerProvider>().getClientForServer(ServerId(widget.connection.id));
-      if (bound is IptvClient) return bound;
-    } catch (_) {
-      // No provider above us, or the connection is not bound: a fresh
-      // client has no last-search record, so the row reads "no search yet".
-    }
-    return null;
-  }
-
   Future<void> _load() async {
     if (_loading) return;
     setState(() {
@@ -1831,7 +1815,7 @@ class _IptvCatalogDiagnosticsState extends State<_IptvCatalogDiagnostics> {
   /// Lives above the probe section so it is visible the moment the row is
   /// expanded, even while the probe is still spinning.
   Widget _buildLastSearch(ThemeData theme) {
-    final lastSearch = _boundClient()?.lastSearchDiagnostics;
+    final lastSearch = boundIptvClient(context, widget.connection.id)?.lastSearchDiagnostics;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1871,7 +1855,7 @@ class _IptvCatalogDiagnosticsState extends State<_IptvCatalogDiagnostics> {
   /// split by source (feed by tvg-id / feed by name / short guide /
   /// none), and the feed's distinct channel-id count.
   Widget _buildGuideCoverage(ThemeData theme) {
-    final client = _boundClient();
+    final client = boundIptvClient(context, widget.connection.id);
     final support = client?.liveTv;
     final coverage = support is IptvLiveTvSupport ? support.guideCoverage() : null;
     return Column(

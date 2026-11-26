@@ -88,6 +88,77 @@ void main() {
       expect(result.positionSeconds, 0.0);
       expect(result.completed, false);
     });
+
+    test('started defaults to true when the key is absent (older native)', () {
+      final result = VrPlayerResult.fromMap({'positionSeconds': 10.0, 'completed': false});
+      expect(result.started, isTrue);
+    });
+
+    test('started=false means VR init failed before any frame (P0.4)', () {
+      final result = VrPlayerResult.fromMap(
+          {'positionSeconds': 0.0, 'completed': false, 'started': false});
+      expect(result.started, isFalse);
+    });
+  });
+
+  group('Dart/Kotlin/JNI key sync (U1/G3)', () {
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(const MethodChannel(channelName), null);
+    });
+
+    // Transcribed from the base Kotlin constants
+    // (android/quest/.../VrPlayerRequest.kt EXTRA_* — fromMap, fromIntent
+    // and toExtras all use the same constants) and the JNI string
+    // literals (android/quest/.../vr_player_jni.cpp get*Extra calls).
+    // Keys do NOT change in this build — only defaults change — so this
+    // list stays valid. If any side renames a key, this test fails
+    // before a headset run is wasted on a silent desync.
+    test('toMap keys match the Kotlin/JNI key list exactly', () {
+      const kotlinJniKeys = {
+        'videoUrl',
+        'layout',
+        'packing',
+        'swapEyes',
+        'screenSize',
+        'screenDistance',
+        'screenCurvature',
+        'depthSeparation',
+        'passthroughBrightness',
+        'autoDimPassthrough',
+        'foveatedRendering',
+        'dynamicResolution',
+        'refreshRate',
+        'spatialAudio',
+        'handTracking',
+        'cooperativeOverlay',
+        'subtitleDepth',
+        'screenLock',
+        'playbackSpeed',
+        'sleepTimerSeconds',
+        'startPositionSeconds',
+        'externalSubtitlePaths',
+        'title',
+      };
+      expect(sampleRequest().toMap().keys.toSet(), kotlinJniKeys);
+    });
+
+    test('the started flag round-trips through playInVr', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel(channelName),
+        (MethodCall call) async => <String, Object?>{
+          'positionSeconds': 0.0,
+          'completed': false,
+          'started': false,
+        },
+      );
+      final channel = VrPlayerChannel();
+      final result = await channel.playInVr(sampleRequest());
+      expect(result, isNotNull);
+      expect(result!.started, isFalse);
+      expect(result.positionSeconds, 0.0);
+    });
   });
 
   group('VrPlayerChannel.playInVr', () {

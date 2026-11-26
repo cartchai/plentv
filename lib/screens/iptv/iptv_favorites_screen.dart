@@ -11,6 +11,7 @@ import '../../navigation/profile_navigation_scope.dart';
 import '../../providers/multi_server_provider.dart';
 import '../../services/settings_service.dart';
 import '../../utils/live_tv_player_navigation.dart';
+import '../../utils/snackbar_helper.dart';
 import '../../utils/tone_mapped_logo_image.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/focusable_list_tile.dart';
@@ -154,20 +155,26 @@ class _IptvFavoritesScreenState extends State<IptvFavoritesScreen> with RouteAwa
   Future<void> _tuneChannel(_FavoriteChannelEntry entry) async {
     if (_tuningChannelKey != null) return;
     setState(() => _tuningChannelKey = entry.channel.stableKey);
+    // The fetch-failed and channel-not-found branches report the same
+    // failure the same way.
+    void showChannelUnavailable() {
+      showErrorSnackBar(context, t.iptv.favorites.channelUnavailable);
+    }
+
     List<LiveTvChannel> channels;
     try {
       channels = await entry.client.liveTv.fetchChannels();
     } catch (_) {
       if (!mounted) return;
       setState(() => _tuningChannelKey = null);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.iptv.favorites.channelUnavailable)));
+      showChannelUnavailable();
       return;
     }
     final channel = IptvFavoritesScreen.resolveFavoriteChannel(channels, entry.channel);
     if (!mounted) return;
     setState(() => _tuningChannelKey = null);
     if (channel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.iptv.favorites.channelUnavailable)));
+      showChannelUnavailable();
       return;
     }
     final multiServer = context.read<MultiServerProvider>();

@@ -20,10 +20,11 @@ import io.flutter.plugin.common.PluginRegistry
  *
  * `playInVr` starts [VrPlayerActivity] for a result with the playback
  * request as intent extras. When the VR session ends, the activity returns
- * the watch position (`positionSeconds`) and whether the video completed;
- * the pending Dart result is completed with that map. A null result means
- * the VR player could not start (no activity, no URL) — the Dart side
- * treats it as "VR unavailable".
+ * the watch position (`positionSeconds`), whether the video completed,
+ * and whether VR init succeeded (`started` — false when init failed
+ * before any frame, P0.4); the pending Dart result is completed with that
+ * map. A null result means the VR player could not start (no activity,
+ * no URL) — the Dart side treats it as "VR unavailable".
  *
  * `recenter` recenters the running VR session (the screen straight ahead
  * of the user). Returns false when no VR session is active.
@@ -128,9 +129,13 @@ class VrPlayerPlugin : FlutterPlugin, ActivityAware, PluginRegistry.ActivityResu
     if (resultCode == Activity.RESULT_OK && data != null) {
       val position = data.getDoubleExtra(VrPlayerRequest.RESULT_POSITION_SECONDS, 0.0)
       val completed = data.getBooleanExtra(VrPlayerRequest.RESULT_COMPLETED, false)
+      // P0.4: default true — an activity that predates the `started`
+      // extra did start (it returned a position at all).
+      val started = data.getBooleanExtra(VrPlayerRequest.RESULT_STARTED, true)
       pending.success(mapOf(
         VrPlayerRequest.RESULT_POSITION_SECONDS to position,
         VrPlayerRequest.RESULT_COMPLETED to completed,
+        VrPlayerRequest.RESULT_STARTED to started,
       ))
     } else {
       // Cancelled / crashed before returning a position: null means "no

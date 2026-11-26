@@ -46,7 +46,19 @@ class PretunedChannel {
 /// or null when the probe itself could not run — inconclusive, never a
 /// verdict: the zap still opens normally rather than trusting an absent
 /// answer.
-Future<int?> probeIptvPlaylist(String url, Map<String, String> headers) async {
+Future<int?> probeIptvPlaylist(
+  String url,
+  Map<String, String> headers, {
+  Duration tunnelReadyTimeout = const Duration(seconds: 5),
+}) async {
+  // 1.6.30 (P0.2/F1): while the tunnel toggle is on but the tunnel is
+  // still starting, do NOT probe — the fetch would go direct and a
+  // 403 would be recorded as a verdict that marks a healthy channel
+  // dead for the 60 s entry TTL. Inconclusive (null) instead, so the
+  // zap opens normally rather than trusting an absent answer.
+  if (!await WarpTunnelService.instance.waitForTunnelReady(timeout: tunnelReadyTimeout)) {
+    return null;
+  }
   // 1.6.28 (G5): the probe rides the tunnel when it is on — the URL
   // carries credentials, so it must never go direct while the tunnel
   // is up.

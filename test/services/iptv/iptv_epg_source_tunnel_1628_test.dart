@@ -64,15 +64,15 @@ class _LocalGuide {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late HttpOverrides? _previousOverrides;
+  late HttpOverrides? previousOverrides;
 
   setUp(() async {
     resetSharedPreferencesForTest();
-    _previousOverrides = HttpOverrides.current;
+    previousOverrides = HttpOverrides.current;
     HttpOverrides.global = _RealHttpOverrides();
     WarpTunnelService.instance.debugSetTunnelForTest(on: false);
     addTearDown(() {
-      HttpOverrides.global = _previousOverrides;
+      HttpOverrides.global = previousOverrides;
       WarpTunnelService.instance.debugSetTunnelForTest(on: false);
     });
   });

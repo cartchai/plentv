@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/strings.g.dart';
 import '../navigation/profile_navigation_scope.dart';
+import 'error_message_utils.dart';
 import 'layout_constants.dart';
 import 'platform_detector.dart';
 
@@ -104,6 +106,13 @@ void showAppSnackBar(BuildContext context, String message, {Duration? duration})
 
 void showErrorSnackBar(BuildContext context, String message) {
   showSnackBar(context, message, type: SnackBarType.error);
+}
+
+/// Shows the shared "failed to load" error snackbar for [e]: the localized,
+/// user-safe reason for the failure, wrapped in the standard error message.
+/// One helper so every load-failure call site shows the same message.
+void showLoadingErrorSnackBar(BuildContext context, Object e) {
+  showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
 }
 
 /// Shows an error snackbar using the root ScaffoldMessenger (survives navigation).

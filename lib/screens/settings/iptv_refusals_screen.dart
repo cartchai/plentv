@@ -3,13 +3,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import 'package:provider/provider.dart';
 
 import '../../connection/connection.dart';
-import '../../i18n/app_locale_utils.dart';
 import '../../i18n/strings.g.dart';
 import '../../media/ids.dart';
 import '../../media/iptv_client.dart';
@@ -139,9 +137,6 @@ class _IptvRefusalsScreenState extends State<IptvRefusalsScreen> {
     }
   }
 
-  String _formatTime(DateTime time) =>
-      '${DateFormat.MMMd(LocaleSettings.currentLocale.intlLocaleName).format(time)} · '
-      '${formatClockTime(time, is24Hour: MediaQuery.alwaysUse24HourFormatOf(context))}';
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +184,7 @@ class _IptvRefusalsScreenState extends State<IptvRefusalsScreen> {
                   itemCount: entries.length,
                   itemBuilder: (context, index) => _RefusalTile(
                     entry: entries[index],
-                    timeText: _formatTime(entries[index].timestamp.toLocal()),
+                    timeText: formatDateTimeWithClock(entries[index].timestamp.toLocal(), context),
                   ),
                 ),
               ),

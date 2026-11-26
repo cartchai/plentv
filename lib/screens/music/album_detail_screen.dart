@@ -36,7 +36,6 @@ import '../../widgets/music/track_row.dart';
 import '../../widgets/optimized_media_image.dart';
 import '../base_media_list_detail_screen.dart';
 import '../focusable_detail_screen_mixin.dart';
-import '../../utils/error_message_utils.dart';
 
 /// Detail screen for a music album: square cover header, Play/Shuffle/
 /// Instant Mix action row, and the track list rendered as grouped
@@ -196,7 +195,7 @@ class _AlbumDetailScreenState extends BaseMediaListDetailScreen<AlbumDetailScree
       if (mounted) showErrorSnackBar(context, t.settings.cellularDownloadBlocked);
     } catch (e) {
       appLogger.e('Failed to queue album download', error: e);
-      if (mounted) showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+      if (mounted) showLoadingErrorSnackBar(context, e);
     }
   }
 

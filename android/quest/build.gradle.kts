@@ -97,16 +97,22 @@ dependencies {
   // compileOnly: the app provides the embedding at runtime. The version
   // tracks the Flutter SDK's engine, read from the SDK itself so a
   // Flutter upgrade does not silently pin a stale embedding here.
-  compileOnly("io.flutter:flutter_embedding_release:1.0.0-${flutterEngineVersion()}")
+  // T6: the version is read lazily (a Provider, resolved only when :quest
+  // itself is compiled). A phone build configures this module but never
+  // resolves its dependencies, so a missing local.properties / flutter.sdk
+  // can no longer break a phone build.
+  compileOnly(project.providers.provider { "io.flutter:flutter_embedding_release:1.0.0-${flutterEngineVersion()}" })
 }
 
 // The Flutter engine version for the embedding artifact, read from the
 // Flutter SDK's engine.version (same file the Flutter tool uses).
+// Only ever evaluated for a Quest build (see T6 above) — a missing
+// flutter.sdk there is a real error, so it still throws.
 fun flutterEngineVersion(): String {
   val properties = Properties()
   rootProject.file("local.properties").inputStream().use { properties.load(it) }
   val flutterSdk = properties.getProperty("flutter.sdk")
-    ?: throw GradleException("flutter.sdk not set in local.properties")
+    ?: throw GradleException("flutter.sdk not set in local.properties (needed for the :quest embedding version)")
   return File(flutterSdk, "bin/internal/engine.version").readText().trim()
 }
 

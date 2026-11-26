@@ -41,8 +41,15 @@ target_link_libraries(vr_player
 target_compile_features(vr_player PRIVATE cxx_std_17)
 
 # Keep the .so small and the log readable.
+# T5 (1.6.30): the old -Wno-unused-parameter blanket suppression is gone
+# — it hid exactly the class of warning that flags dead parameters (and
+# dropping it is already proven safe for this file: the one unused
+# parameter it used to hide, withSwapchainImage's `impl`, is now used by
+# the B11 bounded wait). The one intentional unused parameter
+# (getProcAddress's ctx, required by mpv's callback signature) is already
+# annotated in vr_renderer.cpp as `void* /*ctx*/`, so it does not warn.
+# No -Werror yet (deferred): native warnings still do not fail CI.
 target_compile_options(vr_player PRIVATE
   -Wall
   -Wextra
-  -Wno-unused-parameter
 )

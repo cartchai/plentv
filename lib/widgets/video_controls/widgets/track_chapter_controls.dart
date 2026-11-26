@@ -26,7 +26,7 @@ import '../../../utils/track_label_builder.dart';
 import '../video_control_button.dart';
 
 /// Row of track and chapter control buttons for the video player
-class TrackChapterControls extends StatelessWidget {
+class TrackChapterControls extends StatefulWidget {
   final Player player;
   final List<MediaChapter> chapters;
   final bool chaptersLoaded;
@@ -67,6 +67,44 @@ class TrackChapterControls extends StatelessWidget {
     this.hideChaptersAndQueue = false,
   });
 
+  @override
+  State<TrackChapterControls> createState() => _TrackChapterControlsState();
+}
+
+class _TrackChapterControlsState extends State<TrackChapterControls> {
+  /// The container's declared stereo mode (`video-stereo-mode`), read
+  /// once the file is open in mpv (D7). Null until the read lands (or
+  /// when the player has no such property).
+  Stereo3dDetection? _containerDetection;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContainerStereoMode();
+  }
+
+  @override
+  void didUpdateWidget(TrackChapterControls oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.player != widget.player) {
+      _containerDetection = null;
+      _loadContainerStereoMode();
+    }
+  }
+
+  Future<void> _loadContainerStereoMode() async {
+    try {
+      final mode = await widget.player.getProperty('video-stereo-mode');
+      if (!mounted) return;
+      setState(() {
+        _containerDetection = detectStereo3dFromMpvStereoMode(mode);
+      });
+    } catch (_) {
+      // No container signal (a player without the property, or no file
+      // open yet): filename/resolution/manual detection stands.
+    }
+  }
+
   KeyEventResult _handleButtonKeyEvent(FocusNode _, KeyEvent event, int index, int totalButtons) {
     if (!event.isActionable) {
       return KeyEventResult.ignored;
@@ -75,31 +113,31 @@ class TrackChapterControls extends StatelessWidget {
     final key = event.logicalKey;
 
     if (key == LogicalKeyboardKey.arrowLeft) {
-      if (index > 0 && focusNodes != null && focusNodes!.length > index - 1) {
-        focusNodes![index - 1].requestFocus();
+      if (index > 0 && widget.focusNodes != null && widget.focusNodes!.length > index - 1) {
+        widget.focusNodes![index - 1].requestFocus();
         return KeyEventResult.handled;
       } else if (index == 0) {
-        onNavigateLeft?.call();
+        widget.onNavigateLeft?.call();
         return KeyEventResult.handled;
       }
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowRight) {
-      if (index < totalButtons - 1 && focusNodes != null && focusNodes!.length > index + 1) {
-        focusNodes![index + 1].requestFocus();
+      if (index < totalButtons - 1 && widget.focusNodes != null && widget.focusNodes!.length > index + 1) {
+        widget.focusNodes![index + 1].requestFocus();
         return KeyEventResult.handled;
       }
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowUp) {
-      onNavigateUp?.call();
+      widget.onNavigateUp?.call();
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowDown) {
-      onNavigateDown?.call();
+      widget.onNavigateDown?.call();
       return KeyEventResult.handled;
     }
 
@@ -127,18 +165,23 @@ class TrackChapterControls extends StatelessWidget {
       semanticValue: semanticValue,
       checked: checked,
       isActive: isActive,
-      focusNode: focusNodes != null && focusNodes!.length > buttonIndex ? focusNodes![buttonIndex] : null,
-      onKeyEvent: focusNodes != null
+      focusNode: widget.focusNodes != null && widget.focusNodes!.length > buttonIndex ? widget.focusNodes![buttonIndex] : null,
+      onKeyEvent: widget.focusNodes != null
           ? (node, event) => _handleButtonKeyEvent(node, event, buttonIndex, buttons.length)
           : null,
-      onFocusChange: onFocusChange,
+      onFocusChange: widget.onFocusChange,
       onPressed: onPressed,
     );
   }
 
-  /// Detects the stereo layout for the title currently playing, from the
-  /// selected version's part filename and resolution. Filename tags win;
-  /// resolution is the fallback. A title with neither reads as 2D.
+  /// Detects the stereo layout for the title currently playing, from
+  /// the manual per-title record, the selected version's part filename
+  /// and resolution, and the container's declared stereo mode once the
+  /// file is open in mpv. One shared helper ([detectStereo3dForTitle])
+  /// with the Plex direct-play decision, so the button and the
+  /// direct-play rule cannot disagree (B6/U2). The container tier only
+  /// applies here — the pre-playback Plex decision has no open file to
+  /// read it from (D7).
   Stereo3dDetection _detectStereo3d(TrackControlsState state) {
     if (state.availableVersions.isEmpty) {
       return const Stereo3dDetection.twoD();
@@ -159,8 +202,17 @@ class TrackChapterControls extends StatelessWidget {
       }
     }
     part ??= version.parts.isNotEmpty ? version.parts.first : null;
-    return resolveStereo3d(
+    Stereo3dDetection? manual;
+    final settings = SettingsService.instanceOrNull;
+    if (settings != null && part != null && state.ratingKey.isNotEmpty) {
+      final record =
+          stereo3dTitleStore(settings).load(state.ratingKey, part.id);
+      if (record != null) manual = record.toDetection();
+    }
+    return detectStereo3dForTitle(
+      manual: manual,
       filename: part?.file,
+      container: _containerDetection,
       width: version.width,
       height: version.height,
     );
@@ -169,11 +221,11 @@ class TrackChapterControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Tracks>(
-      stream: player.streams.tracks,
-      initialData: player.state.tracks,
+      stream: widget.player.streams.tracks,
+      initialData: widget.player.state.tracks,
       builder: (context, snapshot) {
         final tracks = snapshot.data;
-        final state = trackControlsState;
+        final state = widget.trackControlsState;
         final isMobile = PlatformDetector.isMobile(context);
         final isDesktop = PlatformDetector.isDesktopOS();
 
@@ -222,7 +274,7 @@ class TrackChapterControls extends StatelessWidget {
                   state.onCancelAutoHide?.call();
                   OverlaySheetController.of(context)
                       .show(
-                        builder: (_) => VideoSettingsSheet(player: player, trackControlsState: state),
+                        builder: (_) => VideoSettingsSheet(player: widget.player, trackControlsState: state),
                       )
                       .whenComplete(() => state.onStartAutoHide?.call());
                 },
@@ -236,10 +288,10 @@ class TrackChapterControls extends StatelessWidget {
           final currentIndex = buttonIndex;
           buttons.add(
             StreamBuilder<TrackSelection>(
-              stream: player.streams.track,
-              initialData: player.state.track,
+              stream: widget.player.streams.track,
+              initialData: widget.player.state.track,
               builder: (context, selectionSnapshot) {
-                final selection = selectionSnapshot.data ?? player.state.track;
+                final selection = selectionSnapshot.data ?? widget.player.state.track;
                 final hasSubtitleControls = state.hasSubtitleControls(tracks);
                 final selectedSub = selection.subtitle;
                 final hasActiveSubtitle = selectedSub != null && selectedSub.id != SubtitleTrack.off.id;
@@ -258,7 +310,7 @@ class TrackChapterControls extends StatelessWidget {
                     state.onCancelAutoHide?.call();
                     OverlaySheetController.of(context)
                         .show(
-                          builder: (_) => TrackSheet(player: player, trackControlsState: state),
+                          builder: (_) => TrackSheet(player: widget.player, trackControlsState: state),
                         )
                         .whenComplete(() => state.onStartAutoHide?.call());
                   },
@@ -269,7 +321,7 @@ class TrackChapterControls extends StatelessWidget {
           buttonIndex++;
         }
 
-        if (chapters.isNotEmpty && !hideChaptersAndQueue) {
+        if (widget.chapters.isNotEmpty && !widget.hideChaptersAndQueue) {
           final currentIndex = buttonIndex;
           buttons.add(
             _buildTrackButton(
@@ -283,13 +335,13 @@ class TrackChapterControls extends StatelessWidget {
                 OverlaySheetController.of(context)
                     .show(
                       builder: (_) => ChapterSheet(
-                        player: player,
-                        chapters: chapters,
-                        chaptersLoaded: chaptersLoaded,
+                        player: widget.player,
+                        chapters: widget.chapters,
+                        chaptersLoaded: widget.chaptersLoaded,
                         canControl: state.canControl,
                         serverId: state.serverId,
-                        onSeekRequested: onSeekRequested,
-                        onSeekCompleted: onSeekCompleted,
+                        onSeekRequested: widget.onSeekRequested,
+                        onSeekCompleted: widget.onSeekCompleted,
                       ),
                     )
                     .whenComplete(() => state.onStartAutoHide?.call());
@@ -317,17 +369,17 @@ class TrackChapterControls extends StatelessWidget {
                 OverlaySheetController.of(context)
                     .show(
                       builder: (_) => Stereo3dSheet(
-                        player: player,
+                        player: widget.player,
                         trackControlsState: state,
-                        chapters: chapters,
-                        chaptersLoaded: chaptersLoaded,
+                        chapters: widget.chapters,
+                        chaptersLoaded: widget.chaptersLoaded,
                         detection: detection,
                         isQuest: isQuest,
                         settings: settings,
                         titleStore: stereo3dTitleStore(settings),
                         vrChannel: VrPlayerChannel(),
-                        onSeekRequested: onSeekRequested,
-                        onSeekCompleted: onSeekCompleted,
+                        onSeekRequested: widget.onSeekRequested,
+                        onSeekCompleted: widget.onSeekCompleted,
                       ),
                     )
                     .whenComplete(() => state.onStartAutoHide?.call());
@@ -337,7 +389,7 @@ class TrackChapterControls extends StatelessWidget {
           buttonIndex++;
         }
 
-        if (state.showQueueButton && state.onQueueItemSelected != null && !hideChaptersAndQueue) {
+        if (state.showQueueButton && state.onQueueItemSelected != null && !widget.hideChaptersAndQueue) {
           final currentIndex = buttonIndex;
           buttons.add(
             _buildTrackButton(
@@ -466,7 +518,7 @@ class TrackChapterControls extends StatelessWidget {
   }
 
   String? _versionQualitySemanticValue() {
-    final state = trackControlsState;
+    final state = widget.trackControlsState;
     final values = <String>[];
     if (state.availableVersions.length > 1) {
       final index = state.selectedMediaIndex;

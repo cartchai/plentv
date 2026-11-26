@@ -250,12 +250,25 @@ class VrPlayerResult {
   /// True when the video played to the end.
   final bool completed;
 
-  const VrPlayerResult({required this.positionSeconds, required this.completed});
+  /// True when the VR session actually started (a frame rendered).
+  /// The native side reports `started: false` when VR init failed
+  /// before any frame (P0.4 contract) — the panel must then NOT seek
+  /// (the position is meaningless) and must resume playback instead.
+  /// Absent means started: maps from older native builds predate the
+  /// flag, and a returned position implies a session ran.
+  final bool started;
+
+  const VrPlayerResult({
+    required this.positionSeconds,
+    required this.completed,
+    this.started = true,
+  });
 
   factory VrPlayerResult.fromMap(Map<Object?, Object?> map) {
     return VrPlayerResult(
       positionSeconds: (map['positionSeconds'] as num?)?.toDouble() ?? 0.0,
       completed: map['completed'] as bool? ?? false,
+      started: map['started'] as bool? ?? true,
     );
   }
 }

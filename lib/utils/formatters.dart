@@ -1,5 +1,6 @@
 import 'package:duration/duration.dart';
 import 'package:duration/locale.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../i18n/app_locale_utils.dart';
 import '../i18n/strings.g.dart';
@@ -145,6 +146,27 @@ String formatClockTime(DateTime time, {required bool is24Hour}) {
   final locale = LocaleSettings.currentLocale.intlLocaleName;
   final formatter = is24Hour ? DateFormat.Hm(locale) : DateFormat.jm(locale);
   return formatter.format(time);
+}
+
+/// Formats a [DateTime] as a date plus a clock time ("Jan 5 · 14:30"),
+/// respecting the system 24-hour preference. The [time] is used as given —
+/// callers pass a local time (e.g. `.toLocal()`) when the stored value is UTC.
+/// Pass [dateFormat] to use a different date shape (e.g. `DateFormat.yMMMd`
+/// for a year); the default is the abbreviated month/day form.
+String formatDateTimeWithClock(DateTime time, BuildContext context, {DateFormat? dateFormat}) {
+  final locale = LocaleSettings.currentLocale.intlLocaleName;
+  final format = dateFormat ?? DateFormat.MMMd(locale);
+  return '${format.format(time)} · ${formatClockTime(time, is24Hour: MediaQuery.alwaysUse24HourFormatOf(context))}';
+}
+
+/// Formats a [DateTime] as a clock time with milliseconds ("14:30:05.123"),
+/// the timestamp shape used by the debug-log lines.
+String formatTimeWithMillis(DateTime time) {
+  final hour = padNumber(time.hour, 2);
+  final minute = padNumber(time.minute, 2);
+  final second = padNumber(time.second, 2);
+  final millisecond = padNumber(time.millisecond, 3);
+  return '$hour:$minute:$second.$millisecond';
 }
 
 /// Formats a date as Today/Tomorrow or a localized abbreviated weekday.

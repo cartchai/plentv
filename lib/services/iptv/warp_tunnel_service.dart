@@ -588,8 +588,10 @@ class WarpTunnelService extends ChangeNotifier {
   /// The `HttpClient.findProxy` value for a request to [url]: the local
   /// proxy while the tunnel is on AND the host is a registered provider
   /// host, DIRECT otherwise. This is the host-aware proxy used by the
-  /// shared platform client (artwork) and the M3U feed fetch — public
-  /// CDN artwork hosts are never registered, so they stay direct.
+  /// shared platform client (artwork) — public CDN artwork hosts are
+  /// never registered, so they stay direct. The M3U feed fetch does
+  /// NOT use this: it goes through [proxiedHttpClient] →
+  /// [proxyForProvider] (unconditional for known provider traffic).
   String findProxy(Uri url) {
     if (!isOn || _proxyPort <= 0) return 'DIRECT';
     if (!shouldProxyHost(url.host)) return 'DIRECT';
@@ -913,6 +915,77 @@ class WarpTunnelService extends ChangeNotifier {
       appLogger.d(
         'WARP: tunnel restore still settling after ${timeout.inSeconds}s, continuing without it',
       );
+    }
+  }
+
+  /// 1.6.30 (P0.3/F2): the ONE shared tunnel-ready gate. Returns true
+  /// when provider traffic may go out: the tunnel is on, or the toggle
+  /// is off (direct, as today). Returns false when the toggle is on
+  /// but the tunnel is still starting after [timeout] — the caller
+  /// must NOT probe direct in that case (a direct probe 403s and arms
+  /// the 5-minute refusal backoff). Never throws.
+  ///
+  /// Covers both ways a start can be in flight: the cold-start
+  /// restore future ([waitForRestoreSettled]) and a manual start
+  /// (state == `starting`, no restore future — the Settings toggle
+  /// calls `start()` directly), within one overall bound. The
+  /// Xtream sign-in gate, the health gate and the M3U / pre-tune /
+  /// EPG probes all route through this instead of re-inventing it.
+  Future<bool> waitForTunnelReady({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    try {
+      if (isOn) return true;
+      bool toggleOn;
+      try {
+        toggleOn = this.toggleOn;
+      } catch (_) {
+        // Settings not initialized: no tunnel could be restoring —
+        // proceed as today.
+        return true;
+      }
+      if (!toggleOn) return true;
+      final deadline = DateTime.now().add(timeout);
+      // Cold-start restore in flight: the restore future settles
+      // when start() finishes.
+      await waitForRestoreSettled(
+        timeout: deadline.difference(DateTime.now()),
+      );
+      if (isOn) return true;
+      // Manual start in flight (state == starting, no restore
+      // future): wait for the state to leave `starting`, same
+      // overall bound.
+      if (isStarting) {
+        await _waitForTunnelStateSettled(deadline);
+        if (isOn) return true;
+      }
+      return false;
+    } catch (_) {
+      // Fail closed: never let a gate failure send provider traffic
+      // direct while the toggle is on.
+      return false;
+    }
+  }
+
+  /// Wait for the tunnel state to leave `starting`, bounded by
+  /// [deadline]. Returns when the state settles or the deadline
+  /// passes; never throws.
+  Future<void> _waitForTunnelStateSettled(DateTime deadline) async {
+    if (!isStarting) return;
+    final completer = Completer<void>();
+    void listener() {
+      if (!isStarting && !completer.isCompleted) completer.complete();
+    }
+    addListener(listener);
+    try {
+      final remaining = deadline.difference(DateTime.now());
+      if (remaining <= Duration.zero) return;
+      await completer.future.timeout(remaining);
+    } on TimeoutException {
+      // Still starting after the bound: the caller fails closed
+      // instead of probing direct.
+    } finally {
+      removeListener(listener);
     }
   }
 

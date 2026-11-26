@@ -48,6 +48,7 @@
 
 #include <atomic>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -79,7 +80,10 @@ struct VrConfig {
 };
 
 // Called (on the render thread) when the VR session ends.
-using VrFinishedCallback = std::function<void(double positionSeconds, bool completed)>;
+// `started` is false when VR init failed before any frame was rendered —
+// the panel must NOT treat that like an exit at position 0 (P0.4/B5:
+// no seek, no pop, resume the panel instead).
+using VrFinishedCallback = std::function<void(double positionSeconds, bool completed, bool started)>;
 
 class VrRenderer {
  public:
@@ -103,19 +107,22 @@ class VrRenderer {
   // Stop the loop and join the thread. Safe to call when not started.
   void stop();
 
-  // Current position / completion, read from the render thread's impl
-  // (defined in vr_renderer.cpp). 0 / false before start.
-  double positionSeconds() const;
-  bool completed() const;
+  // Called by the render thread when it exits, before the impl is
+  // deleted: clears impl_ under the same mutex the accessors use, so no
+  // concurrent requestExit/recenter can touch freed memory (B10).
+  void releaseImpl(void* impl);
 
  private:
-  void onFinished(double positionSeconds, bool completed);
-
   VrConfig config_;
   VrFinishedCallback onFinished_;
   std::thread loopThread_;
   std::atomic<bool> exitRequested_{false};
   std::atomic<bool> recenterRequested_{false};
   std::atomic<bool> running_{false};
+  // Guarded by implMutex_: every access (requestExit/recenter/stop/
+  // releaseImpl) holds it while touching the pointer, and releaseImpl
+  // nulls it before the delete, so a concurrent accessor can never
+  // dereference freed memory (B10).
+  std::mutex implMutex_;
   void* impl_ = nullptr; // VrRendererImpl (vr_renderer.cpp), opaque here
 };

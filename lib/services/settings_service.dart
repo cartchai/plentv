@@ -1051,6 +1051,13 @@ class SettingsService extends BaseSharedPreferencesService {
   /// safest), 'onscreen' or 'follow' (follow the view).
   static const questSubtitleDepth = StringPref('quest_subtitle_depth', defaultValue: 'below');
 
+  /// Screen lock default (B17): 'world' (the screen stays put in the
+  /// room) or 'head' (the screen follows the viewer). The 3D sheet
+  /// reads this on open and the world/head segment writes it back, so
+  /// the choice sticks across titles instead of resetting to 'world'
+  /// every time the sheet opens.
+  static const questScreenLock = StringPref('quest_screen_lock', defaultValue: 'world');
+
   /// The per-title 3D records (one JSON object, keyed by
   /// "ratingKey|partId"). Read and written through
   /// [Stereo3dTitleStore]; do not read this pref directly.

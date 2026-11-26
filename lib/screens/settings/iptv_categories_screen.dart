@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../connection/connection.dart';
 import '../../connection/connection_registry.dart';
+import 'iptv_connection_persistence.dart';
 import '../../i18n/strings.g.dart';
 import '../../media/ids.dart';
 import '../../media/iptv_client.dart';
@@ -301,7 +302,7 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
           // connection's fresh client is the one checked — never the
           // screen's throwaway (its memos are cold).
           if (!mounted || unhidden.isEmpty) return;
-          final client = _boundClient();
+          final client = boundIptvClient(context, widget.connection.id);
           if (client == null) return;
           unawaited(
             maybeShowUnhideRefreshNotice(
@@ -320,20 +321,6 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
       });
       showErrorSnackBar(context, t.iptvCategories.persistFailed);
     }
-  }
-
-  /// The bound client for this connection, if it is bound right now
-  /// (1.2.4): the notice check must run against the bound client's
-  /// memos, never a throwaway. Null when unbound (the rebind failed or
-  /// has not landed) — then no notice, never a cold-client load.
-  IptvClient? _boundClient() {
-    try {
-      final bound = context.read<MultiServerProvider>().getClientForServer(ServerId(widget.connection.id));
-      if (bound is IptvClient) return bound;
-    } catch (_) {
-      // No provider above us, or the connection isn't bound.
-    }
-    return null;
   }
 
   /// Category ids the [updated] connection un-hides relative to

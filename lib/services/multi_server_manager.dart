@@ -1078,6 +1078,14 @@ class MultiServerManager {
       _iptvByConnectionId[connection.id] = client;
       _clients[connection.id] = client;
 
+      // 1.6.30 (P0.9/F8, Q-3): start connectivity monitoring from the
+      // IPTV bind. An IPTV-only profile whose server is down at launch
+      // otherwise never recovers except by backgrounding and
+      // re-opening the app — monitoring only started when a server
+      // was online. Self-guards against double-start, so profiles
+      // with a server online are unchanged.
+      _startNetworkMonitoring();
+
       // Build #23: a replace is a data-source change (new server URL /
       // credentials — the filter-only path returned early above), so the
       // old source's cached catalog must not serve the new client. Clear
@@ -1129,6 +1137,17 @@ class MultiServerManager {
       );
       return healthy;
     } catch (e, stackTrace) {
+      // 1.6.30 (P0.17/F5): a throwing probe must still leave a health
+      // verdict in the map — the client is registered in `_clients`
+      // and the filter-only path reads this map, so a missing entry
+      // (`null == online` is false) would report the server offline
+      // for a merely-unknown probe outcome. Offline is the honest
+      // verdict for a probe that never answered. Only when the client
+      // was actually registered (a non-IPTV connection rejected at
+      // the top never reaches here, and must not gain a map entry).
+      if (_iptvByConnectionId.containsKey(connection.id)) {
+        _iptvHealthByConnectionId[connection.id] = HealthStatus.offline;
+      }
       appLogger.e('Failed to add IPTV server ${connection.displayName}', error: e, stackTrace: stackTrace);
       return false;
     }

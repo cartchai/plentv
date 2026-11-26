@@ -188,59 +188,13 @@ class _AddXtreamScreenState extends State<AddXtreamScreen> with AsyncFormStateMi
   /// the tunnel is on, or the toggle is off (direct, as today).
   /// Returns false when the toggle is on but the tunnel is still
   /// starting after the bound — the caller must NOT probe direct in
-  /// that case. Never throws: a gate failure proceeds as today (the
-  /// health gate has the same best-effort shape).
-  Future<bool> _waitForTunnelReady() async {
-    final service = WarpTunnelService.instance;
-    if (service.isOn) return true;
-    bool toggleOn;
-    try {
-      toggleOn = service.toggleOn;
-    } catch (_) {
-      // Settings not initialized: no tunnel could be restoring —
-      // proceed as today.
-      return true;
-    }
-    if (!toggleOn) return true;
-    final deadline = DateTime.now().add(const Duration(seconds: 5));
-    // Cold-start restore in flight (the 1.6.18 gate): the restore
-    // future settles when start() finishes.
-    await service.waitForRestoreSettled(
-      timeout: deadline.difference(DateTime.now()),
-    );
-    if (service.isOn) return true;
-    // Manual start in flight (state == starting, no restore future —
-    // the Settings toggle calls start() directly): wait for the state
-    // to leave `starting`, same overall bound.
-    if (service.isStarting) {
-      await _waitForTunnelStateSettled(deadline);
-      if (service.isOn) return true;
-    }
-    return false;
-  }
-
-  /// Wait for the tunnel state to leave `starting`, bounded by
-  /// [deadline]. Returns when the state settles or the deadline
-  /// passes; never throws.
-  Future<void> _waitForTunnelStateSettled(DateTime deadline) async {
-    final service = WarpTunnelService.instance;
-    if (!service.isStarting) return;
-    final completer = Completer<void>();
-    void listener() {
-      if (!service.isStarting && !completer.isCompleted) completer.complete();
-    }
-    service.addListener(listener);
-    try {
-      final remaining = deadline.difference(DateTime.now());
-      if (remaining <= Duration.zero) return;
-      await completer.future.timeout(remaining);
-    } on TimeoutException {
-      // Still starting after the bound: the caller fails instead of
-      // probing direct.
-    } finally {
-      service.removeListener(listener);
-    }
-  }
+  /// that case. Never throws.
+  /// 1.6.30 (P0.3/F2): delegated to the shared
+  /// [WarpTunnelService.waitForTunnelReady] — the local restore +
+  /// state-settled waits lived here before and are now the one
+  /// shared implementation.
+  Future<bool> _waitForTunnelReady() =>
+      WarpTunnelService.instance.waitForTunnelReady();
 
   Future<void> _signIn() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;

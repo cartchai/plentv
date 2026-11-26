@@ -460,7 +460,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
     } catch (e, st) {
       appLogger.e('Media context menu action failed', error: e, stackTrace: st);
       if (context.mounted) {
-        showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+        showLoadingErrorSnackBar(context, e);
       }
     } finally {
       _isContextMenuOpen = false;
@@ -1054,7 +1054,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       }
     } catch (e) {
       if (context.mounted) {
-        showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+        showLoadingErrorSnackBar(context, e);
       }
     }
   }
@@ -1077,7 +1077,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       }
     } catch (e) {
       if (context.mounted) {
-        showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+        showLoadingErrorSnackBar(context, e);
       }
     }
   }
@@ -1088,7 +1088,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       await _showRatingSheet(context, item, client);
     } catch (e) {
       if (context.mounted) {
-        showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+        showLoadingErrorSnackBar(context, e);
       }
     }
   }
@@ -1235,7 +1235,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       }
     } catch (e) {
       if (context.mounted) {
-        showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+        showLoadingErrorSnackBar(context, e);
       }
     }
   }
@@ -1760,7 +1760,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
         shuffle: shuffle,
         onError: (e, st) {
           appLogger.w('Failed to fetch audio playlist ${playlist.id}', error: e, stackTrace: st);
-          showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+          showLoadingErrorSnackBar(context, e);
         },
         onEmpty: () => showErrorSnackBar(context, t.messages.failedToCreatePlayQueueNoItems),
       );
@@ -1918,7 +1918,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
     } catch (e) {
       appLogger.e('Failed to delete download', error: e);
       if (context.mounted) {
-        showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+        showLoadingErrorSnackBar(context, e);
       }
     }
   }

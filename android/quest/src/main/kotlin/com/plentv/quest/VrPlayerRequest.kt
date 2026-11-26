@@ -72,6 +72,12 @@ data class VrPlayerRequest(
     const val RESULT_POSITION_SECONDS = "positionSeconds"
     const val RESULT_COMPLETED = "completed"
 
+    /**
+     * Whether VR init succeeded (P0.4). False when init failed before any
+     * frame — the panel must not seek to 0 on that result.
+     */
+    const val RESULT_STARTED = "started"
+
     fun fromMap(map: Map<String, Any?>): VrPlayerRequest? {
       val videoUrl = map[EXTRA_VIDEO_URL] as? String
       if (videoUrl.isNullOrBlank()) return null
@@ -80,7 +86,9 @@ data class VrPlayerRequest(
         )?.filterIsInstance<String>() ?: emptyList()
       return VrPlayerRequest(
         videoUrl = videoUrl,
-        layout = map[EXTRA_LAYOUT] as? String ?: "sbs",
+        // U5: a missing layout defaults to twoD (flat) everywhere — SBS
+        // is the dangerous direction for a flat file shown split.
+        layout = map[EXTRA_LAYOUT] as? String ?: "twoD",
         packing = map[EXTRA_PACKING] as? String ?: "half",
         swapEyes = map[EXTRA_SWAP_EYES] as? Boolean ?: false,
         screenSize = (map[EXTRA_SCREEN_SIZE] as? Number)?.toDouble() ?: 1.0,
@@ -114,7 +122,8 @@ data class VrPlayerRequest(
       if (videoUrl.isNullOrBlank()) return null
       return VrPlayerRequest(
         videoUrl = videoUrl,
-        layout = extras.getString(EXTRA_LAYOUT, "sbs"),
+        // U5: same twoD default as fromMap (see above).
+        layout = extras.getString(EXTRA_LAYOUT, "twoD"),
         packing = extras.getString(EXTRA_PACKING, "half"),
         swapEyes = extras.getBoolean(EXTRA_SWAP_EYES, false),
         screenSize = extras.getDouble(EXTRA_SCREEN_SIZE, 1.0),

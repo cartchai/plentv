@@ -39,6 +39,24 @@
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
+// Named constants (T1, 1.6.30) — the magic numbers that used to be
+// scattered literals. The overlay size is the worst of them: four
+// literals that must agree, in three functions.
+constexpr int kOverlayWidthPx = 1024;  // overlay strip texture width
+constexpr int kOverlayHeightPx = 256;  // overlay strip texture height
+constexpr float kOverlayAspect = 4.0f; // kOverlayWidthPx / kOverlayHeightPx
+constexpr double kSeekStepSeconds = 10.0;    // overlay / thumbstick seek
+constexpr double kSeekChapterSeconds = 60.0; // thumbstick up/down seek
+constexpr float kThumbstickSeekThreshold = 0.7f; // thumbstick deflection that seeks
+constexpr float kPinchDistanceM = 0.025f;        // hand-tracking pinch (2.5 cm)
+constexpr XrFoveationLevelFB kFoveationLevel = XR_FOVEATION_LEVEL_MEDIUM_FB;
+constexpr double kAutoDimBrightnessDelta = -30.0; // S8 auto-dim vs base brightness
+constexpr float kDynResSlowFrameMs = 13.0f;  // above: drop the render scale
+constexpr float kDynResFastFrameMs = 8.0f;   // below: climb back
+constexpr float kDynResMinScale = 0.5f;      // render-scale floor
+constexpr XrDuration kSwapchainWaitTimeoutNs = 100000000; // 100 ms (B11)
+constexpr int kRecenterFlashMs = 1500; // Q5: CENTER-button highlight after recenter
+
 namespace {
 
 
@@ -52,73 +70,9 @@ struct Quat {
 };
 struct Mat4 {
   float m[16];
-  static Mat4 identity() {
-    Mat4 r{};
-    r.m[0] = r.m[5] = r.m[10] = r.m[15] = 1.0f;
-    return r;
-  }
-  static Mat4 translation(float x, float y, float z) {
-    Mat4 r = identity();
-    r.m[12] = x;
-    r.m[13] = y;
-    r.m[14] = z;
-    return r;
-  }
-  static Mat4 perspective(float fovY, float aspect, float nearZ, float farZ) {
-    Mat4 r{};
-    const float f = 1.0f / tanf(fovY * 0.5f);
-    r.m[0] = f / aspect;
-    r.m[5] = f;
-    r.m[10] = (farZ + nearZ) / (nearZ - farZ);
-    r.m[11] = -1.0f;
-    r.m[14] = (2.0f * farZ * nearZ) / (nearZ - farZ);
-    return r;
-  }
-  static Mat4 fromQuat(const Quat& q) {
-    Mat4 r{};
-    const float x = q.x, y = q.y, z = q.z, w = q.w;
-    r.m[0] = 1 - 2 * (y * y + z * z);
-    r.m[1] = 2 * (x * y + z * w);
-    r.m[2] = 2 * (x * z - y * w);
-    r.m[4] = 2 * (x * y - z * w);
-    r.m[5] = 1 - 2 * (x * x + z * z);
-    r.m[6] = 2 * (y * z + x * w);
-    r.m[8] = 2 * (x * z + y * w);
-    r.m[9] = 2 * (y * z - x * w);
-    r.m[10] = 1 - 2 * (x * x + y * y);
-    r.m[15] = 1.0f;
-    return r;
-  }
-  Mat4 operator*(const Mat4& o) const {
-    Mat4 r{};
-    for (int c = 0; c < 4; ++c) {
-      for (int row = 0; row < 4; ++row) {
-        float s = 0.0f;
-        for (int k = 0; k < 4; ++k) s += m[k * 4 + row] * o.m[c * 4 + k];
-        r.m[c * 4 + row] = s;
-      }
-    }
-    return r;
-  }
-  Mat4 invertedRigid() const {
-    // Inverse of a rotation+translation matrix (no scale).
-    Mat4 r = identity();
-    // Transpose the 3x3 rotation.
-    r.m[0] = m[0];
-    r.m[1] = m[4];
-    r.m[2] = m[8];
-    r.m[4] = m[1];
-    r.m[5] = m[5];
-    r.m[6] = m[9];
-    r.m[8] = m[2];
-    r.m[9] = m[6];
-    r.m[10] = m[10];
-    const float tx = m[12], ty = m[13], tz = m[14];
-    r.m[12] = -(r.m[0] * tx + r.m[4] * ty + r.m[8] * tz);
-    r.m[13] = -(r.m[1] * tx + r.m[5] * ty + r.m[9] * tz);
-    r.m[14] = -(r.m[2] * tx + r.m[6] * ty + r.m[10] * tz);
-    return r;
-  }
+  // The live code uses the free functions below (mat4Identity /
+  // mat4Multiply / mat4FromQuat) instead of members — one conversion and
+  // one multiply, kept in exactly one place each (D4/U3).
 };
 
 Vec3 quatRotate(const Quat& q, const Vec3& v) {
@@ -151,6 +105,13 @@ bool loadMpvApi() {
   g_mpv.name = reinterpret_cast<mpv_##name##_fn>(dlsym(handle, "mpv_" #name)); \
   if (g_mpv.name == nullptr) {                                              \
     LOGE("libmpv.so has no mpv_" #name);                                      \
+    /* B9: a partial load must not poison a later session — the earlier  \
+       pointers are already set, and loaded() used to check only the    \
+       first two. Clear the struct and close the handle so the next     \
+       loadMpvApi() retries from scratch instead of calling a null     \
+       function pointer. */                                                 \
+    dlclose(handle);                                                          \
+    g_mpv = MpvApi{};                                                         \
     return false;                                                             \
   }
   LOAD_MPV(create)
@@ -566,6 +527,10 @@ struct VrRendererImpl {
   // Eye swapchains (projection path: curved / VR180 / VR360).
   XrSwapchain eyeSwapchains[2] = {XR_NULL_HANDLE, XR_NULL_HANDLE};
   std::vector<XrSwapchainImageOpenGLESKHR> eyeImages[2];
+  // B1: true only once BOTH eye swapchains exist. A half-created pair is
+  // destroyed on failure (see ensureEyeSwapchains) so the next frame
+  // retries instead of acquiring from a null handle.
+  bool eyeSwapchainsReady = false;
   uint32_t eyeWidth = 0;
   uint32_t eyeHeight = 0;
 
@@ -578,8 +543,6 @@ struct VrRendererImpl {
   // GL.
   GLuint meshProgram = 0;
   GLuint colorProgram = 0;
-  GLuint videoFbo = 0;       // FBO for the projection-path video texture.
-  GLuint videoFrameTexture = 0; // The decoded frame, for the projection path.
   int videoFrameW = 0;
   int videoFrameH = 0;
   Mesh flatMesh;
@@ -593,6 +556,9 @@ struct VrRendererImpl {
   mpv_render_context* renderCtx = nullptr;
   std::atomic<bool> mpvNewFrame{false};
   bool fileLoaded = false;
+  // B14: external subtitles are sub-add'ed on the first FILE_LOADED, not
+  // in initMpv (loadfile is async) — and only once.
+  bool externalSubtitlesAdded = false;
   bool endOfFile = false;
   double durationSeconds = 0.0;
   double lastPositionSeconds = 0.0;
@@ -619,6 +585,13 @@ struct VrRendererImpl {
 
   // Screen pose (stage/app space). Recentered on start and on demand.
   XrPosef screenPose{};
+  // P0.8/B3: the world-lock pose is seeded from the first valid view
+  // (frame() sets it once); until then it is the identity-based pose
+  // renderLoop seeds. Head-lock overwrites it every frame instead.
+  bool screenPoseSeeded = false;
+  // Q5: recenter feedback — the CENTER button stays highlighted until
+  // this time (renderOverlayStrip reads it).
+  std::chrono::steady_clock::time_point recenterFlashUntil{};
   float screenWidthM = 2.0f;
   float screenHeightM = 1.125f;
   // Head pose of the current frame (for the VR180/VR360 sphere model).
@@ -635,6 +608,11 @@ struct VrRendererImpl {
   // Sleep timer (S13).
   std::chrono::steady_clock::time_point sleepDeadline{};
   bool sleepFired = false;
+
+  // B21: frame-local caches that used to be function-statics (and so
+  // survived across VR sessions in the same process). Reset in renderLoop.
+  double lastBrightness = 1e9; // S8 auto-dim: last brightness actually set
+  int lastShownSecond = -1;    // overlay: last second the strip rendered
 
   bool exitRequested = false;
   bool recenterRequested = false;
@@ -1012,6 +990,13 @@ void destroyOpenXr(VrRendererImpl* impl) {
       impl->handTrackers[i] = XR_NULL_HANDLE;
     }
   }
+  // B16: the aim spaces belong to the action set — destroy them before it.
+  for (int i = 0; i < 2; ++i) {
+    if (impl->aimSpaces[i] != XR_NULL_HANDLE) {
+      xrDestroySpace(impl->aimSpaces[i]);
+      impl->aimSpaces[i] = XR_NULL_HANDLE;
+    }
+  }
   if (impl->actionSet != XR_NULL_HANDLE) {
     xrDestroyActionSet(impl->actionSet);
     impl->actionSet = XR_NULL_HANDLE;
@@ -1026,6 +1011,7 @@ void destroyOpenXr(VrRendererImpl* impl) {
       impl->eyeSwapchains[i] = XR_NULL_HANDLE;
     }
   }
+  impl->eyeSwapchainsReady = false;
   if (impl->overlaySwapchain != XR_NULL_HANDLE) {
     xrDestroySwapchain(impl->overlaySwapchain);
     impl->overlaySwapchain = XR_NULL_HANDLE;
@@ -1212,14 +1198,12 @@ bool initMpv(VrRendererImpl* impl) {
     LOGE("mpv loadfile failed: %s", g_mpv.error_string(err));
     return false;
   }
-  // External subtitles (S11): loaded after the file starts; sub-add with
-  // "select" makes the new file the active subtitle track.
-  for (const auto& path : impl->config.externalSubtitlePaths) {
-    const char* subArgs[] = {"sub-add", path.c_str(), "select", nullptr};
-    const int subErr = g_mpv.command(impl->mpv, subArgs);
-    if (subErr < 0) LOGW("sub-add %s failed: %s", path.c_str(), g_mpv.error_string(subErr));
-  }
-  LOGI("mpv loading %s", impl->config.videoUrl.c_str());
+  // External subtitles (S11) are added on the first MPV_EVENT_FILE_LOADED
+  // (see pollMpvEvents): loadfile is async, and a sub-add issued before
+  // the file loads can be silently rejected (B14).
+  // P0.1: never log the video URL — it is a Plex direct-play URL carrying
+  // the auth token. The title/layout are logged by the JNI side instead.
+  LOGI("mpv loading video file (URL withheld)");
   return true;
 }
 
@@ -1431,11 +1415,24 @@ bool createSwapchain(VrRendererImpl* impl, uint32_t w, uint32_t h, XrSwapchain* 
     return false;
   }
   uint32_t count = 0;
-  xrEnumerateSwapchainImages(*out, 0, &count, nullptr);
+  if (XR_FAILED(xrEnumerateSwapchainImages(*out, 0, &count, nullptr))) {
+    LOGE("xrEnumerateSwapchainImages (count) failed");
+    xrDestroySwapchain(*out);
+    *out = XR_NULL_HANDLE;
+    imagesOut->clear();
+    return false;
+  }
   imagesOut->resize(count, {XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
   if (XR_FAILED(xrEnumerateSwapchainImages(*out, count, &count,
                                            reinterpret_cast<XrSwapchainImageBaseHeader*>(imagesOut->data())))) {
     LOGE("xrEnumerateSwapchainImages failed");
+    // B2: never leave a live handle with an empty image list behind — the
+    // ensure* callers treat non-null as "ready" and would black the video
+    // (or submit an unenumerated swapchain) forever. Destroy it so the
+    // next frame retries from scratch.
+    xrDestroySwapchain(*out);
+    *out = XR_NULL_HANDLE;
+    imagesOut->clear();
     return false;
   }
   return true;
@@ -1465,7 +1462,7 @@ bool ensureVideoSwapchain(VrRendererImpl* impl) {
   if (impl->foveationSupported && impl->config.foveatedRendering) {
     XrFoveationLevelProfileCreateInfoFB levelInfo{
         XR_TYPE_FOVEATION_LEVEL_PROFILE_CREATE_INFO_FB};
-    levelInfo.level = XR_FOVEATION_LEVEL_MEDIUM_FB;
+    levelInfo.level = kFoveationLevel;
     XrFoveationProfileCreateInfoFB profileInfo{XR_TYPE_FOVEATION_PROFILE_CREATE_INFO_FB};
     profileInfo.next = &levelInfo;
     if (XR_SUCCEEDED(impl->pfnCreateFoveationProfileFB(impl->session, &profileInfo,
@@ -1486,7 +1483,7 @@ bool ensureVideoSwapchain(VrRendererImpl* impl) {
 }
 
 bool ensureEyeSwapchains(VrRendererImpl* impl) {
-  if (impl->eyeSwapchains[0] != XR_NULL_HANDLE) return true;
+  if (impl->eyeSwapchainsReady) return true;
   // Recommended eye size from the view configuration.
   uint32_t count = 0;
   xrEnumerateViewConfigurationViews(impl->instance, impl->systemId,
@@ -1503,18 +1500,33 @@ bool ensureEyeSwapchains(VrRendererImpl* impl) {
   impl->eyeWidth = w;
   impl->eyeHeight = h;
   for (int i = 0; i < 2; ++i) {
-    if (!createSwapchain(impl, w, h, &impl->eyeSwapchains[i], &impl->eyeImages[i])) return false;
+    if (!createSwapchain(impl, w, h, &impl->eyeSwapchains[i], &impl->eyeImages[i])) {
+      // B1: a half-created pair must not read as complete — frame() would
+      // acquire from a null handle. Destroy the half that did get created
+      // so the next frame retries both eyes from scratch.
+      for (int j = 0; j < 2; ++j) {
+        if (impl->eyeSwapchains[j] != XR_NULL_HANDLE) {
+          xrDestroySwapchain(impl->eyeSwapchains[j]);
+          impl->eyeSwapchains[j] = XR_NULL_HANDLE;
+          impl->eyeImages[j].clear();
+        }
+      }
+      impl->eyeSwapchainsReady = false;
+      return false;
+    }
   }
+  impl->eyeSwapchainsReady = true;
   LOGI("Eye swapchains %ux%u", w, h);
   return true;
 }
 
 bool ensureOverlaySwapchain(VrRendererImpl* impl) {
   if (impl->overlaySwapchain != XR_NULL_HANDLE) return true;
-  if (!createSwapchain(impl, 1024, 256, &impl->overlaySwapchain, &impl->overlayImages)) {
+  if (!createSwapchain(impl, kOverlayWidthPx, kOverlayHeightPx, &impl->overlaySwapchain,
+                       &impl->overlayImages)) {
     return false;
   }
-  LOGI("Overlay swapchain 1024x256");
+  LOGI("Overlay swapchain %dx%d", kOverlayWidthPx, kOverlayHeightPx);
   return true;
 }
 
@@ -1590,8 +1602,21 @@ bool withSwapchainImage(VrRendererImpl* impl, XrSwapchain swapchain,
   uint32_t index = 0;
   if (XR_FAILED(xrAcquireSwapchainImage(swapchain, &acquireInfo, &index))) return false;
   XrSwapchainImageWaitInfo waitInfo{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
-  waitInfo.timeout = XR_INFINITE_DURATION;
-  if (XR_FAILED(xrWaitSwapchainImage(swapchain, &waitInfo))) {
+  // B11: never wait forever. A bounded wait that re-checks exitRequested
+  // lets the render thread always exit, so onDestroy's join cannot block
+  // forever on a parked runtime.
+  waitInfo.timeout = kSwapchainWaitTimeoutNs;
+  while (true) {
+    const XrResult waitResult = xrWaitSwapchainImage(swapchain, &waitInfo);
+    if (XR_SUCCEEDED(waitResult)) break;
+    if (waitResult == XR_TIMEOUT_EXPIRED) {
+      if (impl->exitRequested) {
+        XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+        xrReleaseSwapchainImage(swapchain, &releaseInfo);
+        return false;
+      }
+      continue;
+    }
     XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
     xrReleaseSwapchainImage(swapchain, &releaseInfo);
     return false;
@@ -1633,14 +1658,34 @@ void pollMpvEvents(VrRendererImpl* impl) {
     switch (ev->event_id) {
       case MPV_EVENT_FILE_LOADED:
         impl->fileLoaded = true;
+        // B14: loadfile is async — only now is a sub-add accepted.
+        // "select" makes the new file the active subtitle track.
+        if (!impl->externalSubtitlesAdded) {
+          impl->externalSubtitlesAdded = true;
+          for (const auto& path : impl->config.externalSubtitlePaths) {
+            const char* subArgs[] = {"sub-add", path.c_str(), "select", nullptr};
+            const int subErr = g_mpv.command(impl->mpv, subArgs);
+            if (subErr < 0) {
+              LOGW("sub-add %s failed: %s", path.c_str(), g_mpv.error_string(subErr));
+            }
+          }
+        }
         LOGI("mpv file loaded");
         break;
       case MPV_EVENT_END_FILE: {
         auto* end = static_cast<mpv_event_end_file*>(ev->data);
+        // B13: only clean EOF means "completed". ERROR / STOP also end
+        // the session (completed stays false) instead of leaving VR
+        // stuck on a black screen for a dead stream. QUIT is mpv
+        // quitting on its own and REDIRECT reloads a new file, so
+        // neither exits here.
         if (end != nullptr && end->reason == 0 /* EOF */) {
           impl->endOfFile = true;
           impl->completed.store(true);
           LOGI("mpv end of file (completed)");
+        } else if (end != nullptr && (end->reason == 1 /* STOP */ || end->reason == 3 /* ERROR */)) {
+          impl->endOfFile = true;
+          LOGW("mpv end of file, reason %d (error %d); leaving VR", end->reason, end->error);
         }
         break;
       }
@@ -1770,10 +1815,10 @@ void buildFontAtlas() {
 void drawTextLine(VrRendererImpl* impl, const std::string& text, float x, float y, float scale) {
   buildFontAtlas();
   glUseProgram(impl->meshProgram);
-  // Orthographic MVP for the overlay texture (1024x256, y down).
+  // Orthographic MVP for the overlay texture (y down).
   Mat4 ortho{};
-  ortho.m[0] = 2.0f / 1024.0f;
-  ortho.m[5] = -2.0f / 256.0f;
+  ortho.m[0] = 2.0f / static_cast<float>(kOverlayWidthPx);
+  ortho.m[5] = -2.0f / static_cast<float>(kOverlayHeightPx);
   ortho.m[10] = -1.0f;
   ortho.m[12] = -1.0f;
   ortho.m[13] = 1.0f;
@@ -1840,26 +1885,34 @@ std::string formatTime(double seconds) {
 
 void renderOverlayStrip(VrRendererImpl* impl) {
   if (!ensureOverlaySwapchain(impl)) return;
+  // Q5: recenter feedback — briefly highlight the CENTER button after a
+  // recenter so the user sees it land in VR. The flash is set in frame()
+  // when a recenter is applied; the strip re-renders on the next second
+  // tick after it expires.
+  int highlightButton = impl->overlayFocusedButton;
+  if (std::chrono::steady_clock::now() < impl->recenterFlashUntil) {
+    highlightButton = 3; // CENTER
+  }
   const std::string timeText =
       formatTime(impl->lastPositionSeconds) + " / " + formatTime(impl->durationSeconds);
-  withSwapchainImage(impl, impl->overlaySwapchain, impl->overlayImages,
+  const bool rendered = withSwapchainImage(impl, impl->overlaySwapchain, impl->overlayImages,
                      [&](uint32_t texture) {
                        GLuint fbo = 0;
                        glGenFramebuffers(1, &fbo);
                        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
                        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                               GL_TEXTURE_2D, texture, 0);
-                       glViewport(0, 0, 1024, 256);
+                       glViewport(0, 0, kOverlayWidthPx, kOverlayHeightPx);
                        glClearColor(0.05f, 0.05f, 0.08f, 0.92f);
                        glClear(GL_COLOR_BUFFER_BIT);
-                       // Focused button highlight.
-                       if (impl->overlayFocusedButton >= 0 &&
-                           impl->overlayFocusedButton < 5) {
-                         const auto& b = kOverlayButtons[impl->overlayFocusedButton];
+                       // Focused button highlight (or the Q5 recenter flash).
+                       if (highlightButton >= 0 &&
+                           highlightButton < 5) {
+                         const auto& b = kOverlayButtons[highlightButton];
                          glUseProgram(impl->colorProgram);
                          Mat4 ortho{};
-                         ortho.m[0] = 2.0f / 1024.0f;
-                         ortho.m[5] = -2.0f / 256.0f;
+                         ortho.m[0] = 2.0f / static_cast<float>(kOverlayWidthPx);
+                         ortho.m[5] = -2.0f / static_cast<float>(kOverlayHeightPx);
                          ortho.m[10] = -1.0f;
                          ortho.m[12] = -1.0f;
                          ortho.m[13] = 1.0f;
@@ -1868,7 +1921,8 @@ void renderOverlayStrip(VrRendererImpl* impl) {
                                             GL_FALSE, ortho.m);
                          glUniform4f(glGetUniformLocation(impl->colorProgram, "uColor"), 0.9f,
                                      0.75f, 0.2f, 0.35f);
-                         const float x0 = b.x0 * 1024.0f, x1 = b.x1 * 1024.0f;
+                         const float x0 = b.x0 * static_cast<float>(kOverlayWidthPx),
+                                     x1 = b.x1 * static_cast<float>(kOverlayWidthPx);
                          const float verts[] = {
                              x0, 200, 0, x1, 200, 0, x1, 56, 0, x0, 56, 0,
                          };
@@ -1895,7 +1949,8 @@ void renderOverlayStrip(VrRendererImpl* impl) {
                        for (const auto& b : kOverlayButtons) {
                          const std::string label =
                              (b.id == 0) ? (impl->playing ? "PAUSE" : "PLAY") : b.label;
-                         const float tx = (b.x0 + b.x1) * 0.5f * 1024.0f -
+                         const float tx = (b.x0 + b.x1) * 0.5f *
+                                              static_cast<float>(kOverlayWidthPx) -
                                           static_cast<float>(label.size()) * 22.0f * 0.75f * 0.5f;
                          drawTextLine(impl, label, tx, 110, 22);
                        }
@@ -1903,7 +1958,10 @@ void renderOverlayStrip(VrRendererImpl* impl) {
                        glDeleteFramebuffers(1, &fbo);
                        return true;
                      });
-  impl->overlayDirty = false;
+  // B20: only mark the strip clean when the render actually ran — a
+  // failed render must be retried next frame, not forgotten until the
+  // next hover/second change.
+  if (rendered) impl->overlayDirty = false;
 }
 
 } // namespace
@@ -1930,28 +1988,12 @@ Mat4 projectionFromFov(const XrFovf& fov, float nearZ, float farZ) {
 }
 
 Mat4 viewMatrixFromPose(const XrPosef& pose) {
-  // view = inverse(translation * rotation) = rotation^T * translation(-pos)
+  // view = inverse(translation * rotation) = rotation^T * translation(-pos).
+  // The rotation comes from the single kept quat->matrix conversion
+  // (mat4FromQuat, U3) — no third inline copy of the same 3x3.
   const Quat q = quatFromXr(pose.orientation);
   const Vec3 p = vecFromXr(pose.position);
-  // Rotation matrix (columns = the basis vectors).
-  const float x = q.x, y = q.y, z = q.z, w = q.w;
-  const float xx = x * x, yy = y * y, zz = z * z;
-  const float xy = x * y, xz = x * z, yz = y * z;
-  const float wx = w * x, wy = w * y, wz = w * z;
-  // R (column-major): col0 = (1-2(yy+zz), 2(xy+wz), 2(xz-wy)), etc.
-  Mat4 rot{};
-  rot.m[0] = 1.0f - 2.0f * (yy + zz);
-  rot.m[1] = 2.0f * (xy + wz);
-  rot.m[2] = 2.0f * (xz - wy);
-  rot.m[4] = 2.0f * (xy - wz);
-  rot.m[5] = 1.0f - 2.0f * (xx + zz);
-  rot.m[6] = 2.0f * (yz + wx);
-  rot.m[8] = 2.0f * (xz + wy);
-  rot.m[9] = 2.0f * (yz - wx);
-  rot.m[10] = 1.0f - 2.0f * (xx + yy);
-  rot.m[15] = 1.0f;
-  // view = rot^T * trans(-p). rot^T is the transpose; the translation part
-  // is -rot^T * p.
+  const Mat4 rot = mat4FromQuat(q);
   Mat4 view{};
   view.m[0] = rot.m[0];
   view.m[1] = rot.m[4];
@@ -2052,10 +2094,10 @@ void activateOverlayButton(VrRendererImpl* impl, int id) {
       impl->overlayDirty = true;
       break;
     case 1: // -10 s
-      mpvSeek(impl, impl->lastPositionSeconds - 10.0);
+      mpvSeek(impl, impl->lastPositionSeconds - kSeekStepSeconds);
       break;
     case 2: // +10 s
-      mpvSeek(impl, impl->lastPositionSeconds + 10.0);
+      mpvSeek(impl, impl->lastPositionSeconds + kSeekStepSeconds);
       break;
     case 3: // recenter
       impl->recenterRequested = true;
@@ -2070,7 +2112,7 @@ void activateOverlayButton(VrRendererImpl* impl, int id) {
 
 XrPosef overlayPoseFor(const VrRendererImpl* impl) {
   // Below the screen: screen height / 2 + overlay height / 2 + a gap.
-  const float overlayH = impl->screenWidthM / 4.0f;
+  const float overlayH = impl->screenWidthM / kOverlayAspect;
   const float gap = 0.15f;
   const Vec3 offset{0.0f, -(impl->screenHeightM / 2.0f + overlayH / 2.0f + gap), 0.0f};
   return poseOffset(impl->screenPose, offset);
@@ -2088,7 +2130,7 @@ void syncInput(VrRendererImpl* impl, XrTime predictedTime) {
   // The overlay ray: the right hand's aim pose (fallback left).
   XrPosef overlayPose = overlayPoseFor(impl);
   const float overlayW = impl->screenWidthM;
-  const float overlayH = impl->screenWidthM / 4.0f;
+  const float overlayH = impl->screenWidthM / kOverlayAspect;
   int hovered = -1;
   for (int i = 1; i >= 0; --i) { // right first, then left
     if (impl->aimSpaces[i] == XR_NULL_HANDLE) continue;
@@ -2108,16 +2150,28 @@ void syncInput(VrRendererImpl* impl, XrTime predictedTime) {
   }
 
   const XrPath hands[2] = {impl->leftHandPath, impl->rightHandPath};
+  // B22: one activation per frame. Edge detection is per-hand, so without
+  // these flags both hands pressing in the same frame would fire the same
+  // action twice (double seek, double play/pause toggle = no-op, double
+  // recenter). The hovered button is a single value per frame, so one
+  // flag covers the trigger path; play/pause toggles (trigger with no
+  // hover, and pinch) share a second flag because they are the same action.
+  bool buttonActivatedThisFrame = false;
+  bool playPauseToggledThisFrame = false;
   for (int i = 0; i < 2; ++i) {
     bool active = false;
     const bool playPause = actionBoolState(impl, impl->playPauseAction, hands[i], &active);
     if (active && playPause && !impl->prevPlayPause[i]) {
       // Trigger: if the ray is on a button, activate it; otherwise toggle.
       if (hovered >= 0) {
-        activateOverlayButton(impl, hovered);
-      } else {
+        if (!buttonActivatedThisFrame) {
+          activateOverlayButton(impl, hovered);
+          buttonActivatedThisFrame = true;
+        }
+      } else if (!playPauseToggledThisFrame) {
         mpvSetPaused(impl, impl->playing);
         impl->overlayDirty = true;
+        playPauseToggledThisFrame = true;
       }
     }
     impl->prevPlayPause[i] = playPause;
@@ -2138,17 +2192,17 @@ void syncInput(VrRendererImpl* impl, XrTime predictedTime) {
       const bool cooled =
           now - impl->lastSeekTime > std::chrono::milliseconds(500);
       if (cooled) {
-        if (stick.x > 0.7f) {
-          mpvSeek(impl, impl->lastPositionSeconds + 10.0);
+        if (stick.x > kThumbstickSeekThreshold) {
+          mpvSeek(impl, impl->lastPositionSeconds + kSeekStepSeconds);
           impl->lastSeekTime = now;
-        } else if (stick.x < -0.7f) {
-          mpvSeek(impl, impl->lastPositionSeconds - 10.0);
+        } else if (stick.x < -kThumbstickSeekThreshold) {
+          mpvSeek(impl, impl->lastPositionSeconds - kSeekStepSeconds);
           impl->lastSeekTime = now;
-        } else if (stick.y > 0.7f) {
-          mpvSeek(impl, impl->lastPositionSeconds + 60.0);
+        } else if (stick.y > kThumbstickSeekThreshold) {
+          mpvSeek(impl, impl->lastPositionSeconds + kSeekChapterSeconds);
           impl->lastSeekTime = now;
-        } else if (stick.y < -0.7f) {
-          mpvSeek(impl, impl->lastPositionSeconds - 60.0);
+        } else if (stick.y < -kThumbstickSeekThreshold) {
+          mpvSeek(impl, impl->lastPositionSeconds - kSeekChapterSeconds);
           impl->lastSeekTime = now;
         }
       }
@@ -2179,10 +2233,15 @@ void syncInput(VrRendererImpl* impl, XrTime predictedTime) {
       const float dy = indexTip.pose.position.y - thumbTip.pose.position.y;
       const float dz = indexTip.pose.position.z - thumbTip.pose.position.z;
       const float dist = sqrtf(dx * dx + dy * dy + dz * dz);
-      const bool pinched = dist < 0.025f; // 2.5 cm
+      const bool pinched = dist < kPinchDistanceM;
       if (pinched && !impl->prevPinch[i]) {
-        mpvSetPaused(impl, impl->playing);
-        impl->overlayDirty = true;
+        // B22: same one-toggle-per-frame rule as the trigger path — two
+        // hands pinching in one frame must not toggle twice (a no-op).
+        if (!playPauseToggledThisFrame) {
+          mpvSetPaused(impl, impl->playing);
+          impl->overlayDirty = true;
+          playPauseToggledThisFrame = true;
+        }
       }
       impl->prevPinch[i] = pinched;
     }
@@ -2205,9 +2264,9 @@ void updateDynamicResolution(VrRendererImpl* impl, float frameMs) {
   // At 90 Hz the budget is ~11 ms. Above it, drop the render scale;
   // comfortably below it, climb back.
   float target = impl->renderScale;
-  if (impl->frameTimeAvgMs > 13.0f && impl->renderScale > 0.5f) {
+  if (impl->frameTimeAvgMs > kDynResSlowFrameMs && impl->renderScale > kDynResMinScale) {
     target = impl->renderScale - 0.1f;
-  } else if (impl->frameTimeAvgMs < 8.0f && impl->renderScale < 1.0f) {
+  } else if (impl->frameTimeAvgMs < kDynResFastFrameMs && impl->renderScale < 1.0f) {
     target = impl->renderScale + 0.05f;
   }
   if (fabsf(target - impl->renderScale) > 0.001f) {
@@ -2237,8 +2296,20 @@ uint32_t acquireVideoFrame(VrRendererImpl* impl) {
     return 0;
   }
   XrSwapchainImageWaitInfo waitInfo{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
-  waitInfo.timeout = XR_INFINITE_DURATION;
-  if (XR_FAILED(xrWaitSwapchainImage(impl->videoSwapchain, &waitInfo))) {
+  // B11: bounded, like withSwapchainImage above — the render thread must
+  // always be able to observe exitRequested.
+  waitInfo.timeout = kSwapchainWaitTimeoutNs;
+  while (true) {
+    const XrResult waitResult = xrWaitSwapchainImage(impl->videoSwapchain, &waitInfo);
+    if (XR_SUCCEEDED(waitResult)) break;
+    if (waitResult == XR_TIMEOUT_EXPIRED) {
+      if (impl->exitRequested) {
+        XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+        xrReleaseSwapchainImage(impl->videoSwapchain, &releaseInfo);
+        return 0;
+      }
+      continue;
+    }
     XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
     xrReleaseSwapchainImage(impl->videoSwapchain, &releaseInfo);
     return 0;
@@ -2273,10 +2344,14 @@ void releaseVideoFrame(VrRendererImpl* impl) {
 }
 
 // The per-eye rect of the packed frame, in video-swapchain pixels.
+// B18: the depth slider shifts each eye's rect in opposite directions
+// (vrEyeRectWithDepth) — neutral 0.5 is the unshifted rect.
 XrRect2Di eyeImageRect(const VrRendererImpl* impl, bool isLeft) {
-  const VrEyeRect r = vrEyeRect(impl->config.layout.c_str(), impl->config.packing.c_str(),
-                                impl->config.swapEyes, isLeft,
-                                impl->videoWidth, impl->videoHeight);
+  const VrEyeRect r = vrEyeRectWithDepth(impl->config.layout.c_str(),
+                                         impl->config.packing.c_str(),
+                                         impl->config.swapEyes, isLeft,
+                                         impl->videoWidth, impl->videoHeight,
+                                         impl->config.depthSeparation);
   XrRect2Di out{};
   out.offset.x = static_cast<int32_t>(std::lround(r.x * impl->videoScale));
   out.offset.y = static_cast<int32_t>(std::lround(r.y * impl->videoScale));
@@ -2290,7 +2365,29 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
   const auto frameStart = std::chrono::steady_clock::now();
   pollMpvEvents(impl);
   pollXrEvents(impl);
-  if (impl->exitRequested) return;
+  if (impl->exitRequested) {
+    // B12: this frame was already consumed by xrWaitFrame, so the
+    // wait/begin/end triplet must still balance — begin + end with zero
+    // layers, and check both results instead of ignoring them. (If the
+    // begin itself fails — e.g. the session already stopped — there is
+    // no begun frame to end, so return without xrEndFrame.)
+    XrFrameBeginInfo beginInfo{XR_TYPE_FRAME_BEGIN_INFO};
+    const XrResult beginResult = xrBeginFrame(impl->session, &beginInfo);
+    if (XR_FAILED(beginResult)) {
+      LOGW("xrBeginFrame (exit path) failed: %s", xrResultString(beginResult));
+      return;
+    }
+    XrFrameEndInfo endInfo{XR_TYPE_FRAME_END_INFO};
+    endInfo.displayTime = frameState.predictedDisplayTime;
+    endInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND;
+    endInfo.layerCount = 0;
+    endInfo.layers = nullptr;
+    const XrResult endResult = xrEndFrame(impl->session, &endInfo);
+    if (XR_FAILED(endResult)) {
+      LOGW("xrEndFrame (exit path) failed: %s", xrResultString(endResult));
+    }
+    return;
+  }
 
   // Recenter (controller squeeze / overlay button / JNI).
   if (impl->recenterRequested) {
@@ -2301,6 +2398,10 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
       impl->screenPose = screenPoseForHead(impl->lastHeadPose, impl->config.screenDistance);
       impl->sphereOrientationSet = false;
     }
+    // Q5: flash the CENTER button so the recenter is visible in VR.
+    impl->recenterFlashUntil = std::chrono::steady_clock::now() +
+                               std::chrono::milliseconds(kRecenterFlashMs);
+    impl->overlayDirty = true;
     LOGI("Screen recentred");
   }
 
@@ -2317,17 +2418,25 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
   // when paused. Only the brightness changes; the passthrough stays on.
   if (impl->passthroughSupported && impl->passthroughLayer != XR_NULL_HANDLE) {
     const double base = impl->config.passthroughBrightness;
-    const double dimmed = impl->config.autoDimPassthrough ? std::max(-100.0, base - 30.0) : base;
+    const double dimmed =
+        impl->config.autoDimPassthrough
+            ? std::max(-100.0, base + kAutoDimBrightnessDelta)
+            : base;
     const double target = impl->playing ? dimmed : base;
-    static double lastBrightness = 1e9;
-    if (fabs(target - lastBrightness) > 0.01) {
+    if (fabs(target - impl->lastBrightness) > 0.01) {
       setPassthroughBrightness(impl, target);
-      lastBrightness = target;
+      impl->lastBrightness = target;
     }
   }
 
   XrFrameBeginInfo beginInfo{XR_TYPE_FRAME_BEGIN_INFO};
-  xrBeginFrame(impl->session, &beginInfo);
+  const XrResult beginResult = xrBeginFrame(impl->session, &beginInfo);
+  // B12: a failed begin means the frame was never begun — log it and
+  // discard the frame (no xrEndFrame for a begin that failed).
+  if (XR_FAILED(beginResult)) {
+    LOGW("xrBeginFrame failed: %s", xrResultString(beginResult));
+    return;
+  }
 
   // Locate the views (head pose + per-eye fov) at the predicted time.
   XrViewLocateInfo viewInfo{XR_TYPE_VIEW_LOCATE_INFO};
@@ -2349,6 +2458,13 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
       impl->sphereOrientation = quatFromXr(views[0].pose.orientation);
       impl->sphereOrientationSet = true;
     }
+    // P0.8/B3: world-lock aims the screen at the head on the first valid
+    // view. Before this, nothing did — the screen stayed at the world
+    // origin no matter where the user stood or faced at launch.
+    if (impl->config.screenLock != "head" && !impl->screenPoseSeeded) {
+      impl->screenPose = screenPoseForHead(views[0].pose, impl->config.screenDistance);
+      impl->screenPoseSeeded = true;
+    }
   }
 
   // Head lock (S15 note): the screen follows the head every frame.
@@ -2361,10 +2477,9 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
   // The overlay strip re-renders when its content changed (play state,
   // hover, or the displayed second).
   {
-    static int lastShownSecond = -1;
     const int shownSecond = static_cast<int>(impl->lastPositionSeconds);
-    if (impl->overlayDirty || shownSecond != lastShownSecond) {
-      lastShownSecond = shownSecond;
+    if (impl->overlayDirty || shownSecond != impl->lastShownSecond) {
+      impl->lastShownSecond = shownSecond;
       if (impl->config.cooperativeOverlay) renderOverlayStrip(impl);
     }
   }
@@ -2401,8 +2516,12 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
                                : (impl->config.screenCurvature > 0.01 ? impl->cylinderMesh
                                                                      : impl->flatMesh);
         for (int eye = 0; eye < 2; ++eye) {
-          const VrEyeUv uv = vrEyeUv(impl->config.layout.c_str(), impl->config.packing.c_str(),
-                                     impl->config.swapEyes, eye == 0);
+          // B18: the depth slider shifts each eye's UV rect in opposite
+          // directions (neutral 0.5 = the unshifted rect).
+          const VrEyeUv uv = vrEyeUvWithDepth(impl->config.layout.c_str(),
+                                              impl->config.packing.c_str(),
+                                              impl->config.swapEyes, eye == 0,
+                                              impl->config.depthSeparation);
           // Model: the flat quad is a 2x2 unit quad, scaled to the screen
           // size; the cylinder is already built in metres at the screen
           // size, so it takes the screen pose as-is; the sphere is
@@ -2498,10 +2617,10 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
     overlayQuad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
     overlayQuad.subImage.swapchain = impl->overlaySwapchain;
     overlayQuad.subImage.imageRect.offset = {0, 0};
-    overlayQuad.subImage.imageRect.extent = {1024, 256};
+    overlayQuad.subImage.imageRect.extent = {kOverlayWidthPx, kOverlayHeightPx};
     overlayQuad.subImage.imageArrayIndex = 0;
     overlayQuad.pose = overlayPoseFor(impl);
-    overlayQuad.size = {impl->screenWidthM, impl->screenWidthM / 4.0f};
+    overlayQuad.size = {impl->screenWidthM, impl->screenWidthM / kOverlayAspect};
     layers.push_back(reinterpret_cast<const XrCompositionLayerBaseHeader*>(&overlayQuad));
   }
 
@@ -2510,7 +2629,11 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
   endInfo.environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND;
   endInfo.layerCount = static_cast<uint32_t>(layers.size());
   endInfo.layers = layers.data();
-  xrEndFrame(impl->session, &endInfo);
+  // B12: check the result instead of ignoring it.
+  const XrResult endResult = xrEndFrame(impl->session, &endInfo);
+  if (XR_FAILED(endResult)) {
+    LOGW("xrEndFrame failed: %s", xrResultString(endResult));
+  }
 
   const auto frameEnd = std::chrono::steady_clock::now();
   const float frameMs =
@@ -2522,8 +2645,6 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
 void destroyGl(VrRendererImpl* impl) {
   if (impl->meshProgram != 0) glDeleteProgram(impl->meshProgram);
   if (impl->colorProgram != 0) glDeleteProgram(impl->colorProgram);
-  if (impl->videoFbo != 0) glDeleteFramebuffers(1, &impl->videoFbo);
-  if (impl->videoFrameTexture != 0) glDeleteTextures(1, &impl->videoFrameTexture);
   if (g_fontAtlas != 0) {
     glDeleteTextures(1, &g_fontAtlas);
     g_fontAtlas = 0;
@@ -2539,13 +2660,10 @@ void destroyGl(VrRendererImpl* impl) {
 
 // The render loop (its own thread): EGL -> OpenXR -> actions -> mpv ->
 // GL resources -> frames until exit -> cleanup -> onFinished.
-void renderLoop(VrRendererImpl* impl) {
-  impl->sessionStartTime = std::chrono::steady_clock::now();
-  if (impl->config.sleepTimerSeconds > 0) {
-    impl->sleepDeadline = impl->sessionStartTime +
-                          std::chrono::milliseconds(
-                              static_cast<int64_t>(impl->config.sleepTimerSeconds * 1000.0));
-  }
+void renderLoop(VrRendererImpl* impl, VrRenderer* owner) {
+  // B21: per-session caches start fresh every VR session.
+  impl->lastBrightness = 1e9;
+  impl->lastShownSecond = -1;
   bool ok = false;
   do {
     if (!initEgl(impl)) break;
@@ -2564,11 +2682,26 @@ void renderLoop(VrRendererImpl* impl) {
     ok = true;
   } while (false);
 
+  // P0.4/B5: `started` is true only when the whole init chain succeeded.
+  // On init failure onFinished still fires exactly once, with position 0,
+  // completed false, started false — so the panel can tell "VR never
+  // started" apart from "exited at 0 seconds".
+  const bool started = ok;
+
   if (ok) {
+    // B23: the sleep deadline is anchored AFTER init succeeds, not at the
+    // top of the loop — init can take seconds on a cold start, and the
+    // timer is a user-facing promise ("30 minutes left").
+    impl->sessionStartTime = std::chrono::steady_clock::now();
+    if (impl->config.sleepTimerSeconds > 0) {
+      impl->sleepDeadline = impl->sessionStartTime +
+                            std::chrono::milliseconds(
+                                static_cast<int64_t>(impl->config.sleepTimerSeconds * 1000.0));
+    }
     // Initial screen pose: straight ahead of the head at the configured
     // distance. The first frame's head pose is not known yet, so seed it
-    // from the identity (the head-lock path corrects it on frame 1, and
-    // the world-lock path corrects it on the first valid view).
+    // from the identity — frame() corrects it on the first valid view
+    // for world-lock (P0.8) and every frame for head-lock.
     impl->screenPose.position = {0, 0, static_cast<float>(-impl->config.screenDistance)};
     impl->screenPose.orientation = {0, 0, 0, 1};
     updateScreenSize(impl);
@@ -2581,6 +2714,13 @@ void renderLoop(VrRendererImpl* impl) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         continue;
       }
+      // B11: exitRequested is checked between frames (the loop condition
+      // before the next wait, and frame()'s early return for the frame
+      // just consumed). Residual risk, stated plainly: xrWaitFrame takes
+      // no timeout, so if the runtime stops delivering frames AND never
+      // posts EXITING / LOSS_PENDING, this thread can still park here and
+      // onDestroy's join can stall until the watchdog kills the process.
+      // The bounded swapchain waits cover the other park points.
       if (!impl->sessionBegun) {
         // The session has not begun yet (waiting for READY); still
         // pump events so the state change arrives.
@@ -2603,11 +2743,14 @@ void renderLoop(VrRendererImpl* impl) {
   destroyMpv(impl);
   destroyOpenXr(impl);
   destroyEgl(impl);
-  LOGI("VR render loop exited (position %.1f s, completed %d)", finalPosition, completed);
+  LOGI("VR render loop exited (position %.1f s, completed %d, started %d)", finalPosition,
+       completed, started);
   if (impl->onFinished) {
-    impl->onFinished(finalPosition, completed);
+    impl->onFinished(finalPosition, completed, started);
   }
-  delete impl;
+  // B10: the owner nulls impl_ under its mutex before deleting, so no
+  // concurrent requestExit/recenter can touch freed memory.
+  owner->releaseImpl(impl);
 }
 
 } // namespace
@@ -2624,14 +2767,18 @@ bool VrRenderer::start(const VrConfig& config, VrFinishedCallback onFinished) {
   auto* impl = new VrRendererImpl();
   impl->config = config;
   impl->onFinished = onFinished_;
-  impl_ = impl;
+  {
+    std::lock_guard<std::mutex> lock(implMutex_);
+    impl_ = impl;
+  }
   running_.store(true);
-  loopThread_ = std::thread([impl]() { ::renderLoop(impl); });
+  loopThread_ = std::thread([this, impl]() { ::renderLoop(impl, this); });
   return true;
 }
 
 void VrRenderer::requestExit() {
   exitRequested_.store(true);
+  std::lock_guard<std::mutex> lock(implMutex_);
   if (impl_ != nullptr) {
     static_cast<VrRendererImpl*>(impl_)->exitRequested = true;
   }
@@ -2639,6 +2786,7 @@ void VrRenderer::requestExit() {
 
 void VrRenderer::recenter() {
   recenterRequested_.store(true);
+  std::lock_guard<std::mutex> lock(implMutex_);
   if (impl_ != nullptr) {
     static_cast<VrRendererImpl*>(impl_)->recenterRequested = true;
   }
@@ -2649,23 +2797,18 @@ void VrRenderer::stop() {
   requestExit();
   if (loopThread_.joinable()) loopThread_.join();
   running_.store(false);
+  // The render thread already cleared + deleted the impl in releaseImpl;
+  // null again here in case the thread never ran.
+  std::lock_guard<std::mutex> lock(implMutex_);
   impl_ = nullptr;
 }
 
-void VrRenderer::onFinished(double positionSeconds, bool completed) {
-  if (onFinished_) onFinished_(positionSeconds, completed);
-}
-
-double VrRenderer::positionSeconds() const {
-  if (impl_ != nullptr) {
-    return static_cast<const VrRendererImpl*>(impl_)->positionSeconds.load();
-  }
-  return 0.0;
-}
-
-bool VrRenderer::completed() const {
-  if (impl_ != nullptr) {
-    return static_cast<const VrRendererImpl*>(impl_)->completed.load();
-  }
-  return false;
+void VrRenderer::releaseImpl(void* impl) {
+  // Called by the render thread as its last act: null impl_ under the
+  // mutex BEFORE deleting, so a concurrent requestExit/recenter (which
+  // holds the same mutex while touching the pointer) can never
+  // dereference freed memory (B10).
+  std::lock_guard<std::mutex> lock(implMutex_);
+  if (impl_ == impl) impl_ = nullptr;
+  delete static_cast<VrRendererImpl*>(impl);
 }

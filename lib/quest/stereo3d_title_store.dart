@@ -22,7 +22,15 @@ class SettingsStereo3dTitleStoreBackend implements Stereo3dTitleStoreBackend {
   }
 }
 
+/// One shared [Stereo3dTitleStore] per [SettingsService] (B26/T4).
+///
+/// The factory used to construct a new store on every call. The store
+/// itself is now read-through (no cache), but callers should still share
+/// the one instance so the store's identity matches its backing prefs.
+final _sharedStores = Expando<Stereo3dTitleStore>();
+
 /// The per-title 3D store backed by [SettingsService].
 Stereo3dTitleStore stereo3dTitleStore(SettingsService settings) {
-  return Stereo3dTitleStore(SettingsStereo3dTitleStoreBackend(settings));
+  return _sharedStores[settings] ??=
+      Stereo3dTitleStore(SettingsStereo3dTitleStoreBackend(settings));
 }

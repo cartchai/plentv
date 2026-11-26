@@ -6189,10 +6189,22 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// http(s) URL that answers 200 with bytes that parse as XMLTV. Only
   /// the first 256 KB are read — a multi-megabyte feed is never
   /// downloaded for validation. Throws [StateError] with the reason.
-  Future<void> validateEpgSourceUrl(String url) async {
+  Future<void> validateEpgSourceUrl(
+    String url, {
+    Duration tunnelReadyTimeout = const Duration(seconds: 5),
+  }) async {
     final uri = Uri.tryParse(url.trim());
     if (uri == null || !(uri.isScheme('http') || uri.isScheme('https')) || uri.host.isEmpty) {
       throw StateError('Not a valid http(s) URL');
+    }
+    // 1.6.30 (P0.2/F1): while the tunnel toggle is on but the tunnel
+    // is still starting, do NOT fetch — the URL is often the panel's
+    // credentialled xmltv.php and a direct fetch can 403, which would
+    // be reported as "invalid source". Inconclusive instead: fail
+    // with a wait-and-retry message and record no verdict about the
+    // source.
+    if (!await WarpTunnelService.instance.waitForTunnelReady(timeout: tunnelReadyTimeout)) {
+      throw StateError('The VPN tunnel is still starting. Please wait a moment and try again.');
     }
     // 1.6.28 (G5): the validation fetch rides the tunnel when it is
     // on — the URL is often the panel's xmltv.php with credentials.

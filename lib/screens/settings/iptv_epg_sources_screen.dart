@@ -1,12 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../../connection/connection.dart';
-import '../../i18n/app_locale_utils.dart';
 import '../../i18n/strings.g.dart';
 import '../../media/ids.dart';
 import '../../media/iptv_client.dart';
@@ -185,18 +183,15 @@ class _IptvEpgSourcesScreenState extends State<IptvEpgSourcesScreen> {
     };
   }
 
-  String _formatTime(DateTime time) =>
-      '${DateFormat.MMMd(LocaleSettings.currentLocale.intlLocaleName).format(time.toLocal())} · '
-      '${formatClockTime(time.toLocal(), is24Hour: MediaQuery.alwaysUse24HourFormatOf(context))}';
 
   String? _statusDetail(IptvEpgSourceConfig source, IptvEpgSourceStatus status) {
     final lines = <String>[];
     if (status.lastSuccess != null || status.programs > 0) {
       lines.add(t.iptv.epgSourceStatusDetail(programs: status.programs, channels: status.channels));
     }
-    if (status.lastSuccess != null) lines.add(_formatTime(status.lastSuccess!));
+    if (status.lastSuccess != null) lines.add(formatDateTimeWithClock(status.lastSuccess!.toLocal(), context));
     if (status.lastFailure != null && status.lastFailureReason != null) {
-      lines.add('${_formatTime(status.lastFailure!)} · ${status.lastFailureReason}');
+      lines.add('${formatDateTimeWithClock(status.lastFailure!.toLocal(), context)} · ${status.lastFailureReason}');
     }
     // 1.2.15 R4: the last feed download — bytes, SHA, 304-vs-200, and
     // the User-Agent the request carried. Shown whenever a download

@@ -672,8 +672,9 @@ abstract final class LastCrashStore {
               if (!await file.parent.exists()) await file.parent.create(recursive: true);
               // 1.2.19, L-12: no fsync (see _writeMarkerSync).
               await file.writeAsString('good');
-            } catch (_) {
+            } catch (error, stackTrace) {
               // Best effort.
+              appLogger.d('Could not write the good-start marker', error: error, stackTrace: stackTrace);
             }
           })
           .catchError((Object _) {}),
@@ -704,13 +705,15 @@ abstract final class LastCrashStore {
   }) async {
     try {
       await binderSettled;
-    } catch (_) {
+    } catch (error, stackTrace) {
       // A settle failure still ends the wait.
+      appLogger.d('Profile binder settle failed while waiting for a stable start', error: error, stackTrace: stackTrace);
     }
     try {
       await catalogBinds;
-    } catch (_) {
+    } catch (error, stackTrace) {
       // A bind failure still ends the startup load.
+      appLogger.d('Catalog binds failed while waiting for a stable start', error: error, stackTrace: stackTrace);
     }
     markGoodStart();
   }
@@ -811,8 +814,9 @@ abstract final class LastCrashStore {
     if (inFlight != null) {
       try {
         await inFlight;
-      } catch (_) {
+      } catch (error, stackTrace) {
         // Best effort: a failed write must not block the read.
+        appLogger.d('In-flight crash write failed before the read', error: error, stackTrace: stackTrace);
       }
     }
     try {
@@ -836,8 +840,9 @@ abstract final class LastCrashStore {
     if (inFlight != null) {
       try {
         await inFlight;
-      } catch (_) {
+      } catch (error, stackTrace) {
         // Best effort: a failed write must not block the read.
+        appLogger.d('In-flight crash write failed before the read', error: error, stackTrace: stackTrace);
       }
     }
     try {

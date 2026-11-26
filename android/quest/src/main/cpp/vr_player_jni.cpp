@@ -3,8 +3,8 @@
 // VrPlayerActivity (Kotlin) calls nativeStart() with the request extras;
 // the native render thread runs the OpenXR session + mpv, and when it
 // finishes it calls back into VrPlayerActivity.onVrFinished(position,
-// completed) on the render thread — the Kotlin side posts to the UI
-// thread itself (setResult + finish must run there).
+// completed, started) on the render thread — the Kotlin side posts to the
+// UI thread itself (setResult + finish must run there).
 //
 // The renderer instance is owned by this file (a single static). Only one
 // VR session runs at a time (the plugin enforces it from the Dart side
@@ -17,6 +17,7 @@
 
 #define LOG_TAG "VrPlayerJni"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 static JavaVM* g_vm = nullptr;
@@ -148,23 +149,37 @@ Java_com_plentv_quest_VrPlayerActivity_nativeStart(JNIEnv* env, jobject /*thiz*/
     LOGE("nativeStart: no videoUrl");
     return JNI_FALSE;
   }
-  if (config.layout.empty()) config.layout = "twoD";
+  // T7: validate/normalise the layout at the JNI boundary — an unknown
+  // string used to fall through every native branch silently (vrEyeRect
+  // treats anything not twoD/ou/vr360+full as SBS, and the quad path
+  // treats anything not vr180/vr360/curved as quad). Unknown -> twoD + log.
+  if (config.layout.empty()) {
+    config.layout = "twoD";
+  } else if (config.layout != "twoD" && config.layout != "sbs" && config.layout != "ou" &&
+             config.layout != "vr180" && config.layout != "vr360") {
+    LOGW("Unknown VR layout \"%s\"; using twoD", config.layout.c_str());
+    config.layout = "twoD";
+  }
   if (config.packing.empty()) config.packing = "half";
 
   g_activity = env->NewGlobalRef(activity);
   auto* renderer = new VrRenderer();
   g_renderer = renderer;
-  const bool started = renderer->start(config, [](double position, bool completed) {
+  const bool started = renderer->start(config, [](double position, bool completed, bool vrStarted) {
     // Called on the render thread when the session ends. Attach, call
     // back into the activity, detach. The Kotlin side posts to the UI
     // thread (setResult + finish).
+    // P0.4: vrStarted is false when VR init failed before any frame —
+    // the activity reports it so the panel can tell a failed start
+    // apart from an exit at position 0.
     if (g_vm == nullptr || g_activity == nullptr) return;
     JNIEnv* env = nullptr;
     if (g_vm->AttachCurrentThread(&env, nullptr) != JNI_OK) return;
     jclass activityClass = env->GetObjectClass(g_activity);
-    jmethodID onFinished = env->GetMethodID(activityClass, "onVrFinished", "(DZ)V");
+    jmethodID onFinished = env->GetMethodID(activityClass, "onVrFinished", "(DZZ)V");
     if (onFinished != nullptr) {
-      env->CallVoidMethod(g_activity, onFinished, position, completed ? JNI_TRUE : JNI_FALSE);
+      env->CallVoidMethod(g_activity, onFinished, position, completed ? JNI_TRUE : JNI_FALSE,
+                          vrStarted ? JNI_TRUE : JNI_FALSE);
     }
     g_vm->DetachCurrentThread();
   });

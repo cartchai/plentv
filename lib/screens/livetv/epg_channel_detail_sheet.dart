@@ -1,10 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../../i18n/app_locale_utils.dart';
 import '../../i18n/strings.g.dart';
 import '../../media/iptv_live_tv.dart';
 import '../../models/livetv_channel.dart';
@@ -62,9 +60,6 @@ class _EpgChannelDetailSheetState extends State<_EpgChannelDetailSheet> {
     });
   }
 
-  String _formatTime(DateTime time) =>
-      '${DateFormat.MMMd(LocaleSettings.currentLocale.intlLocaleName).format(time.toLocal())} · '
-      '${formatClockTime(time.toLocal(), is24Hour: MediaQuery.alwaysUse24HourFormatOf(context))}';
 
   String _matchMethodLabel(String? method) {
     return switch (method) {
@@ -188,9 +183,9 @@ class _EpgChannelDetailSheetState extends State<_EpgChannelDetailSheet> {
                 value: t.iptv.epgDetailsProgramsCount(n: detail.programCount),
               ),
               if (detail.lastFetch != null)
-                _Row(label: t.iptv.epgDetailsLastFetch, value: _formatTime(detail.lastFetch!)),
+                _Row(label: t.iptv.epgDetailsLastFetch, value: formatDateTimeWithClock(detail.lastFetch!.toLocal(), context)),
               if (detail.nextFetch != null)
-                _Row(label: t.iptv.epgDetailsNextFetch, value: _formatTime(detail.nextFetch!)),
+                _Row(label: t.iptv.epgDetailsNextFetch, value: formatDateTimeWithClock(detail.nextFetch!.toLocal(), context)),
               if (!detail.hasGuide && detail.noGuideReason != null)
                 _Row(label: t.iptv.epgDetailsWhyNoMatch, value: _reasonLabel(detail.noGuideReason!)),
             ],

@@ -176,9 +176,23 @@ struct MpvApi {
   mpv_render_context_set_update_callback_fn render_context_set_update_callback = nullptr;
   mpv_render_context_update_fn render_context_update = nullptr;
   mpv_render_context_render_fn render_context_render = nullptr;
-  void *handle = nullptr; // dlopen handle (do not close: libmpv stays loaded)
+  void *handle = nullptr; // dlopen handle (do not close while loaded: libmpv stays loaded for the process; a *failed* load closes it — see loadMpvApi)
 
-  bool loaded() const { return create != nullptr && initialize != nullptr; }
+  // B9: a partial load used to pass this check (create/initialize are
+  // the first two symbols loaded), so a second session could call a null
+  // function pointer. Every pointer must be set.
+  bool loaded() const {
+    return handle != nullptr && create != nullptr && initialize != nullptr &&
+           terminate_destroy != nullptr && set_option_string != nullptr &&
+           command != nullptr && command_string != nullptr &&
+           set_property != nullptr && set_property_string != nullptr &&
+           get_property != nullptr && get_property_string != nullptr &&
+           observe_property != nullptr && wait_event != nullptr && free != nullptr &&
+           error_string != nullptr && request_log_messages != nullptr &&
+           render_context_create != nullptr && render_context_free != nullptr &&
+           render_context_set_update_callback != nullptr &&
+           render_context_update != nullptr && render_context_render != nullptr;
+  }
 };
 
 #ifdef __cplusplus
