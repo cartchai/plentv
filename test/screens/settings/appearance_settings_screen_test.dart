@@ -47,9 +47,11 @@ void main() {
     ]) {
       expect(find.text(group), findsOneWidget, reason: 'group $group missing');
     }
-    final scrollable = find.byType(Scrollable).first;
-    await tester.scrollUntilVisible(find.text(t.settings.liveTv), 500, scrollable: scrollable);
-    expect(find.text(t.settings.liveTvDefaultFavorites), findsOneWidget);
+    // 1.6.26: the Live TV group is gone from Appearance — the default
+    // tab is now the "Default tab" choice in Settings → Live TV. The
+    // group title string is removed too, so the literal is the only way
+    // to assert it renders nowhere on this page.
+    expect(find.text('Live TV'), findsNothing);
     // Moved away: profile prompt and performance overlay no longer live here.
     expect(find.text(t.settings.requireProfileSelectionOnOpen), findsNothing);
     expect(find.text(t.settings.autoHidePerformanceOverlay), findsNothing);

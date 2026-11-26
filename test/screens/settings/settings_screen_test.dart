@@ -725,59 +725,71 @@ void main() {
     expect(find.text(t.settings.superSpoofUserAgent), findsNothing);
   });
 
-  testWidgets('Super Spoof page extra rows sync both ways with Advanced (1.6.24)', (tester) async {
+  testWidgets('moved rows live on Super Spoof only, not Advanced (1.6.26)', (tester) async {
     final harness = await _pumpSettingsScreen(tester);
     addTearDown(() => harness.dispose(tester));
 
-    // The shared rows exist on both pages, so every finder below is
-    // scoped to the page it means — the pushed sub-page stays mounted
-    // above Advanced in the Navigator stack.
-    Finder rowOn(Type page, String title) => find.descendant(
-          of: find.byType(page),
-          matching: find.text(title),
-        );
-    bool switchValueOn(Type page, String title) {
-      final tile = find.descendant(
-        of: find.byType(page),
-        matching: find.ancestor(
-          of: find.text(title),
-          matching: find.byType(SwitchListTile),
-        ),
-      );
-      final sw = find.descendant(of: tile, matching: find.byType(Switch));
-      return tester.widget<Switch>(sw).value;
+    // The six moved rows — their titles, for the absence checks on
+    // Advanced and the presence checks on the Super Spoof page.
+    final movedTitles = [
+      t.settings.iptvLiveTs,
+      t.settings.preferIpv4,
+      t.settings.warpVpn,
+      t.settings.warpTransport,
+      t.settings.warpMasqueVhttp,
+      t.settings.resetWarpRegistration,
+    ];
+
+    // Advanced has none of the six — only the Super Spoof entry tile.
+    // The list builds lazily, so check at both ends of where the rows
+    // used to sit (just below Super Spoof, just above View logs):
+    // a row that still existed would be built and visible at one of
+    // those scroll positions.
+    Future<void> expectMovedRowsAbsent() async {
+      await tester.scrollUntilVisible(find.text(t.settings.superSpoof), 200);
+      await tester.pump();
+      for (final title in movedTitles) {
+        expect(find.text(title), findsNothing, reason: '$title on Advanced');
+      }
+      await tester.scrollUntilVisible(find.text(t.settings.viewLogs), 200);
+      await tester.pump();
+      for (final title in movedTitles) {
+        expect(find.text(title), findsNothing, reason: '$title on Advanced');
+      }
     }
 
-    // Open the Super Spoof page and flip MPEG-TS on there.
+    await expectMovedRowsAbsent();
+
+    // Open the Super Spoof page: all six are there.
     await tester.scrollUntilVisible(find.text(t.settings.superSpoof), 200);
     await tester.pump();
     await tester.tap(find.text(t.settings.superSpoof));
     await _pumpUi(tester);
-    expect(rowOn(SuperSpoofSettingsScreen, t.settings.iptvLiveTs), findsOneWidget);
+    for (final title in movedTitles) {
+      expect(
+        find.descendant(
+          of: find.byType(SuperSpoofSettingsScreen),
+          matching: find.text(title),
+        ),
+        findsOneWidget,
+        reason: '$title on Super Spoof',
+      );
+    }
 
-    await tester.tap(rowOn(SuperSpoofSettingsScreen, t.settings.iptvLiveTs));
+    // Flip MPEG-TS on in Super Spoof — the pref still flips, and
+    // going back to Advanced the row is still absent (moved, not
+    // duplicated).
+    final rowOnSpoof = find.descendant(
+      of: find.byType(SuperSpoofSettingsScreen),
+      matching: find.text(t.settings.iptvLiveTs),
+    );
+    await tester.tap(rowOnSpoof);
     await _pumpUi(tester);
     expect(SettingsService.instance.read(SettingsService.iptvLiveTs), isTrue);
-    expect(switchValueOn(SuperSpoofSettingsScreen, t.settings.iptvLiveTs), isTrue);
-
-    // Back on Advanced, the same switch shows on.
     await tester.pageBack();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.scrollUntilVisible(find.text(t.settings.iptvLiveTs), 200);
-    await tester.pump();
-    expect(switchValueOn(SettingsScreen, t.settings.iptvLiveTs), isTrue);
-
-    // Flip it off on Advanced; the sub-page follows.
-    await tester.tap(rowOn(SettingsScreen, t.settings.iptvLiveTs));
-    await _pumpUi(tester);
-    expect(SettingsService.instance.read(SettingsService.iptvLiveTs), isFalse);
-
-    await tester.scrollUntilVisible(find.text(t.settings.superSpoof), 200);
-    await tester.pump();
-    await tester.tap(find.text(t.settings.superSpoof));
-    await _pumpUi(tester);
-    expect(switchValueOn(SuperSpoofSettingsScreen, t.settings.iptvLiveTs), isFalse);
+    await expectMovedRowsAbsent();
   });
 
   testWidgets('restoring a fork backup re-resolves the active profile before rebinding', (tester) async {

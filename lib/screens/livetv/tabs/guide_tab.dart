@@ -2446,7 +2446,10 @@ class GuideTabState extends State<GuideTab>
             onWatchLive: _watchLiveMiniPlayer,
             videoBuilder: widget.debugVideoBuilder,
           ),
-        _buildCategoryPicker(),
+        // 1.6.26: on phones the categories live in the header dropdown
+        // (LiveTvScreen), so the chip row is TV/desktop only — same gate
+        // as the header row, so tablets follow the phone branch too.
+        if (PlatformDetector.shouldUseSideNavigation(context)) _buildCategoryPicker(),
         _buildTimeNavigation(theme),
         // Subtle EPG loading indicator (Task B): a thin bar under the time
         // navigation, visible only while a visible IPTV channel's guide is

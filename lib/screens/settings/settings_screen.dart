@@ -70,7 +70,6 @@ import 'settings_utils.dart';
 import 'super_spoof_settings_screen.dart';
 import 'supporter_settings_tile.dart';
 import 'tracker_service_info.dart';
-import 'warp_settings_rows.dart';
 import '../../widgets/loading_indicator_box.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -132,10 +131,6 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kAbout = 'about';
   static const _kWatchTogetherRelay = 'watch_together_relay';
   static const _kSuperSpoof = 'super_spoof';
-  static const _kIptvLiveTs = 'iptv_live_ts';
-  static const _kIptvPreferIpv4 = 'iptv_prefer_ipv4';
-  static const _kWarpVpn = 'iptv_warp_vpn';
-  static const _kResetWarpRegistration = 'reset_warp_registration';
   static const _kExportForkBackup = 'export_fork_backup';
   static const _kImportForkBackup = 'import_fork_backup';
   static const _kAccountPreferences = 'account_preferences';
@@ -589,95 +584,12 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           subtitle: t.settings.superSpoofDescription,
           destinationBuilder: (context) => const SuperSpoofSettingsScreen(),
         ),
-        // 1.6.12 (MPEG-TS live streams): a plain switch, always visible —
-        // it is independent of Super Spoof (which only changes what the
-        // requests claim to be, not what stream format is asked for).
-        SettingSwitchTile(
-          focusNode: _focusTracker.get(_kIptvLiveTs),
-          pref: settings.SettingsService.iptvLiveTs,
-          icon: Symbols.live_tv_rounded,
-          title: t.settings.iptvLiveTs,
-          subtitle: t.settings.iptvLiveTsDescription,
-        ),
-        // 1.6.13 (Prefer IPv4): a plain switch, always visible — it is
-        // independent of Super Spoof (which changes the network stack,
-        // not the address family). When both are on, IPv4 wins: the
-        // request goes out on Dart + IPv4, not the chosen transport.
-        // 1.6.14: the transport sub-setting's own 'ipv4' choice rides
-        // the same client; the toggle wins over the choice.
-        SettingSwitchTile(
-          focusNode: _focusTracker.get(_kIptvPreferIpv4),
-          pref: settings.SettingsService.iptvPreferIpv4,
-          icon: Symbols.lan_rounded,
-          title: t.settings.preferIpv4,
-          subtitle: t.settings.preferIpv4Description,
-        ),
-        // 1.6.15 (VPN, WARP): its own row, not a plain switch tile —
-        // turning it on runs the terms gate BEFORE the pref flips
-        // (declining leaves the switch off), and the subtitle shows the
-        // live tunnel state (off / starting / on / failed) instead of a
-        // static description. Independent of Super Spoof and Prefer
-        // IPv4; while it is on, Cronet is forced off (no proxy API).
-        // 1.6.24: shared with the Super Spoof page (warp_settings_rows.dart).
-        WarpVpnRow(focusNode: _focusTracker.get(_kWarpVpn)),
-        // 1.6.21 (MASQUE transport): which tunnel transport the app
-        // uses — MASQUE (WARP over port 443, the only transport that
-        // works on a network that blocks UDP 2408) or WireGuard (the
-        // 1.6.15–1.6.20 transport). It takes effect on the next start;
-        // one stored account is one transport, so the first start on
-        // the new transport re-registers a fresh account for it.
-        SettingSelectionTile<String>(
-          pref: settings.SettingsService.iptvWarpTransport,
-          icon: Symbols.swap_horiz_rounded,
-          title: t.settings.warpTransport,
-          subtitleBuilder: warpTransportSubtitle,
-          options: [
-            DialogOption(
-              value: 'masque',
-              title: t.settings.warpTransportMasque,
-            ),
-            DialogOption(
-              value: 'wireguard',
-              title: t.settings.warpTransportWireguard,
-            ),
-          ],
-        ),
-        // 1.6.21 (MASQUE transport): which MASQUE transport the
-        // tunnel uses — Auto (H3 over QUIC, fall back to H2 over
-        // TCP), H3 only, or H2 only. Only used when the transport
-        // above is MASQUE.
-        SettingSelectionTile<String>(
-          pref: settings.SettingsService.iptvWarpMasqueVhttp,
-          icon: Symbols.lan_rounded,
-          title: t.settings.warpMasqueVhttp,
-          subtitleBuilder: warpMasqueVhttpSubtitle,
-          options: [
-            DialogOption(
-              value: 'auto',
-              title: t.settings.warpMasqueVhttpAuto,
-            ),
-            DialogOption(
-              value: 'h3',
-              title: t.settings.warpMasqueVhttpH3,
-            ),
-            DialogOption(
-              value: 'h2',
-              title: t.settings.warpMasqueVhttpH2,
-            ),
-          ],
-        ),
-        // 1.6.19 (Reset WARP registration): signs the app up for a
-        // fresh free WARP account, replacing the stored one — only
-        // for when the tunnel still won't connect. The fresh sign-up
-        // runs before anything is replaced, so a failure leaves the
-        // current account in place.
-        SettingNavigationTile(
-          focusNode: _focusTracker.get(_kResetWarpRegistration),
-          icon: Symbols.restart_alt_rounded,
-          title: t.settings.resetWarpRegistration,
-          subtitle: t.settings.resetWarpRegistrationDescription,
-          onTap: () => showResetWarpRegistrationDialog(context),
-        ),
+        // 1.6.26: the six IPTV network rows that used to sit here
+        // (MPEG-TS, Prefer IPv4, VPN WARP, Tunnel transport, MASQUE
+        // transport, Reset WARP registration) MOVED to the Super Spoof
+        // page (Settings → Advanced → Super Spoof) — they only live
+        // there now, so this page is less convoluted. Nothing about
+        // the settings themselves changed, only where they sit.
         SettingNavigationTile(
           focusNode: _focusTracker.get(_kViewLogs),
           icon: Symbols.article_rounded,

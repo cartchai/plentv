@@ -99,7 +99,15 @@ Future<void> showCatalogItemMenu(BuildContext context, CatalogItem item, {Offset
     case _CatalogMenuActionType.searchTitle:
       // The scope is null when the menu is pumped without a MainScreen
       // (e.g. in widget tests) — then there is no Search tab to open.
-      MainScreenFocusScope.of(context, listen: false)?.searchForQuery?.call(item.title);
+      // 1.6.26: warn instead of vanishing silently — before this fix
+      // the phone branch had no scope at all, so the tap did nothing
+      // and left no trace in the debug log (Matt, 2026-11-25).
+      final searchForQuery = MainScreenFocusScope.of(context, listen: false)?.searchForQuery;
+      if (searchForQuery == null) {
+        appLogger.w('Catalog context menu: no MainScreenFocusScope.searchForQuery — "Search this title" ignored');
+      } else {
+        searchForQuery(item.title);
+      }
     case _CatalogMenuActionType.toggleWatchlist:
       // Re-read membership: it can have changed while the menu was open
       // (snapshot load, another surface's toggle).

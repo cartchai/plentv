@@ -106,12 +106,17 @@ mixin TabNavigationMixin<T extends StatefulWidget> on State<T>, TickerProviderSt
   /// [FocusableActionBar]. It fires both on RIGHT from the last tab and on UP
   /// from any tab, so every screen with that layout gets a consistent remote
   /// path to its app bar actions.
+  ///
+  /// [onNavigateLeftFromFirst] overrides where LEFT from the FIRST chip
+  /// goes (default: [onTabBarBack]). Live TV's phone header passes its
+  /// Favourites button here so the row roves left into the button.
   Widget buildTabChip(
     String label,
     int index, {
     required VoidCallback onSelectWhenActive,
     required VoidCallback onNavigateDown,
     VoidCallback? onNavigateToActions,
+    VoidCallback? onNavigateLeftFromFirst,
   }) {
     final isSelected = tabController.index == index;
     return FocusableTabChip(
@@ -136,7 +141,7 @@ mixin TabNavigationMixin<T extends StatefulWidget> on State<T>, TickerProviderSt
               });
               getTabChipFocusNode(newIndex).requestFocus();
             }
-          : onTabBarBack,
+          : onNavigateLeftFromFirst ?? onTabBarBack,
       onNavigateRight: index < tabCount - 1
           ? () {
               final newIndex = index + 1;

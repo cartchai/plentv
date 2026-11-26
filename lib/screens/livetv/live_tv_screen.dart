@@ -12,6 +12,8 @@ import '../../connection/connection.dart';
 import '../../connection/connection_registry.dart';
 import '../../exceptions/media_server_exceptions.dart';
 import '../../focus/focusable_action_bar.dart';
+import '../../focus/focusable_chip_mixin.dart';
+import '../../focus/input_mode_tracker.dart';
 import '../../i18n/strings.g.dart';
 import '../../media/iptv_client.dart';
 import '../../media/iptv_live_tv.dart';
@@ -33,7 +35,10 @@ import '../../utils/platform_detector.dart';
 import '../../utils/serial_future_queue.dart';
 import 'guide_category.dart';
 import '../../utils/snackbar_helper.dart';
+import '../../widgets/app_menu.dart';
 import '../../widgets/app_icon.dart';
+import '../../widgets/focus_builders.dart';
+import '../../widgets/focusable_popup_menu_button.dart';
 import '../../widgets/focusable_tab_chip.dart';
 import '../../widgets/iptv_unhide_refresh_notice.dart';
 import '../../widgets/overlay_sheet.dart';
@@ -69,6 +74,10 @@ class _LiveTvScreenState extends State<LiveTvScreen>
   /// Focus target for the "Show all channels" action shown when the favorites
   /// filter empties the guide; lets D-pad users reach the action from the tab bar.
   final _guideEmptyStateActionFocusNode = FocusNode(debugLabel: 'guide_empty_state_action');
+
+  /// Focus node for the phone-only Favourites filter button (1.6.26), so
+  /// LEFT from the Guide chip can land on it.
+  final _favoritesFilterFocusNode = FocusNode(debugLabel: 'favorites_filter_chip');
 
   /// Visible tabs in the current session. What's On is included only when a
   /// Live TV server is Plex (the only backend with Live TV hubs), Recordings
@@ -270,7 +279,11 @@ class _LiveTvScreenState extends State<LiveTvScreen>
   void initState() {
     super.initState();
     suppressAutoFocus = true;
-    _showFavoritesOnly = context.settingsRead(SettingsService.liveTvDefaultFavorites);
+    // 1.6.26: the default Live TV tab (Settings → Live TV → Default tab).
+    // Favourites is the Guide tab with the filter on. The tab index is
+    // applied after initTabNavigation() below; the filter seeds here.
+    final defaultTab = _resolveDefaultLiveTvTab();
+    _showFavoritesOnly = defaultTab == 'favorites';
     final provider = context.read<MultiServerProvider>();
     _multiServer = provider;
     _knownLiveTvServerIds = provider.liveTvServers.map((s) => s.serverId).toSet();
@@ -298,7 +311,39 @@ class _LiveTvScreenState extends State<LiveTvScreen>
     _visibleTabs = initialTabs.tabs;
     _canProcessRules = initialTabs.canProcessRules;
     initTabNavigation();
+    _applyDefaultLiveTvTab(defaultTab);
     _loadChannels();
+  }
+
+  /// Resolves the default Live TV tab (1.6.26): the stored
+  /// `live_tv_default_tab` value, or the one-time migration from the old
+  /// "Default to Favorite Channels" toggle (Settings → Appearance,
+  /// removed in 1.6.26) when no tab value is stored yet. The migrated
+  /// choice is written so the old bool is never consulted again.
+  String _resolveDefaultLiveTvTab() {
+    final service = SettingsService.instance;
+    if (service.prefs.containsKey(SettingsService.liveTvDefaultTab.key)) {
+      return service.read(SettingsService.liveTvDefaultTab);
+    }
+    final migrated = service.read(SettingsService.liveTvDefaultFavorites) ? 'favorites' : 'guide';
+    unawaited(service.write(SettingsService.liveTvDefaultTab, migrated));
+    return migrated;
+  }
+
+  /// Applies the saved default tab's index (1.6.26). Favourites is the
+  /// Guide tab with the filter on (seeded in initState); Guide is index
+  /// 0. A saved value that is not currently visible (What's On with no
+  /// Plex, Recordings with no DVR, or an unknown string) falls back to
+  /// Guide, filter off. First open per app session only — the
+  /// IndexedStack keeps the last-viewed tab after that.
+  void _applyDefaultLiveTvTab(String value) {
+    final tab = switch (value) {
+      'whatsOn' => LiveTvTab.whatsOn,
+      'recordings' => LiveTvTab.recordings,
+      _ => LiveTvTab.guide,
+    };
+    final index = _visibleTabs.indexOf(tab);
+    if (index > 0) tabController.index = index;
   }
 
   @override
@@ -309,6 +354,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
     _whatsOnTabFocusNode.dispose();
     _recordingsTabFocusNode.dispose();
     _guideEmptyStateActionFocusNode.dispose();
+    _favoritesFilterFocusNode.dispose();
     disposeTabNavigation();
     super.dispose();
   }
@@ -1178,7 +1224,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
     };
   }
 
-  List<Widget> _buildTabChipItems() {
+  List<Widget> _buildTabChipItems({VoidCallback? onNavigateLeftFromFirst}) {
     return [
       for (int i = 0; i < _visibleTabs.length; i++) ...[
         if (i > 0) const SizedBox(width: 8),
@@ -1188,6 +1234,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
           onSelectWhenActive: _focusCurrentTab,
           onNavigateDown: _focusCurrentTab,
           onNavigateToActions: () => _actionBarKey.currentState?.requestFocusOnFirst(),
+          onNavigateLeftFromFirst: i == 0 ? onNavigateLeftFromFirst : null,
         ),
       ],
     ];
@@ -1219,7 +1266,10 @@ class _LiveTvScreenState extends State<LiveTvScreen>
               // guide-only action would be unmounted before focus could ever
               // reach it. Selecting a result switches back to the guide tab.
               FocusableAction(icon: Symbols.search_rounded, tooltip: t.liveTv.searchGuide, onPressed: _showGuideSearch),
-              if (!isRecordings)
+              // 1.6.26: the star lives on the phone header row now (the
+              // Favourites button, left of Guide) — the AppBar star stays
+              // only where there is no header row, i.e. TV/desktop.
+              if (useSideNav && !isRecordings)
                 FocusableAction(
                   icon: _showFavoritesOnly ? Symbols.star_rounded : Symbols.star_outline_rounded,
                   iconFill: _showFavoritesOnly ? 1.0 : 0.0,
@@ -1332,6 +1382,78 @@ class _LiveTvScreenState extends State<LiveTvScreen>
     };
   }
 
+  /// Favourites filter button (1.6.26, phone only): its own pill at the
+  /// left of the Guide tab chips — star icon + "Favorites" label, filled
+  /// while the filter is on. Tapping it is exactly the old AppBar star
+  /// ([_toggleFavoritesFilter]); the filter only affects the guide, so
+  /// the button shows on the Guide tab only.
+  Widget _buildFavoritesFilterButton() {
+    return _FavoritesFilterButton(
+      key: const ValueKey('live_tv_favorites_filter_button'),
+      isSelected: _showFavoritesOnly,
+      focusNode: _favoritesFilterFocusNode,
+      onSelect: _toggleFavoritesFilter,
+      onNavigateLeft: onTabBarBack,
+      onNavigateRight: () => _guideTabFocusNode.requestFocus(),
+      onNavigateDown: _focusCurrentTab,
+      onNavigateUp: () => _actionBarKey.currentState?.requestFocusOnFirst(),
+    );
+  }
+
+  /// Category dropdown (1.6.26, phone only): replaces the chips row. The
+  /// button shows the current category ("All categories" when none is
+  /// picked); the menu lists every entry with the current one checked,
+  /// and picking one applies the same in-memory filter the chips did.
+  /// Hidden when there is nothing to pick (Plex-only lineups) — the
+  /// chips row returns a shrink in that case too.
+  Widget _buildCategoryDropdown() {
+    final selected = _selectedGuideCategory;
+    final label = selected?.label ?? t.liveTv.allCategories;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 200),
+      child: FocusablePopupMenuButton<GuideCategoryEntry?>(
+        key: const ValueKey('live_tv_category_dropdown'),
+        tooltip: t.liveTv.allCategories,
+        semanticLabel: t.liveTv.allCategories,
+        semanticValue: label,
+        anchorAlignment: AppMenuAnchorAlignment.end,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: .min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              AppIcon(
+                Symbols.arrow_drop_down_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+        itemBuilder: (context) => [
+          AppMenuItem(value: null, label: t.liveTv.allCategories, selected: selected == null),
+          for (final entry in _guideCategoryEntries)
+            AppMenuItem(value: entry, label: entry.label, selected: selected == entry),
+        ],
+        onSelected: (entry) => setState(() => _selectedGuideCategory = entry),
+      ),
+    );
+  }
+
   Widget _buildLiveTvBody(bool useSideNav) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -1353,11 +1475,35 @@ class _LiveTvScreenState extends State<LiveTvScreen>
 
     return Column(
       children: [
+        // 1.6.26 (phone only): [Favourites button] [tab pills, scrollable]
+        // [categories dropdown]. The chips row in the guide is gone on
+        // phones — the dropdown is the only category control — and the
+        // AppBar star is replaced by the Favourites button. TV keeps the
+        // old header (title strip) and the chips row, untouched.
         if (!useSideNav)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            alignment: .centerLeft,
-            child: TabChipStrip(children: _buildTabChipItems()),
+            child: Row(
+              children: [
+                if (_currentTab == LiveTvTab.guide) ...[
+                  _buildFavoritesFilterButton(),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: TabChipStrip(
+                    children: _buildTabChipItems(
+                      onNavigateLeftFromFirst: _currentTab == LiveTvTab.guide
+                          ? () => _favoritesFilterFocusNode.requestFocus()
+                          : null,
+                    ),
+                  ),
+                ),
+                if (_currentTab == LiveTvTab.guide && _guideCategoryEntries.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  _buildCategoryDropdown(),
+                ],
+              ],
+            ),
           ),
         _buildSourcePicker(),
         // 1.2.19, L-35: stale-feed banner on the guide (below).
@@ -1453,6 +1599,110 @@ class _LiveTvScreenState extends State<LiveTvScreen>
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Favourites filter button (1.6.26, phone only): its own pill at the left
+/// of the Guide tab chips — star icon + "Favorites" label, filled while
+/// the filter is on. Same chip family as [FocusableTabChip] (same
+/// focus/selection colours, same D-pad handling via [handleChipKeyEvent]);
+/// the only difference is the icon + label child instead of text alone.
+/// Replaces the AppBar star on phones; the star stays on TV.
+class _FavoritesFilterButton extends StatefulWidget {
+  const _FavoritesFilterButton({
+    super.key,
+    required this.isSelected,
+    required this.onSelect,
+    this.focusNode,
+    this.onNavigateLeft,
+    this.onNavigateRight,
+    this.onNavigateDown,
+    this.onNavigateUp,
+  });
+
+  final bool isSelected;
+  final VoidCallback onSelect;
+  final FocusNode? focusNode;
+  final VoidCallback? onNavigateLeft;
+  final VoidCallback? onNavigateRight;
+  final VoidCallback? onNavigateDown;
+  final VoidCallback? onNavigateUp;
+
+  @override
+  State<_FavoritesFilterButton> createState() => _FavoritesFilterButtonState();
+}
+
+class _FavoritesFilterButtonState extends State<_FavoritesFilterButton>
+    with FocusableChipStateMixin<_FavoritesFilterButton> {
+  @override
+  FocusNode? get widgetFocusNode => widget.focusNode;
+
+  @override
+  String get debugLabel => 'favorites_filter_chip';
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    return handleChipKeyEvent(
+      node,
+      event,
+      ChipKeyCallbacks(
+        onSelect: widget.onSelect,
+        onNavigateLeft: widget.onNavigateLeft,
+        onNavigateRight: widget.onNavigateRight,
+        onNavigateDown: widget.onNavigateDown,
+        onNavigateUp: widget.onNavigateUp,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Only show focus effects during keyboard/d-pad navigation — the
+    // same rule as FocusableTabChip.
+    final showFocus = isFocused && InputModeTracker.isKeyboardMode(context);
+
+    Color backgroundColor;
+    Color foregroundColor;
+    if (widget.isSelected && showFocus) {
+      backgroundColor = Color.lerp(colorScheme.primary, colorScheme.surface, 0.25)!;
+      foregroundColor = colorScheme.onPrimary;
+    } else if (widget.isSelected || showFocus) {
+      backgroundColor = colorScheme.primary;
+      foregroundColor = colorScheme.onPrimary;
+    } else {
+      backgroundColor = colorScheme.surfaceContainerHighest;
+      foregroundColor = colorScheme.onSurfaceVariant;
+    }
+
+    final isHighlighted = showFocus || widget.isSelected;
+    return FocusBuilders.buildFocusableChip(
+      context: context,
+      focusNode: focusNode,
+      onKeyEvent: _handleKeyEvent,
+      onTap: widget.onSelect,
+      semanticLabel: t.liveTv.favorites,
+      selected: widget.isSelected,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      backgroundColor: backgroundColor,
+      child: Row(
+        mainAxisSize: .min,
+        children: [
+          AppIcon(
+            widget.isSelected ? Symbols.star_rounded : Symbols.star_outline_rounded,
+            size: 18,
+            color: foregroundColor,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            t.liveTv.favorites,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: foregroundColor,
+              fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
       ),
     );
   }

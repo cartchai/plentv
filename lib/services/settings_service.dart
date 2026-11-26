@@ -954,6 +954,15 @@ class SettingsService extends BaseSharedPreferencesService {
   static const audioOutputDevice = StringPref('audio_output_device', defaultValue: 'auto');
   static const liveTvDefaultFavorites = BoolPref('live_tv_default_favorites');
 
+  /// Which Live TV tab opens first (1.6.26): 'guide', 'favorites',
+  /// 'whatsOn' or 'recordings'. The first open per app session only —
+  /// switching away and back keeps the last-viewed tab. Subsumes
+  /// [liveTvDefaultFavorites]: the one-time migration in LiveTvScreen
+  /// reads the old bool when no tab value is stored yet, and the old
+  /// Appearance row is gone. Unknown / not-currently-visible values
+  /// clamp to 'guide'.
+  static const liveTvDefaultTab = StringPref('live_tv_default_tab', defaultValue: 'guide');
+
   /// Show the catch-up badge on Live TV guide channels that offer catch-up
   /// (Xtream `tv_archive = 1`). TiviMate's "Show catch-up icon in channel
   /// list". Default on; applies when the guide reloads.
@@ -1934,6 +1943,7 @@ class SettingsService extends BaseSharedPreferencesService {
     cellularQualityPreset,
     musicQualityPreset,
     liveTvDefaultFavorites,
+    liveTvDefaultTab,
     iptvShowCatchUpBadge,
     iptvXtreamUserAgent,
     iptvXtreamUserAgentCustom,

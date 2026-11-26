@@ -32,10 +32,10 @@ import 'warp_settings_rows.dart';
 /// streams piece — so one piece can change without touching the others.
 /// 1.6.24: a second group underneath holds the six Advanced rows
 /// (MPEG-TS, Prefer IPv4, VPN (WARP), Tunnel transport, MASQUE
-/// transport, Reset WARP registration) — duplicated here, not moved:
-/// they stay in Advanced too, and both pages write the same prefs,
-/// so a change in either place shows in the other. No focus nodes
-/// on this page (the 1.6.23 precedent — sub-page tiles own theirs).
+/// transport, Reset WARP registration). 1.6.26: they were MOVED here —
+/// they only live on this page now, removed from Advanced, so there
+/// is one place to set them instead of two. No focus nodes on this
+/// page (the 1.6.23 precedent — sub-page tiles own theirs).
 class SuperSpoofSettingsScreen extends StatelessWidget {
   const SuperSpoofSettingsScreen({super.key});
 
@@ -178,9 +178,10 @@ class SuperSpoofSettingsScreen extends StatelessWidget {
           sliver: SliverToBoxAdapter(
             child: SettingsGroup(
               children: [
-                // 1.6.24: the six Advanced rows, duplicated here in
-                // Advanced order — same prefs, icons, titles,
-                // subtitles and options as Advanced, no focus nodes.
+                // 1.6.24: the six Advanced rows, in Advanced order —
+                // same prefs, icons, titles, subtitles and options,
+                // no focus nodes. 1.6.26: MOVED here — they only live
+                // on this page now, removed from Advanced.
                 SettingSwitchTile(
                   pref: settings.SettingsService.iptvLiveTs,
                   icon: Symbols.live_tv_rounded,

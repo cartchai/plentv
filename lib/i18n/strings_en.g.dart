@@ -1609,11 +1609,8 @@ class Translations$settings$en {
 	/// en: 'Display the Explore tab with content from Plex Discover and connected trackers'
 	String get showExploreTabDescription => 'Display the Explore tab with content from Plex Discover and connected trackers';
 
-	/// en: 'Default to Favorite Channels'
-	String get liveTvDefaultFavorites => 'Default to Favorite Channels';
-
-	/// en: 'Show only favorite channels when opening Live TV'
-	String get liveTvDefaultFavoritesDescription => 'Show only favorite channels when opening Live TV';
+	/// en: 'Default tab'
+	String get liveTvDefaultTab => 'Default tab';
 
 	/// en: 'General'
 	String get general => 'General';
@@ -1641,9 +1638,6 @@ class Translations$settings$en {
 
 	/// en: 'Window'
 	String get window => 'Window';
-
-	/// en: 'Live TV'
-	String get liveTv => 'Live TV';
 
 	/// en: 'Player'
 	String get player => 'Player';
@@ -4020,6 +4014,9 @@ class Translations$about$en {
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
 	];
+	List<String> get changelog2344 => [
+		'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
+	];
 	List<String> get changelog2342 => [
 		'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
 	];
@@ -4027,7 +4024,7 @@ class Translations$about$en {
 		'New: the player now opens IPTV streams through the in-app tunnel instead of straight from the panel — that\'s why shows still showed 403 even when the tunnel was connected. Note: this covers http:// streams only; the bundled player can\'t use the proxy for https:// streams, so those still go direct',
 	];
 	List<String> get changelog2340 => [
-		'New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard in Settings under Advanced, under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it',
+		'New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard on the Super Spoof page (Settings → Advanced → Super Spoof), under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it',
 	];
 	List<String> get changelog2339 => [
 		'Fixed: the tunnel wouldn\'t start at all — its log file pointed at a folder that didn\'t exist, because the app and the tunnel named two different folders. The app now makes the folder before starting, and if it ever can\'t, it starts without the log file instead of failing. Also fixed the tunnel\'s address, which had the port number stuck on it so it could never resolve, and the address check, which made the same mistake and wrongly said it doesn\'t resolve',
@@ -4917,8 +4914,8 @@ class Translations$liveTv$en {
 	/// en: 'Live TV'
 	String get title => 'Live TV';
 
-	/// en: 'Choose which servers show Live TV'
-	String get settingsDescription => 'Choose which servers show Live TV';
+	/// en: 'Choose which servers show Live TV, and which tab opens first'
+	String get settingsDescription => 'Choose which servers show Live TV, and which tab opens first';
 
 	/// en: 'Turn a server off to hide its channels from the guide. Its libraries are not affected.'
 	String get settingsHint => 'Turn a server off to hide its channels from the guide. Its libraries are not affected.';
@@ -10800,8 +10797,7 @@ extension on Translations {
 			'settings.startupSection' => 'Startup Section',
 			'settings.showExploreTab' => 'Show Explore Tab',
 			'settings.showExploreTabDescription' => 'Display the Explore tab with content from Plex Discover and connected trackers',
-			'settings.liveTvDefaultFavorites' => 'Default to Favorite Channels',
-			'settings.liveTvDefaultFavoritesDescription' => 'Show only favorite channels when opening Live TV',
+			'settings.liveTvDefaultTab' => 'Default tab',
 			'settings.general' => 'General',
 			'settings.generalDescription' => 'Language, startup, and window behavior',
 			'settings.languageAndRegion' => 'Language & Region',
@@ -10811,7 +10807,6 @@ extension on Translations {
 			'settings.homeScreen' => 'Home Screen',
 			'settings.navigation' => 'Navigation',
 			'settings.window' => 'Window',
-			'settings.liveTv' => 'Live TV',
 			'settings.player' => 'Player',
 			'settings.videoAndDisplay' => 'Video & Display',
 			'settings.audio' => 'Audio',
@@ -11298,10 +11293,10 @@ extension on Translations {
 			'subtitlingStyling.anchorToScreen' => 'Anchor to Screen',
 			'subtitlingStyling.anchorToScreenDescription' => 'Show text subtitles in the black bars below widescreen video',
 			'subtitlingStyling.bold' => 'Bold',
-			_ => null,
-		} ?? switch (path) {
 			'subtitlingStyling.italic' => 'Italic',
 			'subtitlingStyling.renderResolution' => 'Render Resolution',
+			_ => null,
+		} ?? switch (path) {
 			'subtitlingStyling.renderResolutionScreen' => 'Screen resolution',
 			'subtitlingStyling.renderResolutionVideo' => 'Video resolution',
 			'mpvConfig.title' => 'mpv.conf',
@@ -11727,9 +11722,10 @@ extension on Translations {
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
 			'about.changelog2341.0' => 'New: the player now opens IPTV streams through the in-app tunnel instead of straight from the panel — that\'s why shows still showed 403 even when the tunnel was connected. Note: this covers http:// streams only; the bundled player can\'t use the proxy for https:// streams, so those still go direct',
-			'about.changelog2340.0' => 'New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard in Settings under Advanced, under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it',
+			'about.changelog2340.0' => 'New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard on the Super Spoof page (Settings → Advanced → Super Spoof), under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it',
 			'about.changelog2339.0' => 'Fixed: the tunnel wouldn\'t start at all — its log file pointed at a folder that didn\'t exist, because the app and the tunnel named two different folders. The app now makes the folder before starting, and if it ever can\'t, it starts without the log file instead of failing. Also fixed the tunnel\'s address, which had the port number stuck on it so it could never resolve, and the address check, which made the same mistake and wrongly said it doesn\'t resolve',
 			'about.changelog2338.0' => 'Fixed: the VPN tunnel started but couldn\'t reach anything — it couldn\'t look up Cloudflare\'s address, because the app gave it no DNS of its own and the phone\'s DNS feed was switched off. The tunnel now uses its own DNS (1.1.1.1) to find Cloudflare, logs what it finds, and the startup check waits a few seconds instead of deciding instantly. Also added a Reset WARP registration button in Settings under Advanced, in case the sign-up itself ever needs a fresh start',
 			'about.changelog2337.0' => 'Fixed: turning on VPN (WARP) showed the tunnel as on but nothing loaded — the setup sent a blank account ID, so Cloudflare ignored the connection. The app now sends the ID from your sign-up, waits for the tunnel before the first provider check, and tests that the tunnel really carries traffic after it starts',
@@ -11812,9 +11808,9 @@ extension on Translations {
 			'about.changelog2319.2' => 'New: when the guide can\'t reach the panel it now shows the last guide it downloaded, with the date it was last updated, instead of empty rows',
 			'about.changelog2319.3' => 'New: the access-denied banner now has a button that opens Connection refusals, so you can see exactly what the panel said',
 			'about.changelog2319.4' => 'Fixed: the Retry buttons on a refused connection no longer re-fire the same refused request — they say the connection is refused instead',
+			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
 			_ => null,
 		} ?? switch (path) {
-			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
 			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
 			'about.changelog2317.0' => 'Faster: the guide no longer rebuilds its channel indexes every time you scroll — moving through the guide is now quick instead of taking seconds per screen',
@@ -12296,7 +12292,7 @@ extension on Translations {
 			'explore.detail.linkUnavailable' => 'Couldn\'t open this link on this device',
 			'explore.totalResults' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} result', other: '${n} results', ), 
 			'liveTv.title' => 'Live TV',
-			'liveTv.settingsDescription' => 'Choose which servers show Live TV',
+			'liveTv.settingsDescription' => 'Choose which servers show Live TV, and which tab opens first',
 			'liveTv.settingsHint' => 'Turn a server off to hide its channels from the guide. Its libraries are not affected.',
 			'liveTv.settingsEmpty' => 'No Live TV servers connected',
 			'liveTv.settingsEmptyHint' => 'Connect a server with Live TV to see it here.',
@@ -12326,9 +12322,9 @@ extension on Translations {
 			'liveTv.searchGuide' => 'Search Guide',
 			'liveTv.searchHint' => 'Search channels & programs',
 			'liveTv.searchNoResults' => ({required Object query}) => 'No matches for "${query}"',
+			'liveTv.searchJumpNotFound' => 'That channel isn\'t in the guide any more — try refreshing it.',
 			_ => null,
 		} ?? switch (path) {
-			'liveTv.searchJumpNotFound' => 'That channel isn\'t in the guide any more — try refreshing it.',
 			'liveTv.channelsSection' => 'Channels',
 			'liveTv.programsSection' => 'Programs',
 			'liveTv.now' => 'Now',
@@ -12840,9 +12836,9 @@ extension on Translations {
 			'companionRemote.remote.volumeUp' => 'Up',
 			'companionRemote.remote.fullscreen' => 'Fullscreen',
 			'companionRemote.remote.subtitles' => 'Subtitles',
+			'companionRemote.remote.audio' => 'Audio',
 			_ => null,
 		} ?? switch (path) {
-			'companionRemote.remote.audio' => 'Audio',
 			'companionRemote.remote.searchHint' => 'Search on desktop...',
 			'companionRemote.errors.noNetworkInterface' => 'No network interface found',
 			'companionRemote.errors.authenticationFailed' => 'Authentication failed',
@@ -13354,9 +13350,9 @@ extension on Translations {
 			'iptv.epgReloadWindowSlideReasonStoreUnavailable' => 'store not built yet',
 			'iptv.epgReloadWindowSlideReasonSlideFailed' => 'slide failed',
 			'iptv.epgSourceDownloadDetail' => ({required Object detail}) => 'Download: ${detail}',
+			'iptv.epgM3uTvgIdCheck' => 'Check M3U guide IDs',
 			_ => null,
 		} ?? switch (path) {
-			'iptv.epgM3uTvgIdCheck' => 'Check M3U guide IDs',
 			'iptv.epgM3uTvgIdCheckDescription' => 'One-time check: fetch the provider\'s playlist once and see how many channels without a guide ID gain one from it — and how many of those IDs are in the guide',
 			'iptv.epgM3uTvgIdResult' => ({required Object checked, required Object noId, required Object gained, required Object inFeed}) => '${checked} channels checked · ${noId} without a guide ID · ${gained} gain one from the playlist · ${inFeed} of those are in the guide',
 			'iptv.epgM3uTvgIdSample' => ({required Object samples}) => 'Examples: ${samples}',

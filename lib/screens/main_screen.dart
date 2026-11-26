@@ -2441,11 +2441,38 @@ class _MainScreenState extends State<MainScreen>
       },
       child: ScaffoldMessenger(
         key: ProfileNavigationScope.of(context).mainScaffoldMessengerKey,
-        child: switch (IphoneDuo.verticalBarEdgeOf(context)) {
-          final VerticalBarEdge edge => _buildVerticalBarShell(context, edge),
-          null when PlatformDetector.shouldUseLandscapeNavigationRail(context) => _buildLandscapeShell(context),
-          null => _buildPortraitShell(context),
-        },
+        // 1.6.26 (Explore search fix): the phone branch had NO
+        // MainScreenFocusScope at all — the scope was only built in the
+        // side-nav (TV/desktop) branch — so the Explore long-press
+        // menu's "Search this title" call resolved to null and the tap
+        // was silently swallowed (Matt, 2026-11-25). One scope here
+        // covers all three phone shells (portrait, landscape,
+        // vertical-bar) from a single site. Callbacks bound:
+        // searchForQuery + selectTab + selectLibrary + openSettings —
+        // all four are phone-safe (_selectTab guards on the visible
+        // tabs and already drives the phone bottom bar; _selectLibrary
+        // guards on Libraries visibility; _openSettings is phone-aware
+        // and pushes the settings route, exactly the fallback
+        // user_menu used on phone — so this also repairs the same
+        // silent no-op for the Accounts menu's Downloads entry and
+        // for selectLibrary on phone). focusSidebar is a no-op: the
+        // real _focusSidebar pokes the sidebar focus scope, which does
+        // not exist on phone. Widths are 0 / left null, so the layout
+        // aspects read the same defaults the no-scope path already
+        // produced.
+        child: MainScreenFocusScope(
+          focusSidebar: () {},
+          sideNavigationWidth: 0,
+          selectLibrary: _selectLibrary,
+          openSettings: _openSettings,
+          selectTab: _selectTab,
+          searchForQuery: _searchForQuery,
+          child: switch (IphoneDuo.verticalBarEdgeOf(context)) {
+            final VerticalBarEdge edge => _buildVerticalBarShell(context, edge),
+            null when PlatformDetector.shouldUseLandscapeNavigationRail(context) => _buildLandscapeShell(context),
+            null => _buildPortraitShell(context),
+          },
+        ),
       ),
     );
   }

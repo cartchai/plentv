@@ -38,9 +38,11 @@ String warpMasqueVhttpSubtitle(String choice) => switch (choice) {
 ///
 /// 1.6.24: extracted from SettingsScreen so Advanced and the Super
 /// Spoof page share the one implementation — the terms gate is
-/// safety-sensitive and must not drift into two copies. The focus
-/// node is optional: Advanced passes its tracked node, the sub-page
-/// passes none (its tiles own their nodes, the 1.6.23 precedent).
+/// safety-sensitive and must not drift into two copies. 1.6.26: the
+/// rows moved to the Super Spoof page only, so only that page uses
+/// this now. The focus node is optional: Advanced passed its tracked
+/// node, the sub-page passes none (its tiles own their nodes, the
+/// 1.6.23 precedent).
 class WarpVpnRow extends StatelessWidget {
   const WarpVpnRow({super.key, this.focusNode});
 
@@ -175,7 +177,8 @@ Future<bool?> _showWarpTermsDialog(BuildContext context) {
 /// "wait a minute and try again" instead of a generic failure.
 ///
 /// 1.6.24: moved here from SettingsScreen so Advanced and the Super
-/// Spoof page share the one implementation.
+/// Spoof page share the one implementation. 1.6.26: only the Super
+/// Spoof page uses it now.
 Future<void> showResetWarpRegistrationDialog(BuildContext context) async {
   final confirmed = await showConfirmDialog(
     context,

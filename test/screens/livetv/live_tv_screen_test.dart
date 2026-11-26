@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -8,6 +9,7 @@ import 'package:plezy/exceptions/media_server_exceptions.dart';
 import 'package:plezy/focus/input_mode_tracker.dart';
 import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/ids.dart';
+import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/library_change_event.dart';
 import 'package:plezy/media/live_tv_support.dart';
 import 'package:plezy/media/media_backend.dart';
@@ -25,6 +27,7 @@ import 'package:plezy/services/multi_server_manager.dart';
 import 'package:plezy/services/settings_service.dart';
 import 'package:plezy/theme/mono_theme.dart';
 import 'package:plezy/utils/library_content_notifier.dart';
+import 'package:plezy/widgets/focusable_tab_chip.dart';
 import 'package:provider/provider.dart';
 
 import '../../test_helpers/multi_server_fixtures.dart';
@@ -383,6 +386,259 @@ void main() {
     await tester.pump();
     expect(harness.liveTv.fetchChannelsCalls, 1);
   });
+
+  group('Live TV phone UI (1.6.26)', () {
+    // The test binding defaults to the host (desktop) platform, so the
+    // side-nav branch renders unless the override forces Android.
+    Future<_LiveTvHarness> pumpPhone(
+      WidgetTester tester, {
+      List<String>? channelKeys,
+      _FakeLiveTvDvrSupport? dvr,
+      List<({String id, String name})> categories = const [],
+      Map<String, String> channelCategoryIds = const {},
+      String? defaultTab,
+      bool? defaultFavorites,
+    }) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      if (defaultTab != null || defaultFavorites != null) {
+        final settings = await SettingsService.getInstance();
+        if (defaultTab != null) await settings.write(SettingsService.liveTvDefaultTab, defaultTab);
+        if (defaultFavorites != null) {
+          await settings.write(SettingsService.liveTvDefaultFavorites, defaultFavorites);
+        }
+      }
+      return _pumpLiveTvScreen(
+        tester,
+        channelKeys: channelKeys,
+        dvr: dvr,
+        iptvClient: categories.isNotEmpty,
+        categories: categories,
+        channelCategoryIds: channelCategoryIds,
+      );
+    }
+
+    Future<void> disposeHarness(WidgetTester tester, _LiveTvHarness harness) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      harness.dispose();
+    }
+
+    testWidgets('phone: category chips collapse into a dropdown beside Guide on the right', (tester) async {
+      const categories = [
+        (id: 'cat-uk', name: 'UK| GENERAL'),
+        (id: 'cat-us', name: 'US| NEWS'),
+      ];
+      final harness = await pumpPhone(
+        tester,
+        channelKeys: const ['channel-a', 'channel-b'],
+        categories: categories,
+        channelCategoryIds: const {'channel-a': 'cat-uk', 'channel-b': 'cat-us'},
+        defaultTab: 'guide',
+      );
+      addTearDown(() => disposeHarness(tester, harness));
+      harness.liveTv.favorites.complete(const []);
+      await tester.pumpAndSettle();
+
+      // The chips row is gone: no ChoiceChip renders inside the guide.
+      expect(find.descendant(of: find.byType(GuideTab), matching: find.byType(ChoiceChip)), findsNothing);
+      // The dropdown is present, labelled with the current category.
+      final dropdown = find.byKey(const ValueKey('live_tv_category_dropdown'));
+      expect(dropdown, findsOneWidget);
+      expect(find.descendant(of: dropdown, matching: find.text(t.liveTv.allCategories)), findsOneWidget);
+      // ... beside Guide on the right: its centre is right of the Guide chip's.
+      final guideChip = find.descendant(of: find.byType(TabChipStrip), matching: find.text(t.liveTv.guide));
+      expect(tester.getCenter(dropdown).dx, greaterThan(tester.getCenter(guideChip).dx));
+
+      // Opening it lists every category; picking one filters the guide.
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      expect(find.text('UK| GENERAL'), findsOneWidget);
+      expect(find.text('US| NEWS'), findsOneWidget);
+      await tester.tap(find.text('UK| GENERAL'));
+      await tester.pumpAndSettle();
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a']);
+      expect(find.descendant(of: dropdown, matching: find.text('UK| GENERAL')), findsOneWidget);
+      // Reset before the test ends: the framework checks foundation debug
+      // vars before tearDowns run, so an addTearDown reset is too late.
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('phone: Favourites is its own button left of Guide and the AppBar star is gone', (tester) async {
+      final harness = await pumpPhone(
+        tester,
+        channelKeys: const ['channel-a', 'channel-b'],
+        defaultTab: 'guide',
+      );
+      addTearDown(() => disposeHarness(tester, harness));
+      harness.liveTv.favorites.complete([
+        FavoriteChannel(id: 'channel-a', source: 'server://server-a/provider-a'),
+      ]);
+      await tester.pumpAndSettle();
+
+      final button = find.byKey(const ValueKey('live_tv_favorites_filter_button'));
+      expect(button, findsOneWidget);
+      // Left of Guide.
+      final guideChip = find.descendant(of: find.byType(TabChipStrip), matching: find.text(t.liveTv.guide));
+      expect(tester.getCenter(button).dx, lessThan(tester.getCenter(guideChip).dx));
+      // Star icon + Favorites label on the button; no star in the AppBar.
+      expect(find.descendant(of: button, matching: find.byIcon(Symbols.star_outline_rounded)), findsOneWidget);
+      expect(find.descendant(of: button, matching: find.text(t.liveTv.favorites)), findsOneWidget);
+      expect(
+        find.descendant(of: find.byType(AppBar), matching: find.byIcon(Symbols.star_outline_rounded)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: find.byType(AppBar), matching: find.byIcon(Symbols.star_rounded)),
+        findsNothing,
+      );
+      // The dropdown hides when the lineup has no categories.
+      expect(find.byKey(const ValueKey('live_tv_category_dropdown')), findsNothing);
+
+      // Tapping it narrows the guide to favourites; tapping again restores all.
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a', 'channel-b']);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a']);
+      expect(find.descendant(of: button, matching: find.byIcon(Symbols.star_rounded)), findsOneWidget);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a', 'channel-b']);
+      expect(find.descendant(of: button, matching: find.byIcon(Symbols.star_outline_rounded)), findsOneWidget);
+      // Reset before the test ends: the framework checks foundation debug
+      // vars before tearDowns run, so an addTearDown reset is too late.
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('phone: Default tab Favourites opens the Guide with the filter on', (tester) async {
+      final harness = await pumpPhone(
+        tester,
+        channelKeys: const ['channel-a', 'channel-b'],
+        defaultTab: 'favorites',
+      );
+      addTearDown(() => disposeHarness(tester, harness));
+      harness.liveTv.favorites.complete([
+        FavoriteChannel(id: 'channel-a', source: 'server://server-a/provider-a'),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a']);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('live_tv_favorites_filter_button')),
+          matching: find.byIcon(Symbols.star_rounded),
+        ),
+        findsOneWidget,
+      );
+      // Reset before the test ends: the framework checks foundation debug
+      // vars before tearDowns run, so an addTearDown reset is too late.
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('phone: Default tab Guide opens with the filter off', (tester) async {
+      // setUp wrote the old toggle true — a stored tab value wins over it.
+      final harness = await pumpPhone(
+        tester,
+        channelKeys: const ['channel-a', 'channel-b'],
+        defaultTab: 'guide',
+      );
+      addTearDown(() => disposeHarness(tester, harness));
+      harness.liveTv.favorites.complete([
+        FavoriteChannel(id: 'channel-a', source: 'server://server-a/provider-a'),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a', 'channel-b']);
+      // Reset before the test ends: the framework checks foundation debug
+      // vars before tearDowns run, so an addTearDown reset is too late.
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('phone: an unknown default tab value clamps to Guide', (tester) async {
+      final harness = await pumpPhone(
+        tester,
+        channelKeys: const ['channel-a', 'channel-b'],
+        defaultTab: 'bogus',
+      );
+      addTearDown(() => disposeHarness(tester, harness));
+      harness.liveTv.favorites.complete([
+        FavoriteChannel(id: 'channel-a', source: 'server://server-a/provider-a'),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a', 'channel-b']);
+      // Reset before the test ends: the framework checks foundation debug
+      // vars before tearDowns run, so an addTearDown reset is too late.
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('phone: no stored tab value migrates the old Appearance toggle', (tester) async {
+      // setUp wrote liveTvDefaultFavorites=true and no tab value is stored.
+      final harness = await pumpPhone(tester, channelKeys: const ['channel-a', 'channel-b']);
+      addTearDown(() => disposeHarness(tester, harness));
+      harness.liveTv.favorites.complete([
+        FavoriteChannel(id: 'channel-a', source: 'server://server-a/provider-a'),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a']);
+      // The migration writes the choice once, so the old bool is never
+      // consulted again.
+      expect(SettingsService.instance.read(SettingsService.liveTvDefaultTab), 'favorites');
+      // Reset before the test ends: the framework checks foundation debug
+      // vars before tearDowns run, so an addTearDown reset is too late.
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('phone: no stored tab value and the old toggle off opens on Guide', (tester) async {
+      final harness = await pumpPhone(
+        tester,
+        channelKeys: const ['channel-a', 'channel-b'],
+        defaultFavorites: false,
+      );
+      addTearDown(() => disposeHarness(tester, harness));
+      harness.liveTv.favorites.complete([
+        FavoriteChannel(id: 'channel-a', source: 'server://server-a/provider-a'),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(_guideChannels(tester).map((channel) => channel.key), ['channel-a', 'channel-b']);
+      expect(SettingsService.instance.read(SettingsService.liveTvDefaultTab), 'guide');
+      // Reset before the test ends: the framework checks foundation debug
+      // vars before tearDowns run, so an addTearDown reset is too late.
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('TV: chips row stays, AppBar star stays, no Favourites button or dropdown', (tester) async {
+      // The test binding defaults to Android (phone branch), so the
+      // desktop branch needs the override — macOS, per the
+      // library_browse_tab_test precedent.
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      final settings = await SettingsService.getInstance();
+      await settings.write(SettingsService.liveTvDefaultTab, 'guide');
+      final harness = await _pumpLiveTvScreen(
+        tester,
+        channelKeys: const ['channel-a', 'channel-b'],
+        iptvClient: true,
+        categories: const [(id: 'cat-uk', name: 'UK| GENERAL')],
+        channelCategoryIds: const {'channel-a': 'cat-uk'},
+      );
+      addTearDown(() => disposeHarness(tester, harness));
+      harness.liveTv.favorites.complete([
+        FavoriteChannel(id: 'channel-a', source: 'server://server-a/provider-a'),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(find.descendant(of: find.byType(GuideTab), matching: find.byType(ChoiceChip)), findsWidgets);
+      expect(
+        find.descendant(of: find.byType(AppBar), matching: find.byIcon(Symbols.star_outline_rounded)),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('live_tv_favorites_filter_button')), findsNothing);
+      expect(find.byKey(const ValueKey('live_tv_category_dropdown')), findsNothing);
+      // Reset before the test ends: the framework checks foundation debug
+      // vars before tearDowns run, so an addTearDown reset is too late.
+      debugDefaultTargetPlatformOverride = null;
+    });
+  });
 }
 
 List<LiveTvChannel> _guideChannels(WidgetTester tester) => tester.widget<GuideTab>(find.byType(GuideTab)).channels;
@@ -392,9 +648,13 @@ Future<_LiveTvHarness> _pumpLiveTvScreen(
   List<String>? channelKeys,
   _FakeLiveTvDvrSupport? dvr,
   Object? channelsFailure,
+  bool iptvClient = false,
+  List<({String id, String name})> categories = const [],
+  Map<String, String> channelCategoryIds = const {},
 }) async {
-  final liveTv = _FakeLiveTvSupport(channelKeys: channelKeys, dvr: dvr)..channelsFailure = channelsFailure;
-  final client = _FakeMediaServerClient(liveTv);
+  final liveTv = _FakeLiveTvSupport(channelKeys: channelKeys, dvr: dvr, channelCategoryIds: channelCategoryIds)
+    ..channelsFailure = channelsFailure;
+  final client = iptvClient ? _FakeIptvClient(liveTv, categories: categories) : _FakeMediaServerClient(liveTv);
   final manager = MultiServerManager()..debugRegisterClientForTesting(client);
   final provider = testMultiServerProvider(manager);
   provider.debugSetLiveTvServersForTesting([
@@ -455,12 +715,21 @@ class _FakeMediaServerClient implements MediaServerClient {
 }
 
 class _FakeLiveTvSupport implements LiveTvSupport {
-  _FakeLiveTvSupport({this.serverId = 'server-a', this.storeKey = 'test-store', List<String>? channelKeys, this.dvr})
-    : channelKeys = channelKeys ?? [serverId == 'server-a' ? 'channel-a' : 'channel-$serverId'];
+  _FakeLiveTvSupport({
+    this.serverId = 'server-a',
+    this.storeKey = 'test-store',
+    List<String>? channelKeys,
+    this.dvr,
+    this.channelCategoryIds = const {},
+  }) : channelKeys = channelKeys ?? [serverId == 'server-a' ? 'channel-a' : 'channel-$serverId'];
 
   final String serverId;
   final String storeKey;
   final List<String> channelKeys;
+
+  /// Category id per channel key (1.6.26): lets the dropdown test prove a
+  /// picked category narrows the guide to that category's channels.
+  final Map<String, String> channelCategoryIds;
   Object? channelsFailure;
   final List<Completer<List<FavoriteChannel>>> _favoriteRequests = [];
   int _servedFavoriteRequests = 0;
@@ -503,6 +772,7 @@ class _FakeLiveTvSupport implements LiveTvSupport {
           key: key,
           title: key == 'channel-a' ? 'Unique Channel A' : 'Unique Channel $key',
           serverId: serverId,
+          categoryId: channelCategoryIds[key],
         ),
     ];
   }
@@ -527,6 +797,41 @@ class _FakeLiveTvSupport implements LiveTvSupport {
     writes.add(List.of(channels));
     if (writeFailures.isNotEmpty) throw writeFailures.removeAt(0);
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Fake IPTV client (1.6.26): the same shape as [_FakeMediaServerClient]
+/// but an [IptvClient], so `LiveTvScreen._loadGuideCategories` populates
+/// the category entries. Only [visibleLiveCategories] is overridden;
+/// everything else falls through to [noSuchMethod].
+class _FakeIptvClient implements IptvClient {
+  _FakeIptvClient(this.liveTv, {this.categories = const [], ServerId? serverId})
+    : serverId = serverId ?? ServerId('server-a');
+
+  @override
+  final LiveTvSupport liveTv;
+
+  final List<({String id, String name})> categories;
+
+  @override
+  final ServerId serverId;
+
+  @override
+  String? get serverName => 'Server ${serverId.value}';
+
+  @override
+  MediaBackend get backend => MediaBackend.xtream;
+
+  @override
+  ServerCapabilities get capabilities => ServerCapabilities(liveTv: true, liveTvDvr: liveTv.dvr != null);
+
+  @override
+  Future<List<({String id, String name})>> visibleLiveCategories() async => categories;
+
+  @override
+  void close() {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
