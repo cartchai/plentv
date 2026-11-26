@@ -30,6 +30,15 @@ android {
   // library is built with the same 16 KB page-size-capable libc++ toolchain.
   ndkVersion = "29.0.14206865"
 
+  // Prefab must be enabled for CMake to see the OpenXR loader AAR's
+  // prefab module (find_package(OpenXR)). Without it AGP never exposes
+  // the prefab package, so find_package fails (CI 45855984271). The
+  // prefab package is named "OpenXR" (prefab.json) and the module
+  // "openxr_loader", so the generated target is OpenXR::openxr_loader.
+  buildFeatures {
+    prefab = true
+  }
+
   defaultConfig {
     // Same floor as the app: the library must not declare a higher minSdk
     // than the app, or the manifest merger fails. The module only ever
@@ -37,9 +46,13 @@ android {
     // is overridden in the module manifest (tools:overrideLibrary).
     minSdk = 25
     consumerProguardFiles("consumer-rules.pro")
-    externalNativeBuild {
-      cmake {
-        arguments += listOf("-DANDROID_STL=c++_shared")
+    // The native build is Quest-only (see below): only pass the CMake
+    // arguments when this module is actually being built.
+    if (project.findProperty("questBuild") == "true") {
+      externalNativeBuild {
+        cmake {
+          arguments += listOf("-DANDROID_STL=c++_shared")
+        }
       }
     }
   }
@@ -49,10 +62,18 @@ android {
     targetCompatibility = JavaVersion.VERSION_17
   }
 
-  externalNativeBuild {
-    cmake {
-      path = file("src/main/cpp/CMakeLists.txt")
-      version = "4.1.2"
+  // The native build (CMake) is configured ONLY for the Quest build.
+  // The phone build never links :quest, so it must not run :quest's
+  // CMake — otherwise a Quest native problem blocks the phone build
+  // (CI 45855984271: :quest:configureCMakeRelWithDebInfo ran during the
+  // phone build and failed on find_package). When questBuild is off no
+  // configureCMake tasks are created at all, so nothing can run them.
+  if (project.findProperty("questBuild") == "true") {
+    externalNativeBuild {
+      cmake {
+        path = file("src/main/cpp/CMakeLists.txt")
+        version = "4.1.2"
+      }
     }
   }
 }

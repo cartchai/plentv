@@ -11,7 +11,13 @@ cmake_minimum_required(VERSION 3.22.1)
 project("vr_player")
 
 # The OpenXR loader is a prefab module from the Maven dependency.
-find_package(openxr REQUIRED CONFIG)
+# The prefab package is named "OpenXR" (prefab.json) and the module
+# "openxr_loader", so the generated config is OpenXRConfig.cmake and
+# the target is OpenXR::openxr_loader — capital O, capital XR. The
+# lowercase form (find_package(openxr) / openxr::openxr_loader) does
+# NOT match: CMake is case-sensitive for the config file name, so the
+# lowercase call fails even with prefab enabled.
+find_package(OpenXR REQUIRED CONFIG)
 
 add_library(vr_player SHARED
   vr_renderer.cpp
@@ -23,7 +29,7 @@ target_include_directories(vr_player PRIVATE
 )
 
 target_link_libraries(vr_player
-  openxr::openxr_loader
+  OpenXR::openxr_loader
   EGL
   GLESv3
   android
