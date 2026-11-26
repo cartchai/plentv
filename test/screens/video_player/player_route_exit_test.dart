@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plezy/providers/playback_state_provider.dart';
+import 'package:plezy/services/pip_service.dart';
 import 'package:plezy/services/playback_coordinator.dart';
 import 'package:plezy/screens/video_player_screen.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -71,13 +72,14 @@ void main() {
               await tester.pump();
               expect(key.currentState, isNull);
               expect(find.text('Browse'), findsOneWidget);
-              expect(player.pauseCalls, 1);
+              expect(player.pauseCalls, 0, reason: '1.6.25 F3: a close stops, it does not pause');
+              expect(player.stopCalls, 1, reason: '1.6.25 F3: Back stops the player at the press');
               var stoppedDone = false;
               final stopped = expectLater(
                 PlaybackCoordinator.instance.shutdownVideo(),
-                throwsA(isA<PlatformException>().having((error) => error.code, 'code', 'late_pause_failure')),
+                throwsA(isA<PlatformException>().having((error) => error.code, 'code', 'late_stop_failure')),
               ).whenComplete(() => stoppedDone = true);
-              player.pauseGate.completeError(PlatformException(code: 'late_pause_failure'));
+              player.stopGate.completeError(PlatformException(code: 'late_stop_failure'));
               await pumpUntil(tester, () => stoppedDone);
               await stopped;
               expect(find.text('Browse'), findsOneWidget);
@@ -86,6 +88,7 @@ void main() {
               await tester.pump(const Duration(seconds: 2));
               expect(key.currentState, isNotNull);
               expect(player.pauseCalls, 0);
+              expect(player.stopCalls, 0);
               await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
               await pumpUntil(
                 tester,
@@ -93,7 +96,7 @@ void main() {
               );
             }
           } finally {
-            if (!player.pauseGate.isCompleted) player.pauseGate.complete();
+            if (!player.stopGate.isCompleted) player.stopGate.complete();
             await tester.pumpWidget(const SizedBox.shrink());
             var retirementDone = false;
             final retirement = PlaybackCoordinator.instance.shutdownVideo().whenComplete(() => retirementDone = true);
@@ -128,15 +131,36 @@ void main() {
     expect(screen.key.currentState, isNull);
     expect(find.text('Cover'), findsOneWidget, reason: 'removing the player cannot take the covering route');
     expect(find.text('Browse'), findsNothing, reason: 'the exit must not unwind past the covering route');
-    expect(player.pauseCalls, 1);
+    expect(player.pauseCalls, 0, reason: '1.6.25 F3: a close stops, it does not pause');
+    expect(player.stopCalls, 1, reason: '1.6.25 F3: Back stops the player at the press');
+  });
+
+  // 1.6.25 F3 + PiP constraint: a close while PiP is active must NOT
+  // stop the player — the pop-out keeps playing. It pauses instead,
+  // exactly as before.
+  testWidgets('Back while PiP is active pauses instead of stopping', (tester) async {
+    final player = _TouchExitPlayer();
+    final screen = await _pushHeldPlayer(tester, player);
+    PipService().isPipActive.value = true;
+    addTearDown(() => PipService().isPipActive.value = false);
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+
+    expect(screen.key.currentState, isNull);
+    expect(player.pauseCalls, 1, reason: 'PiP active: the close pauses, as before');
+    expect(player.stopCalls, 0, reason: 'PiP active: the stream keeps playing in the pop-out');
   });
 }
 
 class _TouchExitPlayer extends FakeSyncPlayer {
   _TouchExitPlayer() : super(playing: true);
 
-  final pauseGate = Completer<void>();
+  final stopGate = Completer<void>();
   int pauseCalls = 0;
+  int stopCalls = 0;
 
   @override
   Future<void> abandonAudioFocus() async {}
@@ -144,7 +168,12 @@ class _TouchExitPlayer extends FakeSyncPlayer {
   @override
   Future<void> pause() async {
     pauseCalls++;
-    await pauseGate.future;
+  }
+
+  @override
+  Future<void> stop() async {
+    stopCalls++;
+    await stopGate.future;
   }
 }
 
@@ -168,7 +197,7 @@ Future<({GlobalKey<VideoPlayerScreenState> key, GlobalKey<NavigatorState> naviga
   addTearDown(() async {
     await tester.pumpWidget(const SizedBox.shrink());
     PlaybackCoordinator.instance.unregisterMusicSession(holdInitialization);
-    if (!player.pauseGate.isCompleted) player.pauseGate.complete();
+    if (!player.stopGate.isCompleted) player.stopGate.complete();
     if (!initializationHold.isCompleted) initializationHold.complete();
     await tester.pump();
   });

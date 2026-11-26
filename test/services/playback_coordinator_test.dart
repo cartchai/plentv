@@ -222,4 +222,93 @@ void main() {
     expect(coordinator.hasVideoSession, isTrue);
     expect(coordinator.videoPlayerState, isNull, reason: 'a retiring session reports no player');
   });
+
+  group('1.6.25 F1/Q-11 — waitForVideoRetirements', () {
+    test('waits for a pending retirement before returning', () async {
+      final coordinator = PlaybackCoordinator.instance;
+      final retirement = Completer<void>();
+      Future<void> owner() async {}
+      coordinator.registerVideoSession(shutdown: owner);
+      coordinator.unregisterVideoSession(owner, retirement: retirement.future);
+      addTearDown(() async {
+        if (!retirement.isCompleted) retirement.complete();
+        coordinator.unregisterVideoSession(owner);
+        await coordinator.shutdownVideo();
+      });
+
+      var done = false;
+      final wait = coordinator.waitForVideoRetirements().whenComplete(() => done = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(done, isFalse, reason: 'the retirement is still pending');
+      retirement.complete();
+      await wait;
+      expect(done, isTrue);
+    });
+
+    test('returns immediately when nothing is retiring', () async {
+      final coordinator = PlaybackCoordinator.instance;
+      expect(coordinator.hasVideoSession, isFalse);
+      await coordinator.waitForVideoRetirements(timeout: const Duration(milliseconds: 50));
+    });
+
+    test('a wedged retirement degrades to opening anyway after the timeout', () async {
+      final coordinator = PlaybackCoordinator.instance;
+      final retirement = Completer<void>();
+      Future<void> owner() async {}
+      coordinator.registerVideoSession(shutdown: owner);
+      coordinator.unregisterVideoSession(owner, retirement: retirement.future);
+      addTearDown(() async {
+        if (!retirement.isCompleted) retirement.complete();
+        coordinator.unregisterVideoSession(owner);
+        await coordinator.shutdownVideo();
+      });
+
+      final stopwatch = Stopwatch()..start();
+      await coordinator.waitForVideoRetirements(timeout: const Duration(milliseconds: 100));
+      stopwatch.stop();
+      expect(stopwatch.elapsedMilliseconds, lessThan(2000), reason: 'a wedged teardown never bricks the open');
+      expect(coordinator.hasVideoSession, isTrue, reason: 'the retirement is still pending — only the wait gave up');
+    });
+
+    test('a failed retirement does not throw out of the wait', () async {
+      final coordinator = PlaybackCoordinator.instance;
+      final retirement = Completer<void>();
+      Future<void> owner() async {}
+      coordinator.registerVideoSession(shutdown: owner);
+      coordinator.unregisterVideoSession(owner, retirement: retirement.future);
+      addTearDown(() async {
+        if (!retirement.isCompleted) retirement.complete();
+        coordinator.unregisterVideoSession(owner);
+        await coordinator.shutdownVideo();
+      });
+
+      retirement.completeError(StateError('native retirement failed'));
+      await coordinator.waitForVideoRetirements();
+      expect(coordinator.hasVideoSession, isFalse);
+    });
+
+    test('cancelling a pending wait releases it without waiting for the timeout', () async {
+      final coordinator = PlaybackCoordinator.instance;
+      final retirement = Completer<void>();
+      Future<void> owner() async {}
+      coordinator.registerVideoSession(shutdown: owner);
+      coordinator.unregisterVideoSession(owner, retirement: retirement.future);
+      addTearDown(() async {
+        if (!retirement.isCompleted) retirement.complete();
+        coordinator.unregisterVideoSession(owner);
+        await coordinator.shutdownVideo();
+      });
+
+      var done = false;
+      final wait = coordinator
+          .waitForVideoRetirements(timeout: const Duration(seconds: 30))
+          .whenComplete(() => done = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(done, isFalse, reason: 'the retirement is still pending');
+      coordinator.cancelPendingRetirementWaits();
+      await wait;
+      expect(done, isTrue, reason: 'the cancel releases the waiter immediately');
+      expect(retirement.isCompleted, isFalse, reason: 'the retirement itself is untouched');
+    });
+  });
 }

@@ -38,6 +38,7 @@ import '../../test_helpers/mock_player_channels.dart';
 import '../../test_helpers/multi_server_fixtures.dart';
 import '../../test_helpers/player_streams.dart';
 import '../../test_helpers/prefs.dart';
+import '../../test_helpers/pump.dart';
 
 /// Regression coverage for #2388: a live channel publishes nothing to the OS
 /// media session, so Assistant, the Android TV Now Playing card and AVRCP
@@ -63,12 +64,23 @@ void main() {
       return null;
     });
     messenger.setMockMethodCallHandler(mediaControlEvents, (call) async => null);
+    // 1.6.25 F1: VideoControls reads its always-on-top state fire-and-
+    // forget behind an isDesktopOS() guard, which is true on the Linux
+    // test host — and this file never mocked the window_manager channel,
+    // so the MissingPluginException surfaced once the start was pumped
+    // instead of awaited. Same mock as the sibling player tests.
+    const windowChannel = MethodChannel('window_manager');
+    messenger.setMockMethodCallHandler(
+      windowChannel,
+      (call) async => call.method.startsWith('is') ? false : null,
+    );
   });
 
   tearDown(() {
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(mediaControlChannel, null);
     messenger.setMockMethodCallHandler(mediaControlEvents, null);
+    messenger.setMockMethodCallHandler(const MethodChannel('window_manager'), null);
   });
 
   testWidgets('a live channel registers a media session titled after the channel', (tester) async {
@@ -240,7 +252,21 @@ void main() {
         // The stream the start opened fails while the start still holds the
         // transition lock. The gate turns the recovery away then; it must run
         // once the start has committed rather than be lost.
-        await state.debugStartPlaybackForTesting();
+        //
+        // 1.6.25 F1: the start waits for any retiring video session first
+        // (bounded at 1.5 s), and a retirement from an earlier test's
+        // disposed screen can still be pending here — the coordinator is
+        // a singleton and its retirement chain never settles in fake
+        // time. Awaiting the start with no pump would freeze the fake
+        // clock so the 1.5 s bound could never fire, and a single fixed
+        // pump can land before the wait is even armed (the attempt
+        // suspends at claimVideo first): pump until the start commits,
+        // which also yields to the real event loop between frames.
+        var started = false;
+        final start = state.debugStartPlaybackForTesting();
+        unawaited(start.whenComplete(() => started = true));
+        await pumpUntil(tester, () => started, describe: () => 'start committed (opened=${player.opened})');
+        await start;
 
         expect(player.opened, 1);
         // The ladder waits out its backoff before retrying (build #24): the

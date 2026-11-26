@@ -195,13 +195,19 @@ void main() {
     expect(totalWatch.elapsedMilliseconds, lessThan(3000));
     expect(framesSum, lessThan(1000));
     expect(framesMax, lessThan(100));
+  });
+
+  testWidgets('toggling one row at real scale is fast and takes effect (1.6.25 Q-6)', (tester) async {
+    // Split out of the fling test (1.6.25 Q-6): the toggle proof lived
+    // inside a wall-clock fling test, so parallel-load noise could fail
+    // it for the fling's reasons. Row 1 is visible at load on a fresh
+    // pump — no scroll needed.
+    final h = await harness();
+    await pumpScreen(tester, h.provider, h.registry);
+    await tester.pumpAndSettle();
 
     // One toggle: the whole screen used to rebuild (770 ms pre-fix,
-    // 107 ms baseline). Threshold 400 ms. The fling above scrolled row 1
-    // out of the viewport — and a virtualized row that is off-screen is
-    // not built — so scroll back to the top first.
-    await tester.scrollUntilVisible(find.text('EN - Live 1'), -1000, maxScrolls: 100);
-    await tester.pumpAndSettle();
+    // 107 ms baseline). Threshold 400 ms.
     final toggleWatch = Stopwatch()..start();
     await tester.tap(find.ancestor(
       of: find.text('EN - Live 1'),

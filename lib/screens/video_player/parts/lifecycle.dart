@@ -136,7 +136,15 @@ extension _VideoPlayerLifecycleMethods on VideoPlayerScreenState {
 
     _hiddenForBackground = true;
     await currentPlayer.setVisible(false, restoreOnWindowVisible: Platform.isMacOS);
-    _recordLifecycleState('hidden', action: 'render_hidden');
+    // 1.6.25 Q-1: a handheld IPTV VOD arms the same grace timer as TV —
+    // the suspend releases the stream (and the panel line) after the
+    // grace, and the resume path restores it at the same position.
+    // Anything else keeps the old pause-and-hold.
+    if (_armTvBackgroundPlayerSuspendTimer()) {
+      _recordLifecycleState('hidden', action: 'handheld_iptv_background_suspend_armed');
+    } else {
+      _recordLifecycleState('hidden', action: 'render_hidden');
+    }
   }
 
   Future<void> _handleAppResumed() async {
@@ -230,7 +238,8 @@ extension _VideoPlayerLifecycleMethods on VideoPlayerScreenState {
   }
 
   /// Arm the grace timer that releases the native AV pipeline if the app
-  /// stays backgrounded (Android TV only). Returns whether it was armed.
+  /// stays backgrounded. Android TV (any VOD) and, since 1.6.25 Q-1, a
+  /// handheld IPTV VOD. Returns whether it was armed.
   bool _armTvBackgroundPlayerSuspendTimer() {
     if (_shuttingDown) return false;
     if (!shouldSuspendPlayerForTvBackground(
@@ -238,6 +247,7 @@ extension _VideoPlayerLifecycleMethods on VideoPlayerScreenState {
       isTv: PlatformDetector.isTV(),
       isLive: widget.isLive,
       alreadySuspended: _tvSuspend.suspended,
+      isIptv: _currentMetadata.backend == MediaBackend.m3u || _currentMetadata.backend == MediaBackend.xtream,
     )) {
       return false;
     }

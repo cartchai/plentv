@@ -14,12 +14,15 @@ import '../../mpv/video.dart';
 import '../../providers/multi_server_provider.dart';
 import '../../services/iptv/iptv_playback_activity.dart';
 import '../../services/iptv/iptv_refusal_log.dart';
+import '../../services/pip_service.dart';
 import '../../services/playback_coordinator.dart';
 import '../../services/settings_service.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/live_tv_player_navigation.dart';
 import '../video_player/live_stream_release_gate.dart';
 import '../video_player/live_tv_session_args.dart';
+import '../video_player/playback_open_deadline.dart';
+import '../video_player/tv_background_suspend_state.dart';
 
 /// Playback state of the Live TV mini-player (build #12).
 enum LiveTvMiniPlayerStatus {
@@ -149,10 +152,20 @@ class LiveTvMiniPlayerDiagnostic {
 /// stream has played for [firstFrameWatchdogGrace] with no frame
 /// reported. A brief black flash is acceptable; a permanent black box is
 /// the bug.
-class LiveTvMiniPlayerController extends ChangeNotifier {
-  LiveTvMiniPlayerController({Player Function()? playerFactory, Duration? firstFrameWatchdogGrace})
-    : _playerFactory = playerFactory ?? _defaultPlayerFactory,
-      firstFrameWatchdogGrace = firstFrameWatchdogGrace ?? const Duration(seconds: 5);
+class LiveTvMiniPlayerController extends ChangeNotifier with WidgetsBindingObserver {
+  LiveTvMiniPlayerController({
+    Player Function()? playerFactory,
+    Duration? firstFrameWatchdogGrace,
+    Duration? openDeadline,
+    Duration? backgroundStopGrace,
+  }) : _playerFactory = playerFactory ?? _defaultPlayerFactory,
+       firstFrameWatchdogGrace = firstFrameWatchdogGrace ?? const Duration(seconds: 5),
+       openDeadline = openDeadline ?? openDeadlineFor(isLive: true),
+       backgroundStopGrace = backgroundStopGrace ?? TvBackgroundSuspendState.playerSuspendGrace {
+    // 1.6.25 F2: the mini-player owns its own lifecycle — no app-level
+    // handling existed, so a backgrounded mini-player played forever.
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   static Player _defaultPlayerFactory() {
     final settings = SettingsService.instance;
@@ -167,6 +180,17 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
   /// Grace after which a playing tune with no reported frame reveals the
   /// surface anyway (build #15 watchdog). Overridable for tests.
   final Duration firstFrameWatchdogGrace;
+
+  /// How long an opened tune may go with no first frame before it fails
+  /// (1.6.25 Q-4): the open returned, no frame, no error — a dead
+  /// channel held the spinner with no way out. Live gets the 10 s
+  /// budget from [openDeadlineFor]; overridable for tests.
+  final Duration openDeadline;
+
+  /// How long a backgrounded mini-player keeps playing before it stops
+  /// (1.6.25 F2). Same 30 s grace as the TV/full-player suspend, so one
+  /// mechanism, one grace; overridable for tests.
+  final Duration backgroundStopGrace;
 
   /// The last tune's diagnostic, for the Settings → IPTV "Mini-player"
   /// row (build #15). In-memory; cleared when the app restarts.
@@ -205,13 +229,30 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
   StreamSubscription<void>? _fileLoadFailedSubscription;
   StreamSubscription<void>? _playbackRestartSubscription;
 
-  /// The player's log stream (build #17): ffmpeg logs the HTTP status
+  /// The log stream (build #17): ffmpeg logs the HTTP status
   /// one warn-level line ahead of the error (`http: HTTP error 404 Not
   /// Found`), and mpv collapses every status into the same "file failed
   /// to load" — the log is the only place the panel's answer survives.
   /// Same latch the full player screen keeps (`_onPlayerLog`).
   StreamSubscription<PlayerLog>? _logSubscription;
   Timer? _firstFrameWatchdog;
+
+  /// Open-stall deadline (1.6.25 Q-4): armed when a tune's open returns
+  /// with the player active, cancelled only by a REAL first frame (the
+  /// restart event or the latched frame state) — never by the watchdog
+  /// reveal, which fires with no frame at all.
+  Timer? _openDeadlineTimer;
+
+  /// Background-stop grace (1.6.25 F2): armed when the app is hidden
+  /// while a tune is active or tuning.
+  Timer? _backgroundStopTimer;
+
+  /// True while the app is backgrounded after a hidden event (1.6.25 F2).
+  bool _backgrounded = false;
+
+  /// Whether the player was playing when the app was hidden (1.6.25 F2),
+  /// so a resume inside the grace can pick it back up.
+  bool _wasPlayingBeforeBackground = false;
 
   /// First-frame state for the current tune (build #15).
   bool _restartObserved = false;
@@ -304,7 +345,11 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
   void _checkLatch() {
     final player = _player;
     if (player == null) return;
-    if (player.state.hasRenderedFrame) _reveal(LiveTvMiniPlayerReveal.latch);
+    if (player.state.hasRenderedFrame) {
+      // A real frame: the open-stall deadline is satisfied (1.6.25 Q-4).
+      _cancelOpenDeadline();
+      _reveal(LiveTvMiniPlayerReveal.latch);
+    }
   }
 
   /// Arm the watchdog: once the stream has played for the grace with no
@@ -333,6 +378,7 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
   void _resetFirstFrame() {
     _firstFrameWatchdog?.cancel();
     _firstFrameWatchdog = null;
+    _cancelOpenDeadline();
     _restartObserved = false;
     _revealMethod = LiveTvMiniPlayerReveal.none;
     _tuneStartedAt = DateTime.now();
@@ -345,12 +391,106 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
     hasFirstFrame.value = false;
   }
 
-  /// Called by the [Video] surface when the native rect is first sent
-  /// successfully (build #15). Feeds the diagnostic: a watchdog reveal
-  /// with no rect sent means the plane was never positioned. [rect] is
-  /// the exact "left,top,right,bottom@dpr" the native plane received
-  /// (build #17). Completes the tune's rect wait so the open can start
-  /// on the final surface.
+  /// Arm the open-stall deadline for the tune of [generation] (1.6.25
+  /// Q-4). Fires only while the same tune is still active with no real
+  /// first frame — a superseded tune, a failure, or a frame all cancel
+  /// it first. The watchdog reveal does NOT cancel it: the watchdog
+  /// fires with no frame, and a stalled tune must still fail.
+  void _armOpenDeadline(int generation) {
+    _openDeadlineTimer?.cancel();
+    _openDeadlineTimer = Timer(openDeadline, () {
+      _openDeadlineTimer = null;
+      if (_disposed || generation != _generation) return;
+      if (_status != LiveTvMiniPlayerStatus.active) return;
+      if (_restartObserved) return;
+      final player = _player;
+      if (player != null && player.state.hasRenderedFrame) return;
+      _fail('no first frame in ${openDeadline.inSeconds}s');
+    });
+  }
+
+  void _cancelOpenDeadline() {
+    _openDeadlineTimer?.cancel();
+    _openDeadlineTimer = null;
+  }
+
+  /// Arm the background-stop grace (1.6.25 F2). Fires only while the app
+  /// is still backgrounded and PiP is not active — entering PiP is a
+  /// backgrounding the user chose, and the stream must keep playing.
+  void _armBackgroundStopTimer() {
+    _backgroundStopTimer?.cancel();
+    _backgroundStopTimer = Timer(backgroundStopGrace, () {
+      _backgroundStopTimer = null;
+      if (_disposed || !_backgrounded) return;
+      if (PipService().isPipActive.value) return;
+      if (_status != LiveTvMiniPlayerStatus.active && _status != LiveTvMiniPlayerStatus.tuning) return;
+      unawaited(stopForBackground());
+    });
+  }
+
+  void _cancelBackgroundStopTimer() {
+    _backgroundStopTimer?.cancel();
+    _backgroundStopTimer = null;
+  }
+
+  Future<void> _pauseQuietly(Player player) async {
+    try {
+      await player.pause();
+    } catch (_) {
+      // A rejected pause surfaces on the playing stream, not here.
+    }
+  }
+
+  Future<void> _playQuietly(Player player) async {
+    try {
+      await player.play();
+    } catch (_) {
+      // A rejected play surfaces on the playing stream, not here.
+    }
+  }
+
+  /// App lifecycle (1.6.25 F2): the mini-player owns its own background
+  /// handling. Hidden pauses immediately and arms the grace stop;
+  /// resumed inside the grace resumes. PiP is exempt at both ends —
+  /// backgrounding BECAUSE the user entered the system pop-out window
+  /// must never pause or stop the stream.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.hidden:
+        _onAppHidden();
+      case AppLifecycleState.resumed:
+        _onAppResumed();
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        break;
+    }
+  }
+
+  void _onAppHidden() {
+    if (_disposed) return;
+    if (PipService().isPipActive.value) return;
+    if (_status != LiveTvMiniPlayerStatus.active && _status != LiveTvMiniPlayerStatus.tuning) return;
+    _backgrounded = true;
+    _wasPlayingBeforeBackground = _isPlaying;
+    final player = _player;
+    if (player != null) unawaited(_pauseQuietly(player));
+    _armBackgroundStopTimer();
+  }
+
+  void _onAppResumed() {
+    if (!_backgrounded) return;
+    _backgrounded = false;
+    _cancelBackgroundStopTimer();
+    final wasPlaying = _wasPlayingBeforeBackground;
+    _wasPlayingBeforeBackground = false;
+    if (!wasPlaying) return;
+    final player = _player;
+    if (player != null && _status == LiveTvMiniPlayerStatus.active) {
+      unawaited(_playQuietly(player));
+    }
+  }
   void noteVideoRectSent(String rect) {
     _videoRect = rect;
     _rectSentCompleter?.complete();
@@ -503,8 +643,14 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
       return;
     }
     if (generation != _generation) return;
+    if (_backgrounded) {
+      // 1.6.25 F2: the tune finished while the app was backgrounded —
+      // the open just started audio behind the user's back. Pause it
+      // now; the grace timer armed at hidden still stops it.
+      await _pauseQuietly(player);
+    }
     _status = LiveTvMiniPlayerStatus.active;
-    _isPlaying = true;
+    _isPlaying = !_backgrounded;
     // Build #28: the stream is playing — background panel work waits
     // until it stops (see [IptvPlaybackActivity]).
     IptvPlaybackActivity.instance.markPlaying();
@@ -513,6 +659,7 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
     // and the watchdog starts from here if it is not.
     _checkLatch();
     _armWatchdog();
+    _armOpenDeadline(generation);
     _recordDiagnostic();
     _notify();
   }
@@ -593,6 +740,25 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
     _notify();
   }
 
+  /// Stop for the app-background grace (1.6.25 F2): same shape as
+  /// [stopForFullscreen] — the player is released but the slot stays as
+  /// a stopped card for the same channel, so one tap resumes it when
+  /// the user comes back. Never [stop]: that clears the channel and
+  /// hides the slot, leaving no resume path.
+  Future<void> stopForBackground() async {
+    _generation++;
+    _cancelBackgroundStopTimer();
+    _backgrounded = false;
+    _wasPlayingBeforeBackground = false;
+    _status = LiveTvMiniPlayerStatus.stopped;
+    _isPlaying = false;
+    _isBuffering = false;
+    // Build #28: the stream stopped — background panel work may run again.
+    IptvPlaybackActivity.instance.markIdle();
+    await _releasePlayerAndSession();
+    _notify();
+  }
+
   Player _ensurePlayer() {
     final existing = _player;
     if (existing != null) return existing;
@@ -634,6 +800,8 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
     // Video-widget subscription mounted after open() returned and missed it.
     _playbackRestartSubscription = player.streams.playbackRestart.listen((_) {
       _restartObserved = true;
+      // A real first frame: the open-stall deadline is satisfied (Q-4).
+      _cancelOpenDeadline();
       _reveal(LiveTvMiniPlayerReveal.event);
     });
     return player;
@@ -737,6 +905,7 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
     // Record the tune as failed (reveal: none) before the player goes.
     _firstFrameWatchdog?.cancel();
     _firstFrameWatchdog = null;
+    _cancelOpenDeadline();
     _recordDiagnostic();
     // The failed card replaces the video: release the player so a stale
     // stream does not keep playing behind it.
@@ -774,6 +943,10 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
     _logSubscription = null;
     _firstFrameWatchdog?.cancel();
     _firstFrameWatchdog = null;
+    _cancelOpenDeadline();
+    _cancelBackgroundStopTimer();
+    _backgrounded = false;
+    _wasPlayingBeforeBackground = false;
     PlaybackCoordinator.instance.unregisterVideoSession(_coordinatorShutdown);
     try {
       await player.dispose();
@@ -786,8 +959,13 @@ class LiveTvMiniPlayerController extends ChangeNotifier {
   Future<void> dispose() async {
     _generation++;
     _disposed = true;
+    WidgetsBinding.instance.removeObserver(this);
     _firstFrameWatchdog?.cancel();
     _firstFrameWatchdog = null;
+    _cancelOpenDeadline();
+    _cancelBackgroundStopTimer();
+    _backgrounded = false;
+    _wasPlayingBeforeBackground = false;
     // Build #28: the stream stopped — background panel work may run again.
     IptvPlaybackActivity.instance.markIdle();
     await _releasePlayerAndSession();

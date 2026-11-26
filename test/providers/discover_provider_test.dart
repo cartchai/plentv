@@ -1627,7 +1627,7 @@ void main() {
       IptvCatalogDiskCache.debugDisableDisk = false;
     });
 
-    Future<IptvClient> _addIptvLibrary({required Map<String, IptvFavoriteItem> favourites}) async {
+    Future<IptvClient> addIptvLibrary({required Map<String, IptvFavoriteItem> favourites}) async {
       final repo = _InMemoryItemFavoritesRepository();
       await repo.write('iptv_fav_items:conn-xt-1', favourites);
       final client = _iptvClient(repo);
@@ -1646,7 +1646,7 @@ void main() {
     }
 
     test('favourites lead Home, ahead of the Plex hubs', () async {
-      await _addIptvLibrary(favourites: {
+      await addIptvLibrary(favourites: {
         'movie:1': const IptvFavoriteItem(
           id: 'movie:1',
           kind: 'movie',
@@ -1672,7 +1672,7 @@ void main() {
     });
 
     test('no favourites means no Favourites row on Home', () async {
-      await _addIptvLibrary(favourites: {});
+      await addIptvLibrary(favourites: {});
       aggregation.hubsResult = () => [_hub('plex-hub')];
 
       await provider.load();

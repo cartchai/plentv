@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:openwatchparty/openwatchparty.dart' as owp;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plezy/database/app_database.dart';
@@ -28,6 +29,7 @@ import 'package:plezy/services/download_storage_service.dart';
 import 'package:plezy/services/episode_navigation_service.dart';
 import 'package:plezy/services/offline_watch_sync_service.dart';
 import 'package:plezy/services/playback_initialization_types.dart';
+import 'package:plezy/services/pip_service.dart';
 import 'package:plezy/services/playback_coordinator.dart';
 import 'package:plezy/services/plex_client.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -400,8 +402,13 @@ void main() {
             expect(screen.key.currentState, isNull);
             expect(find.text('Browse'), findsOneWidget);
             expect(pending.isCompleted, isFalse);
-            expect(fakePlayer.pauseCalls, pauseCount + 1);
-            expect(fakePlayer.stopCalls, 0, reason: 'ordinary Back requests pause, not application shutdown stop');
+            // 1.6.25 F3: Back stops the stream explicitly instead of
+            // pausing — the old "ordinary Back requests pause" contract
+            // is gone. The 'pause'/'visibility' variants below still gate
+            // the operations the old path called; they are inert now, kept
+            // as regression guards that Back never pauses mid-cleanup.
+            expect(fakePlayer.pauseCalls, pauseCount, reason: 'Back stops, it no longer pauses');
+            expect(fakePlayer.stopCalls, 1, reason: '1.6.25 F3: Back stops the stream explicitly');
             expect(fakePlayer.disposalStarted, isTrue);
             expect(fakePlayer.disposalFinished, isFalse, reason: 'navigation is not a native release acknowledgement');
 
@@ -685,6 +692,7 @@ void main() {
     _ReloadClient? client,
     bool isOffline = false,
     bool serverOnline = true,
+    MediaBackend backend = MediaBackend.jellyfin,
   }) async {
     client ??= _ReloadClient();
     final multi = testMultiServer(clients: [client], offline: [if (!serverOnline) client]);
@@ -702,7 +710,7 @@ void main() {
       accountPreferences.dispose();
     });
     final key = GlobalKey<VideoPlayerScreenState>();
-    final item = testMediaItem(id: 'movie-prior', serverId: 'srv-1', backend: MediaBackend.jellyfin);
+    final item = testMediaItem(id: 'movie-prior', serverId: 'srv-1', backend: backend);
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -809,6 +817,90 @@ void main() {
 
           await tester.pump(const Duration(seconds: 1));
           expect(state.debugAutoPlayCountdownForTesting, countdownAtBackground - 1, reason: 'the countdown resumes');
+        },
+      );
+    });
+  });
+
+  group('handheld IPTV background suspend (1.6.25 Q-1)', () {
+    setUp(() async {
+      // The handheld chrome shows the clock + finish time, which need
+      // intl date data — the TV tests never build them.
+      await initializeDateFormatting('en');
+    });
+
+    testWidgets('a suspended IPTV VOD stops and restores at the same position', (tester) async {
+      await withMockPlayerChannels(
+        methodChannelName: 'com.plezy/mpv_player',
+        eventChannelName: 'com.plezy/mpv_player/events',
+        testBody: () async {
+          final screen = await pumpReloadScreen(tester, backend: MediaBackend.xtream);
+          final state = screen.key.currentState!;
+          final fakePlayer = screen.player;
+          await state.debugWirePlayerStreamsForTesting();
+          fakePlayer.emitPlaybackRestart();
+          await state.debugMarkPlaybackStartedForTesting();
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          await state.debugSuspendForTvBackgroundForTesting();
+          expect(fakePlayer.stopCalls, 1, reason: 'the suspend releases the IPTV stream');
+
+          final opensBefore = fakePlayer.openCalls;
+          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+          for (var i = 0; i < 400 && fakePlayer.openCalls == opensBefore; i++) {
+            await tester.pump(const Duration(milliseconds: 50));
+            if (fakePlayer.openCalls == opensBefore) {
+              await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 2)));
+            }
+          }
+          expect(fakePlayer.openCalls, opensBefore + 1, reason: 'the restore reopens the suspended IPTV item');
+        },
+      );
+    });
+
+    testWidgets('PiP active: backgrounding neither pauses nor stops the stream', (tester) async {
+      // Handheld, so the background path pauses instead of keeping the
+      // desktop covered-window behaviour. Reset inline at the end of the
+      // test: the framework checks foundation debug vars before tearDowns.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+
+      await withMockPlayerChannels(
+        methodChannelName: 'com.plezy/mpv_player',
+        eventChannelName: 'com.plezy/mpv_player/events',
+        testBody: () async {
+          final screen = await pumpReloadScreen(tester, backend: MediaBackend.xtream);
+          final state = screen.key.currentState!;
+          final fakePlayer = screen.player;
+          await state.debugWirePlayerStreamsForTesting();
+          fakePlayer.emitPlaybackRestart();
+          await state.debugMarkPlaybackStartedForTesting();
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          PipService().isPipActive.value = true;
+          addTearDown(() => PipService().isPipActive.value = false);
+          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+          await tester.pump();
+          expect(fakePlayer.commandLog, isNot(contains('pause')), reason: 'PiP active: the stream keeps playing');
+          expect(fakePlayer.stopCalls, 0);
+          expect(fakePlayer.setVisibleCalls, 0, reason: 'PiP active: the render layer is untouched');
+
+          // Exit PiP, background again: now the ordinary pause runs.
+          // (The OS drives hidden -> inactive -> resumed; the framework
+          // asserts on a direct hidden -> resumed jump.)
+          PipService().isPipActive.value = false;
+          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+          await tester.pump();
+          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+          await tester.pump();
+          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+          await tester.pump();
+          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+          await tester.pump();
+          expect(fakePlayer.commandLog, contains('pause'), reason: 'PiP gone: the background pause runs');
+          expect(fakePlayer.stopCalls, 0, reason: 'the grace has not expired yet');
+          debugDefaultTargetPlatformOverride = null;
         },
       );
     });
@@ -1222,6 +1314,14 @@ class _ReloadPlayer extends FakeSyncPlayer {
     stopCalls++;
     setPosition(Duration.zero);
     emitPlaying(false);
+  }
+
+  int setVisibleCalls = 0;
+
+  @override
+  Future<bool> setVisible(bool visible, {bool restoreOnWindowVisible = false}) async {
+    setVisibleCalls++;
+    return true;
   }
 
   @override

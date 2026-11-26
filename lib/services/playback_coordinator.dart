@@ -116,6 +116,74 @@ class PlaybackCoordinator {
     }
   }
 
+  /// The timeout timer for an outstanding [waitForVideoRetirements],
+  /// and the completer it resolves. Kept so the wait can be cancelled:
+  /// the timer is a real [Timer], and a widget test's fake-async zone
+  /// fails teardown with "a Timer is still pending" if the tree is
+  /// disposed while it is armed (proven by live_media_session_test:
+  /// a zap's wait was still outstanding at test end). Production never
+  /// notices; tests do.
+  Timer? _retirementWaitTimer;
+  Completer<void>? _retirementWaitCompleter;
+
+  /// A new player is about to open its first stream: wait for any retiring
+  /// video session to finish releasing (1.6.25 F1/Q-11). The old screen's
+  /// disposal destroys its native core behind a Watch Together settle (up
+  /// to ~2 s), and a new `loadfile` landing while that socket is still
+  /// dying reads as two streams on a one-connection panel (HTTP 458).
+  /// Bounded by [timeout] — a wedged teardown degrades to the old
+  /// behaviour (open anyway) rather than bricking playback, the same rule
+  /// as the LiveStreamReleaseGate's 1.5 s cap. A failed retirement also
+  /// never blocks the open: the wait is best-effort, the open is not.
+  ///
+  /// The bound is an explicit [Timer], not `Future.timeout`: the timer
+  /// must be cancellable (see [cancelPendingRetirementWaits]), and
+  /// `Future.timeout` hides its timer where nothing can reach it.
+  Future<void> waitForVideoRetirements({Duration timeout = const Duration(milliseconds: 1500)}) async {
+    if (_videoRetirements.isEmpty) return;
+    // A new wait supersedes an outstanding one: the older init attempt
+    // is stale by construction (its generation guard will stop it), so
+    // its timer must not outlive it.
+    cancelPendingRetirementWaits();
+    final completer = Completer<void>();
+    _retirementWaitCompleter = completer;
+    _retirementWaitTimer = Timer(timeout, () {
+      _retirementWaitTimer = null;
+      _retirementWaitCompleter = null;
+      appLogger.w(
+        'PlaybackCoordinator: video retirement wait timed out after ${timeout.inMilliseconds} ms — opening anyway',
+      );
+      if (!completer.isCompleted) completer.complete();
+    });
+    unawaited(_completeRetirementWait(completer));
+    await completer.future;
+  }
+
+  Future<void> _completeRetirementWait(Completer<void> completer) async {
+    try {
+      await Future.wait<void>([..._videoRetirements]);
+    } catch (e, st) {
+      appLogger.w('PlaybackCoordinator: video retirement wait failed', error: e, stackTrace: st);
+    }
+    _retirementWaitTimer?.cancel();
+    _retirementWaitTimer = null;
+    if (identical(_retirementWaitCompleter, completer)) _retirementWaitCompleter = null;
+    if (!completer.isCompleted) completer.complete();
+  }
+
+  /// Cancel a retirement wait still outstanding: the timeout timer is
+  /// cancelled and the waiter is released (it degrades to opening
+  /// anyway, and the caller's generation guard stops a disposed screen
+  /// from opening). Called from the player screen's dispose so no timer
+  /// survives the widget tree, and by a superseding wait.
+  void cancelPendingRetirementWaits() {
+    _retirementWaitTimer?.cancel();
+    _retirementWaitTimer = null;
+    final completer = _retirementWaitCompleter;
+    _retirementWaitCompleter = null;
+    if (completer != null && !completer.isCompleted) completer.complete();
+  }
+
   /// Music playback is about to construct its audio core. Nothing to do, and
   /// deliberately so rather than for lack of a mechanism.
   ///

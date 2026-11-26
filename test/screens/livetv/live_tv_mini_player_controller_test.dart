@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plezy/connection/connection.dart';
@@ -14,6 +15,7 @@ import 'package:plezy/screens/livetv/live_tv_mini_player.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/multi_server_manager.dart';
+import 'package:plezy/services/pip_service.dart';
 
 import '../../test_helpers/multi_server_fixtures.dart';
 import '../../test_helpers/prefs.dart';
@@ -65,7 +67,7 @@ final class _FakePlayer implements Player {
       audioDevice: const Stream<mpv_models.AudioDevice>.empty(),
       audioDevices: const Stream<List<mpv_models.AudioDevice>>.empty(),
       bufferRanges: const Stream<List<mpv_models.BufferRange>>.empty(),
-      playbackRestart: const Stream<void>.empty(),
+      playbackRestart: _playbackRestart.stream,
       fileLoadFailed: _fileLoadFailed.stream,
       backendSwitched: const Stream<void>.empty(),
     );
@@ -75,6 +77,11 @@ final class _FakePlayer implements Player {
   final _buffering = StreamController<bool>.broadcast();
   final _error = StreamController<mpv_models.PlayerError>.broadcast();
   final _fileLoadFailed = StreamController<void>.broadcast();
+  final _playbackRestart = StreamController<void>.broadcast();
+
+  /// 1.6.25 Q-4: the test drives a first frame through this, the way the
+  /// widget tests do with their own fake.
+  void emitPlaybackRestart() => _playbackRestart.add(null);
 
   @override
   late final PlayerStreams streams;
@@ -150,6 +157,7 @@ final class _FakePlayer implements Player {
     await _buffering.close();
     await _error.close();
     await _fileLoadFailed.close();
+    await _playbackRestart.close();
   }
 
   @override
@@ -282,5 +290,116 @@ void main() {
     await controller.toggleMute();
     expect(controller.isMuted, isFalse);
     expect(players.single.volumes, [0, 100]);
+  });
+
+  group('background lifecycle (1.6.25 F2)', () {
+    LiveTvMiniPlayerController shortGraceController() {
+      final c = LiveTvMiniPlayerController(
+        playerFactory: () {
+          final player = _FakePlayer();
+          players.add(player);
+          return player;
+        },
+        backgroundStopGrace: const Duration(milliseconds: 150),
+      );
+      addTearDown(() => c.dispose());
+      return c;
+    }
+
+    void hideApp() => TestWidgetsFlutterBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    void resumeApp() => TestWidgetsFlutterBinding.instance.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    test('hidden pauses the player and the grace stop leaves the stopped card', () async {
+      final c = shortGraceController();
+      await c.tune(channel: channels.firstWhere((c) => c.key == '100'), multiServer: provider);
+      expect(c.status, LiveTvMiniPlayerStatus.active);
+
+      hideApp();
+      expect(players.single.pauseCount, 1, reason: 'hidden pauses the mini-player immediately');
+      expect(c.status, LiveTvMiniPlayerStatus.active, reason: 'the grace has not expired yet');
+
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(c.status, LiveTvMiniPlayerStatus.stopped, reason: 'the grace stop keeps the stopped card as the resume path');
+      expect(c.channel?.displayName, 'Trex News');
+      expect(players.single.disposeCount, 1, reason: 'the player is released, so the stream closes');
+    });
+
+    test('resume inside the grace resumes playback and cancels the stop', () async {
+      final c = shortGraceController();
+      await c.tune(channel: channels.firstWhere((c) => c.key == '100'), multiServer: provider);
+
+      hideApp();
+      expect(players.single.pauseCount, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      resumeApp();
+      expect(players.single.playCount, 1, reason: 'resuming inside the grace resumes the paused stream');
+      expect(c.status, LiveTvMiniPlayerStatus.active);
+
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(c.status, LiveTvMiniPlayerStatus.active, reason: 'the grace was cancelled on resume');
+      expect(players.single.disposeCount, 0);
+    });
+
+    test('PiP active: hidden neither pauses nor stops the stream', () async {
+      PipService().isPipActive.value = true;
+      addTearDown(() => PipService().isPipActive.value = false);
+      final c = shortGraceController();
+      await c.tune(channel: channels.firstWhere((c) => c.key == '100'), multiServer: provider);
+
+      hideApp();
+      expect(players.single.pauseCount, 0, reason: 'PiP active: the stream keeps playing');
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(c.status, LiveTvMiniPlayerStatus.active);
+      expect(players.single.disposeCount, 0);
+    });
+
+    test('a tune completing while backgrounded starts paused', () async {
+      final tuneFuture = controller.tune(
+        channel: channels.firstWhere((c) => c.key == '100'),
+        multiServer: provider,
+      );
+      hideApp();
+      await tuneFuture;
+
+      expect(controller.status, LiveTvMiniPlayerStatus.active);
+      expect(controller.isPlaying, isFalse, reason: 'no audio behind the user\'s back');
+      expect(players.single.pauseCount, greaterThanOrEqualTo(1));
+    });
+  });
+
+  group('open stall deadline (1.6.25 Q-4)', () {
+    LiveTvMiniPlayerController stalledController() {
+      final c = LiveTvMiniPlayerController(
+        playerFactory: () {
+          final player = _FakePlayer();
+          players.add(player);
+          return player;
+        },
+        openDeadline: const Duration(milliseconds: 150),
+        // Keep the 5 s watchdog out of the way: it reveals the surface
+        // without a frame, and must never cancel the deadline.
+        firstFrameWatchdogGrace: const Duration(seconds: 30),
+      );
+      addTearDown(() => c.dispose());
+      return c;
+    }
+
+    test('a tune with no first frame fails within the deadline', () async {
+      final c = stalledController();
+      await c.tune(channel: channels.firstWhere((c) => c.key == '100'), multiServer: provider);
+      expect(c.status, LiveTvMiniPlayerStatus.active);
+
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(c.status, LiveTvMiniPlayerStatus.failed, reason: 'open returned, no frame, no error — the stall must surface');
+    });
+
+    test('a first frame before the deadline keeps the tune active', () async {
+      final c = stalledController();
+      await c.tune(channel: channels.firstWhere((c) => c.key == '100'), multiServer: provider);
+      players.single.emitPlaybackRestart();
+
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(c.status, LiveTvMiniPlayerStatus.active);
+    });
   });
 }

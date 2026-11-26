@@ -1983,6 +1983,13 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
       await PlaybackCoordinator.instance.claimVideo();
       if (!mounted || generation != _playerInitializationGeneration) return;
 
+      // 1.6.25 F1/Q-11: the previous player's stream may still be dying
+      // (its disposal trails the route pop by up to ~2 s) — wait, bounded,
+      // for its retirement before this player's first open, or the panel
+      // sees two streams on a one-connection line (HTTP 458).
+      await PlaybackCoordinator.instance.waitForVideoRetirements();
+      if (!mounted || generation != _playerInitializationGeneration) return;
+
       initPhase = 'creating player';
       final currentPlayer = Player(
         useExoPlayer: useExoPlayer,
@@ -2573,6 +2580,12 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
 
   @override
   void dispose() {
+    // 1.6.25 F1: release a retirement wait still outstanding — its
+    // timeout timer is real, and the test binding fails teardown with
+    // "a Timer is still pending" if it survives the tree. The waiter
+    // degrades to opening anyway, and the generation bump below stops
+    // this disposed screen from opening.
+    PlaybackCoordinator.instance.cancelPendingRetirementWaits();
     // 1.2.18 C-10 (extended 1.2.22 §63.3 to VOD): the live channel — or
     // VOD item — key dies with this screen, so a later rejection can
     // never be attributed to a stale key. Unconditional: the VOD open
@@ -3162,7 +3175,13 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
         await Future.wait<void>([
           stoppedReport,
           if (currentPlayer != null)
-            pauseForRouteExit ? _pauseAndHidePlayerForRouteExit(currentPlayer) : currentPlayer.stop(),
+            // 1.6.25 F3: a real close stops the player at the press, so the
+            // stream's socket closes now instead of dying up to ~2 s later
+            // at dispose(). PiP is the exception: a player entering the
+            // system pop-out must keep playing, so it still only pauses.
+            pauseForRouteExit && _shouldSkipForPip
+                ? _pauseAndHidePlayerForRouteExit(currentPlayer)
+                : currentPlayer.stop(),
           ...cancellations,
         ]);
         completer.complete();
