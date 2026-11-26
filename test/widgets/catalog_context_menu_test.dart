@@ -7,6 +7,7 @@ import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/media_kind.dart';
 import 'package:plezy/models/catalog/catalog_item.dart';
 import 'package:plezy/models/catalog/catalog_metadata.dart';
+import 'package:plezy/navigation/main_screen_scope.dart';
 import 'package:plezy/theme/mono_theme.dart';
 import 'package:plezy/utils/external_url.dart';
 import 'package:plezy/widgets/catalog_context_menu.dart';
@@ -20,16 +21,25 @@ const _item = CatalogItem(
   links: [CatalogLink(label: 'StreamCo', url: 'https://example.com/watch', isStreaming: true)],
 );
 
-Future<void> _openMenu(WidgetTester tester) async {
+Future<void> _openMenu(
+  WidgetTester tester, {
+  CatalogItem item = _item,
+  void Function(String query)? onSearch,
+}) async {
   await tester.pumpWidget(
     TranslationProvider(
       child: MaterialApp(
         theme: monoTheme(MonoPalette.dark),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () => unawaited(showCatalogItemMenu(context, _item, position: const Offset(10, 10))),
-              child: const Text('Open menu'),
+        home: MainScreenFocusScope(
+          focusSidebar: () {},
+          sideNavigationWidth: 0,
+          searchForQuery: onSearch,
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => unawaited(showCatalogItemMenu(context, item, position: const Offset(10, 10))),
+                child: const Text('Open menu'),
+              ),
             ),
           ),
         ),
@@ -54,6 +64,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(t.explore.detail.linkUnavailable), findsOneWidget);
+  });
+
+  group('Search this title (1.6.25)', () {
+    testWidgets('sits second after View details and calls the seam with the title verbatim', (tester) async {
+      final received = <String>[];
+      await _openMenu(tester, onSearch: received.add);
+
+      expect(find.text(t.explore.searchThisTitle), findsOneWidget);
+      // Placement: directly after "View details", before the trailer.
+      final viewDetailsTop = tester.getCenter(find.text(t.mediaMenu.viewDetails)).dy;
+      final searchTop = tester.getCenter(find.text(t.explore.searchThisTitle)).dy;
+      final trailerTop = tester.getCenter(find.text(t.explore.detail.watchTrailer)).dy;
+      expect(viewDetailsTop, lessThan(searchTop));
+      expect(searchTop, lessThan(trailerTop));
+
+      await tester.tap(find.text(t.explore.searchThisTitle));
+      await tester.pumpAndSettle();
+      expect(received, ['Menu Movie']);
+    });
+
+    testWidgets('a blank title shows no Search this title entry', (tester) async {
+      const blankItem = CatalogItem(
+        source: CatalogSourceId.mdblist,
+        kind: MediaKind.movie,
+        title: '   ',
+        ids: CatalogItemIds(tmdb: 61),
+      );
+      await _openMenu(tester, item: blankItem);
+
+      expect(find.text(t.explore.searchThisTitle), findsNothing);
+    });
   });
 
   group('tvOS runner', () {

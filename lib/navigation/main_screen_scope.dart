@@ -35,6 +35,13 @@ class MainScreenFocusScope extends InheritedModel<MainScreenScopeAspect> {
   /// phone bar menu calls MainScreen's own tab selection directly).
   final void Function(NavigationTabId)? selectTab;
 
+  /// Searches for a title (1.6.25): the Explore long-press menu's
+  /// "Search this title" entry. Opens the Search tab and runs the
+  /// existing search for the query — the same path the companion
+  /// remote's search action uses. Null when the menu is pumped without
+  /// a MainScreen.
+  final void Function(String query)? searchForQuery;
+
   const MainScreenFocusScope({
     super.key,
     required this.focusSidebar,
@@ -46,6 +53,7 @@ class MainScreenFocusScope extends InheritedModel<MainScreenScopeAspect> {
     this.selectLibrary,
     this.openSettings,
     this.selectTab,
+    this.searchForQuery,
     required super.child,
   });
 

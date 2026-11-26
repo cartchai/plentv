@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../i18n/strings.g.dart';
 import '../models/catalog/catalog_item.dart';
+import '../navigation/main_screen_scope.dart';
 import '../providers/catalog_sources_provider.dart';
 import '../services/catalog/library_watchlist_candidates.dart';
 import '../utils/catalog_navigation_helper.dart';
@@ -15,7 +16,7 @@ import '../utils/snackbar_helper.dart';
 import '../utils/trailer_urls.dart';
 import 'app_menu.dart';
 
-enum _CatalogMenuActionType { viewDetails, toggleWatchlist, openTrailer, openLink }
+enum _CatalogMenuActionType { viewDetails, searchTitle, toggleWatchlist, openTrailer, openLink }
 
 class _CatalogMenuAction {
   final _CatalogMenuActionType type;
@@ -24,6 +25,7 @@ class _CatalogMenuAction {
   const _CatalogMenuAction(this.type, {this.uri});
 
   static const viewDetails = _CatalogMenuAction(_CatalogMenuActionType.viewDetails);
+  static const searchTitle = _CatalogMenuAction(_CatalogMenuActionType.searchTitle);
   static const toggleWatchlist = _CatalogMenuAction(_CatalogMenuActionType.toggleWatchlist);
 }
 
@@ -57,6 +59,15 @@ Future<void> showCatalogItemMenu(BuildContext context, CatalogItem item, {Offset
     focusFirstItem: position == null,
     entries: [
       AppMenuItem(value: _CatalogMenuAction.viewDetails, label: t.mediaMenu.viewDetails, icon: Symbols.info_rounded),
+      // 1.6.25: search this title — opens the Search tab and runs the
+      // existing search for the display title, verbatim. Hidden on a
+      // blank title (impossible by construction; defensive only).
+      if (item.title.trim().isNotEmpty)
+        AppMenuItem(
+          value: _CatalogMenuAction.searchTitle,
+          label: t.explore.searchThisTitle,
+          icon: Symbols.search_rounded,
+        ),
       if (trailerUri != null)
         AppMenuItem(
           value: _CatalogMenuAction(_CatalogMenuActionType.openTrailer, uri: trailerUri),
@@ -85,6 +96,10 @@ Future<void> showCatalogItemMenu(BuildContext context, CatalogItem item, {Offset
   switch (action.type) {
     case _CatalogMenuActionType.viewDetails:
       await navigateToCatalogItem(context, item);
+    case _CatalogMenuActionType.searchTitle:
+      // The scope is null when the menu is pumped without a MainScreen
+      // (e.g. in widget tests) — then there is no Search tab to open.
+      MainScreenFocusScope.of(context, listen: false)?.searchForQuery?.call(item.title);
     case _CatalogMenuActionType.toggleWatchlist:
       // Re-read membership: it can have changed while the menu was open
       // (snapshot load, another surface's toggle).

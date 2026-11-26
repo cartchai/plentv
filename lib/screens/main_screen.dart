@@ -1189,18 +1189,25 @@ class _MainScreenState extends State<MainScreen>
         if (mounted) _sideNavKey.currentState?.focusHomeItem();
       });
     };
-    receiver.onSearchAction = (query) {
-      final trimmed = query?.trim() ?? '';
-      final hasQuery = trimmed.isNotEmpty;
-      // With a query, don't focus the input (which would auto-open the TV
-      // keyboard); submitSearchQuery runs the search and focuses results.
-      _selectTab(NavigationTabId.search, focusSearchInput: !hasQuery);
-      if (hasQuery) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _onScreen<SearchInputFocusable>(NavigationTabId.search, (screen) => screen.submitSearchQuery(trimmed));
-        });
-      }
-    };
+    receiver.onSearchAction = (query) => _searchForQuery(query);
+  }
+
+  /// Open the Search tab and run the existing search for [query] (1.6.25).
+  /// Shared by the companion remote's search action and the Explore
+  /// long-press menu's "Search this title" entry (via the scope callback)
+  /// so the two callers cannot drift. Do NOT route the menu through the
+  /// receiver: the guide search sheet temporarily overrides it.
+  void _searchForQuery(String? query) {
+    final trimmed = query?.trim() ?? '';
+    final hasQuery = trimmed.isNotEmpty;
+    // With a query, don't focus the input (which would auto-open the TV
+    // keyboard); submitSearchQuery runs the search and focuses results.
+    _selectTab(NavigationTabId.search, focusSearchInput: !hasQuery);
+    if (hasQuery) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _onScreen<SearchInputFocusable>(NavigationTabId.search, (screen) => screen.submitSearchQuery(trimmed));
+      });
+    }
   }
 
   Future<void> _autoStartCompanionRemoteServer() async {
@@ -2334,6 +2341,7 @@ class _MainScreenState extends State<MainScreen>
                     selectLibrary: _selectLibrary,
                     openSettings: _openSettings,
                     selectTab: _selectTab,
+                    searchForQuery: _searchForQuery,
                     child: SideNavigationScope(
                       child: Stack(
                         clipBehavior: Clip.hardEdge,
