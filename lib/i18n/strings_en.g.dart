@@ -58,6 +58,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$tooltips$en tooltips = Translations$tooltips$en.internal(_root);
 	late final Translations$audioTracks$en audioTracks = Translations$audioTracks$en.internal(_root);
 	late final Translations$videoControls$en videoControls = Translations$videoControls$en.internal(_root);
+	late final Translations$stereo3d$en stereo3d = Translations$stereo3d$en.internal(_root);
 	late final Translations$messages$en messages = Translations$messages$en.internal(_root);
 	late final Translations$subtitlingStyling$en subtitlingStyling = Translations$subtitlingStyling$en.internal(_root);
 	late final Translations$mpvConfig$en mpvConfig = Translations$mpvConfig$en.internal(_root);
@@ -1594,6 +1595,12 @@ class Translations$settings$en {
 	/// en: 'Fade the performance overlay with the playback controls'
 	String get autoHidePerformanceOverlayDescription => 'Fade the performance overlay with the playback controls';
 
+	/// en: 'Always show the 3D button'
+	String get show3dButtonDebug => 'Always show the 3D button';
+
+	/// en: 'Show the 3D button on every video, on any device, even when no 3D file was detected. A debug switch — it does not turn on 3D by itself.'
+	String get show3dButtonDebugDescription => 'Show the 3D button on every video, on any device, even when no 3D file was detected. A debug switch — it does not turn on 3D by itself.';
+
 	/// en: 'Show Navigation Bar Labels'
 	String get showNavBarLabels => 'Show Navigation Bar Labels';
 
@@ -2789,6 +2796,186 @@ class Translations$videoControls$en {
 
 	/// en: 'The subtitle didn't appear in time. The download may have failed'
 	String get subtitleDownloadTimedOut => 'The subtitle didn\'t appear in time. The download may have failed';
+}
+
+// Path: stereo3d
+class Translations$stereo3d$en {
+	Translations$stereo3d$en.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: '3D'
+	String get title => '3D';
+
+	/// en: '3D'
+	String get button => '3D';
+
+	/// en: '3D settings'
+	String get buttonTooltip => '3D settings';
+
+	/// en: 'Layout'
+	String get layout => 'Layout';
+
+	/// en: '2D'
+	String get layout2d => '2D';
+
+	/// en: 'Side by side'
+	String get layoutSbs => 'Side by side';
+
+	/// en: 'Over-under'
+	String get layoutOu => 'Over-under';
+
+	/// en: 'Auto (detect)'
+	String get layoutAuto => 'Auto (detect)';
+
+	/// en: 'Packing'
+	String get packing => 'Packing';
+
+	/// en: 'Half'
+	String get packingHalf => 'Half';
+
+	/// en: 'Full'
+	String get packingFull => 'Full';
+
+	/// en: 'Swap eyes'
+	String get swapEyes => 'Swap eyes';
+
+	/// en: 'Fix depth that looks inside-out — near things far away.'
+	String get swapEyesDescription => 'Fix depth that looks inside-out — near things far away.';
+
+	/// en: 'Watch in 2D (left eye)'
+	String get watchIn2d => 'Watch in 2D (left eye)';
+
+	/// en: 'Play just the left eye's picture, at the right shape.'
+	String get watchIn2dDescription => 'Play just the left eye\'s picture, at the right shape.';
+
+	/// en: 'Watch in VR'
+	String get watchInVr => 'Watch in VR';
+
+	/// en: 'Screen size'
+	String get screenSize => 'Screen size';
+
+	/// en: 'Screen distance'
+	String get screenDistance => 'Screen distance';
+
+	/// en: 'Screen curvature'
+	String get screenCurvature => 'Screen curvature';
+
+	/// en: '3D depth'
+	String get depth => '3D depth';
+
+	/// en: 'Recenter screen'
+	String get recenter => 'Recenter screen';
+
+	/// en: 'Room brightness'
+	String get passthroughBrightness => 'Room brightness';
+
+	/// en: 'How bright the real room looks through the headset.'
+	String get passthroughBrightnessDescription => 'How bright the real room looks through the headset.';
+
+	/// en: 'Remember for this title'
+	String get rememberForTitle => 'Remember for this title';
+
+	/// en: 'Subtitle depth'
+	String get subtitleDepth => 'Subtitle depth';
+
+	/// en: 'Below screen'
+	String get subtitleDepthBelow => 'Below screen';
+
+	/// en: 'On screen'
+	String get subtitleDepthOnScreen => 'On screen';
+
+	/// en: 'Follow view'
+	String get subtitleDepthFollow => 'Follow view';
+
+	/// en: 'Screen lock'
+	String get screenLock => 'Screen lock';
+
+	/// en: 'Fixed in the room'
+	String get screenLockWorld => 'Fixed in the room';
+
+	/// en: 'Follows your head'
+	String get screenLockHead => 'Follows your head';
+
+	/// en: 'Screen preset'
+	String get screenPreset => 'Screen preset';
+
+	/// en: 'TV'
+	String get screenPresetTv => 'TV';
+
+	/// en: 'Cinema'
+	String get screenPresetCinema => 'Cinema';
+
+	/// en: 'Custom'
+	String get screenPresetCustom => 'Custom';
+
+	/// en: 'Refresh rate'
+	String get refreshRate => 'Refresh rate';
+
+	/// en: 'Foveated rendering'
+	String get foveatedRendering => 'Foveated rendering';
+
+	/// en: 'Render the edges of your view at lower resolution to save battery and heat. Turn it off if the edges look blurry.'
+	String get foveatedRenderingDescription => 'Render the edges of your view at lower resolution to save battery and heat. Turn it off if the edges look blurry.';
+
+	/// en: 'Dynamic resolution'
+	String get dynamicResolution => 'Dynamic resolution';
+
+	/// en: 'Lower the render resolution briefly to hold the frame rate.'
+	String get dynamicResolutionDescription => 'Lower the render resolution briefly to hold the frame rate.';
+
+	/// en: 'Spatial audio'
+	String get spatialAudio => 'Spatial audio';
+
+	/// en: 'Sound comes from where the screen is.'
+	String get spatialAudioDescription => 'Sound comes from where the screen is.';
+
+	/// en: 'Hand tracking'
+	String get handTracking => 'Hand tracking';
+
+	/// en: 'Pinch to play or pause, grab the screen to move it.'
+	String get handTrackingDescription => 'Pinch to play or pause, grab the screen to move it.';
+
+	/// en: 'Controls over the movie'
+	String get cooperativeOverlay => 'Controls over the movie';
+
+	/// en: 'Show the controls panel floating over the VR scene instead of leaving VR to change a setting.'
+	String get cooperativeOverlayDescription => 'Show the controls panel floating over the VR scene instead of leaving VR to change a setting.';
+
+	/// en: 'Dim the room while playing'
+	String get autoDim => 'Dim the room while playing';
+
+	/// en: 'The room darkens while a movie plays so the screen pops; it brightens when the controls open.'
+	String get autoDimDescription => 'The room darkens while a movie plays so the screen pops; it brightens when the controls open.';
+
+	/// en: 'Playback speed'
+	String get playbackSpeed => 'Playback speed';
+
+	/// en: 'Chapters'
+	String get chapters => 'Chapters';
+
+	/// en: 'Sleep timer'
+	String get sleepTimer => 'Sleep timer';
+
+	/// en: 'Needs a headset — these settings only work on a Quest.'
+	String get needsHeadset => 'Needs a headset — these settings only work on a Quest.';
+
+	/// en: 'External subtitles'
+	String get externalSubtitles => 'External subtitles';
+
+	/// en: 'Load a subtitle file (SRT or ASS) for this video.'
+	String get externalSubtitlesDescription => 'Load a subtitle file (SRT or ASS) for this video.';
+
+	/// en: 'Couldn't start the VR player. Make sure you're on a Quest headset.'
+	String get vrUnavailable => 'Couldn\'t start the VR player. Make sure you\'re on a Quest headset.';
+
+	/// en: 'View recentred'
+	String get recentered => 'View recentred';
+
+	/// en: 'Not watching in VR right now'
+	String get notInVr => 'Not watching in VR right now';
 }
 
 // Path: messages
@@ -4013,6 +4200,9 @@ class Translations$about$en {
 	];
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+	];
+	List<String> get changelog2347 => [
+		'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
 	];
 	List<String> get changelog2345 => [
 		'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
@@ -10795,6 +10985,8 @@ extension on Translations {
 			'settings.exitFullscreenOnPlayerCloseDescription' => 'Automatically exit fullscreen when closing the video player',
 			'settings.autoHidePerformanceOverlay' => 'Auto-Hide Performance Overlay',
 			'settings.autoHidePerformanceOverlayDescription' => 'Fade the performance overlay with the playback controls',
+			'settings.show3dButtonDebug' => 'Always show the 3D button',
+			'settings.show3dButtonDebugDescription' => 'Show the 3D button on every video, on any device, even when no 3D file was detected. A debug switch — it does not turn on 3D by itself.',
 			'settings.showNavBarLabels' => 'Show Navigation Bar Labels',
 			'settings.showNavBarLabelsDescription' => 'Display text labels under navigation bar icons',
 			'settings.startupSection' => 'Startup Section',
@@ -11201,6 +11393,63 @@ extension on Translations {
 			'videoControls.tapToUnlock' => 'Tap to unlock',
 			'videoControls.tapAgainToUnlock' => 'Tap again to unlock',
 			'videoControls.subtitleDownloadTimedOut' => 'The subtitle didn\'t appear in time. The download may have failed',
+			'stereo3d.title' => '3D',
+			'stereo3d.button' => '3D',
+			'stereo3d.buttonTooltip' => '3D settings',
+			'stereo3d.layout' => 'Layout',
+			'stereo3d.layout2d' => '2D',
+			'stereo3d.layoutSbs' => 'Side by side',
+			'stereo3d.layoutOu' => 'Over-under',
+			'stereo3d.layoutAuto' => 'Auto (detect)',
+			'stereo3d.packing' => 'Packing',
+			'stereo3d.packingHalf' => 'Half',
+			'stereo3d.packingFull' => 'Full',
+			'stereo3d.swapEyes' => 'Swap eyes',
+			'stereo3d.swapEyesDescription' => 'Fix depth that looks inside-out — near things far away.',
+			'stereo3d.watchIn2d' => 'Watch in 2D (left eye)',
+			'stereo3d.watchIn2dDescription' => 'Play just the left eye\'s picture, at the right shape.',
+			'stereo3d.watchInVr' => 'Watch in VR',
+			'stereo3d.screenSize' => 'Screen size',
+			'stereo3d.screenDistance' => 'Screen distance',
+			'stereo3d.screenCurvature' => 'Screen curvature',
+			'stereo3d.depth' => '3D depth',
+			'stereo3d.recenter' => 'Recenter screen',
+			'stereo3d.passthroughBrightness' => 'Room brightness',
+			'stereo3d.passthroughBrightnessDescription' => 'How bright the real room looks through the headset.',
+			'stereo3d.rememberForTitle' => 'Remember for this title',
+			'stereo3d.subtitleDepth' => 'Subtitle depth',
+			'stereo3d.subtitleDepthBelow' => 'Below screen',
+			'stereo3d.subtitleDepthOnScreen' => 'On screen',
+			'stereo3d.subtitleDepthFollow' => 'Follow view',
+			'stereo3d.screenLock' => 'Screen lock',
+			'stereo3d.screenLockWorld' => 'Fixed in the room',
+			'stereo3d.screenLockHead' => 'Follows your head',
+			'stereo3d.screenPreset' => 'Screen preset',
+			'stereo3d.screenPresetTv' => 'TV',
+			'stereo3d.screenPresetCinema' => 'Cinema',
+			'stereo3d.screenPresetCustom' => 'Custom',
+			'stereo3d.refreshRate' => 'Refresh rate',
+			'stereo3d.foveatedRendering' => 'Foveated rendering',
+			'stereo3d.foveatedRenderingDescription' => 'Render the edges of your view at lower resolution to save battery and heat. Turn it off if the edges look blurry.',
+			'stereo3d.dynamicResolution' => 'Dynamic resolution',
+			'stereo3d.dynamicResolutionDescription' => 'Lower the render resolution briefly to hold the frame rate.',
+			'stereo3d.spatialAudio' => 'Spatial audio',
+			'stereo3d.spatialAudioDescription' => 'Sound comes from where the screen is.',
+			'stereo3d.handTracking' => 'Hand tracking',
+			'stereo3d.handTrackingDescription' => 'Pinch to play or pause, grab the screen to move it.',
+			'stereo3d.cooperativeOverlay' => 'Controls over the movie',
+			'stereo3d.cooperativeOverlayDescription' => 'Show the controls panel floating over the VR scene instead of leaving VR to change a setting.',
+			'stereo3d.autoDim' => 'Dim the room while playing',
+			'stereo3d.autoDimDescription' => 'The room darkens while a movie plays so the screen pops; it brightens when the controls open.',
+			'stereo3d.playbackSpeed' => 'Playback speed',
+			'stereo3d.chapters' => 'Chapters',
+			'stereo3d.sleepTimer' => 'Sleep timer',
+			'stereo3d.needsHeadset' => 'Needs a headset — these settings only work on a Quest.',
+			'stereo3d.externalSubtitles' => 'External subtitles',
+			'stereo3d.externalSubtitlesDescription' => 'Load a subtitle file (SRT or ASS) for this video.',
+			'stereo3d.vrUnavailable' => 'Couldn\'t start the VR player. Make sure you\'re on a Quest headset.',
+			'stereo3d.recentered' => 'View recentred',
+			'stereo3d.notInVr' => 'Not watching in VR right now',
 			'messages.markedAsWatched' => 'Marked as watched',
 			'messages.markedAsUnwatched' => 'Marked as unwatched',
 			'messages.markedAsWatchedOffline' => 'Marked as watched (will sync when online)',
@@ -11239,6 +11488,8 @@ extension on Translations {
 			'messages.metadataRefreshStarted' => ({required Object title}) => 'Metadata refresh started for "${title}"',
 			'messages.metadataRefreshFailed' => ({required Object error}) => 'Failed to refresh metadata: ${error}',
 			'messages.logoutConfirm' => 'Are you sure you want to log out? This deletes everything in the app: every connection (including IPTV), every profile, and all settings. To sign out of just one Plex account, use the Sign out entry for that account in this menu instead.',
+			_ => null,
+		} ?? switch (path) {
 			'messages.noSeasonsFound' => 'No seasons found',
 			'messages.seasonsLoadFailed' => 'Couldn\'t load seasons',
 			'messages.noEpisodesFound' => 'No episodes found in first season',
@@ -11298,8 +11549,6 @@ extension on Translations {
 			'subtitlingStyling.bold' => 'Bold',
 			'subtitlingStyling.italic' => 'Italic',
 			'subtitlingStyling.renderResolution' => 'Render Resolution',
-			_ => null,
-		} ?? switch (path) {
 			'subtitlingStyling.renderResolutionScreen' => 'Screen resolution',
 			'subtitlingStyling.renderResolutionVideo' => 'Video resolution',
 			'mpvConfig.title' => 'mpv.conf',
@@ -11725,6 +11974,7 @@ extension on Translations {
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			'about.changelog2347.0' => 'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
 			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
@@ -11752,6 +12002,8 @@ extension on Translations {
 			'about.changelog2331.2' => 'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
 			'about.changelog2331.3' => 'Fixed: opening Movies or TV shows with no saved catalogue no longer fires a burst of requests at once — the load is paced, and it stops if the provider refuses',
 			'about.changelog2331.4' => 'Fixed: a background catalogue sync that gets refused is never retried',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2330.0' => 'New: the catalog refresh keeps going when you lock the phone or switch to another app, and no longer says “failed” just because the screen went off — come back to a loaded catalog',
 			'about.changelog2330.1' => 'Fixed: the catalog refresh now shows how much has downloaded while it runs, and each section (live, then movies, then series) appears as soon as it lands',
 			'about.changelog2330.2' => 'Fixed: a movie page opens right away and fills in its details as they arrive, instead of making you wait for them first',
@@ -11812,8 +12064,6 @@ extension on Translations {
 			'about.changelog2319.2' => 'New: when the guide can\'t reach the panel it now shows the last guide it downloaded, with the date it was last updated, instead of empty rows',
 			'about.changelog2319.3' => 'New: the access-denied banner now has a button that opens Connection refusals, so you can see exactly what the panel said',
 			'about.changelog2319.4' => 'Fixed: the Retry buttons on a refused connection no longer re-fire the same refused request — they say the connection is refused instead',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2319.5' => 'New: the debug log now records whether the phone reaches the panel over IPv4 or IPv6, so the next export can tell them apart',
 			'about.changelog2319.6' => 'Fixed: the video player now sends the same name as the rest of the app on every request, instead of sometimes sending its own',
 			'about.changelog2318.0' => 'Fixed: once the guide guesses which local station fills a bare channel row, the app now remembers that pick instead of guessing again every time you open the guide — the same rows show the same programmes on every load. Assign still overrides it by hand',
@@ -12266,6 +12516,8 @@ extension on Translations {
 			'explore.detail.originalTitle' => 'Original title',
 			'explore.detail.alsoKnownAs' => 'Also known as',
 			'explore.detail.studios' => 'Studios',
+			_ => null,
+		} ?? switch (path) {
 			'explore.detail.country' => 'Country',
 			'explore.detail.language' => 'Language',
 			'explore.detail.released' => 'Released',
@@ -12326,8 +12578,6 @@ extension on Translations {
 			'liveTv.searchGuide' => 'Search Guide',
 			'liveTv.searchHint' => 'Search channels & programs',
 			'liveTv.searchNoResults' => ({required Object query}) => 'No matches for "${query}"',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.searchJumpNotFound' => 'That channel isn\'t in the guide any more — try refreshing it.',
 			'liveTv.channelsSection' => 'Channels',
 			'liveTv.programsSection' => 'Programs',
@@ -12780,6 +13030,8 @@ extension on Translations {
 			'shaders.qualityHQ' => 'High Quality',
 			'shaders.mode' => 'Mode',
 			'shaders.importShader' => 'Import Shader',
+			_ => null,
+		} ?? switch (path) {
 			'shaders.customShaderDescription' => 'Custom GLSL shader',
 			'shaders.shaderImported' => 'Shader imported',
 			'shaders.shaderImportFailed' => 'Failed to import shader',
@@ -12840,8 +13092,6 @@ extension on Translations {
 			'companionRemote.remote.volumeUp' => 'Up',
 			'companionRemote.remote.fullscreen' => 'Fullscreen',
 			'companionRemote.remote.subtitles' => 'Subtitles',
-			_ => null,
-		} ?? switch (path) {
 			'companionRemote.remote.audio' => 'Audio',
 			'companionRemote.remote.searchHint' => 'Search on desktop...',
 			'companionRemote.errors.noNetworkInterface' => 'No network interface found',
@@ -13294,6 +13544,8 @@ extension on Translations {
 			'iptv.epgUpdateOnStart' => 'Update on app start',
 			'iptv.epgUpdateOnStartDescription' => 'Refresh the guide when the app starts',
 			'iptv.epgTimeOffset' => 'Time offset',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.epgNoOffset' => 'No offset',
 			'iptv.epgOffsetMinutes' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} minute', other: '${n} minutes', ), 
 			'iptv.epgUpdateNow' => 'Update now',
@@ -13354,8 +13606,6 @@ extension on Translations {
 			'iptv.epgReloadWindowSlideReasonStoreUnavailable' => 'store not built yet',
 			'iptv.epgReloadWindowSlideReasonSlideFailed' => 'slide failed',
 			'iptv.epgSourceDownloadDetail' => ({required Object detail}) => 'Download: ${detail}',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgM3uTvgIdCheck' => 'Check M3U guide IDs',
 			'iptv.epgM3uTvgIdCheckDescription' => 'One-time check: fetch the provider\'s playlist once and see how many channels without a guide ID gain one from it — and how many of those IDs are in the guide',
 			'iptv.epgM3uTvgIdResult' => ({required Object checked, required Object noId, required Object gained, required Object inFeed}) => '${checked} channels checked · ${noId} without a guide ID · ${gained} gain one from the playlist · ${inFeed} of those are in the guide',

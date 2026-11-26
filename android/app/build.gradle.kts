@@ -585,6 +585,21 @@ dependencies {
   // packaging rules.
   implementation(project(":libass"))
 
+  // Quest 3D (1.6.29): the :quest module (OpenXR activity + libvr_player.so)
+  // is linked ONLY when the Quest build property is set, so the phone/TV
+  // APK carries no VR code at all. Set it with the standard Gradle env
+  // var: ORG_GRADLE_PROJECT_questBuild=true, or -PquestBuild=true.
+  // Quest build: ORG_GRADLE_PROJECT_questBuild=true flutter build apk
+  //   --release --split-per-abi --dart-define=QUEST_BUILD=true
+  // (plus the usual dart-defines). The phone build command is unchanged.
+  // Product flavours were rejected for this gate: once flavours exist,
+  // `flutter build apk` without --flavor runs assembleRelease, which no
+  // longer exists (only assemblePhoneRelease / assembleQuestRelease), so
+  // the existing CI command would break.
+  if (project.findProperty("questBuild") == "true") {
+    implementation(project(":quest"))
+  }
+
   // L-25 baseline profiles: ProfileInstaller applies the bundled
   // baseline-prof.txt on sideloaded installs (Play's install-time
   // dexopt / cloud profiles do not reliably cover sideloads). The

@@ -4,7 +4,13 @@ import 'package:flutter/services.dart';
 
 import '../../../focus/dpad_navigator.dart';
 import '../../../mpv/mpv.dart';
+import '../../../media/media_part.dart';
 import '../../../media/media_source_info.dart';
+import '../../../quest/quest_platform.dart';
+import '../../../quest/stereo3d.dart';
+import '../../../quest/stereo3d_title_store.dart';
+import '../../../quest/vr_player_channel.dart';
+import '../../../services/settings_service.dart';
 import '../../../services/sleep_timer_service.dart';
 import '../../../utils/platform_detector.dart';
 import '../../../utils/quality_preset_labels.dart';
@@ -13,6 +19,7 @@ import '../../../widgets/overlay_sheet.dart';
 import '../models/track_controls_state.dart';
 import '../sheets/chapter_sheet.dart';
 import '../sheets/queue_sheet.dart';
+import '../sheets/stereo3d_sheet.dart';
 import '../sheets/track_sheet.dart';
 import '../sheets/video_settings_sheet.dart';
 import '../../../utils/track_label_builder.dart';
@@ -129,6 +136,36 @@ class TrackChapterControls extends StatelessWidget {
     );
   }
 
+  /// Detects the stereo layout for the title currently playing, from the
+  /// selected version's part filename and resolution. Filename tags win;
+  /// resolution is the fallback. A title with neither reads as 2D.
+  Stereo3dDetection _detectStereo3d(TrackControlsState state) {
+    if (state.availableVersions.isEmpty) {
+      return const Stereo3dDetection.twoD();
+    }
+    final index = state.selectedMediaIndex.clamp(
+      0,
+      state.availableVersions.length - 1,
+    );
+    final version = state.availableVersions[index];
+    MediaPart? part;
+    final partId = state.sourcePartId;
+    if (partId != null) {
+      for (final candidate in version.parts) {
+        if (candidate.id == partId.toString()) {
+          part = candidate;
+          break;
+        }
+      }
+    }
+    part ??= version.parts.isNotEmpty ? version.parts.first : null;
+    return resolveStereo3d(
+      filename: part?.file,
+      width: version.width,
+      height: version.height,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Tracks>(
@@ -139,6 +176,20 @@ class TrackChapterControls extends StatelessWidget {
         final state = trackControlsState;
         final isMobile = PlatformDetector.isMobile(context);
         final isDesktop = PlatformDetector.isDesktopOS();
+
+        // 3D button (Quest 3D update): shown only when a 3D file was
+        // detected on a Quest headset, or when the Advanced debug toggle
+        // forces it on every video. Needs SettingsService for the toggle
+        // and the sheet's prefs; without it the button stays hidden.
+        final settings = SettingsService.instanceOrNull;
+        final isQuest = QuestPlatform.isQuest;
+        final detection = _detectStereo3d(state);
+        final showStereo3dButton = settings != null &&
+            shouldShowStereo3dButton(
+              isQuest: isQuest,
+              debugToggle: settings.read(SettingsService.questShow3dButtonDebug),
+              detection: detection,
+            );
 
         final buttons = <Widget>[];
         int buttonIndex = 0;
@@ -237,6 +288,44 @@ class TrackChapterControls extends StatelessWidget {
                         chaptersLoaded: chaptersLoaded,
                         canControl: state.canControl,
                         serverId: state.serverId,
+                        onSeekRequested: onSeekRequested,
+                        onSeekCompleted: onSeekCompleted,
+                      ),
+                    )
+                    .whenComplete(() => state.onStartAutoHide?.call());
+              },
+            ),
+          );
+          buttonIndex++;
+        }
+
+        // 3D button (Quest 3D update): opens the 3D sheet. Only when a 3D
+        // file was detected on a Quest headset, or the Advanced debug
+        // toggle forces it on. The sheet itself gates the VR-only rows.
+        if (showStereo3dButton) {
+          final currentIndex = buttonIndex;
+          buttons.add(
+            _buildTrackButton(
+              buttonIndex: currentIndex,
+              icon: Symbols.view_in_ar_rounded,
+              tooltip: t.stereo3d.buttonTooltip,
+              semanticLabel: t.stereo3d.button,
+              isActive: detection.is3d,
+              buttons: buttons,
+              onPressed: () {
+                state.onCancelAutoHide?.call();
+                OverlaySheetController.of(context)
+                    .show(
+                      builder: (_) => Stereo3dSheet(
+                        player: player,
+                        trackControlsState: state,
+                        chapters: chapters,
+                        chaptersLoaded: chaptersLoaded,
+                        detection: detection,
+                        isQuest: isQuest,
+                        settings: settings,
+                        titleStore: stereo3dTitleStore(settings),
+                        vrChannel: VrPlayerChannel(),
                         onSeekRequested: onSeekRequested,
                         onSeekCompleted: onSeekCompleted,
                       ),

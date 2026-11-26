@@ -50,6 +50,7 @@ import 'services/macos_window_service.dart';
 import 'services/native_window_service.dart';
 import 'services/fullscreen_state_manager.dart';
 import 'services/settings_service.dart';
+import 'quest/quest_platform.dart';
 import 'services/agent_control_service.dart';
 import 'services/android_display_mode_service.dart';
 import 'widgets/agent_control_scope.dart';
@@ -1130,6 +1131,10 @@ void _startNonessentialInitialization(SettingsService settings) {
     'Date formatting',
     () => initializeDateFormatting(settings.read(SettingsService.appLocale).intlLocaleName, null),
   );
+  // 1.6.29 (Quest 3D): detect a Quest headset once, so the 3D button,
+  // sheet and settings can gate on it. Best-effort and non-blocking —
+  // a failed read leaves isQuest false and the 3D UI hidden.
+  bestEffort('Quest detection', QuestPlatform.ensureInitialized);
   bestEffort('Download storage', () => DownloadStorageService.instance.initialize(settings));
   // 1.6.15 (in-app VPN, WARP): restore the tunnel when the user left it
   // on — the toggle, the terms acceptance and the registration all have

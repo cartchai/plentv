@@ -1,0 +1,41 @@
+<!-- PlenTV Quest VR player module manifest (1.6.29).
+     Merged into the app only when the Quest build is requested
+     (ORG_GRADLE_PROJECT_questBuild=true). The phone/TV build never sees
+     this file, so the VrPlayerActivity and the metavr SDK declaration ship
+     only in the Quest APK. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:metavr="http://schemas.oculus.com/metavr"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The OpenXR loader AAR declares a minSdk above the app's 25.
+         The module only ever runs on a Quest headset (API 29+), so the
+         higher floor is overridden here rather than raising the app's. -->
+    <uses-sdk tools:overrideLibrary="org.khronos.openxr" />
+
+    <!-- Hybrid app (panel + immersive): needs Horizon OS v69+. -->
+    <metavr:uses-metavr-sdk
+        metavr:minSdkVersion="69"
+        metavr:targetSdkVersion="207" />
+
+    <application>
+        <!-- The immersive 3D player. Launched only by the app itself
+             (exported=false) via an explicit intent from VrPlayerPlugin
+             when Dart calls playInVr. The VR category tells Horizon this
+             is the immersive entry point; it is NOT a launcher entry
+             (no LAUNCHER category), so it never appears in the home menu.
+             resizeableActivity=false: an immersive activity is not a
+             resizable panel. -->
+        <activity
+            android:name=".VrPlayerActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:resizeableActivity="false"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:configChanges="orientation|keyboardHidden|keyboard|navigation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="com.oculus.intent.category.VR" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

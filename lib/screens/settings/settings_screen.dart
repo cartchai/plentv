@@ -122,6 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kCompanionRemoteServer = 'companion_remote_server';
   static const _kLastCrash = 'last_crash';
   static const _kAutoHidePerformanceOverlay = 'auto_hide_performance_overlay';
+  static const _kShow3dButtonDebug = 'show_3d_button_debug';
   static const _kViewLogs = 'view_logs';
   static const _kClearImageCache = 'clear_image_cache';
   static const _kResetSettings = 'reset_settings';
@@ -573,6 +574,18 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           icon: Symbols.speed_rounded,
           title: t.settings.autoHidePerformanceOverlay,
           subtitle: t.settings.autoHidePerformanceOverlayDescription,
+        ),
+        // 1.6.29 (Quest 3D): debug switch — shows the 3D button on every
+        // video, on any device, even when no 3D file was detected. It does
+        // not turn on 3D by itself. On a Quest the button already appears
+        // for detected 3D files; this is for untagged files and for
+        // checking the sheet on phone/TV.
+        SettingSwitchTile(
+          focusNode: _focusTracker.get(_kShow3dButtonDebug),
+          pref: settings.SettingsService.questShow3dButtonDebug,
+          icon: Symbols.view_in_ar_rounded,
+          title: t.settings.show3dButtonDebug,
+          subtitle: t.settings.show3dButtonDebugDescription,
         ),
         // 1.6.23: Super Spoof moved to its own page — this row opens
         // it. The master toggle and the four sub-settings live in

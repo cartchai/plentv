@@ -110,6 +110,20 @@
                 <data android:scheme="plentv"/>
                 <data android:scheme="plezy"/>
             </intent-filter>
+            <!-- Meta Quest 2D panel (1.6.29): register the panel activity for
+                 the Quest launcher surfaces so Horizon OS can open it as a
+                 2D panel during games / other apps (OVERLAY_LAUNCHER) and
+                 from the VR home (VR_HOME_LAUNCHER). These categories are
+                 Quest-only metadata: phone/TV launchers query for LAUNCHER /
+                 LEANBACK_LAUNCHER and ignore them, so nothing changes on
+                 phone or TV. Kept on the activity (not the icon aliases,
+                 which are codegen'd) so it works whichever icon is enabled. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="com.oculus.intent.category.2D"/>
+                <category android:name="com.oculus.intent.category.OVERLAY_LAUNCHER"/>
+                <category android:name="com.oculus.intent.category.VR_HOME_LAUNCHER"/>
+            </intent-filter>
         </activity>
         <!-- The default icon. Keep this component name forever: it was the launcher activity before
              app icons became switchable, so every existing home-screen shortcut, TV favourite and

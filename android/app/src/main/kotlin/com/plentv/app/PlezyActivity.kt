@@ -963,6 +963,18 @@ class PlezyActivity : FlutterActivity() {
     super.onStop()
   }
 
+  // Quest panel window memory (S15, 1.6.29): save the panel size when the
+  // activity pauses, restore it when it resumes. No-op on phone/TV.
+  override fun onPause() {
+    QuestPanelWindow.save(this)
+    super.onPause()
+  }
+
+  override fun onResume() {
+    super.onResume()
+    QuestPanelWindow.restore(this)
+  }
+
   override fun onStart() {
     super.onStart()
     activityStarted = true
@@ -1249,6 +1261,24 @@ class PlezyActivity : FlutterActivity() {
     catalogSyncForegroundChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
     platformHttpChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
     warpTunnelChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
+
+    // Quest 3D (1.6.29): the VR player plugin lives in the :quest module,
+    // which is only a dependency in the Quest build (questBuild=true).
+    // Reflective registration keeps the phone/TV build compiling without
+    // it: when the class is absent (phone/TV), nothing is registered and
+    // the Dart side's VrPlayerChannel gets a MissingPluginException
+    // (which it treats as "no VR player here"). When present (Quest
+    // build), the plugin registers the com.plentv.app/vr_player channel.
+    try {
+      val pluginClass = Class.forName("com.plentv.quest.VrPlayerPlugin")
+      val plugin = pluginClass.getDeclaredConstructor().newInstance()
+        as io.flutter.embedding.engine.plugins.FlutterPlugin
+      flutterEngine.plugins.add(plugin)
+    } catch (_: ClassNotFoundException) {
+      // Phone/TV build: no VR code. Expected, not an error.
+    } catch (e: Exception) {
+      Log.w("PlezyActivity", "VrPlayerPlugin failed to register", e)
+    }
 
     // Splash screen theme: persist user's chosen theme for next launch (API 31+)
     MethodChannel(flutterEngine.dartExecutor.binaryMessenger, THEME_CHANNEL).setMethodCallHandler { call, result ->

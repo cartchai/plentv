@@ -963,6 +963,99 @@ class SettingsService extends BaseSharedPreferencesService {
   /// clamp to 'guide'.
   static const liveTvDefaultTab = StringPref('live_tv_default_tab', defaultValue: 'guide');
 
+  /// Quest 3D (1.6.29) — every pref here is Quest-only in the UI. The
+  /// 3D button, sheet and settings are hidden entirely on phone and TV;
+  /// detection still runs everywhere (it is invisible) and feeds the
+  /// direct-play rule. The Advanced debug toggle is the one exception:
+  /// it deliberately forces the 3D button visible on any device.
+  ///
+  /// Passthrough brightness (S1.7): -100..100, neutral 0. A global
+  /// room-lighting preference, not a per-title one.
+  static const questPassthroughBrightness = DoublePref(
+    'quest_passthrough_brightness',
+    defaultValue: 0.0,
+  );
+
+  /// Auto-dim passthrough while a movie plays (S8): the room darkens so
+  /// the screen pops; opening the controls brightens it halfway. Same
+  /// style value as the brightness slider, tied to playback state.
+  static const questAutoDimPassthrough = BoolPref(
+    'quest_auto_dim_passthrough',
+    defaultValue: true,
+  );
+
+  /// Fixed foveated rendering (S18): render the periphery of each eye at
+  /// lower resolution. Default on (the standard Meta mitigation); the
+  /// user requires an option to turn it off, and this is it.
+  static const questFoveatedRendering = BoolPref(
+    'quest_foveated_rendering',
+    defaultValue: true,
+  );
+
+  /// Dynamic resolution (S18): scale the render resolution to hold the
+  /// frame rate. Default on; paired with foveated rendering.
+  static const questDynamicResolution = BoolPref(
+    'quest_dynamic_resolution',
+    defaultValue: true,
+  );
+
+  /// Immersive refresh rate (S19): 72, 90 or 120 Hz. Default 90 Hz on
+  /// Quest 3 (72 Hz is the store minimum; 120 Hz costs battery/heat).
+  static const questRefreshRate = IntPref('quest_refresh_rate', defaultValue: 90);
+
+  /// Spatial audio (S20): sound positioned in 3D space, from where the
+  /// screen is. Default on.
+  static const questSpatialAudio = BoolPref('quest_spatial_audio', defaultValue: true);
+
+  /// Hand tracking in the VR player (S5): pinch to play/pause, grab the
+  /// screen to move it, hand raycast for the controls. Default off —
+  /// controllers are the primary input.
+  static const questHandTracking = BoolPref('quest_hand_tracking', defaultValue: false);
+
+  /// Cooperative overlay (S6): launch the controls panel as an overlay
+  /// while inside the immersive activity, so settings float over the
+  /// running VR scene instead of leaving VR to change one. Default on.
+  static const questCooperativeOverlay = BoolPref(
+    'quest_cooperative_overlay',
+    defaultValue: true,
+  );
+
+  /// Panel window memory (S15): remember the panel's size and position
+  /// on Quest between launches, so it opens where it was left instead
+  /// of the default. Default on.
+  static const questPanelWindowMemory = BoolPref(
+    'quest_panel_window_memory',
+    defaultValue: true,
+  );
+
+  /// Advanced debug toggle: always show the 3D button. Default off.
+  /// Gates ONLY the visibility of the 3D button in the player controls —
+  /// on every video, on every device. It must NOT gate detection,
+  /// actual stereo rendering, or playback decisions.
+  static const questShow3dButtonDebug = BoolPref(
+    'quest_show_3d_button_debug',
+    defaultValue: false,
+  );
+
+  /// Global screen defaults for the VR player (per-title overrides live
+  /// in the per-title record). Size is a multiplier (1.0 = default),
+  /// distance is metres from the viewer, curvature is 0 (flat) to 1
+  /// (fully curved), depth is the eye-separation slider (0..1, 0.5 is
+  /// the centre).
+  static const questScreenSize = DoublePref('quest_screen_size', defaultValue: 1.0);
+  static const questScreenDistance = DoublePref('quest_screen_distance', defaultValue: 3.0);
+  static const questScreenCurvature = DoublePref('quest_screen_curvature', defaultValue: 0.0);
+  static const questDepthSeparation = DoublePref('quest_depth_separation', defaultValue: 0.5);
+
+  /// Subtitle depth default (S11): 'below' (below the screen — the
+  /// safest), 'onscreen' or 'follow' (follow the view).
+  static const questSubtitleDepth = StringPref('quest_subtitle_depth', defaultValue: 'below');
+
+  /// The per-title 3D records (one JSON object, keyed by
+  /// "ratingKey|partId"). Read and written through
+  /// [Stereo3dTitleStore]; do not read this pref directly.
+  static const questStereo3dTitles = StringPref('quest_stereo3d_titles', defaultValue: '{}');
+
   /// Show the catch-up badge on Live TV guide channels that offer catch-up
   /// (Xtream `tv_archive = 1`). TiviMate's "Show catch-up icon in channel
   /// list". Default on; applies when the guide reloads.

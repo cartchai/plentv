@@ -51,8 +51,11 @@ import '../models/plex/plex_metadata_preferences.dart';
 import '../models/plex/play_queue_response.dart';
 import '../media/media_file_info.dart';
 import '../media/media_filter.dart';
+import '../media/media_part.dart';
 import '../media/media_source_info.dart';
 import '../media/media_version.dart';
+import '../quest/stereo3d.dart';
+import '../quest/stereo3d_title_store.dart';
 import '../models/plex/plex_subtitle_search_result.dart';
 import '../models/plex/plex_match_result.dart';
 import '../utils/codec_utils.dart';
@@ -3763,9 +3766,26 @@ class PlexClient
       final isTrack = options.metadata.kind == MediaKind.track;
       final audioPreset = options.audioQualityPreset ?? AudioQualityPreset.original;
       final sourceCodecRefused = !isTrack && _sourceCodecRefused(data);
+      // 1.6.29 (Quest 3D): a detected 3D title forces direct play. A Plex
+      // transcode would re-encode the packed frame as flat 2D and destroy
+      // the 3D. The manual per-title record wins over the filename tag.
+      // The codec-refusal case is the one exception: a codec the user
+      // refused cannot be decoded on this device at all, so the refusal
+      // still stands and the transcode path below runs.
+      final stereoDetection = _detectStereo3dForPlayback(data, options.metadata.id);
+      final is3dTitle = stereoDetection.is3d;
+      if (is3dTitle) {
+        appLogger.i(
+          'Detected 3D title (${stereoDetection.layout.name}, '
+          '${stereoDetection.packing.name}, ${stereoDetection.source.name}); '
+          'forcing direct play',
+        );
+      }
       final wantTranscode = isTrack
           ? !audioPreset.isOriginal
-          : sourceCodecRefused || options.forceTranscode || _presetNeedsTranscode(options.qualityPreset, data);
+          : (is3dTitle && !sourceCodecRefused)
+              ? false
+              : sourceCodecRefused || options.forceTranscode || _presetNeedsTranscode(options.qualityPreset, data);
       if (wantTranscode && options.sessionIdentifier != null && options.transcodeSessionId != null) {
         if (isTrack) {
           final result = await buildMusicTranscodeStartPath(
@@ -3839,7 +3859,7 @@ class PlexClient
         if (options.forceTranscode) throw _forcedTranscodeUnavailable(result.outcome);
         return _transcodeFallbackResult(data, result.outcome, options, activeAudioStreamId: carriedAudioStreamId);
       }
-      if (options.forceTranscode && !isTrack) throw _forcedTranscodeUnavailable(null);
+      if (options.forceTranscode && !isTrack && !is3dTitle) throw _forcedTranscodeUnavailable(null);
 
       return PlaybackInitializationResult(
         availableVersions: data.availableVersions,
@@ -3899,6 +3919,37 @@ class PlexClient
 
   MediaVersion? _selectedVersion(PlexVideoPlaybackData data) =>
       data.selectedMediaIndex < data.availableVersions.length ? data.availableVersions[data.selectedMediaIndex] : null;
+
+  /// The selected part (file) for this playback, or null when the
+  /// versions/parts are absent (e.g. metadata fetched without checkFiles).
+  MediaPart? _selectedPart(PlexVideoPlaybackData data) {
+    final version = _selectedVersion(data);
+    if (version == null) return null;
+    if (data.selectedPartIndex >= version.parts.length) return null;
+    return version.parts[data.selectedPartIndex];
+  }
+
+  /// Detect whether this playback is a 3D title (1.6.29 Quest 3D).
+  ///
+  /// Manual per-title record > filename tag > resolution hint. A missing
+  /// file path (metadata without checkFiles) reads as 2D, so playback
+  /// is unchanged — detection is best-effort here, never blocking.
+  Stereo3dDetection _detectStereo3dForPlayback(PlexVideoPlaybackData data, String ratingKey) {
+    final version = _selectedVersion(data);
+    final part = _selectedPart(data);
+    Stereo3dDetection? manual;
+    final settings = SettingsService.instanceOrNull;
+    if (settings != null && part != null) {
+      final record = stereo3dTitleStore(settings).load(ratingKey, part.id);
+      if (record != null) manual = record.toDetection();
+    }
+    return resolveStereo3d(
+      manual: manual,
+      filename: part?.file,
+      width: version?.width,
+      height: version?.height,
+    );
+  }
 
   /// A forced transcode ([PlaybackInitializationOptions.forceTranscode]) the
   /// server would not start. The direct-play URL is not an answer here: the
