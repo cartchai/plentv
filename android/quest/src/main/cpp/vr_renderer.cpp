@@ -14,6 +14,13 @@
 #include <GLES3/gl3.h>
 #include <android/log.h>
 #include <dlfcn.h>
+#include <jni.h>
+// The platform header only declares the GLES types (XrSwapchainImageOpenGLESKHR,
+// XrGraphicsBindingOpenGLESAndroidKHR, XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME)
+// when the graphics API and platform are selected. This renderer is GLES on
+// Android only, so both are defined here, before the OpenXR headers.
+#define XR_USE_GRAPHICS_API_OPENGL_ES
+#define XR_USE_PLATFORM_ANDROID
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
@@ -25,6 +32,7 @@
 #include <vector>
 
 #include "mpv_client.h"
+#include "vr_eye_rects.h"
 
 #define LOG_TAG "VrRenderer"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -517,6 +525,26 @@ struct VrRendererImpl {
   XrPassthroughLayerFB passthroughLayer = XR_NULL_HANDLE;
   XrFoveationProfileFB foveationProfile = XR_NULL_HANDLE;
 
+  // Extension functions, resolved at runtime with xrGetInstanceProcAddr.
+  // The OpenXR loader exports only core functions (xrCreateInstance,
+  // xrGetInstanceProcAddr, ...); extension functions are not exported, and
+  // their prototypes are only declared when XR_EXTENSION_PROTOTYPES is
+  // defined, so they must be loaded through the PFN_ pointers. Each is
+  // loaded only when its extension was enabled; null means unavailable.
+  PFN_xrCreatePassthroughFB pfnCreatePassthroughFB = nullptr;
+  PFN_xrDestroyPassthroughFB pfnDestroyPassthroughFB = nullptr;
+  PFN_xrPassthroughStartFB pfnPassthroughStartFB = nullptr;
+  PFN_xrCreatePassthroughLayerFB pfnCreatePassthroughLayerFB = nullptr;
+  PFN_xrDestroyPassthroughLayerFB pfnDestroyPassthroughLayerFB = nullptr;
+  PFN_xrPassthroughLayerSetStyleFB pfnPassthroughLayerSetStyleFB = nullptr;
+  PFN_xrCreateFoveationProfileFB pfnCreateFoveationProfileFB = nullptr;
+  PFN_xrDestroyFoveationProfileFB pfnDestroyFoveationProfileFB = nullptr;
+  PFN_xrUpdateSwapchainFB pfnUpdateSwapchainFB = nullptr;
+  PFN_xrRequestDisplayRefreshRateFB pfnRequestDisplayRefreshRateFB = nullptr;
+  PFN_xrCreateHandTrackerEXT pfnCreateHandTrackerEXT = nullptr;
+  PFN_xrDestroyHandTrackerEXT pfnDestroyHandTrackerEXT = nullptr;
+  PFN_xrLocateHandJointsEXT pfnLocateHandJointsEXT = nullptr;
+
   // Video swapchain (the packed frame; quad layers sample it).
   XrSwapchain videoSwapchain = XR_NULL_HANDLE;
   std::vector<XrSwapchainImageOpenGLESKHR> videoImages;
@@ -647,6 +675,20 @@ bool xrExtensionSupported(const char* name) {
   return false;
 }
 
+// Resolve one extension function by name. Returns false (and logs) when
+// the runtime does not provide it.
+template <typename T>
+bool loadExtFn(XrInstance instance, const char* name, T* out) {
+  PFN_xrVoidFunction fn = nullptr;
+  if (XR_FAILED(xrGetInstanceProcAddr(instance, name, &fn)) || fn == nullptr) {
+    LOGW("Extension function %s not available", name);
+    *out = nullptr;
+    return false;
+  }
+  *out = reinterpret_cast<T>(fn);
+  return true;
+}
+
 const char* xrResultString(XrResult r) {
   switch (r) {
     case XR_SUCCESS: return "SUCCESS";
@@ -694,11 +736,11 @@ const char* xrResultString(XrResult r) {
     case XR_ERROR_GRAPHICS_DEVICE_INVALID: return "GRAPHICS_DEVICE_INVALID";
     case XR_ERROR_POSE_INVALID: return "POSE_INVALID";
     case XR_ERROR_INDEX_OUT_OF_RANGE: return "INDEX_OUT_OF_RANGE";
-    case XR_ERROR_VIEW_CONFIGURATION_INVALID: return "VIEW_CONFIGURATION_INVALID";
+    case XR_ERROR_VIEW_CONFIGURATION_TYPE_UNSUPPORTED: return "VIEW_CONFIGURATION_TYPE_UNSUPPORTED";
     case XR_ERROR_ENVIRONMENT_BLEND_MODE_UNSUPPORTED: return "ENVIRONMENT_BLEND_MODE_UNSUPPORTED";
     case XR_ERROR_NAME_DUPLICATED: return "NAME_DUPLICATED";
     case XR_ERROR_NAME_INVALID: return "NAME_INVALID";
-    case XR_ERROR_ACTIONSET_ALREADY_ATTACHED: return "ACTIONSET_ALREADY_ATTACHED";
+    case XR_ERROR_ACTIONSETS_ALREADY_ATTACHED: return "ACTIONSETS_ALREADY_ATTACHED";
     case XR_ERROR_LOCALIZED_NAME_DUPLICATED: return "LOCALIZED_NAME_DUPLICATED";
     case XR_ERROR_LOCALIZED_NAME_INVALID: return "LOCALIZED_NAME_INVALID";
     case XR_ERROR_GRAPHICS_REQUIREMENTS_CALL_MISSING: return "GRAPHICS_REQUIREMENTS_CALL_MISSING";
@@ -827,10 +869,10 @@ bool initOpenXr(VrRendererImpl* impl) {
     extensions.push_back(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
     impl->handTrackingSupported = true;
   }
-  if (xrExtensionSupported(XR_FB_PASSTHROUGH_BRIGHTNESS_CONTRAST_SATURATION_EXTENSION_NAME)) {
-    extensions.push_back(XR_FB_PASSTHROUGH_BRIGHTNESS_CONTRAST_SATURATION_EXTENSION_NAME);
-    impl->brightnessSupported = true;
-  }
+  // There is no separate brightness extension: the brightness/contrast/
+  // saturation style (XrPassthroughBrightnessContrastSaturationFB) is part
+  // of XR_FB_passthrough itself, so it is available whenever passthrough is.
+  impl->brightnessSupported = impl->passthroughSupported;
 
   XrInstanceCreateInfo createInfo{XR_TYPE_INSTANCE_CREATE_INFO};
   XrApplicationInfo appInfo{};
@@ -843,6 +885,54 @@ bool initOpenXr(VrRendererImpl* impl) {
   createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
   createInfo.enabledExtensionNames = extensions.data();
   XR_OK(xrCreateInstance(&createInfo, &impl->instance));
+
+  // Resolve the extension functions. A function that fails to load clears
+  // its feature flag, so the frame loop never calls a null pointer.
+  if (impl->passthroughSupported) {
+    if (!loadExtFn(impl->instance, "xrCreatePassthroughFB", &impl->pfnCreatePassthroughFB) ||
+        !loadExtFn(impl->instance, "xrCreatePassthroughLayerFB",
+                   &impl->pfnCreatePassthroughLayerFB) ||
+        !loadExtFn(impl->instance, "xrPassthroughStartFB", &impl->pfnPassthroughStartFB)) {
+      LOGW("Passthrough functions missing; passthrough off");
+      impl->passthroughSupported = false;
+      impl->brightnessSupported = false;
+    } else {
+      loadExtFn(impl->instance, "xrDestroyPassthroughFB", &impl->pfnDestroyPassthroughFB);
+      loadExtFn(impl->instance, "xrDestroyPassthroughLayerFB",
+                &impl->pfnDestroyPassthroughLayerFB);
+      if (!loadExtFn(impl->instance, "xrPassthroughLayerSetStyleFB",
+                     &impl->pfnPassthroughLayerSetStyleFB)) {
+        impl->brightnessSupported = false;
+      }
+    }
+  }
+  if (impl->foveationSupported) {
+    if (!loadExtFn(impl->instance, "xrCreateFoveationProfileFB",
+                   &impl->pfnCreateFoveationProfileFB) ||
+        !loadExtFn(impl->instance, "xrUpdateSwapchainFB", &impl->pfnUpdateSwapchainFB)) {
+      LOGW("Foveation functions missing; foveation off");
+      impl->foveationSupported = false;
+    } else {
+      loadExtFn(impl->instance, "xrDestroyFoveationProfileFB",
+                &impl->pfnDestroyFoveationProfileFB);
+    }
+  }
+  if (impl->refreshRateSupported) {
+    if (!loadExtFn(impl->instance, "xrRequestDisplayRefreshRateFB",
+                   &impl->pfnRequestDisplayRefreshRateFB)) {
+      LOGW("Refresh-rate function missing; refresh-rate off");
+      impl->refreshRateSupported = false;
+    }
+  }
+  if (impl->handTrackingSupported) {
+    if (!loadExtFn(impl->instance, "xrCreateHandTrackerEXT", &impl->pfnCreateHandTrackerEXT) ||
+        !loadExtFn(impl->instance, "xrLocateHandJointsEXT", &impl->pfnLocateHandJointsEXT)) {
+      LOGW("Hand-tracking functions missing; hand tracking off");
+      impl->handTrackingSupported = false;
+    } else {
+      loadExtFn(impl->instance, "xrDestroyHandTrackerEXT", &impl->pfnDestroyHandTrackerEXT);
+    }
+  }
 
   XrSystemGetInfo systemInfo{XR_TYPE_SYSTEM_GET_INFO};
   systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
@@ -870,16 +960,16 @@ bool initOpenXr(VrRendererImpl* impl) {
   // session begins; the layer is submitted every frame.
   if (impl->passthroughSupported) {
     XrPassthroughCreateInfoFB ptInfo{XR_TYPE_PASSTHROUGH_CREATE_INFO_FB};
-    if (XR_SUCCEEDED(xrCreatePassthroughFB(impl->session, &ptInfo, &impl->passthrough))) {
+    if (XR_SUCCEEDED(impl->pfnCreatePassthroughFB(impl->session, &ptInfo, &impl->passthrough))) {
       XrPassthroughLayerCreateInfoFB layerInfo{XR_TYPE_PASSTHROUGH_LAYER_CREATE_INFO_FB};
       layerInfo.passthrough = impl->passthrough;
       layerInfo.purpose = XR_PASSTHROUGH_LAYER_PURPOSE_RECONSTRUCTION_FB;
-      if (XR_FAILED(xrCreatePassthroughLayerFB(impl->session, impl->passthrough, &layerInfo,
+      if (XR_FAILED(impl->pfnCreatePassthroughLayerFB(impl->session, &layerInfo,
                                                &impl->passthroughLayer))) {
         LOGW("xrCreatePassthroughLayerFB failed; passthrough off");
         impl->passthroughLayer = XR_NULL_HANDLE;
       } else {
-        XR_OK_VOID(xrPassthroughStartFB(impl->passthrough));
+        XR_OK_VOID(impl->pfnPassthroughStartFB(impl->passthrough));
       }
     } else {
       LOGW("xrCreatePassthroughFB failed; passthrough off");
@@ -897,20 +987,28 @@ bool initOpenXr(VrRendererImpl* impl) {
 
 void destroyOpenXr(VrRendererImpl* impl) {
   if (impl->foveationProfile != XR_NULL_HANDLE) {
-    xrDestroyFoveationProfileFB(impl->foveationProfile);
+    if (impl->pfnDestroyFoveationProfileFB != nullptr) {
+      impl->pfnDestroyFoveationProfileFB(impl->foveationProfile);
+    }
     impl->foveationProfile = XR_NULL_HANDLE;
   }
   if (impl->passthroughLayer != XR_NULL_HANDLE) {
-    xrDestroyPassthroughLayerFB(impl->passthroughLayer);
+    if (impl->pfnDestroyPassthroughLayerFB != nullptr) {
+      impl->pfnDestroyPassthroughLayerFB(impl->passthroughLayer);
+    }
     impl->passthroughLayer = XR_NULL_HANDLE;
   }
   if (impl->passthrough != XR_NULL_HANDLE) {
-    xrDestroyPassthroughFB(impl->passthrough);
+    if (impl->pfnDestroyPassthroughFB != nullptr) {
+      impl->pfnDestroyPassthroughFB(impl->passthrough);
+    }
     impl->passthrough = XR_NULL_HANDLE;
   }
   for (int i = 0; i < 2; ++i) {
     if (impl->handTrackers[i] != XR_NULL_HANDLE) {
-      xrDestroyHandTrackerEXT(impl->handTrackers[i]);
+      if (impl->pfnDestroyHandTrackerEXT != nullptr) {
+        impl->pfnDestroyHandTrackerEXT(impl->handTrackers[i]);
+      }
       impl->handTrackers[i] = XR_NULL_HANDLE;
     }
   }
@@ -986,7 +1084,7 @@ bool initActions(VrRendererImpl* impl) {
   }
   {
     XrActionCreateInfo info{XR_TYPE_ACTION_CREATE_INFO};
-    std::strncpy(info.actionName, "aim", "Aim (overlay ray)");
+    std::strncpy(info.actionName, "aim", sizeof(info.actionName) - 1);
     std::strncpy(info.localizedActionName, "Aim pose", sizeof(info.localizedActionName) - 1);
     info.actionType = XR_ACTION_TYPE_POSE_INPUT;
     info.countSubactionPaths = 2;
@@ -1032,7 +1130,7 @@ bool initActions(VrRendererImpl* impl) {
       XrHandTrackerCreateInfoEXT info{XR_TYPE_HAND_TRACKER_CREATE_INFO_EXT};
       info.hand = (i == 0) ? XR_HAND_LEFT_EXT : XR_HAND_RIGHT_EXT;
       info.handJointSet = XR_HAND_JOINT_SET_DEFAULT_EXT;
-      if (XR_FAILED(xrCreateHandTrackerEXT(impl->session, &info, &impl->handTrackers[i]))) {
+      if (XR_FAILED(impl->pfnCreateHandTrackerEXT(impl->session, &info, &impl->handTrackers[i]))) {
         LOGW("Hand tracker %d failed to create", i);
         impl->handTrackers[i] = XR_NULL_HANDLE;
       }
@@ -1370,11 +1468,11 @@ bool ensureVideoSwapchain(VrRendererImpl* impl) {
     levelInfo.level = XR_FOVEATION_LEVEL_MEDIUM_FB;
     XrFoveationProfileCreateInfoFB profileInfo{XR_TYPE_FOVEATION_PROFILE_CREATE_INFO_FB};
     profileInfo.next = &levelInfo;
-    if (XR_SUCCEEDED(xrCreateFoveationProfileFB(impl->session, &profileInfo,
+    if (XR_SUCCEEDED(impl->pfnCreateFoveationProfileFB(impl->session, &profileInfo,
                                                 &impl->foveationProfile))) {
       XrSwapchainStateFoveationFB state{XR_TYPE_SWAPCHAIN_STATE_FOVEATION_FB};
       state.profile = impl->foveationProfile;
-      XR_OK_VOID(xrUpdateSwapchainFB(
+      XR_OK_VOID(impl->pfnUpdateSwapchainFB(
           impl->videoSwapchain,
           reinterpret_cast<const XrSwapchainStateBaseHeaderFB*>(&state)));
       LOGI("Fixed foveation (medium) on the video swapchain");
@@ -1443,14 +1541,14 @@ void setPassthroughBrightness(VrRendererImpl* impl, double value100) {
   }
   style.textureOpacityFactor = 1.0f;
   style.edgeColor = {0, 0, 0, 0};
-  XR_OK_VOID(xrPassthroughLayerSetStyleFB(impl->passthroughLayer, &style));
+  XR_OK_VOID(impl->pfnPassthroughLayerSetStyleFB(impl->passthroughLayer, &style));
 }
 
 // Refresh rate (S19).
 void applyRefreshRate(VrRendererImpl* impl) {
   if (!impl->refreshRateSupported) return;
   const float rate = static_cast<float>(impl->config.refreshRate);
-  const XrResult r = xrRequestDisplayRefreshRateFB(impl->session, rate);
+  const XrResult r = impl->pfnRequestDisplayRefreshRateFB(impl->session, rate);
   if (XR_SUCCEEDED(r)) {
     LOGI("Display refresh rate requested: %.0f Hz", rate);
   } else {
@@ -2068,7 +2166,7 @@ void syncInput(VrRendererImpl* impl, XrTime predictedTime) {
       XrHandJointLocationEXT joints[XR_HAND_JOINT_COUNT_EXT];
       locations.jointCount = XR_HAND_JOINT_COUNT_EXT;
       locations.jointLocations = joints;
-      if (XR_FAILED(xrLocateHandJointsEXT(impl->handTrackers[i], &locateInfo, &locations))) {
+      if (XR_FAILED(impl->pfnLocateHandJointsEXT(impl->handTrackers[i], &locateInfo, &locations))) {
         continue;
       }
       const auto& indexTip = joints[XR_HAND_JOINT_INDEX_TIP_EXT];
@@ -2281,7 +2379,7 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
 
   // Passthrough underlay (bottom layer).
   if (impl->passthroughSupported && impl->passthroughLayer != XR_NULL_HANDLE) {
-    passthroughLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+    passthroughLayer.flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
     passthroughLayer.space = impl->appSpace;
     passthroughLayer.layerHandle = impl->passthroughLayer;
     layers.push_back(reinterpret_cast<const XrCompositionLayerBaseHeader*>(&passthroughLayer));
@@ -2528,7 +2626,7 @@ bool VrRenderer::start(const VrConfig& config, VrFinishedCallback onFinished) {
   impl->onFinished = onFinished_;
   impl_ = impl;
   running_.store(true);
-  loopThread_ = std::thread([impl]() { renderLoop(impl); });
+  loopThread_ = std::thread([impl]() { ::renderLoop(impl); });
   return true;
 }
 

@@ -109,7 +109,6 @@ class VrRenderer {
   bool completed() const;
 
  private:
-  void renderLoop();
   void onFinished(double positionSeconds, bool completed);
 
   VrConfig config_;
