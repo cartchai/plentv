@@ -97,10 +97,11 @@ object QuestPanelWindow {
   // The read uses a fresh throwaway DataStore per call (read-only, never
   // written): no second long-lived instance for the same file, and no
   // stale in-memory cache — each save/restore reads the file as it is.
-  // androidx.datastore:datastore-preferences is on the classpath
-  // transitively via shared_preferences_android. runBlocking on
-  // Dispatchers.IO: the file is a few KB, so the main thread waits only
-  // for that one small read.
+  // androidx.datastore:datastore-preferences is declared directly in
+  // android/app/build.gradle.kts (shared_preferences_android keeps it as
+  // `implementation`, so it does NOT reach the app classpath transitively).
+  // runBlocking on Dispatchers.IO: the file is a few KB, so the main
+  // thread waits only for that one small read.
   private const val FLUTTER_PREFS_DATASTORE = "FlutterSharedPreferences"
   private const val KEY_PANEL_WINDOW_MEMORY = "quest_panel_window_memory"
   private const val LEGACY_PREFS_FILE = "FlutterSharedPreferences"

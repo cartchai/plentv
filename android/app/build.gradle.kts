@@ -561,6 +561,14 @@ dependencies {
   implementation(files("libs/libbox.aar"))
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
+  // Quest panel window memory (P0.14, 1.6.30): QuestPanelWindow.kt reads
+  // the Flutter SharedPreferences DataStore directly. The artifact is NOT
+  // on the app classpath transitively — shared_preferences_android declares
+  // it as `implementation`, so the app module must declare it itself.
+  // Version 1.1.7 is exactly what shared_preferences_android 2.4.27 pins,
+  // so the merged classpath stays coherent.
+  implementation("androidx.datastore:datastore-preferences:1.1.7")
+
   // Android TV Watch Next integration
   implementation("androidx.tvprovider:tvprovider:1.1.0")
 
