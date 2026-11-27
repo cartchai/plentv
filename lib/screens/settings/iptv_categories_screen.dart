@@ -193,7 +193,7 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
         if (!seen.add(category.id)) continue;
         result.add((id: category.id, name: category.name));
       }
-      result.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      _sortVisibleFirst(result);
       return result;
     }
 
@@ -238,7 +238,9 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
       List<_CategoryRow>? groups;
       var groupsFailed = false;
       try {
-        groups = (await client.m3uGroups()).map((g) => (id: g, name: g)).toList(growable: false);
+        final groupsList = (await client.m3uGroups()).map((g) => (id: g, name: g)).toList();
+        _sortVisibleFirst(groupsList);
+        groups = groupsList;
       } catch (_) {
         groupsFailed = true;
       }
@@ -255,8 +257,8 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
     // Initials load separately from the category lists, so a slow initials
     // fetch never holds the categories back.
     try {
-      final initials = await client.iptvInitials()
-        ..sort((a, b) => a.initial.toUpperCase().compareTo(b.initial.toUpperCase()));
+      final initials = await client.iptvInitials();
+      _sortInitialsVisibleFirst(initials);
       if (!mounted) return;
       setState(() => _initials = initials);
     } catch (_) {
@@ -273,6 +275,33 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
 
   int _hiddenCount(List<_CategoryRow>? rows) => rows == null ? 0 : rows.where(_isHidden).length;
 
+  /// Turned-off categories sit at the bottom (1.6.32): each list sorts
+  /// visible-first, then hidden, alphabetical inside each group — so
+  /// everything still on sits on top and everything off sits below it,
+  /// in order. An in-memory re-sort only, never a re-fetch (the
+  /// diagnosis: the re-sort costs nothing; the freeze was the guide
+  /// rebuild, not this screen). Applied at load and on every toggle,
+  /// so the row moves the moment it is turned off.
+  void _sortVisibleFirst(List<_CategoryRow>? rows) {
+    rows?.sort((a, b) {
+      final aHidden = _isHidden(a);
+      final bHidden = _isHidden(b);
+      if (aHidden != bHidden) return aHidden ? 1 : -1;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+  }
+
+  /// The initials list sorts the same way (1.6.32): turned-off
+  /// initials at the bottom, alphabetical inside each group.
+  void _sortInitialsVisibleFirst(List<IptvInitial>? initials) {
+    initials?.sort((a, b) {
+      final aHidden = _hiddenInitials.contains(a.initial);
+      final bHidden = _hiddenInitials.contains(b.initial);
+      if (aHidden != bHidden) return aHidden ? 1 : -1;
+      return a.initial.toUpperCase().compareTo(b.initial.toUpperCase());
+    });
+  }
+
   Future<void> _persist(Connection updated) async {
     final previous = _connection;
     // 1.2.4: the newly-unhidden category ids — by id, plus every row
@@ -282,8 +311,15 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
     final unhidden = _unhiddenCategoryIds(previous, updated);
     // Optimistic: the row and the counts update in the same frame as the
     // tap. The persist below is local storage; if it fails, revert.
+    // The lists re-sort with the new hidden sets (1.6.32): the row just
+    // turned off moves to the bottom of its list in the same frame.
     setState(() {
       _connection = updated;
+      _sortVisibleFirst(_live);
+      _sortVisibleFirst(_movies);
+      _sortVisibleFirst(_series);
+      _sortVisibleFirst(_groups);
+      _sortInitialsVisibleFirst(_initials);
       _recomputeCounts();
     });
     try {
@@ -317,6 +353,11 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
       if (!mounted) return;
       setState(() {
         _connection = previous;
+        _sortVisibleFirst(_live);
+        _sortVisibleFirst(_movies);
+        _sortVisibleFirst(_series);
+        _sortVisibleFirst(_groups);
+        _sortInitialsVisibleFirst(_initials);
         _recomputeCounts();
       });
       showErrorSnackBar(context, t.iptvCategories.persistFailed);

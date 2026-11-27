@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../i18n/strings.g.dart';
+import '../services/iptv/xtream_api.dart';
 import '../utils/json_utils.dart';
 
 part 'livetv_channel.g.dart';
@@ -129,6 +130,32 @@ class LiveTvChannel {
   });
 
   factory LiveTvChannel.fromJson(Map<String, dynamic> json) => _$LiveTvChannelFromJson(json);
+
+  /// One [LiveTvChannel] for one Xtream live stream (1.6.32): the single
+  /// definition of how a stream becomes a guide channel, shared by the
+  /// client's memo path and by the search index's background guide
+  /// materialization — the two must agree, or the guide would show
+  /// different rows depending on which path served it.
+  factory LiveTvChannel.fromXtreamStream(
+    XtreamLiveStream stream, {
+    required String serverId,
+    required String serverName,
+  }) =>
+      LiveTvChannel(
+        key: '${stream.streamId}',
+        identifier: stream.epgChannelId,
+        title: stream.name,
+        thumb: stream.streamIcon,
+        serverId: serverId,
+        serverName: serverName,
+        // Visible catch-up badge in the guide (tv_archive = 1).
+        hasCatchUp: stream.tvArchive,
+        // Archive-window clamp (1.2.19 L-47): the guide only offers catch-up
+        // for programmes inside tv_archive_duration.
+        catchUpArchiveDurationSeconds: stream.tvArchive ? stream.tvArchiveDuration : null,
+        // Guide category picker (build #17): the Xtream category id.
+        categoryId: stream.categoryId,
+      );
 
   LiveTvChannel copyWith({
     String? serverId,

@@ -1684,6 +1684,9 @@
     "changelog2343": [
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
     ],
+    "changelog2350": [
+      "Fixed: turning a whole group of channels off no longer freezes the app — the TV guide list is now rebuilt in the background instead of on the screen's own thread, so the remote keeps answering while it works; the same fix covers Reload TV details. Turned-off categories now sit at the bottom of their list, in alphabetical order, with the ones still on at the top. The download dialog now shows a real progress bar with how much has arrived and how fast it is coming, and the Update now dialog now shows live progress while the guide downloads in the background, plus how many of your channels matched. The guide settings screen now also shows how many channels and programmes the loaded guide holds"
+    ],
     "changelog2349": [
       "Fixed: on a Meta Quest headset the 2D panel window now stays the size you drag it to — the app no longer snaps it back to the size it had before when the panel comes back into focus. The panel still reopens at the size you left it. The 3D movie screen is unchanged: its size, distance, curvature and depth are still set from the 3D sheet"
     ],
@@ -3532,6 +3535,8 @@
     "catalogSyncSeries": "TV / Series",
     "catalogSyncDone": "Catalog synced",
     "catalogSyncFailed": "Catalog sync failed",
+    "catalogSyncProgressOf": "${received} of ${total}",
+    "catalogSyncProgressUnknown": "${received} received",
     "catalogMode": "Catalog mode",
     "catalogModeLowRam": "Low RAM",
     "catalogModeLowRamDescription": "Uses less memory and a smaller cache file. Only the categories you have turned on are stored.",
@@ -3576,6 +3581,8 @@
     "epgClearGuide": "Clear guide",
     "epgClearGuideDescription": "Delete the downloaded guide data",
     "epgLastUpdated": "Last updated",
+    "epgGuideCounts": "Guide contents",
+    "epgGuideCountsEmpty": "No guide loaded yet",
     "epgNeverUpdated": "Never",
     "epgLastAttemptLine": "Last attempt: ${stamp}",
     "epgUpdated": "Guide updated",
@@ -3607,6 +3614,9 @@
     "epgReloadTvDetailsDescription": "Re-fetch the channel list and the guide, and report what loaded",
     "epgReloadTvDetailsResult": "${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match",
     "epgReloadFeedRefreshingBackground": "The guide is still downloading the latest programmes in the background — the counts above are from the guide you already had, and the new programmes will appear when the download finishes",
+    "epgUpdateNowDownloading": "Downloading the latest programmes…",
+    "epgUpdateNowDownloadingBytes": "Downloading the latest programmes… ${detail}",
+    "epgUpdateNowDownloadFinished": "Download finished — the new programmes will appear when the guide reloads",
     "epgReloadMatchBreakdown": "Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}",
     "epgReloadUnmatchedBreakdown": "No match — ambiguous: ${ambiguous}, foreign: ${foreign}, no tvg-id: ${noTvgId}, tvg-id not in feed: ${tvgIdNotInFeed}, matched but no programmes: ${matchedButNoProgrammes}",
     "epgReloadFeedSample": "Feed sample: ${samples}",

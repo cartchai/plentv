@@ -834,6 +834,9 @@ class _FakeIptvClient implements IptvClient {
   void close() {}
 
   @override
+  int get filterGeneration => 0;
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

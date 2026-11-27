@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import '../../media/iptv_playlist_fingerprint.dart';
+import '../../models/livetv_channel.dart';
 import '../../services/device_performance.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/iptv_initials.dart';
@@ -727,6 +729,105 @@ class IptvSearchIndex {
       appLogger.w('IPTV search index: async search failed for $type', error: e);
       return const [];
     }
+  }
+
+  /// 1.6.32: materialize the whole live guide — channels, the by-key
+  /// streams, and the playlist fingerprint — off the main isolate.
+  /// The category-toggle freeze: the toggle itself is instant, but it
+  /// fired a cascade that rebuilt the entire guide synchronously on
+  /// the UI thread (the index read in 5,000-row pages, 26k-row
+  /// materialization, a full fingerprint hash, dedupe + sort), 3–7 s
+  /// of unbroken UI work past Android's 5 s ANR line — the TV's remote
+  /// stopped answering and Android killed the app. The read +
+  /// materialize + fingerprint now run in an [Isolate.run] worker with
+  /// its own read connection (WAL + 2 s busy timeout + 4 MB cache,
+  /// same as [searchAsync]); only the finished lists cross back, so
+  /// the UI thread stays free to answer the remote. The fingerprint
+  /// is computed over the same hidden-filtered rows the synchronous
+  /// path hashed, so a fingerprint stored by one path matches the
+  /// other's. Throws on any isolate failure — the caller falls back
+  /// to its synchronous path (the old behaviour, slow but correct).
+  /// In-memory indexes (unit tests) have no file to open in another
+  /// isolate, so they materialize synchronously on the caller's path.
+  Future<({List<LiveTvChannel> channels, List<XtreamLiveStream> streams, int? fingerprint})>
+  materializeLiveGuideAsync(
+    String connectionId, {
+    required Set<String> hiddenIds,
+    required Set<String> hiddenInitials,
+    required String serverId,
+    required String serverName,
+    required bool computeFingerprint,
+  }) async {
+    if (_closed) throw StateError('IPTV search index is closed');
+    final path = _dbPath;
+    if (isMemory || path == null) {
+      return _materializeLiveGuide(
+        connectionId,
+        hiddenIds: hiddenIds,
+        hiddenInitials: hiddenInitials,
+        serverId: serverId,
+        serverName: serverName,
+        computeFingerprint: computeFingerprint,
+      );
+    }
+    return Isolate.run(() {
+      final db = sqlite3.open(path);
+      try {
+        db.execute('PRAGMA journal_mode=WAL;');
+        // Fail fast instead of blocking behind a background write lock.
+        db.execute('PRAGMA busy_timeout = $readBusyTimeoutMs;');
+        db.execute('PRAGMA cache_size = -4096;');
+        return IptvSearchIndex._(db, isMemory: false)._materializeLiveGuide(
+          connectionId,
+          hiddenIds: hiddenIds,
+          hiddenInitials: hiddenInitials,
+          serverId: serverId,
+          serverName: serverName,
+          computeFingerprint: computeFingerprint,
+        );
+      } finally {
+        db.close();
+      }
+    });
+  }
+
+  /// The read + materialize + fingerprint core shared by
+  /// [materializeLiveGuideAsync]'s worker and the in-memory fallback:
+  /// page the live rows from the index (hidden filter in SQL, same as
+  /// the old `_indexAllRows` + loop), build one channel + one stream
+  /// per row, and hash the rows when [computeFingerprint] asks for it.
+  ({List<LiveTvChannel> channels, List<XtreamLiveStream> streams, int? fingerprint}) _materializeLiveGuide(
+    String connectionId, {
+    required Set<String> hiddenIds,
+    required Set<String> hiddenInitials,
+    required String serverId,
+    required String serverName,
+    required bool computeFingerprint,
+  }) {
+    final rows = <IptvSearchIndexRow>[];
+    var offset = 0;
+    while (true) {
+      final page = listByCategory(
+        connectionId,
+        typeLive,
+        offset: offset,
+        limit: 5000,
+        hiddenIds: hiddenIds,
+        hiddenInitials: hiddenInitials,
+      );
+      if (page.isEmpty) break;
+      rows.addAll(page);
+      offset += page.length;
+      if (page.length < 5000) break;
+    }
+    final streams = rows.map((r) => r.toLiveStream()).toList(growable: false);
+    final channels = streams
+        .map((s) => LiveTvChannel.fromXtreamStream(s, serverId: serverId, serverName: serverName))
+        .toList(growable: false);
+    final fingerprint = computeFingerprint
+        ? iptvPlaylistFingerprint(rows.map((r) => iptvPlaylistRowHash([r.streamId, r.name, r.epgChannelId])))
+        : null;
+    return (channels: channels, streams: streams, fingerprint: fingerprint);
   }
 
   // -- Writes (called from the background-isolate writer; see below) ------

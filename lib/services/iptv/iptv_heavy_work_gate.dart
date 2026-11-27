@@ -96,16 +96,18 @@ class IptvHeavyWorkGate {
     }
   }
 
-  /// The RSS watchdog's threshold (1.2.18 S-4): the same formula
-  /// `main.dart`'s `_startRssWatchdog` uses — 45% of total RAM
-  /// clamped to [512 MB, 1536 MB] on Android, 1.5 GB on desktop.
-  /// Null where there is no watchdog (iOS/tvOS: jetsam instead).
+  /// The RSS watchdog's threshold (1.2.18 S-4, fixed 1.6.32): the tier
+  /// threshold from [DevicePerformance] — the same number `main.dart`'s
+  /// `_startRssWatchdog` uses — never a local copy of the formula.
+  /// The old 45%-of-RAM formula read 1536 MB on the Streamer, above
+  /// the real 600 MB kill line, so `isMemoryHot` never fired in time
+  /// and the toggle path never consulted the gate at all. 1.5 GB on
+  /// desktop; null where there is no watchdog (iOS/tvOS: jetsam
+  /// instead).
   static int? watchdogThresholdBytes() {
     if (PlatformDetector.isDesktopOS()) return 1536 << 20;
     if (!Platform.isAndroid) return null;
-    final totalMem = DevicePerformance.totalMemBytes;
-    if (totalMem == null) return 1 << 30;
-    return (totalMem * 0.45).round().clamp(512 << 20, 1536 << 20);
+    return DevicePerformance.watchdogThresholdBytes;
   }
 
   /// Whether RSS is already above half the watchdog threshold — the

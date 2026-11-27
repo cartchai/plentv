@@ -1079,7 +1079,18 @@ class IptvEpgUpdateNowResult {
   /// one was still downloading when Update now returned.
   final bool feedRefreshBackground;
 
-  const IptvEpgUpdateNowResult({required this.feedOutcomes, this.feedRefreshBackground = false});
+  /// 1.6.32, D3: the cached channel list's size — the `channels`
+  /// total the outcome lines name their matches against (the matches
+  /// themselves come from that same cached list, see `updateEpgNow`).
+  /// 0 when the list was never refreshed — the lines then name the
+  /// feed's own size, as before.
+  final int channelsTotal;
+
+  const IptvEpgUpdateNowResult({
+    required this.feedOutcomes,
+    this.feedRefreshBackground = false,
+    this.channelsTotal = 0,
+  });
 }
 
 /// Which source served a channel's EPG (build #17, §10) — the split the

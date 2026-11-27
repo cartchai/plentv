@@ -4270,6 +4270,9 @@ class Translations$about$en {
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
 	];
+	List<String> get changelog2350 => [
+		'Fixed: turning a whole group of channels off no longer freezes the app — the TV guide list is now rebuilt in the background instead of on the screen\'s own thread, so the remote keeps answering while it works; the same fix covers Reload TV details. Turned-off categories now sit at the bottom of their list, in alphabetical order, with the ones still on at the top. The download dialog now shows a real progress bar with how much has arrived and how fast it is coming, and the Update now dialog now shows live progress while the guide downloads in the background, plus how many of your channels matched. The guide settings screen now also shows how many channels and programmes the loaded guide holds',
+	];
 	List<String> get changelog2349 => [
 		'Fixed: on a Meta Quest headset the 2D panel window now stays the size you drag it to — the app no longer snaps it back to the size it had before when the panel comes back into focus. The panel still reopens at the size you left it. The 3D movie screen is unchanged: its size, distance, curvature and depth are still set from the 3D sheet',
 	];
@@ -7774,6 +7777,12 @@ class Translations$iptv$en {
 	/// en: 'Catalog sync failed'
 	String get catalogSyncFailed => 'Catalog sync failed';
 
+	/// en: '${received} of ${total}'
+	String catalogSyncProgressOf({required Object received, required Object total}) => '${received} of ${total}';
+
+	/// en: '${received} received'
+	String catalogSyncProgressUnknown({required Object received}) => '${received} received';
+
 	/// en: 'Catalog mode'
 	String get catalogMode => 'Catalog mode';
 
@@ -7888,6 +7897,12 @@ class Translations$iptv$en {
 	/// en: 'Last updated'
 	String get epgLastUpdated => 'Last updated';
 
+	/// en: 'Guide contents'
+	String get epgGuideCounts => 'Guide contents';
+
+	/// en: 'No guide loaded yet'
+	String get epgGuideCountsEmpty => 'No guide loaded yet';
+
 	/// en: 'Never'
 	String get epgNeverUpdated => 'Never';
 
@@ -7980,6 +7995,15 @@ class Translations$iptv$en {
 
 	/// en: 'The guide is still downloading the latest programmes in the background — the counts above are from the guide you already had, and the new programmes will appear when the download finishes'
 	String get epgReloadFeedRefreshingBackground => 'The guide is still downloading the latest programmes in the background — the counts above are from the guide you already had, and the new programmes will appear when the download finishes';
+
+	/// en: 'Downloading the latest programmes…'
+	String get epgUpdateNowDownloading => 'Downloading the latest programmes…';
+
+	/// en: 'Downloading the latest programmes… ${detail}'
+	String epgUpdateNowDownloadingBytes({required Object detail}) => 'Downloading the latest programmes… ${detail}';
+
+	/// en: 'Download finished — the new programmes will appear when the guide reloads'
+	String get epgUpdateNowDownloadFinished => 'Download finished — the new programmes will appear when the guide reloads';
 
 	/// en: 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}'
 	String epgReloadMatchBreakdown({required Object manual, required Object tvgId, required Object name, required Object loose, required Object affiliate}) => 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}';
@@ -12096,13 +12120,14 @@ extension on Translations {
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			'about.changelog2350.0' => 'Fixed: turning a whole group of channels off no longer freezes the app — the TV guide list is now rebuilt in the background instead of on the screen\'s own thread, so the remote keeps answering while it works; the same fix covers Reload TV details. Turned-off categories now sit at the bottom of their list, in alphabetical order, with the ones still on at the top. The download dialog now shows a real progress bar with how much has arrived and how fast it is coming, and the Update now dialog now shows live progress while the guide downloads in the background, plus how many of your channels matched. The guide settings screen now also shows how many channels and programmes the loaded guide holds',
 			'about.changelog2349.0' => 'Fixed: on a Meta Quest headset the 2D panel window now stays the size you drag it to — the app no longer snaps it back to the size it had before when the panel comes back into focus. The panel still reopens at the size you left it. The 3D movie screen is unchanged: its size, distance, curvature and depth are still set from the 3D sheet',
 			'about.changelog2348.0' => 'Cleanup and Quest 3D fixes: error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. On a Meta Quest headset the 3D depth slider now really changes the depth, and 3D detection now also reads the video file\'s own stereo mode, so a 3D file with no tag in its filename is still recognised as 3D. Signing in and the first checks also now wait for the VPN tunnel to finish starting instead of going out direct while it is still coming up',
 			'about.changelog2347.0' => 'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
 			'about.changelog2346.0' => 'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
-			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
 			'about.changelog2341.0' => 'New: the player now opens IPTV streams through the in-app tunnel instead of straight from the panel — that\'s why shows still showed 403 even when the tunnel was connected. Note: this covers http:// streams only; the bundled player can\'t use the proxy for https:// streams, so those still go direct',
@@ -12614,9 +12639,9 @@ extension on Translations {
 			'explore.format.other' => 'Other',
 			'explore.sourceMaterial.original' => 'Original',
 			'explore.sourceMaterial.manga' => 'Manga',
-			'explore.sourceMaterial.lightNovel' => 'Light novel',
 			_ => null,
 		} ?? switch (path) {
+			'explore.sourceMaterial.lightNovel' => 'Light novel',
 			'explore.sourceMaterial.novel' => 'Novel',
 			'explore.sourceMaterial.visualNovel' => 'Visual novel',
 			'explore.sourceMaterial.game' => 'Game',
@@ -13128,9 +13153,9 @@ extension on Translations {
 			'downloads.backgroundWarning.settingsUnavailable' => 'Couldn\'t open system settings on this device',
 			'downloads.backgroundWarning.linkUnavailable' => 'Couldn\'t open dontkillmyapp.com on this device',
 			'downloads.options' => 'Downloads options',
-			'downloads.groupings.library' => 'Library',
 			_ => null,
 		} ?? switch (path) {
+			'downloads.groupings.library' => 'Library',
 			'downloads.groupings.collections' => 'Collections',
 			'downloads.unknownLibrary' => 'Unknown library',
 			'downloads.unknownShow' => 'Unknown Show',
@@ -13642,13 +13667,15 @@ extension on Translations {
 			'iptv.catalogSyncNow' => 'Sync catalog now',
 			'iptv.catalogSyncNowDescription' => 'Download all titles for movies, TV and channels now',
 			'iptv.catalogSyncTitle' => 'Refreshing Trex details',
-			'iptv.catalogSyncLive' => 'Live TV',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.catalogSyncLive' => 'Live TV',
 			'iptv.catalogSyncMovies' => 'Movies',
 			'iptv.catalogSyncSeries' => 'TV / Series',
 			'iptv.catalogSyncDone' => 'Catalog synced',
 			'iptv.catalogSyncFailed' => 'Catalog sync failed',
+			'iptv.catalogSyncProgressOf' => ({required Object received, required Object total}) => '${received} of ${total}',
+			'iptv.catalogSyncProgressUnknown' => ({required Object received}) => '${received} received',
 			'iptv.catalogMode' => 'Catalog mode',
 			'iptv.catalogModeLowRam' => 'Low RAM',
 			'iptv.catalogModeLowRamDescription' => 'Uses less memory and a smaller cache file. Only the categories you have turned on are stored.',
@@ -13684,6 +13711,8 @@ extension on Translations {
 			'iptv.epgClearGuide' => 'Clear guide',
 			'iptv.epgClearGuideDescription' => 'Delete the downloaded guide data',
 			'iptv.epgLastUpdated' => 'Last updated',
+			'iptv.epgGuideCounts' => 'Guide contents',
+			'iptv.epgGuideCountsEmpty' => 'No guide loaded yet',
 			'iptv.epgNeverUpdated' => 'Never',
 			'iptv.epgLastAttemptLine' => ({required Object stamp}) => 'Last attempt: ${stamp}',
 			'iptv.epgUpdated' => 'Guide updated',
@@ -13715,6 +13744,9 @@ extension on Translations {
 			'iptv.epgReloadTvDetailsDescription' => 'Re-fetch the channel list and the guide, and report what loaded',
 			'iptv.epgReloadTvDetailsResult' => ({required Object channels, required Object withGuide, required Object withoutGuide}) => '${channels} channels · ${withGuide} matched from the provider feed · ${withoutGuide} without a feed match',
 			'iptv.epgReloadFeedRefreshingBackground' => 'The guide is still downloading the latest programmes in the background — the counts above are from the guide you already had, and the new programmes will appear when the download finishes',
+			'iptv.epgUpdateNowDownloading' => 'Downloading the latest programmes…',
+			'iptv.epgUpdateNowDownloadingBytes' => ({required Object detail}) => 'Downloading the latest programmes… ${detail}',
+			'iptv.epgUpdateNowDownloadFinished' => 'Download finished — the new programmes will appear when the guide reloads',
 			'iptv.epgReloadMatchBreakdown' => ({required Object manual, required Object tvgId, required Object name, required Object loose, required Object affiliate}) => 'Match breakdown — manual: ${manual}, tvg-id: ${tvgId}, name: ${name}, loose name: ${loose}, affiliate guess: ${affiliate}',
 			'iptv.epgReloadUnmatchedBreakdown' => ({required Object ambiguous, required Object foreign, required Object noTvgId, required Object tvgIdNotInFeed, required Object matchedButNoProgrammes}) => 'No match — ambiguous: ${ambiguous}, foreign: ${foreign}, no tvg-id: ${noTvgId}, tvg-id not in feed: ${tvgIdNotInFeed}, matched but no programmes: ${matchedButNoProgrammes}',
 			'iptv.epgReloadFeedSample' => ({required Object samples}) => 'Feed sample: ${samples}',

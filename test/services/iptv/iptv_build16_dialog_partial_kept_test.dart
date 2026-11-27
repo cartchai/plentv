@@ -119,6 +119,35 @@ class _DegradedPanel extends http.BaseClient {
   }
 }
 
+/// 1.6.32, D1: the degraded panel, but `get_live_streams` arrives
+/// through a [StreamController] the test feeds one chunk at a time —
+/// the provider's shape (no Content-Length), paced slowly enough that
+/// the sync dialog is observable mid-download. A delay inside the
+/// panel's own stream would be a fake-async timer (the dialog's sync
+/// runs in the test's fake zone, so it would never elapse); feeding
+/// from the poll loop — which advances real time — paces it for real.
+/// All other actions answer instantly, as the base panel does.
+class _SlowLivePanel extends _DegradedPanel {
+  // Closed by the test: the poll loop closes it once the last chunk is
+  // fed, and the test's tearDown closes it if the test fails first.
+  // The lint cannot see either close.
+  // ignore: close_sinks
+  final liveChunks = StreamController<List<int>>();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.queryParameters['action'] == 'get_live_streams') {
+      return http.StreamedResponse(
+        liveChunks.stream,
+        200,
+        request: request,
+        headers: {'content-type': 'application/json'},
+      );
+    }
+    return super.send(request);
+  }
+}
+
 XtreamConnection _trexConnection() => XtreamConnection(
       id: _connId,
       name: 'Trex',
@@ -281,6 +310,88 @@ void main() {
       expect(find.text(t.iptv.catalogSyncDone), findsOneWidget,
           reason: 'a kept partial list is not a failed sync');
       expect(find.text(t.iptv.catalogSyncFailed), findsNothing);
+    });
+
+    testWidgets('D1 1.6.32: the sync dialog shows a progress bar + bytes while a download runs with no total', (tester) async {
+      // The provider sends no Content-Length, so every row sat at '…'
+      // for minutes with only a 20px spinner. The dialog now shows a
+      // LinearProgressIndicator (indeterminate when the total is
+      // unknown) plus the bytes received so far. The live download is
+      // fed one chunk per poll iteration so the dialog is observable
+      // mid-download.
+      final panel = _SlowLivePanel();
+      addTearDown(() async {
+        if (!panel.liveChunks.isClosed) await panel.liveChunks.close();
+      });
+      final client = _clientWith(panel);
+
+      CredentialVault.resetKeyForTesting();
+      await tester.runAsync(() => CredentialVault.protect('opaque-vault-warmup'));
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(() async => db.close());
+      final registry = _FakeConnectionRegistry(db);
+      await registry.upsert(_trexConnection());
+      final manager = MultiServerManager()..debugRegisterClientForTesting(client);
+      final provider = testMultiServerProvider(manager);
+      addTearDown(() {
+        provider.dispose();
+        manager.dispose();
+      });
+      tester.view.physicalSize = const Size(840, 1800);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<MultiServerProvider>.value(value: provider),
+            Provider<ConnectionRegistry>.value(value: registry),
+          ],
+          child: InputModeTracker(
+            child: MaterialApp(
+              theme: monoTheme(MonoPalette.dark),
+              home: const IptvSettingsScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(t.iptv.catalogSyncNow));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(t.iptv.catalogSyncNow));
+      await tester.pump();
+
+      // Poll (real async) until the footer lands, feeding the live
+      // download one chunk per iteration and recording whether the
+      // progress bar + bytes line ever appeared mid-download. Bounded
+      // by iteration count, not wall-clock (see D2).
+      final liveBytes = utf8.encode(panel._bodyFor('get_live_streams'));
+      const chunkSize = 24;
+      var nextChunk = 0;
+      var sawBar = false;
+      var sawBytes = false;
+      var landed = false;
+      for (var i = 0; i < 100 && !landed; i++) {
+        await tester.runAsync(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+        });
+        await tester.pump();
+        if (nextChunk * chunkSize < liveBytes.length) {
+          final end = (nextChunk * chunkSize + chunkSize).clamp(0, liveBytes.length);
+          panel.liveChunks.add(liveBytes.sublist(nextChunk * chunkSize, end));
+          nextChunk++;
+          if (nextChunk * chunkSize >= liveBytes.length) await panel.liveChunks.close();
+        }
+        if (find.byType(LinearProgressIndicator).evaluate().isNotEmpty) sawBar = true;
+        if (find.textContaining('received').evaluate().isNotEmpty) sawBytes = true;
+        landed = find.text(t.iptv.catalogSyncDone).evaluate().isNotEmpty ||
+            find.text(t.iptv.catalogSyncFailed).evaluate().isNotEmpty;
+      }
+      expect(landed, isTrue, reason: 'the dialog never reached a footer');
+      expect(sawBar, isTrue,
+          reason: 'no LinearProgressIndicator ever appeared while the live download ran — the dialog still shows only the spinner');
+      expect(sawBytes, isTrue,
+          reason: 'no "received" bytes line ever appeared while the live download ran — the total is unknown, so the bytes are the only progress');
     });
   });
 }

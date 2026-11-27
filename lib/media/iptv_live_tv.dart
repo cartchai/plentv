@@ -4185,6 +4185,11 @@ class IptvLiveTvSupport implements LiveTvSupport {
     if (stampLastUpdated) {
       _lastEpgUpdatedAt = DateTime.now();
       _noteEpgUpdated(_lastEpgUpdatedAt!);
+      // 1.6.32, D4: the counts row in IPTV settings — the loaded
+      // guide's size across every feed, written with the "Last
+      // updated" stamp so the row survives a restart and stays in
+      // step with it.
+      _noteGuideCounts();
     }
     final size = await _xmltvFeedFileSize(attempt.cacheKey);
     final statuses = await _epgStore.loadStatuses();
@@ -5854,6 +5859,31 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// when the server declares it (resume path only — the fresh path
   /// has no total). Null when no download is in flight for the key.
   ({int received, int? totalBytes})? feedDownloadProgress(String cacheKey) => _feedDownloadProgress[cacheKey];
+
+  /// True while a feed load is in flight for this connection (1.6.32,
+  /// D2): the Update-now dialog uses it to tell a download that
+  /// already settled from one that never started.
+  bool get hasInFlightFeedLoad => _xmltvGuideFutures.isNotEmpty;
+
+  /// Wait for every in-flight feed load to settle (1.6.32, D2): the
+  /// Update-now tile keeps its spinner until the background download
+  /// finishes instead of clearing it when the dialog appears.
+  /// Snapshots the in-flight loads; a load that starts after the
+  /// snapshot is not waited on. Never throws — a failed load settles
+  /// the wait like a finished one.
+  Future<void> waitForFeedRefresh() async {
+    final inFlight = List<Future<_CachedXmltvGuide>>.of(_xmltvGuideFutures.values);
+    if (inFlight.isEmpty) return;
+    await Future.wait(
+      inFlight.map((f) async {
+        try {
+          await f;
+        } catch (_) {
+          // A failed load settles the wait like a finished one.
+        }
+      }),
+    );
+  }
 
   /// The provider feed's cache key for this connection
   /// (`xtream:<connection id>`) — the same key the feed loader uses.
@@ -7644,9 +7674,16 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
       'window slide: ${windowSlide.slid ? 'ready for ${windowSlide.channelCount} rows' : 'skipped (${windowSlide.reason ?? 'silent'})'}; '
       'feed refresh in background: $feedRefreshBackground',
     );
+    // 1.6.32, D3: Update now reports match counts — the channel list
+    // is the last refreshed one, cached, no network (the same list
+    // the window slide above already uses). When it is empty (never
+    // refreshed) the outcomes keep their feed-only lines, as before.
+    final cachedChannels = _client.fullLiveChannelsFromLastRefresh;
+    final channelsForMatch = (cachedChannels != null && cachedChannels.isNotEmpty) ? cachedChannels : null;
     return IptvEpgUpdateNowResult(
-      feedOutcomes: _feedOutcomes(outcome, null, mappings, settings, from, to),
+      feedOutcomes: _feedOutcomes(outcome, channelsForMatch, mappings, settings, from, to),
       feedRefreshBackground: feedRefreshBackground,
+      channelsTotal: channelsForMatch?.length ?? 0,
     );
   }
 
@@ -7841,6 +7878,7 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
       _lastEpgUpdatedAt = null;
       final settings = await SettingsService.getInstance();
       await settings.write(SettingsService.iptvEpgLastUpdated, '');
+      await settings.write(SettingsService.iptvEpgLastGuideCounts, '');
     } else {
       _bumpEpgVersion();
     }
@@ -7882,6 +7920,28 @@ Future<Map<int, String>> _fetchAndParseM3uPlaylist(
     final stamp = now.toIso8601String();
     SettingsService.getInstance().then((settings) {
       settings.write(SettingsService.iptvEpgLastUpdated, stamp);
+    });
+  }
+
+  /// Record the loaded guide's size for the settings screen (1.6.32,
+  /// D4): distinct feed channels with programmes + total programmes
+  /// across every loaded feed, as "channels|programmes". Written only
+  /// on bulk feed loads (the [stampLastUpdated] call sites), never on
+  /// per-channel loads — one write per feed per load, so no throttle
+  /// is needed. Best-effort: a failed write leaves the previous
+  /// counts in place, and the next load re-records.
+  void _noteGuideCounts() {
+    if (_xmltvCache.isEmpty) return;
+    final channelIds = <String>{};
+    var programs = 0;
+    for (final guide in _xmltvCache.values) {
+      channelIds.addAll(guide.programCountByChannel.keys);
+      programs += guide.totalProgramCount;
+    }
+    if (channelIds.isEmpty && programs == 0) return;
+    final value = '${channelIds.length}|$programs';
+    SettingsService.getInstance().then((settings) {
+      settings.write(SettingsService.iptvEpgLastGuideCounts, value);
     });
   }
 

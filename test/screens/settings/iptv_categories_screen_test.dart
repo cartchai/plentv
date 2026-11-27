@@ -183,6 +183,30 @@ void main() {
     expect((swapped.connection as XtreamConnection).hiddenCategoryIds, ['L2']);
   });
 
+  testWidgets('REORDER 1.6.32: turned-off categories sink to the bottom, on ones stay on top', (tester) async {
+    final h = await harness();
+    await pumpScreen(tester, h.provider, h.registry);
+
+    // Turn off Live 1 and Live 3 (not adjacent, not at the ends — the
+    // reorder must move both below every on-category, in alphabetical
+    // order among themselves).
+    await tester.tap(switchTileFor('EN - Live 1'));
+    await tester.pumpAndSettle();
+    await tester.tap(switchTileFor('EN - Live 3'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<FocusableSwitchListTile>(switchTileFor('EN - Live 1')).value, isFalse);
+    expect(tester.widget<FocusableSwitchListTile>(switchTileFor('EN - Live 3')).value, isFalse);
+    expect(find.textContaining('6 categories, 2 hidden'), findsOneWidget);
+
+    // Display order = vertical order on screen. On base the list stays
+    // in provider order (Live 1 first), so this fails there; on the fix
+    // the on-categories come first alphabetically, then the off ones.
+    final labels = ['EN - Live 1', 'EN - Live 2', 'EN - Live 3', 'EN - Live 4', 'EN - Live 5', 'EN - Live 6'];
+    final ordered = [...labels]..sort((a, b) => tester.getTopLeft(find.text(a)).dy.compareTo(tester.getTopLeft(find.text(b)).dy));
+    expect(ordered, ['EN - Live 2', 'EN - Live 4', 'EN - Live 5', 'EN - Live 6', 'EN - Live 1', 'EN - Live 3']);
+  });
+
   testWidgets('CONTROL: toggling an initial hides every category starting with it', (tester) async {
     final h = await harness();
     await pumpScreen(tester, h.provider, h.registry);

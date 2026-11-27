@@ -216,7 +216,12 @@ void main() {
     await tester.pumpAndSettle();
     toggleWatch.stop();
     expect(toggleWatch.elapsedMilliseconds, lessThan(400));
-    // And the toggle took effect: the row now reads hidden.
+    // And the toggle took effect: the row now reads hidden. 1.6.32:
+    // a turned-off category sinks to the bottom of its list, so the
+    // row is no longer in place — scroll down to it (it sits below
+    // every on-category, alphabetically among the off ones).
+    await tester.scrollUntilVisible(find.text('EN - Live 1'), 2000);
+    await tester.pumpAndSettle();
     final tile = tester.widget<FocusableSwitchListTile>(find.ancestor(
       of: find.text('EN - Live 1'),
       matching: find.byType(FocusableSwitchListTile),

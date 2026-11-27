@@ -448,6 +448,10 @@ void main() {
       final settings = await SettingsService.getInstance();
       expect(settings.read(SettingsService.iptvEpgLastAttempt), isEmpty);
 
+      // 1.6.32, D3: the match counts read the cached channel list,
+      // which only `refreshLiveChannelsFromNetwork` populates (a plain
+      // `iptvChannels()` does not) — refresh first, as Reload does.
+      await client.refreshLiveChannelsFromNetwork();
       final result = await support.updateEpgNow();
       // Give the fire-and-forget attempt write a moment to land.
       await Future<void>.delayed(const Duration(milliseconds: 300));
@@ -457,7 +461,13 @@ void main() {
       final provider = result.feedOutcomes.single;
       expect(provider.kind, IptvEpgFeedOutcomeKind.loaded);
       expect(provider.feedChannels, 1);
-      expect(provider.matchedChannels, isNull, reason: 'Update now never re-fetches the channel list, so there is no match count to name');
+      // 1.6.32, D3: Update now reports the match count from the cached
+      // channel list (setUp's iptvChannels() cached ch100 + ch101) —
+      // no re-fetch, but the feed's ch100 matches one of the two cached
+      // channels, so the report can name "matched 1 of 2 channels"
+      // instead of only the feed's own size.
+      expect(provider.matchedChannels, 1);
+      expect(result.channelsTotal, 2);
       expect(
         settings.read(SettingsService.iptvEpgLastAttempt),
         isNotEmpty,
@@ -480,6 +490,32 @@ void main() {
         provider!.state(enabled: true, ttl: const Duration(hours: 24)),
         IptvEpgSourceState.failed,
         reason: 'the failure must land in the per-source status so the chip can show it',
+      );
+    });
+
+    test('an empty cached channel list keeps the feed-only lines (D3 fallback)', () async {
+      // No iptvChannels() call in this test's setUp path — the client
+      // is fresh, so the cached list is empty and Update now falls back
+      // to the feed-only lines, as before 1.6.32. (The shared setUp DOES
+      // call iptvChannels(), so this test rebuilds a fresh client
+      // without it.)
+      final fresh = IptvClient.xtream(xtreamConnection: _trexConnection());
+      fresh.testXtreamApi = api;
+      addTearDown(fresh.close);
+      final freshSupport = fresh.liveTv as IptvLiveTvSupport;
+      final result = await freshSupport.updateEpgNow();
+
+      expect(result.channelsTotal, 0);
+      expect(result.feedOutcomes.single.matchedChannels, isNull);
+    });
+  });
+
+  group('D2 — the Update-now dialog can wait for a background download (1.6.32)', () {
+    test('no feed load is in flight when idle, and the wait returns at once', () async {
+      expect(support.hasInFlightFeedLoad, isFalse);
+      await support.waitForFeedRefresh().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => fail('waitForFeedRefresh must return promptly when nothing is downloading'),
       );
     });
   });

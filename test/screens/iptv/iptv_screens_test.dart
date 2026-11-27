@@ -1115,6 +1115,15 @@ void main() {
       expect(find.text('Version 1.2.4-2.25.0'), findsOneWidget);
       final newest124 = tester.getTopLeft(find.text('Version 1.2.4-2.25.0')).dy;
       expect(newest124, lessThan(newest123));
+      // Category freeze + dialog progress (v1.6.32): the newest entry
+      // must be present and sit above 1.6.31 — the 1.6.31 guard the
+      // 1.6.31 tester asked for was never added, so this guards both:
+      // 1.6.31 present below 1.6.32, 1.6.32 on top.
+      expect(find.text('Version 1.6.32-2.26.0'), findsOneWidget);
+      expect(find.text('Version 1.6.31-2.26.0'), findsOneWidget);
+      final newest1632 = tester.getTopLeft(find.text('Version 1.6.32-2.26.0')).dy;
+      final previous1631 = tester.getTopLeft(find.text('Version 1.6.31-2.26.0')).dy;
+      expect(newest1632, lessThan(previous1631));
     });
   });
 }

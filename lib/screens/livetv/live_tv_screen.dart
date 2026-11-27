@@ -153,6 +153,21 @@ class _LiveTvScreenState extends State<LiveTvScreen>
   /// visible until a restart.
   StreamSubscription<LibraryChangeEvent>? _catalogSubscription;
 
+  /// Debounce timer for user-initiated catalog reloads (1.6.32,
+  /// option 8): a filter toggle fires the catalog event twice in
+  /// quick succession (the rebind, then the re-derive completion) —
+  /// the timer collapses the burst into one load.
+  Timer? _catalogReloadDebounce;
+
+  /// Filter generation per Live TV server (by server-id value)
+  /// captured at the start of the in-flight channel load (1.6.32,
+  /// option 6), and the generations the last completed load covered.
+  /// A user-initiated event for a generation the in-flight (or last
+  /// completed) load already covers is the re-derive completion for
+  /// that same change, not a new change — it reloads nothing.
+  Map<String, int> _loadFilterGenerations = {};
+  Map<String, int> _lastCompletedFilterGenerations = {};
+
   // Favorites
   bool _showFavoritesOnly = false;
   Set<String> _favoriteKeys = {};
@@ -298,14 +313,24 @@ class _LiveTvScreenState extends State<LiveTvScreen>
       // the whole channel list and re-fetched EPG for visible channels
       // for nothing (build #14, SA-4 partial).
       if (!event.liveCatalogChanged) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_channelsLoadFuture != null) {
-          _reloadAfterLoad = true;
-        } else {
-          unawaited(_loadChannels());
-        }
-      });
+      // 1.6.32, option 8: a filter toggle fires the catalog event
+      // twice in quick succession (the rebind, then the re-derive
+      // completion) — debounce user-initiated reloads so a burst
+      // collapses into one load. Server pushes (a sync landing) are
+      // not debounced: they arrive once and reload at once, and a
+      // push cancels a pending toggle debounce (the push's load
+      // covers the toggle's change too).
+      if (event.userInitiated) {
+        _catalogReloadDebounce?.cancel();
+        _catalogReloadDebounce = Timer(const Duration(milliseconds: 300), () {
+          _catalogReloadDebounce = null;
+          _requestGuideReloadAfterEvent(event);
+        });
+      } else {
+        _catalogReloadDebounce?.cancel();
+        _catalogReloadDebounce = null;
+        _requestGuideReloadAfterEvent(event);
+      }
     });
     final initialTabs = _tabStateFor(provider);
     _visibleTabs = initialTabs.tabs;
@@ -348,6 +373,7 @@ class _LiveTvScreenState extends State<LiveTvScreen>
 
   @override
   void dispose() {
+    _catalogReloadDebounce?.cancel();
     _catalogSubscription?.cancel();
     _multiServer.removeListener(_onLiveTvServersChanged);
     _guideTabFocusNode.dispose();
@@ -564,9 +590,21 @@ class _LiveTvScreenState extends State<LiveTvScreen>
   Future<void> _loadChannels() {
     final inFlight = _channelsLoadFuture;
     if (inFlight != null) return inFlight;
+    // 1.6.32, option 6: capture each IPTV client's filter generation
+    // at load start — a catalog event for the same generation while
+    // this load runs is the re-derive completion for the change this
+    // load already covers, not a new change.
+    _loadFilterGenerations = {
+      for (final serverInfo in _multiServer.liveTvServers)
+        serverInfo.serverId: _filterGenerationFor(serverInfo.serverId),
+    };
     late final Future<void> load;
     load = _loadChannelsOnce().whenComplete(() {
       if (identical(_channelsLoadFuture, load)) _channelsLoadFuture = null;
+      // The generations this load covered — a later user-initiated
+      // event for the same generation is the re-derive completion,
+      // not a new change.
+      _lastCompletedFilterGenerations = Map.of(_loadFilterGenerations);
       // A server bound while this load was running: fetch once more so its
       // channels are included instead of waiting for a manual refresh.
       if (_reloadAfterLoad) {
@@ -576,6 +614,41 @@ class _LiveTvScreenState extends State<LiveTvScreen>
     });
     _channelsLoadFuture = load;
     return load;
+  }
+
+  /// Act on one catalog event (1.6.32, options 6 + 8): start a load, or
+  /// mark one for after the in-flight load — but only when the event
+  /// names a change the in-flight (or last completed) load does not
+  /// already cover. A user-initiated event for the same filter
+  /// generation is the re-derive completion for that same change, so
+  /// it reloads nothing. A server push (a sync landing) is never
+  /// coalesced this way — the index changed, not the filter, so it
+  /// always reloads. Deferred to the next frame, like before: the
+  /// event can arrive mid-build.
+  void _requestGuideReloadAfterEvent(LibraryChangeEvent event) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final serverId = event.serverId.value;
+      if (event.userInitiated) {
+        final current = _filterGenerationFor(serverId);
+        if (current == _loadFilterGenerations[serverId] ||
+            current == _lastCompletedFilterGenerations[serverId]) {
+          return;
+        }
+      }
+      if (_channelsLoadFuture != null) {
+        _reloadAfterLoad = true;
+      } else {
+        unawaited(_loadChannels());
+      }
+    });
+  }
+
+  /// The filter generation of one Live TV server's client (1.6.32,
+  /// option 6): 0 for a non-IPTV client, which has no filter.
+  int _filterGenerationFor(String serverId) {
+    final client = _multiServer.getClientForServer(ServerId(serverId));
+    return client is IptvClient ? client.filterGeneration : 0;
   }
 
   Future<void> _loadChannelsOnce() async {
@@ -648,17 +721,25 @@ class _LiveTvScreenState extends State<LiveTvScreen>
           );
           for (final channel in channels) {
             if (enabledKeys != null && !enabledKeys.contains(channel.key)) continue;
-            final scopedChannel = channel.copyWith(
-              liveDvrKey: serverInfo.dvrKey,
-              liveTvSourceTitle: sourceTitle,
-              favoriteSource: source,
-              favoriteStoreKey: storeKey,
+            // 1.6.32, option 5: the dedupe key is computed from the
+            // un-scoped channel + this server's scope — no copyWith
+            // is needed to ask whether this channel was already seen.
+            // Only a channel that is actually added pays for the
+            // scoped copy. The key is built exactly as
+            // [liveTvChannelScopeKey] builds it from the scoped
+            // channel (serverId, then the DVR key, then the key).
+            final dedupKey =
+                '${channel.serverId ?? ''}\u0000${serverInfo.dvrKey}\u0000${channel.key}';
+            if (!seenChannels.add(dedupKey)) continue;
+            liveServerKeyByChannel[dedupKey] = liveServerKey;
+            allChannels.add(
+              channel.copyWith(
+                liveDvrKey: serverInfo.dvrKey,
+                liveTvSourceTitle: sourceTitle,
+                favoriteSource: source,
+                favoriteStoreKey: storeKey,
+              ),
             );
-            final dedupKey = liveTvChannelScopeKey(scopedChannel);
-            if (seenChannels.add(dedupKey)) {
-              liveServerKeyByChannel[dedupKey] = liveServerKey;
-              allChannels.add(scopedChannel);
-            }
           }
         },
         onError: (client, serverInfo, error, stackTrace) {
@@ -684,11 +765,25 @@ class _LiveTvScreenState extends State<LiveTvScreen>
         return;
       }
 
-      allChannels.sort((a, b) {
-        final aNum = double.tryParse(a.number ?? '') ?? 999999;
-        final bNum = double.tryParse(b.number ?? '') ?? 999999;
-        return aNum.compareTo(bNum);
-      });
+      // 1.6.32, option 5: the old comparator called double.tryParse
+      // twice per comparison (~780k calls for 26k channels — and every
+      // IPTV channel has no number at all, so the sort was a no-op
+      // that still paid for itself). Parse each number once; when no
+      // channel has a number at all, skip the sort — provider order
+      // already is the order. The sort is stable (Dart's List.sort),
+      // so unnumbered channels keep provider order among themselves.
+      final sortKeys = List<double>.generate(
+        allChannels.length,
+        (i) => double.tryParse(allChannels[i].number ?? '') ?? 999999,
+      );
+      if (sortKeys.any((k) => k != 999999)) {
+        final decorated = [
+          for (var i = 0; i < allChannels.length; i++) (key: sortKeys[i], channel: allChannels[i]),
+        ]..sort((a, b) => a.key.compareTo(b.key));
+        for (var i = 0; i < allChannels.length; i++) {
+          allChannels[i] = decorated[i].channel;
+        }
+      }
 
       if (!mounted) return;
 

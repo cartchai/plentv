@@ -172,7 +172,16 @@ class IptvClient implements MediaServerClient {
     if (_isXtream &&
         (!setEquals(oldHiddenIds, _hiddenCategories) ||
             !setEquals(oldHiddenInitials, _hiddenCategoryInitials))) {
-      _rederiveMemosFromDisk();
+      // 1.6.32, option 6: the filter changed — a new generation, so a
+      // guide load already in flight does not mistake the re-derive
+      // completion for this change as a second change.
+      _filterGeneration++;
+      // 1.6.32, option 2: a hide-only change (the hidden sets only
+      // grew — nothing was un-hidden) can filter the cached guide list
+      // in Dart instead of invalidating it and re-reading 26k rows.
+      final hideOnly = _hiddenCategories.containsAll(oldHiddenIds) &&
+          _hiddenCategoryInitials.containsAll(oldHiddenInitials);
+      unawaited(_rederiveMemosFromDisk(hideOnly: hideOnly));
     }
   }
 
@@ -189,14 +198,76 @@ class IptvClient implements MediaServerClient {
   /// re-derived — the index path re-reads with the new hidden sets and
   /// needs no re-derive, so a toggle with no memo loaded does no work
   /// at all and never loads a memo just to re-derive it.
-  void _rederiveMemosFromDisk() {
-    // 1.2.18 C-1: a filter change changes the index-path list, so the
-    // cached guide list goes with the memos.
-    _invalidateGuideChannelCache();
+  ///
+  /// 1.6.32: the toggle-time re-derive is where the freeze lived — the
+  /// guide rebuild ran synchronously on the UI thread while the memos
+  /// re-parsed in the background. The re-derive now (option 2) filters
+  /// the cached guide list in Dart on a hide-only toggle, (option 3)
+  /// skips entirely while a catalog sync is running in another
+  /// isolate, (option 7) skips entirely while memory is hot, and
+  /// (option 9) drops the VOD/series memos instead of re-deriving
+  /// them — the index path serves those reads with the new hidden
+  /// sets, and the next memo-path read re-warms from disk on demand.
+  Future<void> _rederiveMemosFromDisk({bool hideOnly = false}) async {
+    // 1.6.32, option 2: a hide-only toggle filters the cached guide
+    // list in Dart instead of invalidating it and re-reading 26k rows
+    // from SQLite — the cached list is the visible set, and hiding
+    // only removes rows from it. The key→index map is rebuilt from
+    // the filtered list, and the C-1 stamps stay: the index
+    // generation did not change, so a later iptvChannels() over this
+    // same index serves the filtered list without a re-read. An
+    // un-hide still invalidates — the hidden rows are not in the
+    // cached list to filter back in.
+    if (hideOnly && _cachedGuideChannels != null) {
+      final liveCategoryNames = await _liveCategoryNames();
+      final filtered = _cachedGuideChannels!
+          .where((c) => !_isHiddenCategory(c.categoryId, liveCategoryNames[c.categoryId]))
+          .toList(growable: false);
+      _cachedGuideChannels = filtered;
+      _cachedGuideChannelIndex = {
+        for (var i = 0; i < filtered.length; i++) filtered[i].key: i,
+      };
+    } else {
+      // 1.2.18 C-1: a filter change changes the index-path list, so the
+      // cached guide list goes with the memos.
+      _invalidateGuideChannelCache();
+    }
+    // 1.6.32, option 3: a catalog sync is already running in another
+    // isolate — its landing refreshes the memos/index and notifies,
+    // so re-deriving now would compete with it (parse + deserialize
+    // on the main isolate while the sync writes) for a result the
+    // sync is about to replace. Skip the re-derive; the sync's
+    // notifications reload the tabs when it lands.
+    if (await isSyncRunningElsewhere()) return;
+    // 1.6.32, option 7: memory is already hot — skip the re-derive
+    // entirely. Correctness is covered without it: the guide reads
+    // the index path (warm) with the new hidden sets, and the memo
+    // path filters with _isHiddenCategory at read time, so a stale
+    // memo can never show a hidden row; un-hidden rows come back
+    // through the index or the next sync. The memos refresh on the
+    // next cool toggle or sync.
+    if (IptvHeavyWorkGate.isMemoryHot) return;
+    // 1.6.32, option 9: the VOD/series memos are DROPPED on a filter
+    // change instead of re-derived — the same drop-not-republish shape
+    // as [_refreshCatalogAfterSync]: re-deriving them deserializes up
+    // to 199k rows onto the main isolate per toggle, and the index
+    // path serves those reads with the new hidden sets anyway. The
+    // next memo-path read re-warms from disk on demand. The category
+    // futures stay — the category lists did not change, only which
+    // of them are hidden. The live memo is still re-derived (26k
+    // rows, and the guide's cold fallback reads it).
+    if (_vodStreamsFuture != null) {
+      _vodStreamsFuture = null;
+      _vodById = null;
+      _vodStreamsLoaded = false;
+    }
+    if (_seriesFuture != null) {
+      _seriesFuture = null;
+      _seriesById = null;
+      _seriesListLoaded = false;
+    }
     final futures = <Future<void>>[];
     if (_liveStreamsFuture != null) futures.add(_warmLiveCatalogFromDisk(force: true));
-    if (_vodStreamsFuture != null) futures.add(_warmVodCatalogFromDisk(force: true));
-    if (_seriesFuture != null) futures.add(_warmSeriesCatalogFromDisk(force: true));
     if (futures.isEmpty) return;
     final future = Future.wait(futures);
     _rederiveMemosFuture = future;
@@ -1086,6 +1157,16 @@ class IptvClient implements MediaServerClient {
   /// a memo hit. Null until the first index-path guide load.
   DateTime? _lastGuideIndexLastSync;
   int? _lastGuideIndexRowCount;
+
+  /// The hidden sets the fingerprint was last computed over (1.6.32,
+  /// option 4): a hide-only change must not trigger the fingerprint +
+  /// EPG decision — the playlist did not change, only its visibility
+  /// did. When the index changed AND the hidden sets changed since
+  /// the last fingerprint, the fingerprint is skipped this load (the
+  /// playlist-change check resumes on the next index change, one sync
+  /// cycle later at most).
+  Set<String>? _lastGuideHiddenIds;
+  Set<String>? _lastGuideHiddenInitials;
 
   /// Cached guide-order channel list + key→index map (1.2.18 C-1):
   /// `iptvChannels()` rebuilt the whole 26k-row list from SQLite on
@@ -2445,6 +2526,17 @@ class IptvClient implements MediaServerClient {
   String get _seriesLibraryId => _libraryId(seriesLibrarySuffix);
 
   Set<String> get _hiddenCategories => _hiddenCategoryIdList.toSet();
+
+  /// Filter generation (1.6.32, option 6): bumped every time the hidden
+  /// filter changes in [updateConnection]. The guide's reload
+  /// coalescing uses it to tell a re-derive completion (same
+  /// generation — the in-flight load already covers this change) from
+  /// a NEW toggle that landed while a load was running (new
+  /// generation — one more reload is genuinely due).
+  int _filterGeneration = 0;
+
+  /// The current filter generation — see [_filterGeneration].
+  int get filterGeneration => _filterGeneration;
 
   /// ONE switch for the 1.2.4 catalog prune (the owner's two-mode decision,
   /// 2026-11-13 ~14:19 EST): the app will have "Low RAM" (on by default
@@ -4991,57 +5083,12 @@ class IptvClient implements MediaServerClient {
     unawaited(_maybeSeedSearchIndexFromDisk());
   }
 
-  /// Disk-only memo reload (build #23, startup rule; 1.2.11: no longer
-  /// the bind warm-up — the bind seeds the index instead): read the
-  /// disk catalog into the memoized future so a loaded memo stays
-  /// consistent, and never fetch from the panel. Only the toggle
-  /// re-derive ([_rederiveMemosFromDisk]) calls this now, for memos
-  /// that are loaded. If there is no disk file yet (fresh install),
-  /// this is a no-op — the background sync populates the disk + index,
-  /// and a browse/search load fetches as before (the cold fallback).
-  /// 1.2.4: the parse filters inside the isolate, so the memo holds
-  /// visible rows only — a disk file written before 1.2.4 (full
-  /// catalog) is pruned at read time. [force] is the toggle re-derive
-  /// ([_rederiveMemosFromDisk]): re-parse and swap the memo even when
-  /// one is loaded, so the stale memo keeps serving until the fresh
-  /// one lands.
-  Future<void> _warmSeriesCatalogFromDisk({bool force = false}) async {
-    if (!force && _seriesListLoaded) return;
-    final filter = await _visibleCatalogFilterFor(IptvSearchIndex.typeSeries);
-    final disk = await _readDiskCatalogFromFile<XtreamSeries>(
-      IptvCatalogDiskCache.seriesDataset,
-      (path) => XtreamApi.parseSeriesFileVisible(path, filter),
-    );
-    if (disk == null) return;
-    _seriesFuture = Future.value(disk.rows);
-    _seriesById = null;
-    _seriesListLoaded = true;
-    _seriesLoadSource = 'disk';
-    _memoSyncStamp[IptvSearchIndex.typeSeries] = disk.fetchedAt;
-  }
-
   /// Same warm-up for the VOD catalog (build #13): the first Movies
   /// browse/search after app start otherwise races the 199k-row load.
   void warmUpVodCatalog() {
     if (!_isXtream) return;
     // 1.2.11: seed-only — see [warmUpSeriesCatalog].
     unawaited(_maybeSeedSearchIndexFromDisk());
-  }
-
-  /// Disk-only VOD warm-up (build #23, startup rule) — see
-  /// [_warmSeriesCatalogFromDisk]. 1.2.4: visible-only parse (see above).
-  Future<void> _warmVodCatalogFromDisk({bool force = false}) async {
-    if (!force && _vodStreamsLoaded) return;
-    final filter = await _visibleCatalogFilterFor(IptvSearchIndex.typeMovie);
-    final disk = await _readDiskCatalogFromFile<XtreamVodStream>(
-      IptvCatalogDiskCache.vodDataset,
-      (path) => XtreamApi.parseVodStreamsFileVisible(path, filter),
-    );
-    if (disk == null) return;
-    _vodStreamsFuture = Future.value(disk.rows);
-    _vodStreamsLoaded = true;
-    _vodLoadSource = 'disk';
-    _memoSyncStamp[IptvSearchIndex.typeMovie] = disk.fetchedAt;
   }
 
   /// Same warm-up for the live catalog (build #13): the first Live TV
@@ -5052,8 +5099,16 @@ class IptvClient implements MediaServerClient {
     unawaited(_maybeSeedSearchIndexFromDisk());
   }
 
-  /// Disk-only live warm-up (build #23, startup rule) — see
-  /// [_warmSeriesCatalogFromDisk]. 1.2.4: visible-only parse (see above).
+  /// Disk-only live warm-up (build #23, startup rule). 1.2.4:
+  /// visible-only parse — the memo holds visible rows only, so a disk
+  /// file written before 1.2.4 (full catalog) is pruned at read time.
+  /// [force] is the toggle re-derive ([_rederiveMemosFromDisk]):
+  /// re-parse and swap the memo even when one is loaded, so the stale
+  /// memo keeps serving until the fresh one lands. 1.6.32: the VOD and
+  /// series disk warm-ups are gone — the toggle re-derive drops those
+  /// memos instead of re-parsing them (option 9), and the lazy path
+  /// re-warms them on demand — so this live warm-up is the only disk
+  /// warm-up left.
   Future<void> _warmLiveCatalogFromDisk({bool force = false}) async {
     if (!force && _liveStreamsLoaded) return;
     final filter = await _visibleCatalogFilterFor(IptvSearchIndex.typeLive);
@@ -7315,6 +7370,61 @@ class IptvClient implements MediaServerClient {
             _cachedGuideIndexRowCount == rowCount) {
           return _cachedGuideChannels!;
         }
+        // 1.6.32, option 4: the fingerprint is only due when the INDEX
+        // changed and the hidden filter did not change with it — a
+        // hide-only change is a visibility change, not a playlist
+        // change, so it must not trigger the fingerprint hash or the
+        // EPG refresh decision. When both changed together, the
+        // fingerprint is skipped this load (the check resumes on the
+        // next index change). No snapshot yet means no hidden change:
+        // the first load must compute the fingerprint, or the baseline
+        // is never stored.
+        final hiddenChangedSinceLastGuideLoad =
+            _lastGuideHiddenIds != null &&
+            (!setEquals(_lastGuideHiddenIds!, _hiddenCategories) ||
+                !setEquals(_lastGuideHiddenInitials ?? const {}, _hiddenCategoryInitials));
+        final computeFingerprint = indexStateChanged && !hiddenChangedSinceLastGuideLoad;
+        // 1.6.32, option 1: the read + materialize + fingerprint run
+        // in a worker isolate — the UI thread never blocks on the
+        // 26k-row rebuild that froze the TV on a category toggle (and
+        // on Reload TV details). On any isolate failure (closed index,
+        // busy lock) fall back to the synchronous path below (the old
+        // behaviour, slow but correct).
+        try {
+          final materialized = await index.materializeLiveGuideAsync(
+            connection.id,
+            hiddenIds: _hiddenCategories,
+            hiddenInitials: _hiddenCategoryInitials,
+            serverId: connection.id,
+            serverName: _name,
+            computeFingerprint: computeFingerprint,
+          );
+          for (final stream in materialized.streams) {
+            _xtreamChannelByKey['${stream.streamId}'] = stream;
+          }
+          if (indexStateChanged) {
+            _lastGuideIndexLastSync = lastSync;
+            _lastGuideIndexRowCount = rowCount;
+            _lastGuideHiddenIds = _hiddenCategories;
+            _lastGuideHiddenInitials = _hiddenCategoryInitials;
+            if (materialized.fingerprint != null) {
+              await _maybeRefreshEpgForPlaylistChange(materialized.fingerprint!);
+            }
+          }
+          // 1.2.18 C-1: cache the list + key→index map for the next
+          // fetch over this same index generation.
+          _cachedGuideChannels = materialized.channels;
+          _cachedGuideChannelIndex = {
+            for (var i = 0; i < materialized.channels.length; i++) materialized.channels[i].key: i,
+          };
+          _cachedGuideIndexLastSync = lastSync;
+          _cachedGuideIndexRowCount = rowCount;
+          return materialized.channels;
+        } catch (e) {
+          appLogger.w('IPTV: guide isolate materialization failed, falling back to the synchronous path', error: e);
+        }
+        // Synchronous fallback (the pre-1.6.32 path): read + materialize
+        // on the UI thread. Only reached when the isolate fails.
         final liveCategoryNames = await _liveCategoryNames();
         final rows = await _indexAllRows(IptvSearchIndex.typeLive);
         // The index could have gone cold between the warm check and the
@@ -7329,9 +7439,13 @@ class IptvClient implements MediaServerClient {
           if (indexStateChanged) {
             _lastGuideIndexLastSync = lastSync;
             _lastGuideIndexRowCount = rowCount;
-            await _maybeRefreshEpgForPlaylistChange(
-              iptvPlaylistFingerprint(rows.map((r) => iptvPlaylistRowHash([r.streamId, r.name, r.epgChannelId]))),
-            );
+            _lastGuideHiddenIds = _hiddenCategories;
+            _lastGuideHiddenInitials = _hiddenCategoryInitials;
+            if (computeFingerprint) {
+              await _maybeRefreshEpgForPlaylistChange(
+                iptvPlaylistFingerprint(rows.map((r) => iptvPlaylistRowHash([r.streamId, r.name, r.epgChannelId]))),
+              );
+            }
           }
           // 1.2.18 C-1: cache the list + key→index map for the next
           // fetch over this same index generation.
@@ -7446,21 +7560,8 @@ class IptvClient implements MediaServerClient {
   /// One [LiveTvChannel] for one raw Xtream row — shared by
   /// [iptvChannels] and the F3 full-list capture, so the visible and
   /// the full list are built identically.
-  LiveTvChannel _liveTvChannelForStream(XtreamLiveStream stream) => LiveTvChannel(
-    key: '${stream.streamId}',
-    identifier: stream.epgChannelId,
-    title: stream.name,
-    thumb: stream.streamIcon,
-    serverId: connection.id,
-    serverName: _name,
-    // Visible catch-up badge in the guide (tv_archive = 1).
-    hasCatchUp: stream.tvArchive,
-    // Archive-window clamp (1.2.19 L-47): the guide only offers catch-up
-    // for programmes inside tv_archive_duration.
-    catchUpArchiveDurationSeconds: stream.tvArchive ? stream.tvArchiveDuration : null,
-    // Guide category picker (build #17): the Xtream category id.
-    categoryId: stream.categoryId,
-  );
+  LiveTvChannel _liveTvChannelForStream(XtreamLiveStream stream) =>
+      LiveTvChannel.fromXtreamStream(stream, serverId: connection.id, serverName: _name);
 
   /// One [LiveTvChannel] for one M3U entry — shared by [iptvChannels]
   /// and the F3 full-list capture. [key] is `tvg-id ?? url`, the same

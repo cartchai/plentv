@@ -402,6 +402,10 @@ class IptvSettingsScreen extends StatelessWidget {
                   onTap: () => _clearEpgGuide(context),
                 ),
                 const _EpgLastUpdatedTile(),
+            // 1.6.32, D4: the loaded guide's counts — the referent for
+            // "the counts above" in the Update-now dialog, which
+            // previously pointed at counts that did not exist here.
+            const _EpgGuideCountsTile(),
               ],
             ),
           ),
@@ -607,19 +611,37 @@ class IptvSettingsScreen extends StatelessWidget {
   ///
   /// The dialog is shown unawaited on purpose: the caller (the working
   /// tile) must finish — and clear its spinner — as soon as the report
-  /// APPEARS, not when the user dismisses it.
+  /// APPEARS, not when the user dismisses it. 1.6.32, D2: when a feed
+  /// is still downloading in the background, the tile instead keeps
+  /// its spinner until the download settles (below) — the dialog shows
+  /// the live progress meanwhile, so the download is visible in both
+  /// places.
   Future<void> _updateEpgNow(BuildContext context) async {
     final registry = context.read<ConnectionRegistry>();
     final multiServer = context.read<MultiServerProvider>();
     final connections = await registry.list();
-    final reports = <({String name, List<IptvEpgFeedOutcome> outcomes, bool feedRefreshBackground})>[];
+    final reports = <({
+      String name,
+      List<IptvEpgFeedOutcome> outcomes,
+      bool feedRefreshBackground,
+      int channelsTotal,
+      IptvLiveTvSupport support,
+    })>[];
+    final backgroundSupports = <IptvLiveTvSupport>[];
     for (final connection in connections) {
       if (connection is! M3uConnection && connection is! XtreamConnection) continue;
       final client = multiServer.getClientForServer(ServerId(connection.id));
       final liveTv = client?.liveTv;
       if (liveTv is IptvLiveTvSupport) {
         final result = await liveTv.updateEpgNow();
-        reports.add((name: connection.displayName, outcomes: result.feedOutcomes, feedRefreshBackground: result.feedRefreshBackground));
+        reports.add((
+          name: connection.displayName,
+          outcomes: result.feedOutcomes,
+          feedRefreshBackground: result.feedRefreshBackground,
+          channelsTotal: result.channelsTotal,
+          support: liveTv,
+        ));
+        if (result.feedRefreshBackground) backgroundSupports.add(liveTv);
       }
     }
     if (!context.mounted) return;
@@ -630,41 +652,17 @@ class IptvSettingsScreen extends StatelessWidget {
     unawaited(
       showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(t.iptv.epgUpdateNow),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final report in reports) ...[
-                if (reports.length > 1)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(report.name, style: Theme.of(context).textTheme.titleSmall),
-                  ),
-                // 1.4.4 F6: the outcomes below are the previous feed's —
-                // the fresh feed is still downloading in the background.
-                if (report.feedRefreshBackground)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(t.iptv.epgReloadFeedRefreshingBackground),
-                  ),
-                if (report.outcomes.isEmpty)
-                  Text(t.iptv.epgUpdated)
-                else
-                  // Update now never re-fetches the channel list, so
-                  // there is no match count to name (0) — the lines
-                  // name each feed's own size instead.
-                  for (final outcome in report.outcomes)
-                    Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(epgFeedOutcomeLine(outcome, 0))),
-              ],
-            ],
-          ),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.ok))],
-        ),
+        builder: (context) => _EpgUpdateNowDialog(reports: reports),
       ),
     );
+    // 1.6.32, D2: keep the tile spinner until the background download
+    // finishes — the dialog shows live progress meanwhile, and the tile
+    // behind it keeps spinning until the guide actually lands.
+    if (backgroundSupports.isNotEmpty) {
+      await Future.wait(backgroundSupports.map((s) => s.waitForFeedRefresh()));
+    }
   }
+
 
   /// "Clear guide": empty every IPTV client's EPG cache and leave the
   /// guide empty (hour placeholders) until the next refresh.
@@ -680,6 +678,179 @@ class IptvSettingsScreen extends StatelessWidget {
     }
     if (!context.mounted) return;
     showSuccessSnackBar(context, t.iptv.epgCleared);
+  }
+}
+
+/// The "Update now" report dialog (1.2.3), stateful since 1.6.32 (D2):
+/// while a feed is still downloading in the background, the dialog
+/// polls the in-flight feed progress (the same getter the Reload row
+/// polls) and shows a spinner + downloaded bytes under the report —
+/// before this the dialog had no progress at all, and the tile behind
+/// it had already cleared its spinner, so a background download was
+/// invisible everywhere. When the download settles, the row says so.
+/// Match counts (1.6.32, D3) come from the cached channel list, so the
+/// outcome lines name "matched X of Y channels" instead of only the
+/// feed's own size.
+class _EpgUpdateNowDialog extends StatefulWidget {
+  const _EpgUpdateNowDialog({required this.reports});
+
+  final List<({
+    String name,
+    List<IptvEpgFeedOutcome> outcomes,
+    bool feedRefreshBackground,
+    int channelsTotal,
+    IptvLiveTvSupport support,
+  })> reports;
+
+  @override
+  State<_EpgUpdateNowDialog> createState() => _EpgUpdateNowDialogState();
+}
+
+class _EpgUpdateNowDialogState extends State<_EpgUpdateNowDialog> {
+  Timer? _progressTimer;
+
+  /// In-flight feed progress per background support (keyed by the
+  /// support's feed cache key), and the keys whose download settled.
+  final _feedProgress = <String, ({int received, int? totalBytes})>{};
+  final _downloadFinished = <String>{};
+
+  /// Consecutive polls with no progress change (1.6.32): the timer
+  /// stops after 10 of these (5 s of stall) once at least one report
+  /// has been seen — a stalled download leaves the last bytes on
+  /// screen instead of polling forever. Before the first report the
+  /// timer keeps running (the download is still starting). This also
+  /// keeps `pumpAndSettle` working: a periodic timer never settles,
+  /// so an unbounded poll would hang any test that pumps while the
+  /// dialog is open.
+  var _unchangedTicks = 0;
+
+  List<IptvLiveTvSupport> get _backgroundSupports => [
+    for (final report in widget.reports)
+      if (report.feedRefreshBackground) report.support,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (_backgroundSupports.isEmpty) return;
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 500), (_) => _pollFeedProgress());
+  }
+
+  void _pollFeedProgress() {
+    if (!mounted) return;
+    var changed = false;
+    for (final support in _backgroundSupports) {
+      final key = support.xtreamFeedCacheKey;
+      if (_downloadFinished.contains(key)) continue;
+      final progress = support.feedDownloadProgress(key);
+      if (progress != null) {
+        if (_feedProgress[key] != progress) {
+          _feedProgress[key] = progress;
+          changed = true;
+        }
+      } else if (!support.hasInFlightFeedLoad) {
+        // No bytes in flight and no load running: the download settled.
+        _downloadFinished.add(key);
+        changed = true;
+      }
+      // No progress yet but a load is running: the download started
+      // and no bytes have arrived — the row shows a bare spinner.
+    }
+    if (changed) {
+      _unchangedTicks = 0;
+      setState(() {});
+    } else if (_feedProgress.isNotEmpty) {
+      // A download that stops producing bytes for 5 s is stalled —
+      // stop polling and leave the last bytes on screen. (Before the
+      // first report, keep polling: the download is still starting.)
+      if (++_unchangedTicks >= 10) {
+        _progressTimer?.cancel();
+        _progressTimer = null;
+      }
+    }
+    if (_downloadFinished.length == _backgroundSupports.length) {
+      _progressTimer?.cancel();
+      _progressTimer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _progressTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(t.iptv.epgUpdateNow),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final report in widget.reports) ...[
+            if (widget.reports.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(report.name, style: Theme.of(context).textTheme.titleSmall),
+              ),
+            // 1.4.4 F6: the outcomes below are the previous feed's —
+            // the fresh feed is still downloading in the background.
+            if (report.feedRefreshBackground)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(t.iptv.epgReloadFeedRefreshingBackground),
+              ),
+            if (report.feedRefreshBackground) _liveProgressRow(report.support),
+            if (report.outcomes.isEmpty)
+              Text(t.iptv.epgUpdated)
+            else
+              for (final outcome in report.outcomes)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(epgFeedOutcomeLine(outcome, report.channelsTotal)),
+                ),
+          ],
+        ],
+      ),
+      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.common.ok))],
+    );
+  }
+
+  /// The live progress row for one background download (1.6.32, D2):
+  /// a spinner + downloaded bytes while it runs, a finished line when
+  /// it settles, a bare spinner before the first bytes arrive.
+  Widget _liveProgressRow(IptvLiveTvSupport support) {
+    final key = support.xtreamFeedCacheKey;
+    final progress = _feedProgress[key];
+    final finished = _downloadFinished.contains(key);
+    final String text;
+    if (finished) {
+      text = t.iptv.epgUpdateNowDownloadFinished;
+    } else if (progress == null) {
+      text = t.iptv.epgUpdateNowDownloading;
+    } else {
+      final receivedText = ByteFormatter.formatBytes(progress.received);
+      final detail =
+          (progress.totalBytes != null && progress.totalBytes! > 0)
+              ? t.iptv.catalogSyncProgressOf(
+                  received: receivedText,
+                  total: ByteFormatter.formatBytes(progress.totalBytes!),
+                )
+              : receivedText;
+      text = t.iptv.epgUpdateNowDownloadingBytes(detail: detail);
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          if (!finished)
+            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+          if (!finished) const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
   }
 }
 
@@ -777,6 +948,9 @@ class _CatalogSyncDialog extends StatefulWidget {
 class _CatalogSyncDialogState extends State<_CatalogSyncDialog> {
   final _abort = AbortController();
   final _progress = <String, IptvSearchSyncProgress>{};
+  // 1.6.32, D1: when each type's download started, for the elapsed /
+  // rate line — the first 'fetching' report is the fetch start.
+  final _fetchStartedAt = <String, DateTime>{};
   bool _done = false;
   bool _failed = false;
 
@@ -796,7 +970,12 @@ class _CatalogSyncDialogState extends State<_CatalogSyncDialog> {
           abort: _abort,
           onProgress: (p) {
             if (!mounted) return;
-            setState(() => _progress[p.type] = p);
+            setState(() {
+              if (p.phase == 'fetching' && !_fetchStartedAt.containsKey(p.type)) {
+                _fetchStartedAt[p.type] = DateTime.now();
+              }
+              _progress[p.type] = p;
+            });
           },
         );
         // A per-type fetch failure is recorded in the result's skipped
@@ -855,6 +1034,55 @@ class _CatalogSyncDialogState extends State<_CatalogSyncDialog> {
     return '';
   }
 
+  /// The progress bar + detail line under a type row while it is
+  /// downloading (1.6.32, D1): the old dialog showed only a 20px
+  /// spinner and '…' — no bar, no percentage, no byte count — because
+  /// the provider sends no Content-Length and the phase text only
+  /// renders a percentage when the total is known. The bar is
+  /// determinate when the total is known and indeterminate (animated)
+  /// when it is not, and the line always names bytes received, the
+  /// rate, and the elapsed time, so a minutes-long first-run download
+  /// reads as progress, not as stuck.
+  Widget? _progressSubtitle(String type) {
+    final p = _progress[type];
+    if (p == null || p.phase != 'fetching') return null;
+    final received = p.receivedBytes;
+    if (received == null) return null;
+    final total = p.totalBytes;
+    final value = (total != null && total > 0) ? (received / total).clamp(0.0, 1.0) : null;
+    final startedAt = _fetchStartedAt[type];
+    final elapsed = startedAt == null ? Duration.zero : DateTime.now().difference(startedAt);
+    // Rate needs at least a second of elapsed time, or the first
+    // report divides by ~0 and reads absurd.
+    final rate = elapsed.inMilliseconds >= 1000 ? received * 1000 ~/ elapsed.inMilliseconds : null;
+    final receivedText = ByteFormatter.formatBytes(received);
+    String detail;
+    if (total != null && total > 0) {
+      detail = t.iptv.catalogSyncProgressOf(received: receivedText, total: ByteFormatter.formatBytes(total));
+      if (rate != null) detail += ' · ${ByteFormatter.formatBytes(rate)}/s';
+    } else {
+      detail = t.iptv.catalogSyncProgressUnknown(received: receivedText);
+      if (rate != null) detail += ' · ${ByteFormatter.formatBytes(rate)}/s';
+      detail += ' · ${_formatElapsed(elapsed)}';
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 4),
+        LinearProgressIndicator(value: value),
+        const SizedBox(height: 4),
+        Text(detail, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+
+  String _formatElapsed(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -867,6 +1095,7 @@ class _CatalogSyncDialogState extends State<_CatalogSyncDialog> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(_typeLabel(type)),
+              subtitle: _progressSubtitle(type),
               trailing: _progress[type] == null
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : Text(_phaseText(_progress[type]!), style: theme.textTheme.bodyMedium),
@@ -1388,6 +1617,56 @@ class _EpgLastUpdatedTile extends StatelessWidget {
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+/// The loaded guide's counts row (1.6.32, D4): "X programmes · Y
+/// channels" from the last feed load — the referent for "the counts
+/// above" in the Update-now dialog, which previously pointed at
+/// counts that did not exist on this screen. Reads the persisted
+/// counts pref (written when a feed lands), so it survives a restart.
+/// Before the first load it reads "No guide loaded yet" — not a bare
+/// "Never", so the settings test's one-"Never" finder (the Last
+/// updated line) keeps matching exactly one widget.
+class _EpgGuideCountsTile extends StatelessWidget {
+  const _EpgGuideCountsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ValueListenableBuilder<String>(
+      valueListenable: settings.SettingsService.instance.listenable(
+        settings.SettingsService.iptvEpgLastGuideCounts,
+      ),
+      builder: (context, counts, _) {
+        final parts = counts.split('|');
+        final channels = parts.length == 2 ? int.tryParse(parts[0]) : null;
+        final programs = parts.length == 2 ? int.tryParse(parts[1]) : null;
+        final text = (channels == null || programs == null)
+            ? t.iptv.epgGuideCountsEmpty
+            : t.iptv.epgSourceStatusDetail(programs: programs, channels: channels);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            crossAxisAlignment: .start,
+            children: [
+              AppIcon(Symbols.bar_chart_rounded, fill: 1),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: .start,
+                  children: [
+                    Text(t.iptv.epgGuideCounts, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(text, style: theme.textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

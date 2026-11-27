@@ -1103,6 +1103,14 @@ class SettingsService extends BaseSharedPreferencesService {
   /// load. Shown as "Last updated" in IPTV settings.
   static const iptvEpgLastUpdated = StringPref('iptv_epg_last_updated', defaultValue: '');
 
+  /// The loaded guide's size as "channels|programmes" (1.6.32, D4):
+  /// distinct feed channels with programmes + total programmes across
+  /// every loaded feed, written by the EPG layer when a feed load
+  /// lands (same moment as "Last updated"). Empty before the first
+  /// load. Shown as the counts row in IPTV settings — the referent
+  /// for "the counts above" in the Update-now dialog.
+  static const iptvEpgLastGuideCounts = StringPref('iptv_epg_last_guide_counts', defaultValue: '');
+
   /// ISO-8601 timestamp of the last EPG fetch ATTEMPT across all IPTV
   /// sources (1.1.2 D9), written by the EPG layer (throttled to one write
   /// per minute). Empty before the first attempt. Shown as "Last attempt"
