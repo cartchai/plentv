@@ -185,6 +185,8 @@ class _AddCustomPlayerDialogState extends State<_AddCustomPlayerDialog> {
   // no process to spawn and no package to target.
   final _urlSchemeOnly = Platform.isIOS;
   late CustomPlayerType _selectedType = _urlSchemeOnly ? CustomPlayerType.urlScheme : CustomPlayerType.command;
+  String? _nameError;
+  String? _valueError;
 
   @override
   void dispose() {
@@ -198,7 +200,17 @@ class _AddCustomPlayerDialogState extends State<_AddCustomPlayerDialog> {
   void _submit() {
     final name = _nameController.text.trim();
     final value = _valueController.text.trim();
-    if (!SettingsService.validCustomPlayerFields(name, value)) return;
+    // Both fields are required: say which one is empty instead of
+    // silently doing nothing with the dialog still open.
+    final nameError = name.isEmpty ? t.externalPlayer.playerNameRequired : null;
+    final valueError = value.isEmpty ? t.externalPlayer.playerValueRequired : null;
+    if (nameError != null || valueError != null) {
+      setState(() {
+        _nameError = nameError;
+        _valueError = valueError;
+      });
+      return;
+    }
     Navigator.pop(context, (name: name, value: value, type: _selectedType));
   }
 
@@ -227,9 +239,13 @@ class _AddCustomPlayerDialogState extends State<_AddCustomPlayerDialog> {
               decoration: InputDecoration(
                 labelText: t.externalPlayer.playerName,
                 hintText: t.externalPlayer.playerNameHint,
+                errorText: _nameError,
               ),
               autofocus: true,
               textInputAction: TextInputAction.next,
+              onChanged: (_) {
+                if (_nameError != null) setState(() => _nameError = null);
+              },
               onSubmitted: (_) => _valueFocusNode.requestFocus(),
             ),
             if (!_urlSchemeOnly) ...[
@@ -250,8 +266,11 @@ class _AddCustomPlayerDialogState extends State<_AddCustomPlayerDialog> {
             FocusableTextField(
               controller: _valueController,
               focusNode: _valueFocusNode,
-              decoration: InputDecoration(labelText: label, hintText: hint),
+              decoration: InputDecoration(labelText: label, hintText: hint, errorText: _valueError),
               textInputAction: TextInputAction.done,
+              onChanged: (_) {
+                if (_valueError != null) setState(() => _valueError = null);
+              },
               onSubmitted: (_) => _saveFocusNode.requestFocus(),
             ),
           ],

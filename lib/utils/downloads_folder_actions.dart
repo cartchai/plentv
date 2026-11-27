@@ -8,7 +8,6 @@ import '../providers/offline_mode_provider.dart';
 import '../services/watch_actions.dart';
 import 'app_logger.dart';
 import 'dialogs.dart';
-import 'error_message_utils.dart';
 import 'snackbar_helper.dart';
 
 // Actions on a downloads folder: a collection shown on the downloads screen,
@@ -32,7 +31,7 @@ Future<void> setDownloadsFolderWatched(BuildContext context, MediaItem folder, {
     }
     if (!context.mounted) return;
     if (!reachedServer) {
-      showErrorSnackBar(context, t.messages.errorLoading(error: t.errors.reasonUnreachable));
+      showLoadingErrorSnackBar(context, null, reason: t.errors.reasonUnreachable);
     } else if (offline) {
       showAppSnackBar(context, watched ? t.messages.markedAsWatchedOffline : t.messages.markedAsUnwatchedOffline);
     } else {
@@ -40,7 +39,7 @@ Future<void> setDownloadsFolderWatched(BuildContext context, MediaItem folder, {
     }
   } catch (e, st) {
     appLogger.e('Failed to mark downloads folder ${folder.globalKey}', error: e, stackTrace: st);
-    if (context.mounted) showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+    if (context.mounted) showLoadingErrorSnackBar(context, e);
   }
 }
 
@@ -59,7 +58,7 @@ Future<bool> deleteDownloadsFolder(BuildContext context, MediaItem folder) async
     return true;
   } catch (e, st) {
     appLogger.e('Failed to delete downloads folder ${folder.globalKey}', error: e, stackTrace: st);
-    if (context.mounted) showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+    if (context.mounted) showLoadingErrorSnackBar(context, e);
     return false;
   }
 }

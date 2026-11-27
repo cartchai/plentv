@@ -1201,7 +1201,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
     } catch (e) {
       if (context.mounted) {
         final reason = e is _ItemServerUnavailable ? t.errors.reasonUnreachable : localizedErrorReason(e);
-        showErrorSnackBar(context, t.messages.errorLoading(error: reason));
+        showLoadingErrorSnackBar(context, e, reason: reason);
       }
     }
   }
@@ -1842,7 +1842,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
 
     if (!context.mounted) return;
     if (client == null) {
-      showErrorSnackBar(context, t.messages.errorLoading(error: t.errors.reasonUnreachable));
+      showLoadingErrorSnackBar(context, null, reason: t.errors.reasonUnreachable);
       return;
     }
     await ExternalPlayerService.launch(

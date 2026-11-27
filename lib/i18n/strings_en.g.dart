@@ -1073,6 +1073,24 @@ class Translations$settings$en {
 	/// en: 'Clear'
 	String get lastCrashClear => 'Clear';
 
+	/// en: 'Clear crash history?'
+	String get lastCrashClearTitle => 'Clear crash history?';
+
+	/// en: 'Delete all recorded crashes? This can't be undone.'
+	String get lastCrashClearMessage => 'Delete all recorded crashes? This can\'t be undone.';
+
+	/// en: 'Crash history cleared.'
+	String get lastCrashCleared => 'Crash history cleared.';
+
+	/// en: 'Clear last crash?'
+	String get lastCrashClearLastTitle => 'Clear last crash?';
+
+	/// en: 'Delete the recorded last crash? This can't be undone.'
+	String get lastCrashClearLastMessage => 'Delete the recorded last crash? This can\'t be undone.';
+
+	/// en: 'Last crash cleared.'
+	String get lastCrashLastCleared => 'Last crash cleared.';
+
 	/// en: 'Crash history'
 	String get lastCrashHistory => 'Crash history';
 
@@ -3520,6 +3538,12 @@ class Translations$profiles$en {
 	/// en: 'Remove'
 	String get removePin => 'Remove';
 
+	/// en: 'Remove the PIN?'
+	String get removePinTitle => 'Remove the PIN?';
+
+	/// en: 'Anyone will be able to open this profile without a PIN.'
+	String get removePinMessage => 'Anyone will be able to open this profile without a PIN.';
+
 	/// en: 'Connections'
 	String get connectionsLabel => 'Connections';
 
@@ -3582,6 +3606,9 @@ class Translations$profiles$en {
 
 	/// en: 'Failed to borrow connection.'
 	String get borrowFailed => 'Failed to borrow connection.';
+
+	/// en: 'IPTV connections can't be borrowed yet.'
+	String get borrowIptvNotSupported => 'IPTV connections can\'t be borrowed yet.';
 
 	/// en: 'Incorrect PIN.'
 	String get incorrectPin => 'Incorrect PIN.';
@@ -6204,6 +6231,18 @@ class Translations$downloads$en {
 	/// en: 'Retry failed downloads'
 	String get retryFailed => 'Retry failed downloads';
 
+	/// en: 'That server is no longer connected — re-add it to retry this download.'
+	String get retryServerGone => 'That server is no longer connected — re-add it to retry this download.';
+
+	/// en: 'That server is no longer connected — re-add it to resume this download.'
+	String get resumeServerGone => 'That server is no longer connected — re-add it to resume this download.';
+
+	/// en: '(one) {1 download couldn't be retried — its server is no longer connected. Re-add the server to retry it.} (other) {${n} downloads couldn't be retried — their servers are no longer connected. Re-add the servers to retry them.}'
+	String retrySkippedNoServer({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n,
+		one: '1 download couldn\'t be retried — its server is no longer connected. Re-add the server to retry it.',
+		other: '${n} downloads couldn\'t be retried — their servers are no longer connected. Re-add the servers to retry them.',
+	);
+
 	/// en: 'Delete all'
 	String get deleteAll => 'Delete all';
 
@@ -6752,6 +6791,12 @@ class Translations$externalPlayer$en {
 
 	/// en: 'My Player'
 	String get playerNameHint => 'My Player';
+
+	/// en: 'Enter a name'
+	String get playerNameRequired => 'Enter a name';
+
+	/// en: 'Enter a value'
+	String get playerValueRequired => 'Enter a value';
 
 	/// en: 'Command'
 	String get playerCommand => 'Command';
@@ -10861,6 +10906,12 @@ extension on Translations {
 			'settings.lastCrashAbnormalExit' => 'The app did not shut down cleanly last time, and no Dart error was recorded — if it crashed, the crash is likely outside Dart code',
 			'settings.lastCrashLoading' => 'Checking for a recorded crash…',
 			'settings.lastCrashClear' => 'Clear',
+			'settings.lastCrashClearTitle' => 'Clear crash history?',
+			'settings.lastCrashClearMessage' => 'Delete all recorded crashes? This can\'t be undone.',
+			'settings.lastCrashCleared' => 'Crash history cleared.',
+			'settings.lastCrashClearLastTitle' => 'Clear last crash?',
+			'settings.lastCrashClearLastMessage' => 'Delete the recorded last crash? This can\'t be undone.',
+			'settings.lastCrashLastCleared' => 'Last crash cleared.',
 			'settings.lastCrashHistory' => 'Crash history',
 			'settings.viewLogs' => 'View Logs',
 			'settings.viewLogsDescription' => 'View application logs',
@@ -11019,14 +11070,14 @@ extension on Translations {
 			'settings.deinterlace' => 'Deinterlacing',
 			'settings.deinterlaceDescription' => 'Remove combing artifacts from interlaced video (mpv player only)',
 			'settings.deinterlaceOff' => 'Off',
+			_ => null,
+		} ?? switch (path) {
 			'settings.deinterlaceOffDescription' => 'Show interlaced video as it is decoded',
 			'settings.deinterlaceVideo' => 'Video',
 			'settings.deinterlaceVideoDescription' => 'Turn each field into a full frame. For video shot for TV, like sports, news, and concerts',
 			'settings.deinterlaceFilm' => 'Film',
 			'settings.deinterlaceFilmDescription' => 'Restore the original frames of film and animation telecined to 29.97 fps, common on NTSC DVDs. Video shot for TV stutters. Live TV uses Video',
 			'settings.requireProfileSelectionOnOpen' => 'Ask for profile on app open',
-			_ => null,
-		} ?? switch (path) {
 			'settings.requireProfileSelectionOnOpenDescription' => 'Show profile selection every time the app is opened',
 			'settings.forceTvMode' => 'Force TV mode',
 			'settings.forceTvModeDescription' => 'Force TV layout. For devices that don\'t auto-detect. Requires restart.',
@@ -11533,14 +11584,14 @@ extension on Translations {
 			'messages.playbackCancelled' => 'Playback was canceled.',
 			'messages.playbackFailed' => 'Playback could not be started.',
 			'messages.playbackFailedDetail' => ({required Object error}) => 'Playback could not be started: ${error}',
+			_ => null,
+		} ?? switch (path) {
 			'messages.playbackFailedViaTunnel' => 'Playback could not be started. The tunnel was on but the stream did not load — check the tunnel is still connected and try again.',
 			'messages.audioOutputFailed' => 'The audio output stopped responding. Check the TV or receiver\'s audio connection; if other apps have no sound either, restart the device.',
 			'messages.mediaUnavailable' => 'This content is no longer available.',
 			'messages.errorLoadingFileInfo' => ({required Object error}) => 'Error loading file info: ${error}',
 			'messages.errorLoadingSeries' => 'Error loading series',
 			'messages.musicNotSupported' => 'Music playback is not yet supported',
-			_ => null,
-		} ?? switch (path) {
 			'messages.noDescriptionAvailable' => 'No description available',
 			'messages.noProfilesAvailable' => 'No profiles available',
 			'messages.contactAdminForProfiles' => 'Contact your server administrator to add profiles',
@@ -11668,6 +11719,8 @@ extension on Translations {
 			'profiles.pinSet' => 'PIN set',
 			'profiles.changePin' => 'Change',
 			'profiles.removePin' => 'Remove',
+			'profiles.removePinTitle' => 'Remove the PIN?',
+			'profiles.removePinMessage' => 'Anyone will be able to open this profile without a PIN.',
 			'profiles.connectionsLabel' => 'Connections',
 			'profiles.add' => 'Add',
 			'profiles.deleteProfileButton' => 'Delete profile',
@@ -11689,6 +11742,7 @@ extension on Translations {
 			'profiles.borrowFromProfile' => ({required Object displayName}) => 'From ${displayName}',
 			'profiles.borrowConnectionBorrowed' => 'Connection borrowed.',
 			'profiles.borrowFailed' => 'Failed to borrow connection.',
+			'profiles.borrowIptvNotSupported' => 'IPTV connections can\'t be borrowed yet.',
 			'profiles.incorrectPin' => 'Incorrect PIN.',
 			'profiles.incorrectPinTryAgain' => 'Incorrect PIN. Please try again.',
 			'profiles.sourceProfileMissingParentAccount' => 'Source profile is missing its parent account.',
@@ -12044,6 +12098,8 @@ extension on Translations {
 			'about.changelog2346.0' => 'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
 			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
 			'about.changelog2341.0' => 'New: the player now opens IPTV streams through the in-app tunnel instead of straight from the panel — that\'s why shows still showed 403 even when the tunnel was connected. Note: this covers http:// streams only; the bundled player can\'t use the proxy for https:// streams, so those still go direct',
 			'about.changelog2340.0' => 'New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard on the Super Spoof page (Settings → Advanced → Super Spoof), under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it',
@@ -12053,8 +12109,6 @@ extension on Translations {
 			'about.changelog2336.0' => 'Fixed: turning on VPN (WARP) still failed to start — the tunnel setup told the engine to watch the network with a placeholder that always fails; it now runs without the watcher, and the tunnel starts',
 			'about.changelog2335.0' => 'Fixed: turning on VPN (WARP) failed to start — the tunnel setup sent the addresses without their network sizes, so the tunnel engine refused them; they now go out with their sizes, and the tunnel starts',
 			'about.changelog2334.0' => 'New: Settings → Advanced has a “VPN (WARP)” switch — the app can route its own provider requests through Cloudflare\'s free WARP network, so they come from a different address. Off by default; nothing changes unless you turn it on',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2334.1' => 'New: turning the VPN on first shows Cloudflare\'s terms — the app only signs up for a free WARP account after you accept them, and the switch stays off until the sign-up works',
 			'about.changelog2334.2' => 'Fixed: while the VPN is on, provider requests (catalog, streams, and artwork from the provider) go through it — and if the tunnel drops, they stop instead of going out directly',
 			'about.changelog2333.0' => 'New: all the spoofing now lives in one place — Settings → Advanced → Super Spoof. The name, the network stack and the extra headers are separate switches under it, so you can change one without touching the others',
@@ -12558,6 +12612,8 @@ extension on Translations {
 			'explore.sourceMaterial.manga' => 'Manga',
 			'explore.sourceMaterial.lightNovel' => 'Light novel',
 			'explore.sourceMaterial.novel' => 'Novel',
+			_ => null,
+		} ?? switch (path) {
 			'explore.sourceMaterial.visualNovel' => 'Visual novel',
 			'explore.sourceMaterial.game' => 'Game',
 			'explore.sourceMaterial.webComic' => 'Web comic',
@@ -12567,8 +12623,6 @@ extension on Translations {
 			'explore.creditRole.director' => 'Director',
 			'explore.creditRole.writer' => 'Writer',
 			'explore.creditRole.producer' => 'Producer',
-			_ => null,
-		} ?? switch (path) {
 			'explore.creditRole.creator' => 'Creator',
 			'explore.creditRole.composer' => 'Composer',
 			'explore.relation.prequel' => 'Prequel',
@@ -13000,6 +13054,9 @@ extension on Translations {
 			'downloads.resumeAll' => 'Resume all',
 			'downloads.retryAll' => 'Retry all',
 			'downloads.retryFailed' => 'Retry failed downloads',
+			'downloads.retryServerGone' => 'That server is no longer connected — re-add it to retry this download.',
+			'downloads.resumeServerGone' => 'That server is no longer connected — re-add it to resume this download.',
+			'downloads.retrySkippedNoServer' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '1 download couldn\'t be retried — its server is no longer connected. Re-add the server to retry it.', other: '${n} downloads couldn\'t be retried — their servers are no longer connected. Re-add the servers to retry them.', ), 
 			'downloads.deleteAll' => 'Delete all',
 			'downloads.selectVersion' => 'Select Version',
 			'downloads.allEpisodes' => 'All episodes',
@@ -13069,6 +13126,8 @@ extension on Translations {
 			'downloads.options' => 'Downloads options',
 			'downloads.groupings.library' => 'Library',
 			'downloads.groupings.collections' => 'Collections',
+			_ => null,
+		} ?? switch (path) {
 			'downloads.unknownLibrary' => 'Unknown library',
 			'downloads.unknownShow' => 'Unknown Show',
 			'downloads.unknownSeason' => 'Unknown Season',
@@ -13081,8 +13140,6 @@ extension on Translations {
 			'downloads.errorHttpStatus' => ({required Object status}) => 'Download failed (HTTP ${status})',
 			'downloads.errorPostProcessing' => ({required Object reason}) => 'Post-processing failed: ${reason}',
 			'downloads.reasonFileNotSaved' => 'the file could not be saved on this device',
-			_ => null,
-		} ?? switch (path) {
 			'downloads.reasonCannotResume' => 'the partial download could not be resumed',
 			'downloads.pausedCannotResume' => 'Paused — this download restarted from the beginning instead of resuming',
 			'downloads.reasonDeviceStorageFull' => 'this device is out of storage',
@@ -13257,6 +13314,8 @@ extension on Translations {
 			'externalPlayer.addCustomPlayer' => 'Add Custom Player',
 			'externalPlayer.playerName' => 'Player Name',
 			'externalPlayer.playerNameHint' => 'My Player',
+			'externalPlayer.playerNameRequired' => 'Enter a name',
+			'externalPlayer.playerValueRequired' => 'Enter a value',
 			'externalPlayer.playerCommand' => 'Command',
 			'externalPlayer.playerPackage' => 'Package Name',
 			'externalPlayer.playerUrlScheme' => 'URL Scheme',
@@ -13581,6 +13640,8 @@ extension on Translations {
 			'iptv.catalogSyncTitle' => 'Refreshing Trex details',
 			'iptv.catalogSyncLive' => 'Live TV',
 			'iptv.catalogSyncMovies' => 'Movies',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.catalogSyncSeries' => 'TV / Series',
 			'iptv.catalogSyncDone' => 'Catalog synced',
 			'iptv.catalogSyncFailed' => 'Catalog sync failed',
@@ -13595,8 +13656,6 @@ extension on Translations {
 			'iptv.catalogSyncing' => 'Catalog syncing…',
 			'iptv.catalogColdHint' => ({required Object types}) => '${types} not synced yet — hit Enter to search online',
 			'iptv.catalogUpdated' => ({required Object channels, required Object movies, required Object series, required Object date}) => 'Catalog: ${channels} channels · ${movies} movies · ${series} series · updated ${date}',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.guideAndCatchUp' => 'Guide & catch-up',
 			'iptv.showCatchUpBadge' => 'Show catch-up badge',
 			'iptv.showCatchUpBadgeDescription' => 'Show a badge on channels that offer catch-up TV. Applies when the guide reloads.',

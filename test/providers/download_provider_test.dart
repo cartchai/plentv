@@ -4087,6 +4087,24 @@ void main() {
       expect(manager.retried, ['srv:3', 'srv:1']);
     });
 
+    test('reports how many keys were skipped because their server is gone', () async {
+      provider.debugSeedState(
+        downloads: {
+          'srv:1': progress('srv:1', DownloadStatus.failed),
+          'gone:2': progress('gone:2', DownloadStatus.failed),
+          'gone:3': progress('gone:3', DownloadStatus.failed),
+        },
+      );
+
+      final skipped = await provider.retryDownloads(
+        ['srv:1', 'gone:2', 'gone:3'],
+        (key) => key.startsWith('srv:') ? client : null,
+      );
+
+      expect(skipped, 2, reason: 'both gone-server keys were skipped, not silently swallowed');
+      expect(manager.retried, ['srv:1']);
+    });
+
     test('one failed retry does not stop the rest of the batch', () async {
       provider.debugSeedState(
         downloads: {

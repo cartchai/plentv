@@ -97,7 +97,7 @@ void main() {
     await waitForLoad(tester);
   }
 
-  testWidgets('a recorded crash shows its headline, details, and Clear removes it', (tester) async {
+  testWidgets('a recorded crash shows its headline, details, and Clear removes it after confirming', (tester) async {
     // record() writes synchronously when the directory override is set.
     LastCrashStore.record(StateError('boom on startup'), source: 'uncaught');
 
@@ -113,10 +113,41 @@ void main() {
     expect(find.textContaining('boom on startup'), findsWidgets);
     expect(find.byKey(const Key('LastCrashClearButton')), findsOneWidget);
 
-    // Clear: the record is deleted and the row falls back to "no error".
+    // Clear asks first: the record survives until the confirm is tapped.
     await tester.tap(find.byKey(const Key('LastCrashClearButton')));
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text(t.settings.lastCrashClearLastTitle), findsOneWidget);
+    expect(find.textContaining('boom on startup'), findsWidgets);
+
+    await tester.tap(
+      find.descendant(of: find.byType(AlertDialog), matching: find.text(t.common.clear)),
+    );
     await waitFor(tester, find.text(t.settings.lastCrashNone));
     expect(find.textContaining('boom on startup'), findsNothing);
+    expect(find.text(t.settings.lastCrashLastCleared), findsOneWidget);
+  });
+
+  testWidgets('Clear asks first; cancelling keeps the last-crash record', (tester) async {
+    LastCrashStore.record(StateError('boom on startup'), source: 'uncaught');
+
+    await pumpRow(tester);
+
+    await tester.tap(find.byKey(const Key('LastCrashRowTile')));
+    await tester.pump();
+    expect(find.byKey(const Key('LastCrashClearButton')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('LastCrashClearButton')));
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(of: find.byType(AlertDialog), matching: find.text(t.common.cancel)),
+    );
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.textContaining('boom on startup'), findsWidgets);
+    expect(find.text(t.settings.lastCrashLastCleared), findsNothing);
   });
 
   testWidgets('Copy copies the exact crash details to the clipboard', (tester) async {

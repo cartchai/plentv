@@ -4,12 +4,14 @@ import 'dart:collection';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plezy/connection/connection.dart';
 import 'package:plezy/connection/connection_registry.dart';
 import 'package:plezy/database/app_database.dart';
 import 'package:plezy/focus/input_mode_tracker.dart';
 import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/profiles/plex_home_service.dart';
 import 'package:plezy/profiles/profile.dart';
+import 'package:plezy/profiles/profile_connection.dart';
 import 'package:plezy/profiles/profile_connection_registry.dart';
 import 'package:plezy/profiles/profile_registry.dart';
 import 'package:plezy/screens/profile/borrow_connection_screen.dart';
@@ -86,6 +88,86 @@ void main() {
 
     expect(find.text(t.profiles.borrowEmpty), findsOneWidget);
     expect(find.text(t.profiles.borrowLoadFailed), findsNothing);
+  });
+
+  testWidgets('IPTV candidate is shown disabled with a note and cannot be borrowed', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final connections = ConnectionRegistry(db);
+    final profileConnections = ProfileConnectionRegistry(db);
+    final profiles = ProfileRegistry(db);
+    final storage = await StorageService.getInstance();
+    final plexHome = _ControlledPlexHomeService(
+      connections: connections,
+      profileConnections: profileConnections,
+      storage: storage,
+    );
+    addTearDown(() async {
+      await plexHome.dispose();
+      await db.close();
+    });
+
+    final source = Profile.local(id: 'source', displayName: 'Source', createdAt: DateTime(2026));
+    await profiles.upsert(source);
+    final connection = XtreamConnection(
+      id: 'xtream-1',
+      name: 'Test Xtream',
+      serverUrl: 'http://127.0.0.1:1',
+      username: 'user',
+      password: 'pass',
+      createdAt: DateTime(2026, 1, 1),
+    );
+    await connections.upsert(connection);
+    await profileConnections.upsert(
+      ProfileConnection(
+        profileId: source.id,
+        connectionId: connection.id,
+        userToken: null,
+        userIdentifier: 'user',
+        tokenAcquiredAt: DateTime(2026, 1, 1),
+      ),
+    );
+
+    final target = Profile.local(id: 'target', displayName: 'Target', createdAt: DateTime(2026));
+
+    await tester.pumpWidget(
+      TranslationProvider(
+        child: MultiProvider(
+          providers: [
+            Provider<ProfileConnectionRegistry>.value(value: profileConnections),
+            Provider<ConnectionRegistry>.value(value: connections),
+            Provider<ProfileRegistry>.value(value: profiles),
+            Provider<PlexHomeService>.value(value: plexHome),
+          ],
+          child: InputModeTracker(
+            child: MaterialApp(
+              theme: monoTheme(MonoPalette.dark),
+              home: BorrowConnectionScreen(targetProfile: target),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    plexHome.hydrations.first.complete();
+    await tester.pumpAndSettle();
+
+    // The IPTV candidate is listed, but marked as not borrowable.
+    expect(find.text('Test Xtream'), findsOneWidget);
+    expect(find.text(t.profiles.borrowIptvNotSupported), findsOneWidget);
+    // Its tile is disabled: no tap handler, so the tap cannot silently
+    // do nothing.
+    final tileInkWell = find.ancestor(
+      of: find.text(t.profiles.borrowIptvNotSupported),
+      matching: find.byType(InkWell),
+    );
+    expect(tileInkWell, findsOneWidget);
+    expect(tester.widget<InkWell>(tileInkWell).onTap, isNull);
+
+    // Tapping the tile changes nothing: no borrow, no navigation away.
+    await tester.tap(find.text('Test Xtream'));
+    await tester.pumpAndSettle();
+    expect(find.text(t.profiles.borrowConnectionBorrowed), findsNothing);
+    expect(find.text('Test Xtream'), findsOneWidget);
   });
 }
 

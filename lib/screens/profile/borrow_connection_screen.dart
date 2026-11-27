@@ -206,6 +206,10 @@ class _BorrowConnectionScreenState extends State<BorrowConnectionScreen> {
                 final cand = candidates[index];
                 final tokensRef = tokens(context);
                 final tileRadii = groupItemRadii(context, index, candidates.length);
+                // Borrowing an IPTV connection is not supported yet (there
+                // is no token-mint path for it), so its tile is listed
+                // disabled with a note instead of tappable-but-silent.
+                final isIptv = cand.connection is M3uConnection || cand.connection is XtreamConnection;
                 return Padding(
                   padding: EdgeInsets.fromLTRB(16, index == 0 ? 4 : tokensRef.groupGap, 16, 0),
                   // Wrapper inside the Card so the focus fill paints above the
@@ -214,12 +218,17 @@ class _BorrowConnectionScreenState extends State<BorrowConnectionScreen> {
                     shape: RoundedRectangleBorder(borderRadius: tileRadii),
                     clipBehavior: Clip.antiAlias,
                     child: FocusableWrapper(
-                      autofocus: index == 0,
+                      autofocus: index == 0 && !isIptv,
                       disableScale: true,
                       useBackgroundFocus: true,
                       borderRadii: tileRadii,
-                      onSelect: _busy ? null : () => _borrow(cand),
-                      child: _BorrowTile(candidate: cand, borderRadius: tileRadii, onTap: () => _borrow(cand)),
+                      onSelect: _busy || isIptv ? null : () => _borrow(cand),
+                      child: _BorrowTile(
+                        candidate: cand,
+                        borderRadius: tileRadii,
+                        onTap: isIptv ? null : () => _borrow(cand),
+                        enabled: !isIptv,
+                      ),
                     ),
                   ),
                 );
@@ -388,9 +397,13 @@ class _BorrowCandidate {
 class _BorrowTile extends StatelessWidget {
   final _BorrowCandidate candidate;
   final BorderRadius borderRadius;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
-  const _BorrowTile({required this.candidate, required this.borderRadius, required this.onTap});
+  /// False for IPTV (M3U/Xtream) candidates: borrowing is not supported
+  /// for them, so the tile is greyed out with a note instead of tappable.
+  final bool enabled;
+
+  const _BorrowTile({required this.candidate, required this.borderRadius, required this.onTap, this.enabled = true});
 
   @override
   Widget build(BuildContext context) {
@@ -401,43 +414,55 @@ class _BorrowTile extends StatelessWidget {
       borderRadius: borderRadius,
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: .start,
-          children: [
-            BackendBadge(backend: candidate.connection.backend, size: 28),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: .start,
-                mainAxisSize: .min,
-                children: [
-                  Text(candidate.connectionLabel, style: theme.textTheme.titleMedium, overflow: .ellipsis),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        t.profiles.borrowFromProfile(displayName: candidate.source.displayName),
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                      if (candidate.source.isPinProtected) ...[
-                        const SizedBox(width: 6),
-                        AppIcon(Symbols.lock_rounded, fill: 1, size: 12, color: theme.colorScheme.onSurfaceVariant),
+        child: Opacity(
+          opacity: enabled ? 1 : 0.6,
+          child: Row(
+            crossAxisAlignment: .start,
+            children: [
+              BackendBadge(backend: candidate.connection.backend, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: .start,
+                  mainAxisSize: .min,
+                  children: [
+                    Text(candidate.connectionLabel, style: theme.textTheme.titleMedium, overflow: .ellipsis),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          t.profiles.borrowFromProfile(displayName: candidate.source.displayName),
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                        if (candidate.source.isPinProtected) ...[
+                          const SizedBox(width: 6),
+                          AppIcon(Symbols.lock_rounded, fill: 1, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                        ],
                       ],
-                    ],
-                  ),
-                  if (candidate.connection is PlexAccountConnection)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        t.profiles.connectionAs(displayName: candidate.source.displayName),
-                        style: theme.textTheme.bodySmall,
-                      ),
                     ),
-                ],
+                    if (candidate.connection is PlexAccountConnection)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          t.profiles.connectionAs(displayName: candidate.source.displayName),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    if (!enabled)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          t.profiles.borrowIptvNotSupported,
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const Padding(padding: .only(left: 8, top: 4), child: AppIcon(Symbols.add_rounded, fill: 1)),
-          ],
+              if (enabled)
+                const Padding(padding: .only(left: 8, top: 4), child: AppIcon(Symbols.add_rounded, fill: 1)),
+            ],
+          ),
         ),
       ),
     );

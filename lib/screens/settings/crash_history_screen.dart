@@ -8,6 +8,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../i18n/app_locale_utils.dart';
 import '../../i18n/strings.g.dart';
 import '../../services/last_crash_store.dart';
+import '../../utils/dialogs.dart';
 import '../../utils/formatters.dart';
 import '../../utils/snackbar_helper.dart';
 import '../../widgets/app_icon.dart';
@@ -48,9 +49,18 @@ class _CrashHistoryScreenState extends State<CrashHistoryScreen> {
   }
 
   Future<void> _clear() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: t.settings.lastCrashClearTitle,
+      message: t.settings.lastCrashClearMessage,
+      confirmText: t.common.clear,
+      isDestructive: true,
+    );
+    if (!confirmed || !mounted) return;
     await LastCrashStore.clear();
     if (!mounted) return;
     setState(() => _records = []);
+    showSuccessSnackBar(context, t.settings.lastCrashCleared);
   }
 
   void _copy(LastCrashRecord record) {

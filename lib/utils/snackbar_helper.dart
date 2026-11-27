@@ -108,11 +108,21 @@ void showErrorSnackBar(BuildContext context, String message) {
   showSnackBar(context, message, type: SnackBarType.error);
 }
 
-/// Shows the shared "failed to load" error snackbar for [e]: the localized,
-/// user-safe reason for the failure, wrapped in the standard error message.
-/// One helper so every load-failure call site shows the same message.
-void showLoadingErrorSnackBar(BuildContext context, Object e) {
-  showErrorSnackBar(context, t.messages.errorLoading(error: localizedErrorReason(e)));
+/// Shows the shared "failed to load" error snackbar for [error]: the
+/// localized, user-safe reason for the failure, wrapped in the standard error
+/// message. One helper so every load-failure call site shows the same message.
+///
+/// Pass [reason] to override the reason derived from [error] — for call
+/// sites that know why the load failed without holding an exception (e.g.
+/// the server could not be reached). When [error] is null and no [reason]
+/// is given, the generic unexpected-error reason is used.
+void showLoadingErrorSnackBar(BuildContext context, Object? error, {String? reason}) {
+  showErrorSnackBar(
+    context,
+    t.messages.errorLoading(
+      error: reason ?? (error == null ? t.errors.reasonUnexpected : localizedErrorReason(error)),
+    ),
+  );
 }
 
 /// Shows an error snackbar using the root ScaffoldMessenger (survives navigation).

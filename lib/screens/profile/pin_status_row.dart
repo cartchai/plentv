@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../focus/focusable_button.dart';
 import '../../i18n/strings.g.dart';
+import '../../utils/dialogs.dart';
 import '../../widgets/app_icon.dart';
 
 /// "PIN set" pill + Change/Remove text buttons. Shown on profile creation
@@ -16,6 +17,19 @@ class PinStatusRow extends StatelessWidget {
   final FocusNode? changeFocusNode;
 
   const PinStatusRow({super.key, required this.onChange, required this.onRemove, this.changeFocusNode});
+
+  /// Removing the PIN is a security change: ask first, and only run the
+  /// parent's removal when the user confirms.
+  Future<void> _confirmRemove(BuildContext context) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: t.profiles.removePinTitle,
+      message: t.profiles.removePinMessage,
+      confirmText: t.profiles.removePin,
+      isDestructive: true,
+    );
+    if (confirmed) onRemove();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +60,8 @@ class PinStatusRow extends StatelessWidget {
         ),
         FocusableButton(
           useBackgroundFocus: true,
-          onPressed: onRemove,
-          child: TextButton(onPressed: onRemove, child: Text(t.profiles.removePin)),
+          onPressed: () => _confirmRemove(context),
+          child: TextButton(onPressed: () => _confirmRemove(context), child: Text(t.profiles.removePin)),
         ),
       ],
     );

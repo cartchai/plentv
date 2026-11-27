@@ -6,6 +6,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../i18n/strings.g.dart';
 import '../../services/last_crash_store.dart';
+import '../../utils/dialogs.dart';
 import '../../utils/snackbar_helper.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/focusable_list_tile.dart';
@@ -60,9 +61,18 @@ class _LastCrashRowState extends State<LastCrashRow> {
   }
 
   Future<void> _clear() async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: t.settings.lastCrashClearLastTitle,
+      message: t.settings.lastCrashClearLastMessage,
+      confirmText: t.common.clear,
+      isDestructive: true,
+    );
+    if (!confirmed || !mounted) return;
     await LastCrashStore.clear();
     if (!mounted) return;
     setState(() => _record = null);
+    showSuccessSnackBar(context, t.settings.lastCrashLastCleared);
   }
 
   /// Copy the exact text shown above, so the crash can be pasted into a

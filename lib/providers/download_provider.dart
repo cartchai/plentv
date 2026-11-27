@@ -2366,21 +2366,30 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// queue downloads them in the given order. [clientFor] resolves each key's
   /// server; a key whose server is unavailable stays failed. One key's error
   /// does not stop the rest; a profile switch does.
-  Future<void> retryDownloads(
+  ///
+  /// Returns the number of keys skipped because their server client was
+  /// unavailable ([clientFor] returned null). The caller reports those to
+  /// the user — without the count the tap would silently do nothing.
+  Future<int> retryDownloads(
     Iterable<String> globalKeys,
     MediaServerClient? Function(String globalKey) clientFor,
   ) async {
     final profileGeneration = _profileGeneration;
+    var skippedNoClient = 0;
     for (final globalKey in globalKeys.toList(growable: false)) {
-      if (isDisposed || profileGeneration != _profileGeneration) return;
+      if (isDisposed || profileGeneration != _profileGeneration) return skippedNoClient;
       final client = clientFor(globalKey);
-      if (client == null) continue;
+      if (client == null) {
+        skippedNoClient++;
+        continue;
+      }
       try {
         await retryDownload(globalKey, client);
       } catch (e, st) {
         appLogger.e('Failed to retry download $globalKey', error: e, stackTrace: st);
       }
     }
+    return skippedNoClient;
   }
 
   /// Cancel a download

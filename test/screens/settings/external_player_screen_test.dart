@@ -95,6 +95,57 @@ void main() {
     expect(find.widgetWithText(FocusableListTile, selected.name), findsOneWidget);
     expect(find.widgetWithText(FocusableListTile, 'System Default'), findsOneWidget);
   });
+
+  testWidgets('Add Custom Player Save with empty fields shows errors and keeps the dialog open', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 1400);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await settings.write(SettingsService.useExternalPlayer, true);
+
+    await tester.pumpWidget(MaterialApp(theme: monoTheme(MonoPalette.dark), home: const ExternalPlayerScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(t.externalPlayer.addCustomPlayer));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.tap(find.text(t.common.save));
+    await tester.pumpAndSettle();
+
+    // The tap is no longer silent: each empty field says what it needs.
+    expect(find.text(t.externalPlayer.playerNameRequired), findsOneWidget);
+    expect(find.text(t.externalPlayer.playerValueRequired), findsOneWidget);
+    // The dialog stays open so the user can fix the fields; nothing saved.
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(settings.read(SettingsService.customExternalPlayers), isEmpty);
+  });
+
+  testWidgets('Add Custom Player Save with both fields filled adds the player', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 1400);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await settings.write(SettingsService.useExternalPlayer, true);
+
+    await tester.pumpWidget(MaterialApp(theme: monoTheme(MonoPalette.dark), home: const ExternalPlayerScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(t.externalPlayer.addCustomPlayer));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, 'My Player');
+    await tester.enterText(find.byType(TextField).last, 'myplayer://play?url=');
+    await tester.tap(find.text(t.common.save));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(settings.read(SettingsService.customExternalPlayers), hasLength(1));
+    expect(find.text('My Player'), findsOneWidget);
+  });
 }
 
 /// Reports every player as installed so the screen renders the full platform

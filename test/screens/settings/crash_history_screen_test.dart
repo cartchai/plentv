@@ -152,14 +152,38 @@ void main() {
     await waitFor(tester, find.text(t.settings.lastCrashNone));
   });
 
-  testWidgets('Clear empties the list', (tester) async {
+  testWidgets('Clear asks first; confirming clears and shows a snackbar', (tester) async {
     LastCrashStore.record(StateError('boom'), source: 'uncaught');
 
     await pumpScreen(tester);
     await waitFor(tester, find.byKey(const Key('CrashHistoryTile-0')));
 
     await tester.tap(find.byTooltip(t.settings.lastCrashClear));
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text(t.settings.lastCrashClearTitle), findsOneWidget);
+
+    await tester.tap(find.text(t.common.clear));
     await waitFor(tester, find.text(t.settings.lastCrashNone));
     expect(find.byKey(const Key('CrashHistoryTile-0')), findsNothing);
+    expect(find.text(t.settings.lastCrashCleared), findsOneWidget);
+  });
+
+  testWidgets('Clear asks first; cancelling keeps the history', (tester) async {
+    LastCrashStore.record(StateError('boom'), source: 'uncaught');
+
+    await pumpScreen(tester);
+    await waitFor(tester, find.byKey(const Key('CrashHistoryTile-0')));
+
+    await tester.tap(find.byTooltip(t.settings.lastCrashClear));
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text(t.settings.lastCrashClearTitle), findsOneWidget);
+
+    await tester.tap(find.text(t.common.cancel));
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byKey(const Key('CrashHistoryTile-0')), findsOneWidget);
+    expect(find.text(t.settings.lastCrashCleared), findsNothing);
   });
 }

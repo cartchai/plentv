@@ -22,6 +22,7 @@ import '../../widgets/music/track_row.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/settings_builder.dart';
 import '../../utils/global_key_utils.dart';
+import '../../utils/snackbar_helper.dart';
 import '../../mixins/tab_navigation_mixin.dart';
 import '../../mixins/tab_visibility_aware.dart';
 import '../../mixins/refreshable.dart';
@@ -129,8 +130,24 @@ class DownloadsScreenState extends State<DownloadsScreen>
     return context.read<MultiServerProvider>().serverManager.getClient(ServerId(serverId));
   }
 
-  void _retryDownloads(List<String> globalKeys) {
-    unawaited(context.read<DownloadProvider>().retryDownloads(globalKeys, _clientForDownload));
+  void _retryDownloads(List<String> globalKeys) async {
+    final skipped = await context.read<DownloadProvider>().retryDownloads(globalKeys, _clientForDownload);
+    _reportRetrySkippedNoServer(skipped);
+  }
+
+  /// Tell the user a batch retry skipped [skipped] downloads whose server
+  /// is no longer connected. Without this the tap would silently do nothing
+  /// (DEAD-1): the retry loop skips those keys and nothing else changes.
+  void _reportRetrySkippedNoServer(int skipped) {
+    if (skipped <= 0 || !mounted) return;
+    showErrorSnackBar(context, t.downloads.retrySkippedNoServer(n: skipped));
+  }
+
+  /// Tell the user a single Resume / Retry cannot run because the download's
+  /// server is no longer connected.
+  void _reportRetryServerGone({required bool resume}) {
+    if (!mounted) return;
+    showErrorSnackBar(context, resume ? t.downloads.resumeServerGone : t.downloads.retryServerGone);
   }
 
   /// Focus the top of the currently active tab — its chips bar on
@@ -286,12 +303,16 @@ class DownloadsScreenState extends State<DownloadsScreen>
                                 final client = _clientForDownload(globalKey);
                                 if (client != null) {
                                   downloadProvider.resumeDownload(globalKey, client);
+                                } else {
+                                  _reportRetryServerGone(resume: true);
                                 }
                               },
                               onRetry: (globalKey) {
                                 final client = _clientForDownload(globalKey);
                                 if (client != null) {
                                   downloadProvider.retryDownload(globalKey, client);
+                                } else {
+                                  _reportRetryServerGone(resume: false);
                                 }
                               },
                               onRetryAll: _retryDownloads,
