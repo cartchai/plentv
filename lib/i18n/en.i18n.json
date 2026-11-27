@@ -1684,6 +1684,9 @@
     "changelog2343": [
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
     ],
+    "changelog2349": [
+      "Fixed: on a Meta Quest headset the 2D panel window now stays the size you drag it to — the app no longer snaps it back to the size it had before when the panel comes back into focus. The panel still reopens at the size you left it. The 3D movie screen is unchanged: its size, distance, curvature and depth are still set from the 3D sheet"
+    ],
     "changelog2348": [
       "Cleanup and Quest 3D fixes: error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. On a Meta Quest headset the 3D depth slider now really changes the depth, and 3D detection now also reads the video file's own stereo mode, so a 3D file with no tag in its filename is still recognised as 3D. Signing in and the first checks also now wait for the VPN tunnel to finish starting instead of going out direct while it is still coming up"
     ],

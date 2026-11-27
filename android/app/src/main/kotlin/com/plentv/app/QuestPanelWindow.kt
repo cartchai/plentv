@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import java.io.File
+import java.lang.ref.WeakReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -25,6 +26,18 @@ object QuestPanelWindow {
   private const val PREFS = "quest_panel_window"
   private const val KEY_WIDTH = "width"
   private const val KEY_HEIGHT = "height"
+
+  // Restore is once per activity instance (1.6.31): the saved size is
+  // applied on the first resume after the activity is created (cold
+  // launch / relaunch after process death) — the only time the window
+  // can be at the manifest default instead of the size the user left.
+  // On later resumes the panel is a live window whose size Horizon OS
+  // already preserves; re-applying the saved size there would undo a
+  // resize the user (or the OS — snap points, Focus mode, window
+  // reflow) made while the activity was paused, i.e. the app fighting
+  // the user's drag. Tracked by activity identity, held weakly so a
+  // destroyed activity is never retained.
+  private var restoredActivityRef: WeakReference<Activity>? = null
 
   // Same detection as the Dart side (lib/quest/quest_platform.dart):
   // manufacturer/brand oculus/meta, backstopped by the same three Quest
@@ -64,14 +77,18 @@ object QuestPanelWindow {
   // Restore the saved size. Called from onResume. For a resizable panel
   // activity Horizon OS honours the request; on a fullscreen activity
   // (phone/TV) it is ignored. Gated on the pref like save() (P0.14).
+  // Once per activity instance (1.6.31): only the first resume after
+  // creation applies the saved size — see restoredActivityRef.
   fun restore(activity: Activity) {
     if (!isQuest(activity)) return
     if (!isPanelWindowMemoryEnabled(activity)) return
+    if (restoredActivityRef?.get() === activity) return
     val prefs = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     val w = prefs.getInt(KEY_WIDTH, 0)
     val h = prefs.getInt(KEY_HEIGHT, 0)
     if (w <= 0 || h <= 0) return
     activity.window?.setLayout(w, h)
+    restoredActivityRef = WeakReference(activity)
   }
 
   // --- quest_panel_window_memory pref (P0.14/B19) ---

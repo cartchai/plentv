@@ -4270,6 +4270,9 @@ class Translations$about$en {
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
 	];
+	List<String> get changelog2349 => [
+		'Fixed: on a Meta Quest headset the 2D panel window now stays the size you drag it to — the app no longer snaps it back to the size it had before when the panel comes back into focus. The panel still reopens at the size you left it. The 3D movie screen is unchanged: its size, distance, curvature and depth are still set from the 3D sheet',
+	];
 	List<String> get changelog2348 => [
 		'Cleanup and Quest 3D fixes: error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. On a Meta Quest headset the 3D depth slider now really changes the depth, and 3D detection now also reads the video file\'s own stereo mode, so a 3D file with no tag in its filename is still recognised as 3D. Signing in and the first checks also now wait for the VPN tunnel to finish starting instead of going out direct while it is still coming up',
 	];
@@ -12093,13 +12096,14 @@ extension on Translations {
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			'about.changelog2349.0' => 'Fixed: on a Meta Quest headset the 2D panel window now stays the size you drag it to — the app no longer snaps it back to the size it had before when the panel comes back into focus. The panel still reopens at the size you left it. The 3D movie screen is unchanged: its size, distance, curvature and depth are still set from the 3D sheet',
 			'about.changelog2348.0' => 'Cleanup and Quest 3D fixes: error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. On a Meta Quest headset the 3D depth slider now really changes the depth, and 3D detection now also reads the video file\'s own stereo mode, so a 3D file with no tag in its filename is still recognised as 3D. Signing in and the first checks also now wait for the VPN tunnel to finish starting instead of going out direct while it is still coming up',
 			'about.changelog2347.0' => 'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
 			'about.changelog2346.0' => 'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
 			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
-			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
 			'about.changelog2341.0' => 'New: the player now opens IPTV streams through the in-app tunnel instead of straight from the panel — that\'s why shows still showed 403 even when the tunnel was connected. Note: this covers http:// streams only; the bundled player can\'t use the proxy for https:// streams, so those still go direct',
 			'about.changelog2340.0' => 'New: the tunnel now connects over MASQUE (WARP over port 443) instead of WireGuard (UDP 2408) — your home Wi-Fi blocks UDP 2408, which is why the tunnel started but never carried any traffic. MASQUE uses the same port as normal web traffic, so it gets through. You can switch back to WireGuard on the Super Spoof page (Settings → Advanced → Super Spoof), under Tunnel transport, and pick how MASQUE connects (Auto, H3 or H2) right below it',
@@ -12611,9 +12615,9 @@ extension on Translations {
 			'explore.sourceMaterial.original' => 'Original',
 			'explore.sourceMaterial.manga' => 'Manga',
 			'explore.sourceMaterial.lightNovel' => 'Light novel',
-			'explore.sourceMaterial.novel' => 'Novel',
 			_ => null,
 		} ?? switch (path) {
+			'explore.sourceMaterial.novel' => 'Novel',
 			'explore.sourceMaterial.visualNovel' => 'Visual novel',
 			'explore.sourceMaterial.game' => 'Game',
 			'explore.sourceMaterial.webComic' => 'Web comic',
@@ -13125,9 +13129,9 @@ extension on Translations {
 			'downloads.backgroundWarning.linkUnavailable' => 'Couldn\'t open dontkillmyapp.com on this device',
 			'downloads.options' => 'Downloads options',
 			'downloads.groupings.library' => 'Library',
-			'downloads.groupings.collections' => 'Collections',
 			_ => null,
 		} ?? switch (path) {
+			'downloads.groupings.collections' => 'Collections',
 			'downloads.unknownLibrary' => 'Unknown library',
 			'downloads.unknownShow' => 'Unknown Show',
 			'downloads.unknownSeason' => 'Unknown Season',
@@ -13639,9 +13643,9 @@ extension on Translations {
 			'iptv.catalogSyncNowDescription' => 'Download all titles for movies, TV and channels now',
 			'iptv.catalogSyncTitle' => 'Refreshing Trex details',
 			'iptv.catalogSyncLive' => 'Live TV',
-			'iptv.catalogSyncMovies' => 'Movies',
 			_ => null,
 		} ?? switch (path) {
+			'iptv.catalogSyncMovies' => 'Movies',
 			'iptv.catalogSyncSeries' => 'TV / Series',
 			'iptv.catalogSyncDone' => 'Catalog synced',
 			'iptv.catalogSyncFailed' => 'Catalog sync failed',
