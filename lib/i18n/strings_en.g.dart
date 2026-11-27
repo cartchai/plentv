@@ -1601,6 +1601,12 @@ class Translations$settings$en {
 	/// en: 'Show the 3D button on every video, on any device, even when no 3D file was detected. A debug switch — it does not turn on 3D by itself.'
 	String get show3dButtonDebugDescription => 'Show the 3D button on every video, on any device, even when no 3D file was detected. A debug switch — it does not turn on 3D by itself.';
 
+	/// en: 'Remember panel size'
+	String get panelWindowMemory => 'Remember panel size';
+
+	/// en: 'On a Quest headset, reopen the panel at the size you left it instead of the default size. Turn it off to always start at the default size.'
+	String get panelWindowMemoryDescription => 'On a Quest headset, reopen the panel at the size you left it instead of the default size. Turn it off to always start at the default size.';
+
 	/// en: 'Show Navigation Bar Labels'
 	String get showNavBarLabels => 'Show Navigation Bar Labels';
 
@@ -2851,11 +2857,11 @@ class Translations$stereo3d$en {
 	/// en: 'Fix depth that looks inside-out — near things far away.'
 	String get swapEyesDescription => 'Fix depth that looks inside-out — near things far away.';
 
-	/// en: 'Watch in 2D (left eye)'
-	String get watchIn2d => 'Watch in 2D (left eye)';
+	/// en: 'Remember 2D for this title'
+	String get remember2dForTitle => 'Remember 2D for this title';
 
-	/// en: 'Play just the left eye's picture, at the right shape.'
-	String get watchIn2dDescription => 'Play just the left eye\'s picture, at the right shape.';
+	/// en: 'Saves 2D (left eye) for this title, for the next time it plays. The picture playing now stays as it is.'
+	String get remember2dForTitleDescription => 'Saves 2D (left eye) for this title, for the next time it plays. The picture playing now stays as it is.';
 
 	/// en: 'Watch in VR'
 	String get watchInVr => 'Watch in VR';
@@ -2979,6 +2985,33 @@ class Translations$stereo3d$en {
 
 	/// en: 'Couldn't start the VR player. Make sure you're on a Quest headset.'
 	String get vrUnavailable => 'Couldn\'t start the VR player. Make sure you\'re on a Quest headset.';
+
+	/// en: 'Couldn't start VR: the headset's display couldn't be opened. Try closing other apps and starting again.'
+	String get vrFailedEgl => 'Couldn\'t start VR: the headset\'s display couldn\'t be opened. Try closing other apps and starting again.';
+
+	/// en: 'Couldn't start VR: the headset's VR system didn't answer. Try restarting the headset.'
+	String get vrFailedOpenxr => 'Couldn\'t start VR: the headset\'s VR system didn\'t answer. Try restarting the headset.';
+
+	/// en: 'Couldn't start VR: the headset's controllers couldn't be set up.'
+	String get vrFailedActions => 'Couldn\'t start VR: the headset\'s controllers couldn\'t be set up.';
+
+	/// en: 'Couldn't start VR: the video couldn't be opened in VR. Try playing it in 2D first.'
+	String get vrFailedMpv => 'Couldn\'t start VR: the video couldn\'t be opened in VR. Try playing it in 2D first.';
+
+	/// en: 'Couldn't start VR: the headset's graphics couldn't be set up.'
+	String get vrFailedGl => 'Couldn\'t start VR: the headset\'s graphics couldn\'t be set up.';
+
+	/// en: 'Couldn't start VR: the VR player is missing from this install. Reinstall the app.'
+	String get vrFailedLibraryMissing => 'Couldn\'t start VR: the VR player is missing from this install. Reinstall the app.';
+
+	/// en: 'Couldn't start VR: the video link was missing.'
+	String get vrFailedInvalidRequest => 'Couldn\'t start VR: the video link was missing.';
+
+	/// en: 'A VR session is already running. Close it before starting another.'
+	String get vrFailedAlreadyRunning => 'A VR session is already running. Close it before starting another.';
+
+	/// en: 'Couldn't start the VR player. Try again.'
+	String get vrFailedStart => 'Couldn\'t start the VR player. Try again.';
 
 	/// en: 'View recentred'
 	String get recentered => 'View recentred';
@@ -4211,7 +4244,7 @@ class Translations$about$en {
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
 	];
 	List<String> get changelog2348 => [
-		'Cleanup: a tidy-up update — error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. Nothing about how the app works has changed',
+		'Cleanup and Quest 3D fixes: error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. On a Meta Quest headset the 3D depth slider now really changes the depth, and 3D detection now also reads the video file\'s own stereo mode, so a 3D file with no tag in its filename is still recognised as 3D. Signing in and the first checks also now wait for the VPN tunnel to finish starting instead of going out direct while it is still coming up',
 	];
 	List<String> get changelog2347 => [
 		'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
@@ -11005,6 +11038,8 @@ extension on Translations {
 			'settings.autoHidePerformanceOverlayDescription' => 'Fade the performance overlay with the playback controls',
 			'settings.show3dButtonDebug' => 'Always show the 3D button',
 			'settings.show3dButtonDebugDescription' => 'Show the 3D button on every video, on any device, even when no 3D file was detected. A debug switch — it does not turn on 3D by itself.',
+			'settings.panelWindowMemory' => 'Remember panel size',
+			'settings.panelWindowMemoryDescription' => 'On a Quest headset, reopen the panel at the size you left it instead of the default size. Turn it off to always start at the default size.',
 			'settings.showNavBarLabels' => 'Show Navigation Bar Labels',
 			'settings.showNavBarLabelsDescription' => 'Display text labels under navigation bar icons',
 			'settings.startupSection' => 'Startup Section',
@@ -11426,8 +11461,8 @@ extension on Translations {
 			'stereo3d.packingFull' => 'Full',
 			'stereo3d.swapEyes' => 'Swap eyes',
 			'stereo3d.swapEyesDescription' => 'Fix depth that looks inside-out — near things far away.',
-			'stereo3d.watchIn2d' => 'Watch in 2D (left eye)',
-			'stereo3d.watchIn2dDescription' => 'Play just the left eye\'s picture, at the right shape.',
+			'stereo3d.remember2dForTitle' => 'Remember 2D for this title',
+			'stereo3d.remember2dForTitleDescription' => 'Saves 2D (left eye) for this title, for the next time it plays. The picture playing now stays as it is.',
 			'stereo3d.watchInVr' => 'Watch in VR',
 			'stereo3d.screenSize' => 'Screen size',
 			'stereo3d.screenDistance' => 'Screen distance',
@@ -11469,6 +11504,15 @@ extension on Translations {
 			'stereo3d.externalSubtitles' => 'External subtitles',
 			'stereo3d.externalSubtitlesDescription' => 'Load a subtitle file (SRT or ASS) for this video.',
 			'stereo3d.vrUnavailable' => 'Couldn\'t start the VR player. Make sure you\'re on a Quest headset.',
+			'stereo3d.vrFailedEgl' => 'Couldn\'t start VR: the headset\'s display couldn\'t be opened. Try closing other apps and starting again.',
+			'stereo3d.vrFailedOpenxr' => 'Couldn\'t start VR: the headset\'s VR system didn\'t answer. Try restarting the headset.',
+			'stereo3d.vrFailedActions' => 'Couldn\'t start VR: the headset\'s controllers couldn\'t be set up.',
+			'stereo3d.vrFailedMpv' => 'Couldn\'t start VR: the video couldn\'t be opened in VR. Try playing it in 2D first.',
+			'stereo3d.vrFailedGl' => 'Couldn\'t start VR: the headset\'s graphics couldn\'t be set up.',
+			'stereo3d.vrFailedLibraryMissing' => 'Couldn\'t start VR: the VR player is missing from this install. Reinstall the app.',
+			'stereo3d.vrFailedInvalidRequest' => 'Couldn\'t start VR: the video link was missing.',
+			'stereo3d.vrFailedAlreadyRunning' => 'A VR session is already running. Close it before starting another.',
+			'stereo3d.vrFailedStart' => 'Couldn\'t start the VR player. Try again.',
 			'stereo3d.recentered' => 'View recentred',
 			'stereo3d.notInVr' => 'Not watching in VR right now',
 			'messages.markedAsWatched' => 'Marked as watched',
@@ -11495,6 +11539,8 @@ extension on Translations {
 			'messages.errorLoadingFileInfo' => ({required Object error}) => 'Error loading file info: ${error}',
 			'messages.errorLoadingSeries' => 'Error loading series',
 			'messages.musicNotSupported' => 'Music playback is not yet supported',
+			_ => null,
+		} ?? switch (path) {
 			'messages.noDescriptionAvailable' => 'No description available',
 			'messages.noProfilesAvailable' => 'No profiles available',
 			'messages.contactAdminForProfiles' => 'Contact your server administrator to add profiles',
@@ -11506,8 +11552,6 @@ extension on Translations {
 			'messages.libraryScanStarted' => ({required Object title}) => 'Library scan started for "${title}"',
 			'messages.libraryScanFailed' => ({required Object error}) => 'Failed to scan library: ${error}',
 			'messages.metadataRefreshing' => ({required Object title}) => 'Refreshing metadata for "${title}"...',
-			_ => null,
-		} ?? switch (path) {
 			'messages.metadataRefreshStarted' => ({required Object title}) => 'Metadata refresh started for "${title}"',
 			'messages.metadataRefreshFailed' => ({required Object error}) => 'Failed to refresh metadata: ${error}',
 			'messages.logoutConfirm' => 'Are you sure you want to log out? This deletes everything in the app: every connection (including IPTV), every profile, and all settings. To sign out of just one Plex account, use the Sign out entry for that account in this menu instead.',
@@ -11995,7 +12039,7 @@ extension on Translations {
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
-			'about.changelog2348.0' => 'Cleanup: a tidy-up update — error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. Nothing about how the app works has changed',
+			'about.changelog2348.0' => 'Cleanup and Quest 3D fixes: error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. On a Meta Quest headset the 3D depth slider now really changes the depth, and 3D detection now also reads the video file\'s own stereo mode, so a 3D file with no tag in its filename is still recognised as 3D. Signing in and the first checks also now wait for the VPN tunnel to finish starting instead of going out direct while it is still coming up',
 			'about.changelog2347.0' => 'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
 			'about.changelog2346.0' => 'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
 			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
@@ -12009,6 +12053,8 @@ extension on Translations {
 			'about.changelog2336.0' => 'Fixed: turning on VPN (WARP) still failed to start — the tunnel setup told the engine to watch the network with a placeholder that always fails; it now runs without the watcher, and the tunnel starts',
 			'about.changelog2335.0' => 'Fixed: turning on VPN (WARP) failed to start — the tunnel setup sent the addresses without their network sizes, so the tunnel engine refused them; they now go out with their sizes, and the tunnel starts',
 			'about.changelog2334.0' => 'New: Settings → Advanced has a “VPN (WARP)” switch — the app can route its own provider requests through Cloudflare\'s free WARP network, so they come from a different address. Off by default; nothing changes unless you turn it on',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2334.1' => 'New: turning the VPN on first shows Cloudflare\'s terms — the app only signs up for a free WARP account after you accept them, and the switch stays off until the sign-up works',
 			'about.changelog2334.2' => 'Fixed: while the VPN is on, provider requests (catalog, streams, and artwork from the provider) go through it — and if the tunnel drops, they stop instead of going out directly',
 			'about.changelog2333.0' => 'New: all the spoofing now lives in one place — Settings → Advanced → Super Spoof. The name, the network stack and the extra headers are separate switches under it, so you can change one without touching the others',
@@ -12020,8 +12066,6 @@ extension on Translations {
 			'about.changelog2332.2' => 'Fixed: if Chrome\'s stack can\'t start on a device, the app falls back to today\'s requests instead of failing',
 			'about.changelog2332.3' => 'Added: Settings → Advanced has a “Prefer IPv4” switch — provider requests connect over IPv4 only, like the Fire Stick, for Wi-Fi networks that refuse the phone\'s IPv6 connection. Off by default',
 			'about.changelog2332.4' => 'Fixed: Retry works again after a refusal — tapping Retry on a refused show, or Test on the Connection refusals screen, sends one real test with your current settings instead of waiting out the hold',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2331.0' => 'Fixed: the app now talks to your provider the way an ordinary Android player does — a real player name instead of a bare “VLC” — so Wi-Fi networks that tell the app apart from a player stop refusing it',
 			'about.changelog2331.1' => 'New: Settings → Advanced has a “Request live TV as MPEG-TS” switch — live channels come as .ts streams like other TV apps instead of HLS playlists. Off by default; try it if live TV still gets refused on your Wi-Fi',
 			'about.changelog2331.2' => 'Fixed: the player now checks its user-agent actually landed, and says so in the log when it didn\'t',
@@ -12523,6 +12567,8 @@ extension on Translations {
 			'explore.creditRole.director' => 'Director',
 			'explore.creditRole.writer' => 'Writer',
 			'explore.creditRole.producer' => 'Producer',
+			_ => null,
+		} ?? switch (path) {
 			'explore.creditRole.creator' => 'Creator',
 			'explore.creditRole.composer' => 'Composer',
 			'explore.relation.prequel' => 'Prequel',
@@ -12534,8 +12580,6 @@ extension on Translations {
 			'explore.relation.parentStory' => 'Parent story',
 			'explore.relation.adaptation' => 'Adaptation',
 			'explore.relation.other' => 'Related',
-			_ => null,
-		} ?? switch (path) {
 			'explore.broadcast' => ({required Object day, required Object time}) => 'Airs ${day} at ${time}',
 			'explore.broadcastWithZone' => ({required Object day, required Object time, required Object timezone}) => 'Airs ${day} at ${time} ${timezone}',
 			'explore.detail.originalTitle' => 'Original title',
@@ -13037,6 +13081,8 @@ extension on Translations {
 			'downloads.errorHttpStatus' => ({required Object status}) => 'Download failed (HTTP ${status})',
 			'downloads.errorPostProcessing' => ({required Object reason}) => 'Post-processing failed: ${reason}',
 			'downloads.reasonFileNotSaved' => 'the file could not be saved on this device',
+			_ => null,
+		} ?? switch (path) {
 			'downloads.reasonCannotResume' => 'the partial download could not be resumed',
 			'downloads.pausedCannotResume' => 'Paused — this download restarted from the beginning instead of resuming',
 			'downloads.reasonDeviceStorageFull' => 'this device is out of storage',
@@ -13048,8 +13094,6 @@ extension on Translations {
 			'shaders.nvscalerDescription' => 'NVIDIA image scaling for sharper video',
 			'shaders.artcnnVariantNeutral' => 'Neutral',
 			'shaders.artcnnVariantDenoise' => 'Denoise',
-			_ => null,
-		} ?? switch (path) {
 			'shaders.artcnnVariantDenoiseSharpen' => 'Denoise + Sharpen',
 			'shaders.qualityFast' => 'Fast',
 			'shaders.qualityHQ' => 'High Quality',
@@ -13551,6 +13595,8 @@ extension on Translations {
 			'iptv.catalogSyncing' => 'Catalog syncing…',
 			'iptv.catalogColdHint' => ({required Object types}) => '${types} not synced yet — hit Enter to search online',
 			'iptv.catalogUpdated' => ({required Object channels, required Object movies, required Object series, required Object date}) => 'Catalog: ${channels} channels · ${movies} movies · ${series} series · updated ${date}',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.guideAndCatchUp' => 'Guide & catch-up',
 			'iptv.showCatchUpBadge' => 'Show catch-up badge',
 			'iptv.showCatchUpBadgeDescription' => 'Show a badge on channels that offer catch-up TV. Applies when the guide reloads.',
@@ -13562,8 +13608,6 @@ extension on Translations {
 			'iptv.epgDaysCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: '${n} day', other: '${n} days', ), 
 			'iptv.epgUpdateInterval' => 'Update interval',
 			'iptv.epgHoursCount' => ({required num n}) => (_root.$meta.cardinalResolver ?? PluralResolvers.cardinal('en'))(n, one: 'Every ${n} hour', other: 'Every ${n} hours', ), 
-			_ => null,
-		} ?? switch (path) {
 			'iptv.epgManualOnly' => 'Manual only',
 			'iptv.epgPastDays' => 'Past days to keep',
 			'iptv.epgPastDaysNone' => 'None',

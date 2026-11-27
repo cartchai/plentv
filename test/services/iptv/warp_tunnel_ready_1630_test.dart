@@ -92,6 +92,38 @@ void main() {
     );
   });
 
+  test('toggle on, tunnel start fails mid-wait: false promptly, not after the bound (M)',
+      () async {
+    await setTunnelToggle(true);
+    WarpTunnelService.instance.debugSetTunnelForTest(on: false, starting: true);
+    // The start fails while the helper is waiting: the state leaves
+    // `starting` for `off`. The wait must settle then, not run out
+    // the full remaining bound.
+    // NOTE (M): the missed-notification race itself — the tunnel
+    // settling in the synchronous gap between the `isStarting` check
+    // and listener registration — has no await in it, so no outside
+    // code can land inside that gap and no harness can inject a flip
+    // there. This test pins the surrounding contract instead: any
+    // settle the listener can see ends the wait promptly. The
+    // post-registration re-check in `_waitForTunnelStateSettled`
+    // closes the gap itself, as defence in depth.
+    unawaited(
+      Future<void>.delayed(
+        const Duration(milliseconds: 50),
+        () => WarpTunnelService.instance.debugSetTunnelForTest(on: false),
+      ),
+    );
+
+    final stopwatch = Stopwatch()..start();
+    final ready = await WarpTunnelService.instance.waitForTunnelReady(
+      timeout: const Duration(seconds: 2),
+    );
+    stopwatch.stop();
+
+    expect(ready, isFalse);
+    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
+  });
+
   test('toggle on, restore settles without the tunnel coming up: false', () async {
     await setTunnelToggle(true);
     // No restore in flight and no manual start: the tunnel is simply

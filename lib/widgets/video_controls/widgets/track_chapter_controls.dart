@@ -77,6 +77,11 @@ class _TrackChapterControlsState extends State<TrackChapterControls> {
   /// when the player has no such property).
   Stereo3dDetection? _containerDetection;
 
+  /// Generation of the in-flight container read: a title change while
+  /// a read is still out must not let the old title's answer land on
+  /// the new title (K(i)).
+  int _containerLoadGeneration = 0;
+
   @override
   void initState() {
     super.initState();
@@ -89,13 +94,53 @@ class _TrackChapterControlsState extends State<TrackChapterControls> {
     if (oldWidget.player != widget.player) {
       _containerDetection = null;
       _loadContainerStereoMode();
+    } else if (_titleIdentity(oldWidget.trackControlsState) !=
+        _titleIdentity(widget.trackControlsState)) {
+      // Same player session, new title (next episode, or a version
+      // switch to a different file): the container value belongs to
+      // the file open in mpv, so the old title's value must not
+      // survive (K(i)). Clear it first so the old title's 3D button
+      // does not linger while the new read is in flight, then re-read.
+      _containerDetection = null;
+      _loadContainerStereoMode();
     }
   }
 
+  /// The part of the selected version the detection reads the filename
+  /// from: the part matching [TrackControlsState.sourcePartId], else
+  /// the version's first part. Shared by [_detectStereo3d] and
+  /// [_titleIdentity] so both agree on which file the title is.
+  MediaPart? _selectedPart(TrackControlsState state) {
+    if (state.availableVersions.isEmpty) return null;
+    final index = state.selectedMediaIndex.clamp(
+      0,
+      state.availableVersions.length - 1,
+    );
+    final version = state.availableVersions[index];
+    final partId = state.sourcePartId;
+    if (partId != null) {
+      for (final candidate in version.parts) {
+        if (candidate.id == partId.toString()) return candidate;
+      }
+    }
+    return version.parts.isNotEmpty ? version.parts.first : null;
+  }
+
+  /// Identity of the title (and file) the container read belongs to:
+  /// the Plex rating key, the part, the selected version and the file
+  /// open in mpv. Any of these changing means a different file is
+  /// open, so the container value must be re-read (K(i)).
+  String _titleIdentity(TrackControlsState state) {
+    final part = _selectedPart(state);
+    return '${state.ratingKey}|${state.sourcePartId}|'
+        '${state.selectedMediaIndex}|${part?.file}';
+  }
+
   Future<void> _loadContainerStereoMode() async {
+    final generation = ++_containerLoadGeneration;
     try {
       final mode = await widget.player.getProperty('video-stereo-mode');
-      if (!mounted) return;
+      if (!mounted || generation != _containerLoadGeneration) return;
       setState(() {
         _containerDetection = detectStereo3dFromMpvStereoMode(mode);
       });
@@ -191,17 +236,7 @@ class _TrackChapterControlsState extends State<TrackChapterControls> {
       state.availableVersions.length - 1,
     );
     final version = state.availableVersions[index];
-    MediaPart? part;
-    final partId = state.sourcePartId;
-    if (partId != null) {
-      for (final candidate in version.parts) {
-        if (candidate.id == partId.toString()) {
-          part = candidate;
-          break;
-        }
-      }
-    }
-    part ??= version.parts.isNotEmpty ? version.parts.first : null;
+    final part = _selectedPart(state);
     Stereo3dDetection? manual;
     final settings = SettingsService.instanceOrNull;
     if (settings != null && part != null && state.ratingKey.isNotEmpty) {

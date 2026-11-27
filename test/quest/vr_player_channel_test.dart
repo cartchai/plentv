@@ -99,6 +99,24 @@ void main() {
           {'positionSeconds': 0.0, 'completed': false, 'started': false});
       expect(result.started, isFalse);
     });
+
+    test('parses failureReason when the native side reports one (P0.4/T2)',
+        () {
+      final result = VrPlayerResult.fromMap({
+        'positionSeconds': 0.0,
+        'completed': false,
+        'started': false,
+        'failureReason': 'mpv',
+      });
+      expect(result.started, isFalse);
+      expect(result.failureReason, 'mpv');
+    });
+
+    test('failureReason is null when the key is absent (older native)', () {
+      final result = VrPlayerResult.fromMap(
+          {'positionSeconds': 0.0, 'completed': false, 'started': false});
+      expect(result.failureReason, isNull);
+    });
   });
 
   group('Dart/Kotlin/JNI key sync (U1/G3)', () {
@@ -158,6 +176,24 @@ void main() {
       expect(result, isNotNull);
       expect(result!.started, isFalse);
       expect(result.positionSeconds, 0.0);
+    });
+
+    test('the failureReason round-trips through playInVr (P0.4/T2)', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel(channelName),
+        (MethodCall call) async => <String, Object?>{
+          'positionSeconds': 0.0,
+          'completed': false,
+          'started': false,
+          'failureReason': 'openxr',
+        },
+      );
+      final channel = VrPlayerChannel();
+      final result = await channel.playInVr(sampleRequest());
+      expect(result, isNotNull);
+      expect(result!.started, isFalse);
+      expect(result.failureReason, 'openxr');
     });
   });
 

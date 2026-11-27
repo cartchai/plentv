@@ -235,6 +235,30 @@ void main() {
     expect(find.text('Import Settings'), findsNothing);
   });
 
+  // 1.6.30 (P0.14/B19): the panel-memory pref gates save/restore in
+  // QuestPanelWindow, but no settings tile bound it — the user could not
+  // toggle it and it stayed default-on. The Advanced section now has the
+  // tile (next to the 3D debug switch); tapping it toggles the pref.
+  testWidgets('Advanced has the panel-memory tile and it toggles the pref',
+      (tester) async {
+    final harness = await _pumpSettingsScreen(tester);
+    addTearDown(() => harness.dispose(tester));
+
+    final settings = SettingsService.instance;
+    expect(settings.read(SettingsService.questPanelWindowMemory), isTrue);
+    expect(find.text(t.settings.panelWindowMemory), findsOneWidget);
+    expect(find.text(t.settings.panelWindowMemoryDescription), findsOneWidget);
+    expect(find.text(t.settings.show3dButtonDebug), findsOneWidget);
+
+    await tester.tap(find.text(t.settings.panelWindowMemory));
+    await _pumpUi(tester);
+    expect(settings.read(SettingsService.questPanelWindowMemory), isFalse);
+
+    await tester.tap(find.text(t.settings.panelWindowMemory));
+    await _pumpUi(tester);
+    expect(settings.read(SettingsService.questPanelWindowMemory), isTrue);
+  });
+
   testWidgets('special download and generic update rows keep rich content on the shared compact row', (tester) async {
     final harness = await _pumpSettingsScreen(tester);
     addTearDown(() => harness.dispose(tester));

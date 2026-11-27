@@ -82,8 +82,15 @@ struct VrConfig {
 // Called (on the render thread) when the VR session ends.
 // `started` is false when VR init failed before any frame was rendered —
 // the panel must NOT treat that like an exit at position 0 (P0.4/B5:
-// no seek, no pop, resume the panel instead).
-using VrFinishedCallback = std::function<void(double positionSeconds, bool completed, bool started)>;
+// no seek, no pop, resume the panel instead). `failureReason` names the
+// step that failed when `started` is false (P0.4/T2): 'egl' | 'openxr' |
+// 'actions' | 'mpv' | 'gl' for the render-thread init chain, '' when the
+// session started or exited normally. A stable code, never free text —
+// it crosses JNI/Kotlin/Dart to the sheet, which maps it to a localized
+// message; it must never contain a path, URL, or device detail.
+using VrFinishedCallback =
+    std::function<void(double positionSeconds, bool completed, bool started,
+                       const std::string& failureReason)>;
 
 class VrRenderer {
  public:

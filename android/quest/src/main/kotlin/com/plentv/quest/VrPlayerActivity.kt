@@ -47,8 +47,10 @@ class VrPlayerActivity : Activity() {
   // JNI — implemented in android/quest/src/main/cpp/vr_player_jni.cpp.
   // nativeStart takes the intent extras Bundle and the activity itself
   // (for the onVrFinished callback); it returns false when the OpenXR
-  // session or mpv could not start.
+  // session or mpv could not start. nativeStartFailureReason reports
+  // WHY the last nativeStart returned false (P0.4/T2).
   private external fun nativeStart(extras: Bundle, activity: VrPlayerActivity): Boolean
+  private external fun nativeStartFailureReason(): String
   private external fun nativeRequestExit()
   private external fun nativeRecenter()
   private external fun nativeStop()
@@ -60,8 +62,7 @@ class VrPlayerActivity : Activity() {
     val request = VrPlayerRequest.fromIntent(intent)
     if (request == null) {
       Log.w(TAG, "No valid VR request in intent; finishing")
-      setResult(RESULT_CANCELED)
-      finish()
+      finishWithFailure("invalid_request")
       return
     }
     this.request = request
@@ -71,19 +72,45 @@ class VrPlayerActivity : Activity() {
       System.loadLibrary("vr_player")
     } catch (e: UnsatisfiedLinkError) {
       Log.e(TAG, "libvr_player.so missing", e)
-      setResult(RESULT_CANCELED)
-      finish()
+      finishWithFailure("library_missing")
       return
     }
 
     nativeStarted = nativeStart(intent.extras ?: Bundle(), this)
     if (!nativeStarted) {
       Log.e(TAG, "Native VR session failed to start")
-      setResult(RESULT_CANCELED)
-      finish()
+      // P0.4/T2: report WHY instead of a bare RESULT_CANCELED, so the
+      // panel can say more than "VR unavailable". The JNI side records
+      // the reason for the last failed start.
+      val reason = try {
+        nativeStartFailureReason().ifBlank { "start_failed" }
+      } catch (e: Exception) {
+        Log.w(TAG, "nativeStartFailureReason failed", e)
+        "start_failed"
+      }
+      finishWithFailure(reason)
       return
     }
     Log.i(TAG, "VR session started (video URL received, ${request.layout}/${request.packing})")
+  }
+
+  /**
+   * Finish with a failed start, carrying the reason to the panel
+   * (P0.4/T2). Unlike RESULT_CANCELED, this reaches Dart as
+   * `started: false` + `failureReason`, so the sheet shows the reason
+   * and the panel resumes playback instead of seeking to 0.
+   */
+  private fun finishWithFailure(reason: String) {
+    if (finished) return
+    finished = true
+    val data = Intent().apply {
+      putExtra(VrPlayerRequest.RESULT_POSITION_SECONDS, 0.0)
+      putExtra(VrPlayerRequest.RESULT_COMPLETED, false)
+      putExtra(VrPlayerRequest.RESULT_STARTED, false)
+      putExtra(VrPlayerRequest.RESULT_FAILURE_REASON, reason)
+    }
+    setResult(RESULT_OK, data)
+    finish()
   }
 
   /**
@@ -91,10 +118,17 @@ class VrPlayerActivity : Activity() {
    * ends — user exit, video completed, or a fatal native error. The
    * position is where the video stopped, so the panel can resume there.
    * `started` is false when VR init failed before any frame (P0.4): the
-   * panel must not seek to 0 on that result.
+   * panel must not seek to 0 on that result. `failureReason` names the
+   * init step that failed (P0.4/T2, '' on a normal exit) so the panel
+   * can show why VR did not start.
    */
   @Suppress("unused") // Called from native code.
-  fun onVrFinished(positionSeconds: Double, completed: Boolean, started: Boolean) {
+  fun onVrFinished(
+    positionSeconds: Double,
+    completed: Boolean,
+    started: Boolean,
+    failureReason: String?,
+  ) {
     runOnUiThread {
       if (finished) return@runOnUiThread
       finished = true
@@ -102,6 +136,9 @@ class VrPlayerActivity : Activity() {
         putExtra(VrPlayerRequest.RESULT_POSITION_SECONDS, positionSeconds)
         putExtra(VrPlayerRequest.RESULT_COMPLETED, completed)
         putExtra(VrPlayerRequest.RESULT_STARTED, started)
+        if (!failureReason.isNullOrBlank()) {
+          putExtra(VrPlayerRequest.RESULT_FAILURE_REASON, failureReason)
+        }
       }
       setResult(RESULT_OK, data)
       finish()

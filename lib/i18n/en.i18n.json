@@ -548,6 +548,8 @@
     "autoHidePerformanceOverlayDescription": "Fade the performance overlay with the playback controls",
     "show3dButtonDebug": "Always show the 3D button",
     "show3dButtonDebugDescription": "Show the 3D button on every video, on any device, even when no 3D file was detected. A debug switch — it does not turn on 3D by itself.",
+    "panelWindowMemory": "Remember panel size",
+    "panelWindowMemoryDescription": "On a Quest headset, reopen the panel at the size you left it instead of the default size. Turn it off to always start at the default size.",
     "showNavBarLabels": "Show Navigation Bar Labels",
     "showNavBarLabelsDescription": "Display text labels under navigation bar icons",
     "startupSection": "Startup Section",
@@ -1017,8 +1019,8 @@
     "packingFull": "Full",
     "swapEyes": "Swap eyes",
     "swapEyesDescription": "Fix depth that looks inside-out — near things far away.",
-    "watchIn2d": "Watch in 2D (left eye)",
-    "watchIn2dDescription": "Play just the left eye's picture, at the right shape.",
+    "remember2dForTitle": "Remember 2D for this title",
+    "remember2dForTitleDescription": "Saves 2D (left eye) for this title, for the next time it plays. The picture playing now stays as it is.",
     "watchInVr": "Watch in VR",
     "screenSize": "Screen size",
     "screenDistance": "Screen distance",
@@ -1060,6 +1062,15 @@
     "externalSubtitles": "External subtitles",
     "externalSubtitlesDescription": "Load a subtitle file (SRT or ASS) for this video.",
     "vrUnavailable": "Couldn't start the VR player. Make sure you're on a Quest headset.",
+    "vrFailedEgl": "Couldn't start VR: the headset's display couldn't be opened. Try closing other apps and starting again.",
+    "vrFailedOpenxr": "Couldn't start VR: the headset's VR system didn't answer. Try restarting the headset.",
+    "vrFailedActions": "Couldn't start VR: the headset's controllers couldn't be set up.",
+    "vrFailedMpv": "Couldn't start VR: the video couldn't be opened in VR. Try playing it in 2D first.",
+    "vrFailedGl": "Couldn't start VR: the headset's graphics couldn't be set up.",
+    "vrFailedLibraryMissing": "Couldn't start VR: the VR player is missing from this install. Reinstall the app.",
+    "vrFailedInvalidRequest": "Couldn't start VR: the video link was missing.",
+    "vrFailedAlreadyRunning": "A VR session is already running. Close it before starting another.",
+    "vrFailedStart": "Couldn't start the VR player. Try again.",
     "recentered": "View recentred",
     "notInVr": "Not watching in VR right now"
   },
@@ -1665,7 +1676,7 @@
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
     ],
     "changelog2348": [
-      "Cleanup: a tidy-up update — error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. Nothing about how the app works has changed"
+      "Cleanup and Quest 3D fixes: error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. On a Meta Quest headset the 3D depth slider now really changes the depth, and 3D detection now also reads the video file's own stereo mode, so a 3D file with no tag in its filename is still recognised as 3D. Signing in and the first checks also now wait for the VPN tunnel to finish starting instead of going out direct while it is still coming up"
     ],
     "changelog2347": [
       "New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file"

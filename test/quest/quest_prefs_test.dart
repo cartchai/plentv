@@ -5,10 +5,14 @@ import 'package:plezy/services/settings_service.dart';
 import '../test_helpers/prefs.dart';
 
 // Dart-side Quest prefs (1.6.30, G5/G6): the settings the sheet and the
-// native panel-memory gate read. The Kotlin gating of
-// `questPanelWindowMemory` is a sibling agent's job and is proven by its
-// host test; this file proves the Dart side exists, defaults on, and is
-// readable/writable through SettingsService.
+// native panel-memory gate read. There is NO Kotlin host test proving
+// the native gating of `questPanelWindowMemory` — none exists in the
+// repo (no QuestPanelWindow test under androidTest or anywhere else),
+// so nothing here may claim one does. The gate itself
+// (QuestPanelWindow.save/restore reading the pref from the Flutter
+// DataStore) is verified by code inspection only, and at runtime only by
+// a Quest headset. This file proves the Dart side exists, defaults on,
+// and is readable/writable through SettingsService.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

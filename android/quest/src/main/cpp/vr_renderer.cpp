@@ -2665,12 +2665,31 @@ void renderLoop(VrRendererImpl* impl, VrRenderer* owner) {
   impl->lastBrightness = 1e9;
   impl->lastShownSecond = -1;
   bool ok = false;
+  // P0.4/T2: which init step failed, as a stable reason code for the
+  // panel. Empty when init succeeds — the reason travels with
+  // onFinished so a failed start can say WHY, not just "unavailable".
+  std::string failureReason;
   do {
-    if (!initEgl(impl)) break;
-    if (!initOpenXr(impl)) break;
-    if (!initActions(impl)) break;
-    if (!initMpv(impl)) break;
-    if (!initGl(impl)) break;
+    if (!initEgl(impl)) {
+      failureReason = "egl";
+      break;
+    }
+    if (!initOpenXr(impl)) {
+      failureReason = "openxr";
+      break;
+    }
+    if (!initActions(impl)) {
+      failureReason = "actions";
+      break;
+    }
+    if (!initMpv(impl)) {
+      failureReason = "mpv";
+      break;
+    }
+    if (!initGl(impl)) {
+      failureReason = "gl";
+      break;
+    }
     // Meshes (built once the GL context exists). The flat quad is a
     // 2x2 unit quad, scaled to the screen size by the model matrix. The
     // spheres are fixed (10 m radius, centred on the head). The cylinder
@@ -2721,6 +2740,19 @@ void renderLoop(VrRendererImpl* impl, VrRenderer* owner) {
       // posts EXITING / LOSS_PENDING, this thread can still park here and
       // onDestroy's join can stall until the watchdog kills the process.
       // The bounded swapchain waits cover the other park points.
+      // 1.6.30 assessment (left as-is, do not "fix" without a headset):
+      // xrWaitFrame has no timeout variant in the OpenXR API, so the wait
+      // itself cannot be bounded at the call site. Moving the join off
+      // the UI thread (async/detached join in nativeStop) would only move
+      // the hazard: the render thread is process-global state
+      // (g_activity/g_renderer in vr_player_jni.cpp), so a thread that
+      // outlives its activity could have its eventual onFinished call
+      // back into a NEW activity with the OLD session's position.
+      // Guarding that needs a generation token across JNI/Kotlin/C++,
+      // a larger native change with no headset to prove it. The stall
+      // only bites when the runtime is already wedged (no frames, no
+      // EXITING/LOSS_PENDING), where the watchdog kills the process
+      // anyway; the normal exit path joins a nearly-finished thread.
       if (!impl->sessionBegun) {
         // The session has not begun yet (waiting for READY); still
         // pump events so the state change arrives.
@@ -2743,10 +2775,10 @@ void renderLoop(VrRendererImpl* impl, VrRenderer* owner) {
   destroyMpv(impl);
   destroyOpenXr(impl);
   destroyEgl(impl);
-  LOGI("VR render loop exited (position %.1f s, completed %d, started %d)", finalPosition,
-       completed, started);
+  LOGI("VR render loop exited (position %.1f s, completed %d, started %d, reason %s)",
+       finalPosition, completed, started, failureReason.c_str());
   if (impl->onFinished) {
-    impl->onFinished(finalPosition, completed, started);
+    impl->onFinished(finalPosition, completed, started, failureReason);
   }
   // B10: the owner nulls impl_ under its mutex before deleting, so no
   // concurrent requestExit/recenter can touch freed memory.

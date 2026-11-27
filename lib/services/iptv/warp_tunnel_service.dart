@@ -977,6 +977,11 @@ class WarpTunnelService extends ChangeNotifier {
       if (!isStarting && !completer.isCompleted) completer.complete();
     }
     addListener(listener);
+    // The tunnel may have settled between the `isStarting` check above
+    // and registering the listener: a state change in that gap fires no
+    // notification for us, so re-check now instead of waiting out the
+    // full remaining bound (M).
+    if (!isStarting && !completer.isCompleted) completer.complete();
     try {
       final remaining = deadline.difference(DateTime.now());
       if (remaining <= Duration.zero) return;

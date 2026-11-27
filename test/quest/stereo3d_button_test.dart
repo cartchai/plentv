@@ -71,12 +71,26 @@ void main() {
     ],
   );
 
+  // A second real 2D file: no tag, 1920x1080 (never 3D by resolution).
+  const twoDVersion2 = MediaVersion(
+    id: '3',
+    width: 1920,
+    height: 1080,
+    parts: [
+      MediaPart(
+        id: '7',
+        file: '/Movies/Avatar 2 (2022).mkv',
+      ),
+    ],
+  );
+
   Future<void> pumpControls(
     WidgetTester tester, {
     required MediaVersion version,
     required bool isQuest,
     bool debugToggle = false,
     Player? player,
+    String ratingKey = 'rating-1',
   }) async {
     QuestPlatform.debugSetIsQuest(isQuest);
     await SettingsService.instance.write(
@@ -96,7 +110,7 @@ void main() {
                 availableVersions: [version],
                 selectedMediaIndex: 0,
                 sourcePartId: 7,
-                ratingKey: 'rating-1',
+                ratingKey: ratingKey,
                 mediaTitle: 'Avatar',
               ),
             ),
@@ -215,6 +229,68 @@ void main() {
       await tester.pump();
       expect(stereo3dButton(), findsNothing);
     });
+
+    testWidgets(
+        'next episode: a stale SBS container value does not survive a title change (K(i))',
+        (tester) async {
+      // Same player session, same controls row: episode 1 is an
+      // untagged file whose container declares SBS, so the button
+      // shows. The next episode is a flat file — the old title's
+      // container value must not linger once the title changes.
+      final player = _FakeMutableContainerPlayer(stereoMode: 'left_right');
+      await pumpControls(
+        tester,
+        version: twoDVersion,
+        isQuest: true,
+        player: player,
+        ratingKey: 'rating-1',
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(stereo3dButton(), findsOneWidget);
+
+      player.stereoMode = 'mono';
+      await pumpControls(
+        tester,
+        version: twoDVersion2,
+        isQuest: true,
+        player: player,
+        ratingKey: 'rating-2',
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(stereo3dButton(), findsNothing);
+    });
+
+    testWidgets(
+        'next episode: a flat title followed by a container-declared SBS title shows the button (K(i))',
+        (tester) async {
+      // The mirror direction: the re-read must pick the new title's
+      // value up, not just clear the old one.
+      final player = _FakeMutableContainerPlayer(stereoMode: 'mono');
+      await pumpControls(
+        tester,
+        version: twoDVersion,
+        isQuest: true,
+        player: player,
+        ratingKey: 'rating-1',
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(stereo3dButton(), findsNothing);
+
+      player.stereoMode = 'left_right';
+      await pumpControls(
+        tester,
+        version: twoDVersion2,
+        isQuest: true,
+        player: player,
+        ratingKey: 'rating-2',
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(stereo3dButton(), findsOneWidget);
+    });
   });
 }
 
@@ -268,6 +344,22 @@ class _FakeContainerPlayer extends _FakeButtonPlayer {
   _FakeContainerPlayer({required this.stereoMode});
 
   final String stereoMode;
+
+  @override
+  Future<String?> getProperty(String name) async {
+    if (name == 'video-stereo-mode') return stereoMode;
+    return null;
+  }
+}
+
+/// Same as [_FakeContainerPlayer] but with a settable mode, so a test
+/// can play a second title in the same player session (K(i)): the next
+/// episode opens a different file, so mpv reports a different
+/// `video-stereo-mode` for it.
+class _FakeMutableContainerPlayer extends _FakeButtonPlayer {
+  _FakeMutableContainerPlayer({required this.stereoMode});
+
+  String stereoMode;
 
   @override
   Future<String?> getProperty(String name) async {

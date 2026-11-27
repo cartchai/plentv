@@ -78,6 +78,17 @@ data class VrPlayerRequest(
      */
     const val RESULT_STARTED = "started"
 
+    /**
+     * Why VR failed to start (P0.4/T2), as a stable reason code — 'egl' |
+     * 'openxr' | 'actions' | 'mpv' | 'gl' from the render-thread init
+     * chain, 'library_missing' | 'invalid_request' | 'already_running' |
+     * 'start_failed' from the activity/start path. Absent when VR
+     * started or when the failure predates the reason channel. The Dart
+     * side maps the code to a localized message; unknown codes fall back
+     * to the generic message.
+     */
+    const val RESULT_FAILURE_REASON = "failureReason"
+
     fun fromMap(map: Map<String, Any?>): VrPlayerRequest? {
       val videoUrl = map[EXTRA_VIDEO_URL] as? String
       if (videoUrl.isNullOrBlank()) return null

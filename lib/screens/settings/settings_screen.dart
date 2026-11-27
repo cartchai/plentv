@@ -123,6 +123,7 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
   static const _kLastCrash = 'last_crash';
   static const _kAutoHidePerformanceOverlay = 'auto_hide_performance_overlay';
   static const _kShow3dButtonDebug = 'show_3d_button_debug';
+  static const _kPanelWindowMemory = 'panel_window_memory';
   static const _kViewLogs = 'view_logs';
   static const _kClearImageCache = 'clear_image_cache';
   static const _kResetSettings = 'reset_settings';
@@ -586,6 +587,19 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           icon: Symbols.view_in_ar_rounded,
           title: t.settings.show3dButtonDebug,
           subtitle: t.settings.show3dButtonDebugDescription,
+        ),
+        // 1.6.30 (Quest 3D, P0.14/B19): the panel-memory pref gates
+        // whether the Quest panel's size is saved on pause and restored
+        // on resume (QuestPanelWindow) — but until now no tile bound it,
+        // so the user could not toggle it and it stayed default-on.
+        // Shown here next to the 3D debug switch; the description says
+        // it only takes effect on a Quest headset.
+        SettingSwitchTile(
+          focusNode: _focusTracker.get(_kPanelWindowMemory),
+          pref: settings.SettingsService.questPanelWindowMemory,
+          icon: Symbols.memory_rounded,
+          title: t.settings.panelWindowMemory,
+          subtitle: t.settings.panelWindowMemoryDescription,
         ),
         // 1.6.23: Super Spoof moved to its own page — this row opens
         // it. The master toggle and the four sub-settings live in

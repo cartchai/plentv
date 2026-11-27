@@ -117,13 +117,21 @@ void main() {
       );
     });
 
-    testWidgets('Watch in 2D records a flat choice for the title',
+    testWidgets('Remember 2D records a flat choice for the title (D-1)',
         (tester) async {
       final player = _FakeStereo3dPlayer();
       final store = Stereo3dTitleStore(_MemoryTitleBackend());
       await pumpSheet(tester,
           player: player, titleStore: store, vrChannel: VrPlayerChannel());
-      await tester.tap(find.text('Watch in 2D (left eye)'));
+      // D-1: the button records 2D for the next playback — it does not
+      // change the picture currently playing, and the label says so.
+      expect(find.text('Remember 2D for this title'), findsOneWidget);
+      expect(
+        find.text(
+            'Saves 2D (left eye) for this title, for the next time it plays. The picture playing now stays as it is.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Remember 2D for this title'));
       await tester.pump();
       final record = store.load('rating-1', '7');
       expect(record, isNotNull);
@@ -421,6 +429,197 @@ void main() {
       );
     });
 
+    testWidgets(
+        'a failed VR start reports the native failure reason (P0.4/T2)',
+        (tester) async {
+      final player = _FakeStereo3dPlayer();
+      final store = Stereo3dTitleStore(_MemoryTitleBackend());
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel(VrPlayerChannel.channelName),
+        (MethodCall call) async => <String, Object?>{
+          'positionSeconds': 0.0,
+          'completed': false,
+          'started': false,
+          'failureReason': 'mpv',
+        },
+      );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+                const MethodChannel(VrPlayerChannel.channelName), null);
+      });
+
+      await pumpSheet(tester,
+          player: player, titleStore: store, vrChannel: VrPlayerChannel());
+      await tester.tap(find.text('Watch in VR'));
+      await tester.pump();
+      await tester.pump();
+      // Same no-seek / no-pop / resume contract as the reason-less
+      // failure, but the message names the failing step instead of the
+      // generic "VR unavailable".
+      expect(player.seekPosition, isNull);
+      expect(player.playCalled, isTrue);
+      expect(find.text('Watch in VR'), findsOneWidget);
+      expect(
+        find.text(
+            "Couldn't start VR: the video couldn't be opened in VR. Try playing it in 2D first."),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+            "Couldn't start the VR player. Make sure you're on a Quest headset."),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'a failed VR start with an unknown reason falls back to the generic message (P0.4/T2)',
+        (tester) async {
+      final player = _FakeStereo3dPlayer();
+      final store = Stereo3dTitleStore(_MemoryTitleBackend());
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel(VrPlayerChannel.channelName),
+        (MethodCall call) async => <String, Object?>{
+          'positionSeconds': 0.0,
+          'completed': false,
+          'started': false,
+          'failureReason': 'bogus-future-reason',
+        },
+      );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+                const MethodChannel(VrPlayerChannel.channelName), null);
+      });
+
+      await pumpSheet(tester,
+          player: player, titleStore: store, vrChannel: VrPlayerChannel());
+      await tester.tap(find.text('Watch in VR'));
+      await tester.pump();
+      await tester.pump();
+      expect(player.seekPosition, isNull);
+      expect(player.playCalled, isTrue);
+      expect(
+        find.text(
+            "Couldn't start the VR player. Make sure you're on a Quest headset."),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+        'tapping Custom restores the stored custom values instead of resetting (D-2)',
+        (tester) async {
+      final player = _FakeStereo3dPlayer();
+      final store = Stereo3dTitleStore(_MemoryTitleBackend());
+      // Dragged values, saved as globals; the record says 'tv', so the
+      // sheet opens showing the TV preset.
+      final settings = SettingsService.instance;
+      await settings.write(SettingsService.questScreenSize, 1.3);
+      await settings.write(SettingsService.questScreenDistance, 4.2);
+      await settings.write(SettingsService.questScreenCurvature, 0.25);
+      store.save(
+        'rating-1',
+        '7',
+        const Stereo3dTitleRecord(
+          layout: Stereo3dLayout.sbs,
+          screenPreset: 'tv',
+        ),
+      );
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel(VrPlayerChannel.channelName),
+        (MethodCall call) async {
+          calls.add(call);
+          return <String, Object?>{
+            'positionSeconds': 10.0,
+            'completed': false,
+          };
+        },
+      );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+                const MethodChannel(VrPlayerChannel.channelName), null);
+      });
+
+      await pumpSheet(tester,
+          player: player, titleStore: store, vrChannel: VrPlayerChannel());
+      await tester.ensureVisible(find.text('Custom'));
+      await tester.pump();
+      await tester.tap(find.text('Custom'));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Watch in VR'));
+      await tester.pump();
+      await tester.tap(find.text('Watch in VR'));
+      await tester.pump();
+      await tester.pump();
+      expect(calls, hasLength(1));
+      final args = calls.single.arguments as Map<Object?, Object?>;
+      // The stored custom values come back — not the hard defaults
+      // (1.0 / 3.0 / 0.0) the old code reset to.
+      expect(args['screenSize'], 1.3);
+      expect(args['screenDistance'], 4.2);
+      expect(args['screenCurvature'], 0.25);
+      // And the globals were not overwritten with the defaults either.
+      expect(settings.read(SettingsService.questScreenSize), 1.3);
+      expect(settings.read(SettingsService.questScreenDistance), 4.2);
+      expect(settings.read(SettingsService.questScreenCurvature), 0.25);
+      expect(store.load('rating-1', '7')?.screenPreset, 'custom');
+    });
+
+    testWidgets('Reset to auto-detect also clears swap eyes (Q6)',
+        (tester) async {
+      final player = _FakeStereo3dPlayer();
+      final store = Stereo3dTitleStore(_MemoryTitleBackend());
+      store.save(
+        'rating-1',
+        '7',
+        const Stereo3dTitleRecord(
+          layout: Stereo3dLayout.vr180,
+          swapEyes: true,
+          screenPreset: 'cinema',
+        ),
+      );
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel(VrPlayerChannel.channelName),
+        (MethodCall call) async {
+          calls.add(call);
+          return <String, Object?>{
+            'positionSeconds': 10.0,
+            'completed': false,
+          };
+        },
+      );
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+                const MethodChannel(VrPlayerChannel.channelName), null);
+      });
+
+      await pumpSheet(tester,
+          player: player, titleStore: store, vrChannel: VrPlayerChannel());
+      await tester.ensureVisible(find.text('Reset to auto-detect'));
+      await tester.pump();
+      await tester.tap(find.text('Reset to auto-detect'));
+      await tester.pump();
+      expect(store.load('rating-1', '7'), isNull);
+      // The stale swap-eyes value must not survive the reset and be
+      // re-sent (or re-saved) by the next handoff.
+      await tester.ensureVisible(find.text('Watch in VR'));
+      await tester.pump();
+      await tester.tap(find.text('Watch in VR'));
+      await tester.pump();
+      await tester.pump();
+      expect(calls, hasLength(1));
+      final args = calls.single.arguments as Map<Object?, Object?>;
+      expect(args['swapEyes'], isFalse);
+    });
+
     testWidgets('a null VR result resumes the panel (P0.12)', (tester) async {
       final player = _FakeStereo3dPlayer();
       final store = Stereo3dTitleStore(_MemoryTitleBackend());
@@ -629,6 +828,10 @@ void main() {
         find.byType(SegmentedButton<Stereo3dLayout>),
       );
       expect(layoutButton.selected, {Stereo3dLayout.vr180});
+      // The longer 2D description above pushes this row below the fold
+      // at the default viewport — scroll it into view first.
+      await tester.ensureVisible(find.text('Reset to auto-detect'));
+      await tester.pump();
       await tester.tap(find.text('Reset to auto-detect'));
       await tester.pump();
       expect(store.load('rating-1', '7'), isNull);

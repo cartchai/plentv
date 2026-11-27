@@ -3,8 +3,8 @@
 // VrPlayerActivity (Kotlin) calls nativeStart() with the request extras;
 // the native render thread runs the OpenXR session + mpv, and when it
 // finishes it calls back into VrPlayerActivity.onVrFinished(position,
-// completed, started) on the render thread — the Kotlin side posts to the
-// UI thread itself (setResult + finish must run there).
+// completed, started, failureReason) on the render thread — the Kotlin
+// side posts to the UI thread itself (setResult + finish must run there).
 //
 // The renderer instance is owned by this file (a single static). Only one
 // VR session runs at a time (the plugin enforces it from the Dart side
@@ -24,6 +24,11 @@ static JavaVM* g_vm = nullptr;
 static VrRenderer* g_renderer = nullptr;
 // Global ref to the activity, for the onVrFinished callback.
 static jobject g_activity = nullptr;
+// Why the last nativeStart() returned false (P0.4/T2): 'already_running'
+// | 'invalid_request' | 'start_failed'. Read back through
+// nativeStartFailureReason() so the activity can report the reason to
+// the panel instead of finishing with a bare RESULT_CANCELED.
+static std::string g_startFailureReason;
 
 jint JNI_OnLoad(JavaVM* vm, void* /*reserved*/) {
   g_vm = vm;
@@ -110,12 +115,15 @@ extern "C" {
 JNIEXPORT jboolean JNICALL
 Java_com_plentv_quest_VrPlayerActivity_nativeStart(JNIEnv* env, jobject /*thiz*/,
                                                    jobject extras, jobject activity) {
+  g_startFailureReason.clear();
   if (g_renderer != nullptr) {
     LOGE("nativeStart called while a VR session is already running");
+    g_startFailureReason = "already_running";
     return JNI_FALSE;
   }
   if (extras == nullptr) {
     LOGE("nativeStart called with null extras");
+    g_startFailureReason = "invalid_request";
     return JNI_FALSE;
   }
   VrConfig config;
@@ -147,6 +155,7 @@ Java_com_plentv_quest_VrPlayerActivity_nativeStart(JNIEnv* env, jobject /*thiz*/
 
   if (config.videoUrl.empty()) {
     LOGE("nativeStart: no videoUrl");
+    g_startFailureReason = "invalid_request";
     return JNI_FALSE;
   }
   // T7: validate/normalise the layout at the JNI boundary — an unknown
@@ -165,26 +174,33 @@ Java_com_plentv_quest_VrPlayerActivity_nativeStart(JNIEnv* env, jobject /*thiz*/
   g_activity = env->NewGlobalRef(activity);
   auto* renderer = new VrRenderer();
   g_renderer = renderer;
-  const bool started = renderer->start(config, [](double position, bool completed, bool vrStarted) {
+  const bool started = renderer->start(config, [](double position, bool completed, bool vrStarted,
+                                                  const std::string& failureReason) {
     // Called on the render thread when the session ends. Attach, call
     // back into the activity, detach. The Kotlin side posts to the UI
     // thread (setResult + finish).
     // P0.4: vrStarted is false when VR init failed before any frame —
     // the activity reports it so the panel can tell a failed start
-    // apart from an exit at position 0.
+    // apart from an exit at position 0. P0.4/T2: failureReason names
+    // the init step that failed ('egl' | 'openxr' | 'actions' | 'mpv'
+    // | 'gl', '' on a normal exit) so the panel can say why.
     if (g_vm == nullptr || g_activity == nullptr) return;
     JNIEnv* env = nullptr;
     if (g_vm->AttachCurrentThread(&env, nullptr) != JNI_OK) return;
     jclass activityClass = env->GetObjectClass(g_activity);
-    jmethodID onFinished = env->GetMethodID(activityClass, "onVrFinished", "(DZZ)V");
+    jmethodID onFinished = env->GetMethodID(activityClass, "onVrFinished",
+                                            "(DZZLjava/lang/String;)V");
     if (onFinished != nullptr) {
+      jstring jReason = env->NewStringUTF(failureReason.c_str());
       env->CallVoidMethod(g_activity, onFinished, position, completed ? JNI_TRUE : JNI_FALSE,
-                          vrStarted ? JNI_TRUE : JNI_FALSE);
+                          vrStarted ? JNI_TRUE : JNI_FALSE, jReason);
+      if (jReason != nullptr) env->DeleteLocalRef(jReason);
     }
     g_vm->DetachCurrentThread();
   });
   if (!started) {
     LOGE("VrRenderer::start failed");
+    g_startFailureReason = "start_failed";
     delete renderer;
     g_renderer = nullptr;
     env->DeleteGlobalRef(g_activity);
@@ -194,6 +210,16 @@ Java_com_plentv_quest_VrPlayerActivity_nativeStart(JNIEnv* env, jobject /*thiz*/
   LOGI("VR player started: %s (%s/%s)", config.title.c_str(), config.layout.c_str(),
        config.packing.c_str());
   return JNI_TRUE;
+}
+
+// Why the last nativeStart() returned false (P0.4/T2), as a stable
+// reason code ('already_running' | 'invalid_request' | 'start_failed',
+// '' when the last start succeeded). The activity reads it when
+// nativeStart returns false so the panel learns the reason.
+JNIEXPORT jstring JNICALL
+Java_com_plentv_quest_VrPlayerActivity_nativeStartFailureReason(JNIEnv* env,
+                                                                jobject /*activity*/) {
+  return env->NewStringUTF(g_startFailureReason.c_str());
 }
 
 // Ask the loop to exit (back button / menu). The loop calls onVrFinished.

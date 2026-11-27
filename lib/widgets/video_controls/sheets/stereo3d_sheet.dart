@@ -284,7 +284,9 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
         // init failed before any frame. The returned position is
         // meaningless (0) — do NOT seek the panel to 0, do NOT pop the
         // sheet. The panel is resumed in the finally below.
-        showErrorSnackBar(context, t.stereo3d.vrUnavailable);
+        // P0.4/T2: the failure reason names the step that failed, so
+        // the message says why instead of the generic "unavailable".
+        showErrorSnackBar(context, _vrFailureMessage(result.failureReason));
         return;
       }
       vrStarted = true;
@@ -315,6 +317,28 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
         } catch (_) {}
       }
     }
+  }
+
+  /// Maps a native VR failure reason code (P0.4/T2) to the message the
+  /// sheet shows. The codes come from the render-thread init chain
+  /// ('egl' | 'openxr' | 'actions' | 'mpv' | 'gl') and the activity /
+  /// start path ('library_missing' | 'invalid_request' |
+  /// 'already_running' | 'start_failed'). Unknown codes — including
+  /// future native codes and a missing reason on older native builds —
+  /// fall back to the generic "VR unavailable" message.
+  String _vrFailureMessage(String? failureReason) {
+    return switch (failureReason) {
+      'egl' => t.stereo3d.vrFailedEgl,
+      'openxr' => t.stereo3d.vrFailedOpenxr,
+      'actions' => t.stereo3d.vrFailedActions,
+      'mpv' => t.stereo3d.vrFailedMpv,
+      'gl' => t.stereo3d.vrFailedGl,
+      'library_missing' => t.stereo3d.vrFailedLibraryMissing,
+      'invalid_request' => t.stereo3d.vrFailedInvalidRequest,
+      'already_running' => t.stereo3d.vrFailedAlreadyRunning,
+      'start_failed' => t.stereo3d.vrFailedStart,
+      _ => t.stereo3d.vrUnavailable,
+    };
   }
 
   Future<void> _recenter() async {
@@ -504,7 +528,15 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
               )
             else
               _vrOnlyNote(),
-            // Watch flat instead (records 2D for this title).
+            // Remember 2D for this title (D-1): records 2D for the NEXT
+            // playback of this title. A live left-eye crop of the picture
+            // currently playing is not feasible in this build — the crop
+            // would have to be owned alongside VideoFilterManager (which
+            // owns video-aspect-override and rewrites it), cleared on
+            // every title change so it never leaks into the next title,
+            // and proven against real mpv rendering, none of which the
+            // harness can verify — so the button says what it does
+            // instead of promising a picture change it cannot make.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: OutlinedButton(
@@ -516,14 +548,14 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                   _saveRecord();
                   Navigator.of(context).pop();
                 },
-                child: Text(t.stereo3d.watchIn2d),
+                child: Text(t.stereo3d.remember2dForTitle),
               ),
             ),
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Text(
-                t.stereo3d.watchIn2dDescription,
+                t.stereo3d.remember2dForTitleDescription,
                 style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context).textTheme.bodySmall?.color),
@@ -616,6 +648,10 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                   _rememberForTitle = false;
                   _layout = widget.detection.layout;
                   _packing = widget.detection.packing;
+                  // Q6: the swap-eyes choice lives in the same record —
+                  // a stale swap must not survive the reset and be
+                  // re-saved by the next record write.
+                  _swapEyes = false;
                   _screenSize =
                       widget.settings.read(SettingsService.questScreenSize);
                   _screenDistance = widget.settings
@@ -648,21 +684,42 @@ class _Stereo3dSheetState extends State<Stereo3dSheet> {
                 showSelectedIcon: false,
                 onSelectionChanged: (selection) {
                   final preset = selection.single;
+                  // D-2: 'custom' has no fixed numbers — its values live
+                  // in the global prefs (B7), where the sliders wrote
+                  // them. Picking Custom restores those stored values so
+                  // the user can adjust them; it must NOT reset to hard
+                  // defaults (100% / 3.0 m / 0%) and overwrite the prefs
+                  // with them. Only the named presets (tv/cinema) change
+                  // the values — and the globals with them.
+                  final isCustom = preset == 'custom';
+                  final size = isCustom
+                      ? widget.settings.read(SettingsService.questScreenSize)
+                      : _presetSize(preset);
+                  final distance = isCustom
+                      ? widget.settings
+                          .read(SettingsService.questScreenDistance)
+                      : _presetDistance(preset);
+                  final curvature = isCustom
+                      ? widget.settings
+                          .read(SettingsService.questScreenCurvature)
+                      : _presetCurvature(preset);
                   setState(() {
                     _screenPreset = preset;
-                    _screenSize = _presetSize(preset);
-                    _screenDistance = _presetDistance(preset);
-                    _screenCurvature = _presetCurvature(preset);
+                    _screenSize = size;
+                    _screenDistance = distance;
+                    _screenCurvature = curvature;
                   });
                   _saveRecord();
-                  unawaited(() async {
-                    final s = widget.settings;
-                    await s.write(SettingsService.questScreenSize, _screenSize);
-                    await s.write(
-                        SettingsService.questScreenDistance, _screenDistance);
-                    await s.write(
-                        SettingsService.questScreenCurvature, _screenCurvature);
-                  }());
+                  if (!isCustom) {
+                    unawaited(() async {
+                      final s = widget.settings;
+                      await s.write(SettingsService.questScreenSize, _screenSize);
+                      await s.write(
+                          SettingsService.questScreenDistance, _screenDistance);
+                      await s.write(
+                          SettingsService.questScreenCurvature, _screenCurvature);
+                    }());
+                  }
                 },
               ),
             ),

@@ -258,10 +258,22 @@ class VrPlayerResult {
   /// flag, and a returned position implies a session ran.
   final bool started;
 
+  /// Why VR failed to start (P0.4/T2), as a stable reason code from the
+  /// native side — 'egl' | 'openxr' | 'actions' | 'mpv' | 'gl' for the
+  /// render-thread init steps, 'library_missing' | 'invalid_request' |
+  /// 'already_running' | 'start_failed' for the activity/start path.
+  /// Null when VR started, when the failure predates the reason channel
+  /// (older native builds), or when the result carries no failure.
+  /// The code is a machine key, never user text: the sheet maps it to a
+  /// localized message, and unknown codes fall back to the generic
+  /// "VR unavailable" message.
+  final String? failureReason;
+
   const VrPlayerResult({
     required this.positionSeconds,
     required this.completed,
     this.started = true,
+    this.failureReason,
   });
 
   factory VrPlayerResult.fromMap(Map<Object?, Object?> map) {
@@ -269,6 +281,7 @@ class VrPlayerResult {
       positionSeconds: (map['positionSeconds'] as num?)?.toDouble() ?? 0.0,
       completed: map['completed'] as bool? ?? false,
       started: map['started'] as bool? ?? true,
+      failureReason: map['failureReason'] as String?,
     );
   }
 }
