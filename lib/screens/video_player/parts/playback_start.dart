@@ -16,6 +16,9 @@ extension _VideoPlayerPlaybackStartMethods on VideoPlayerScreenState {
     _dismissPlaybackFailure();
     // 503s observed from here on belong to this attempt's open.
     _http503Watchdog.disarm();
+    // 1.6.34 (P-11): position silence from here on belongs to this
+    // attempt's open too — the first frame re-arms the watchdog.
+    _stallWatchdog.disarm();
 
     // Live TV mode: bypass standard playback initialization
     if (widget.isLive) {

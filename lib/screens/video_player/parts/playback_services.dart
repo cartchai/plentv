@@ -130,6 +130,9 @@ extension _VideoPlayerPlaybackServiceMethods on VideoPlayerScreenState {
     // This request is proven: a later in-place switch that fails restores it.
     _workingOpenRequest = _currentOpenRequest;
     _http503Watchdog.disarm();
+    // 1.6.34 (P-11): the open produced a frame, so position silence from
+    // here on is a mid-stream stall, not an open — arm the watchdog.
+    _stallWatchdog.arm();
     final progressTracker = _progressTracker;
     if (progressTracker != null && currentPlayer.state.isActive) {
       unawaited(progressTracker.sendProgress('playing'));
@@ -165,10 +168,20 @@ extension _VideoPlayerPlaybackServiceMethods on VideoPlayerScreenState {
     // outgoing player's timeline.
     _relativeSkip.attachPlayheadJumps(currentPlayer.streams.playheadJump);
 
+    // 1.6.34 (P-11): a jump means the backend is responding — the stall
+    // window restarts, so a seek never trips the watchdog on its own.
+    _playerStreamSubscriptions.add(
+      currentPlayer.streams.playheadJump.listen((_) => _stallWatchdog.onPlayheadJump()),
+    );
+
     _playerStreamSubscriptions.add(currentPlayer.streams.playing.listen(_onPlayingStateChanged));
 
     _playerStreamSubscriptions.add(
       currentPlayer.streams.completed.listen((done) {
+        // 1.6.34 (P-11): playback ended — the frozen position at EOF is
+        // not a stall. (A spurious mid-file EOF disarms too; the EOF
+        // recovery owns that path, and the reload's first frame re-arms.)
+        if (done) _stallWatchdog.onCompleted();
         // completed=false means a file (re)loaded after a reconnect-seek or fresh
         // open — re-arm the end-of-video latch so the real EOF can still show Play
         // Next. But only when playback is clear of the end region: a stray
@@ -326,6 +339,11 @@ extension _VideoPlayerPlaybackServiceMethods on VideoPlayerScreenState {
         // budget for the next stream death.
         _eofRecovery.onPositionAdvanced(position.inMilliseconds);
 
+        // 1.6.34 (P-11): the stall watchdog's heartbeat — only an advancing
+        // position counts as alive (the watchdog itself ignores equal
+        // values, which mpv keeps emitting while the stream is stuck).
+        _stallWatchdog.onPosition(position);
+
         final duration = activePlayer.state.duration;
         _episode.completionLatch.classifyPosition(
           positionMs: position.inMilliseconds,
@@ -443,6 +461,8 @@ extension _VideoPlayerPlaybackServiceMethods on VideoPlayerScreenState {
       _isBuffering.value = false;
       _firstFrame.reset();
       _http503Watchdog.disarm();
+      // 1.6.34 (P-11): a torn-down attempt owns no stall window.
+      _stallWatchdog.disarm();
     }
   }
 
@@ -804,6 +824,10 @@ extension _VideoPlayerPlaybackServiceMethods on VideoPlayerScreenState {
   }
 
   void _onPlayingStateChanged(bool isPlaying) {
+    // 1.6.34 (P-11): the raw playing signal, before any guard below
+    // forces a pause — the watchdog suspends on pause and restarts its
+    // silence window on resume.
+    _stallWatchdog.onPlayingChanged(isPlaying);
     if (!isPlaying) {
       _lastPlaybackPauseAt = DateTime.now();
     }

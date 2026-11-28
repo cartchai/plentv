@@ -940,6 +940,7 @@
     "pauseButton": "Pause",
     "playbackPaused": "Paused",
     "playbackResumed": "Playing",
+    "streamStalled": "Stream stalled",
     "loadingVideo": "Loading video",
     "showPlaybackControls": "Show playback controls",
     "hidePlaybackControls": "Hide playback controls",
@@ -1688,6 +1689,9 @@
     ],
     "changelog2343": [
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
+    ],
+    "changelog2352": [
+      "Faster all round: opening a movie or series category now shows the first titles straight away instead of loading the whole category first; the first catalog sync is quicker — it no longer downloads everything twice if you tap refresh while it is still running, and the guide can use fresh live channels before the whole sync finishes; long-pressing a movie or series now opens its menu straight away, with the category filling in a moment later; and a stream that stalls now tells you it has stalled and tries reconnecting on its own instead of sitting on a frozen picture"
     ],
     "changelog2351": [
       "New: long-pressing a movie or series from IPTV now shows the category it belongs to — for example NF — instead of File Info, which never worked for a stream. Tapping it turns that whole category off, so its movies and series stop showing up; turn it back on in IPTV settings. Categories that never showed up in the whole-groups list can now be turned off this way too"
@@ -3524,6 +3528,7 @@
     "lastSyncFailedError": "Last sync failed — the panel returned an error.",
     "survivalSyncNote": "On this low-memory device the catalog only syncs when you tap Sync now, so it can be out of date.",
     "syncSkippedLowMemory": "skipped — low-memory device",
+    "syncDeferredSeries": "Series follows shortly",
     "syncSkippedStorageFull": "Storage full",
     "syncSkippedStorageFullDetail": "Sync skipped — storage almost full. Free some space and it will run at the next scheduled time.",
     "backgroundSyncMeteredDeferred": "Sync incomplete — will finish on Wi-Fi",
@@ -3543,6 +3548,7 @@
     "catalogSyncSeries": "TV / Series",
     "catalogSyncDone": "Catalog synced",
     "catalogSyncFailed": "Catalog sync failed",
+    "catalogSyncWaiting": "Waiting for the sync already running…",
     "catalogSyncProgressOf": "${received} of ${total}",
     "catalogSyncProgressUnknown": "${received} received",
     "catalogMode": "Catalog mode",

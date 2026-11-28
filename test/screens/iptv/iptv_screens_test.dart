@@ -737,11 +737,15 @@ void main() {
 
     // The sync runs real sqlite + panel work on the real event loop —
     // yield to it, then pump, until the dialog reports the outcome.
+    // 1.6.34 (P-04): the pump advances fake time 250 ms per round, so
+    // the sync's 200 ms fetch-start pacing (a fake timer in this zone)
+    // actually fires — a zero-duration pump leaves fake time frozen and
+    // the starter parked at the first pacing delay forever.
     for (var i = 0; i < 40 && find.text(t.iptv.catalogSyncFailed).evaluate().isEmpty; i++) {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
       });
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
     }
     expect(find.text(t.iptv.catalogSyncFailed), findsOneWidget);
     expect(find.text(t.iptv.catalogSyncDone), findsNothing);
@@ -894,6 +898,13 @@ void main() {
   testWidgets('IPTV settings screen renders the EPG section and its actions work', (tester) async {
     CredentialVault.resetKeyForTesting();
     await tester.runAsync(() => CredentialVault.protect('opaque-vault-warmup'));
+    // 1.6.34: the EPG download consults SharedPreferences first (the
+    // catalog-sync stamp, P-06) and parses in a worker isolate — both
+    // never complete inside `testWidgets`' fake async zone without the
+    // in-memory prefs fakes, so the load would park forever, the tile
+    // spinner would animate forever, and the pumpAndSettle below would
+    // time out. Same wall as the favourites/resume stores above.
+    resetSharedPreferencesForTest();
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(() async => db.close());
     final registry = _FakeConnectionRegistry(db);
@@ -949,6 +960,14 @@ void main() {
     await tester.ensureVisible(find.text(t.iptv.epgUpdateNow));
     await tester.pumpAndSettle();
     await tester.tap(find.text(t.iptv.epgUpdateNow));
+    // 1.6.34: the tap starts a REAL feed load (download + worker-isolate
+    // parse + row-store build). The isolate work never completes inside
+    // `testWidgets`' fake async zone, so give it real time first — the
+    // dialog appears and the tile spinner clears only once the load
+    // settles. A bare pumpAndSettle here timed out (the spinner
+    // animates until the load settles); the runAsync window is the
+    // file's established pattern for the same wall.
+    await tester.runAsync(() async => await Future<void>.delayed(const Duration(seconds: 3)));
     await tester.pumpAndSettle();
     // 1.2.3 RC2: Update now attempts a real refresh and reports the
     // outcome in a dialog — it no longer claims "Guide updated" in a
@@ -960,6 +979,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text(t.iptv.epgClearGuide));
     await tester.pumpAndSettle();
+    // 1.6.34: the clear's persisted-feed delete is real async disk I/O
+    // that never completes when started in fake async (same wall as
+    // above) — disable the persisted side just for this tap, so the
+    // delete is a no-op and the action can report. The Update step
+    // above runs with persistence on (the proven path); only the clear
+    // needs the seam, and the real delete is covered by the EPG cache
+    // unit tests.
+    IptvLiveTvSupport.debugDisablePersistedEpg = true;
+    addTearDown(() => IptvLiveTvSupport.debugDisablePersistedEpg = false);
     await tester.tap(find.text(t.iptv.epgClearGuide));
     await tester.pumpAndSettle();
     expect(find.text(t.iptv.epgCleared), findsOneWidget);
@@ -1011,6 +1039,12 @@ void main() {
       expect(strings.about.changelog2251, contains('Movies and Series Recommended now loads'));
       expect(strings.about.changelog2250, hasLength(4));
       expect(strings.about.changelog2250.first, contains('First release'));
+      // 1.6.34: the performance update's entry exists and reads in
+      // plain words.
+      // 1.6.34: the performance update's entry exists and reads in
+      // plain words.
+      expect(strings.about.changelog2352, hasLength(1));
+      expect(strings.about.changelog2352.first, contains('Faster all round'));
     });
 
     testWidgets('About screen shows PlenTV and the changelog, newest first', (tester) async {
@@ -1124,6 +1158,16 @@ void main() {
       final newest1632 = tester.getTopLeft(find.text('Version 1.6.32-2.26.0')).dy;
       final previous1631 = tester.getTopLeft(find.text('Version 1.6.31-2.26.0')).dy;
       expect(newest1632, lessThan(previous1631));
+      // VOD category (v1.6.33): the entry existed but had no guard —
+      // same guard for it, present and above 1.6.32.
+      expect(find.text('Version 1.6.33-2.26.0'), findsOneWidget);
+      final newest1633 = tester.getTopLeft(find.text('Version 1.6.33-2.26.0')).dy;
+      expect(newest1633, lessThan(newest1632));
+      // Performance update (v1.6.34): present and above 1.6.33.
+      expect(find.text('Version 1.6.34-2.26.0'), findsOneWidget);
+      final newest1634 = tester.getTopLeft(find.text('Version 1.6.34-2.26.0')).dy;
+      expect(newest1634, lessThan(newest1633));
     });
+
   });
 }

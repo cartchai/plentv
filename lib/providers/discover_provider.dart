@@ -177,7 +177,6 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// edit) refreshes ONLY those servers — a full Home reload on every IPTV
   /// toggle re-fetched Plex hubs too. Server pushes keep the full pass.
   Set<String> _pendingLibraryEventServerIds = {};
-  Set<String> _pendingUserInitiatedServerIds = {};
 
   /// Authoritative fetches tell the store which items the server re-observed,
   /// so a stale local watch patch stops overriding fresh server state (#1829).
@@ -365,7 +364,8 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
 
   /// A server pushed a library-content change (#1646). Pacing lives in
   /// [_libraryEventPacer]: bursts — several servers scanning at once, or a
-  /// channel re-emitting — collapse into one debounced full pass; an active
+  /// channel re-emitting — collapse into one debounced delta pass (1.6.34,
+  /// P-17: only the changed servers' hubs, never a full pass); an active
   /// video playback defers the pass entirely (retried on a timer) so the
   /// playback path stays quiet; and passes run at most once per
   /// [libraryEventCooldown] so a long import updates the home screen
@@ -374,9 +374,8 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   void _onLibraryContentChanged(LibraryChangeEvent event) {
     if (isDisposed || !event.hasChanges) return;
     // Build #15 (P-2): remember WHICH server changed, so the pass can
-    // refresh only it when every pending change is the user's own.
+    // refresh only it.
     _pendingLibraryEventServerIds.add(event.serverId.value);
-    if (event.userInitiated) _pendingUserInitiatedServerIds.add(event.serverId.value);
     // The user's own change (filter toggle / rebind) bypasses the pacer
     // cooldown (build #14): deferring it to the trailing edge leaves the
     // toggle invisible on Home for up to 2 minutes. Server pushes stay paced.
@@ -390,16 +389,20 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   bool _runLibraryEventRefresh() {
     if (isDisposed) return false;
     final ids = Set<String>.of(_pendingLibraryEventServerIds);
-    final userIds = Set<String>.of(_pendingUserInitiatedServerIds);
     _pendingLibraryEventServerIds = {};
-    _pendingUserInitiatedServerIds = {};
-    // Build #15 (P-2): when every pending change is the user's own (an
-    // IPTV filter toggle, a connection edit), refresh only those servers'
-    // hubs — a full pass re-fetches Plex hubs on every toggle. Server
-    // pushes, or a mix of pushes and user changes, keep the full pass.
-    if (ids.isNotEmpty && userIds.length == ids.length) {
-      appLogger.d('DiscoverProvider: refreshing hubs for user-changed servers $ids');
-      unawaited(_loadDeltaOnce(ids, force: true));
+    // Build #15 (P-2) + 1.6.34 (P-17): refresh only the changed
+    // servers' hubs — a full pass re-fetches every server's hubs on
+    // every toggle AND every server push. The refresh runs in delta
+    // refresh mode: the event itself is the evidence the server changed
+    // after the last full pass, and the non-refresh dedup
+    // (`_fullyLoadedServerIds`, `_loadedOnDeckServerIds`,
+    // `_loadedHubServerIds`) cannot tell a full pass that ran before
+    // the event from one that ran after it — a push for an
+    // already-loaded server would be skipped and its new content
+    // never fetched. The pacer still bounds how often this fires.
+    if (ids.isNotEmpty) {
+      appLogger.d('DiscoverProvider: refreshing hubs for changed servers $ids');
+      unawaited(_loadDeltaOnce(ids, refresh: true));
     } else {
       appLogger.d('DiscoverProvider: refreshing after server library change');
       unawaited(load());
@@ -659,18 +662,30 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// Failures keep the loaded state and leave the ids un-loaded, so the next
   /// status emission retries them.
   ///
-  /// [force] (build #15, P-2): re-fetch even servers that are already fully
-  /// loaded — a filter toggle's whole point is that an already-loaded
-  /// server's hubs changed. Without it the `difference` below would drop
-  /// the toggle's server and the pass would fetch nothing.
-  Future<void> _loadDeltaOnce(Set<String> serverIds, {bool force = false}) async {
+  /// [refresh] (1.6.34, P-17): re-fetch the given servers outright — the
+  /// event is evidence a server changed AFTER the last full pass, so no
+  /// dedup applies. Without it the `difference`s below would drop an
+  /// already-loaded server and the pass would fetch nothing (build #15's
+  /// P-2 force flag did the same for user toggles; refresh subsumes it).
+  /// In refresh mode the servers' onDeck rows are REPLACED, not merged:
+  /// their existing rows (and copies) are dropped before pooling, so a
+  /// row the server no longer reports leaves Home — the background
+  /// Continue Watching refresh replaces wholesale, and the delta must do
+  /// the same per server. A server whose fetch failed keeps its rows:
+  /// only succeeded servers are filtered out.
+  Future<void> _loadDeltaOnce(Set<String> serverIds, {bool refresh = false}) async {
     ++_contentRevision;
     // A full pass may have covered these ids while they sat in the queue.
-    final ids = force ? serverIds : serverIds.difference(_fullyLoadedServerIds);
-    final onDeckIds = ids.difference(_loadedOnDeckServerIds);
-    final hubIds = ids.difference(_loadedHubServerIds);
+    // (Refresh mode: the event itself is the evidence, so no dedup.)
+    final ids = refresh ? serverIds : serverIds.difference(_fullyLoadedServerIds);
+    final onDeckIds = refresh ? ids : ids.difference(_loadedOnDeckServerIds);
+    final hubIds = refresh ? ids : ids.difference(_loadedHubServerIds);
     if (onDeckIds.isEmpty && hubIds.isEmpty) return;
-    appLogger.d('DiscoverProvider: merging content from newly-online servers $ids (onDeck=$onDeckIds, hubs=$hubIds)');
+    appLogger.d(
+      refresh
+          ? 'DiscoverProvider: refreshing changed servers $ids (onDeck=$onDeckIds, hubs=$hubIds)'
+          : 'DiscoverProvider: merging content from newly-online servers $ids (onDeck=$onDeckIds, hubs=$hubIds)',
+    );
 
     try {
       await _hiddenLibraries.ensureInitialized();
@@ -709,10 +724,28 @@ class DiscoverProvider extends ChangeNotifier with DisposableChangeNotifierMixin
 
       if (freshOnDeck != null) {
         final hadMore = _hasMoreContinueWatching;
+        // Refresh mode: drop the succeeded servers' existing rows (and
+        // copies) before pooling — see the [refresh] doc above. A failed
+        // server keeps its rows, so filter on succeeded, not requested.
+        final refreshedServerIds = refresh ? freshOnDeck.succeededServerIds : const <String>{};
+        final existingOnDeck = refreshedServerIds.isEmpty
+            ? _onDeck
+            : _onDeck
+                .where((item) => item.serverId == null || !refreshedServerIds.contains(item.serverId))
+                .toList();
+        final existingCopies = refreshedServerIds.isEmpty
+            ? _continueWatchingCopies
+            : {
+                for (final entry in _continueWatchingCopies.entries)
+                  if (existingOnDeck.any((item) => item.globalKey == entry.key))
+                    entry.key: entry.value
+                        .where((copy) => copy.serverId == null || !refreshedServerIds.contains(copy.serverId))
+                        .toList(),
+              };
         final mergedOnDeck = await aggregation.mergeContinueWatching(
-          _onDeck,
+          existingOnDeck,
           freshOnDeck.items,
-          existingCopies: _continueWatchingCopies,
+          existingCopies: existingCopies,
           freshCopies: freshOnDeck.copies,
           limit: _continueWatchingProbeLimit,
         );

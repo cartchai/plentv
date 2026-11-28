@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:cached_network_image_ce/cached_network_image.dart'
-    show FileResponse, HttpInterceptor, HttpRequestData, HttpRequestHandler;
+    show FileInfo, FileResponse, FileSource, HttpInterceptor, HttpRequestData, HttpRequestHandler;
 // CE's public conditional export hides the IO-only httpClientFactory parameter
 // behind a narrower unsupported-platform stub.
 // ignore: implementation_imports
@@ -11,6 +12,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import '../utils/app_logger.dart';
 import '../utils/media_server_http_client.dart';
 import 'device_performance.dart';
 import 'storage_health.dart';
@@ -43,8 +45,21 @@ Future<void> closeArtworkHttpClientGracefully({Duration drainTimeout = const Dur
 int imageDiskCacheMaxObjects({required bool lowStorage}) =>
     lowStorage ? StorageHealth.lowStorageImageCacheMaxObjects : StorageHealth.normalImageCacheMaxObjects;
 
+/// Image disk-cache byte cap for the storage state (1.6.34, P-10):
+/// the normal 512 MB cache, or 128 MB while free space is low. The
+/// object cap alone cannot bound bytes — 3,000 large posters could be
+/// gigabytes — so the byte cap is the binding limit when posters run
+/// large. Pure and testable; the trim reads it at run time.
+@visibleForTesting
+int imageDiskCacheMaxBytes({required bool lowStorage}) =>
+    lowStorage ? StorageHealth.lowStorageImageCacheMaxBytes : StorageHealth.normalImageCacheMaxBytes;
+
 class PlexImageCacheManager extends ce_cache.DefaultCacheManager {
   static final PlexImageCacheManager instance = PlexImageCacheManager._();
+
+  /// The cache directory provider (1.6.34, P-10): the byte trim lists
+  /// this directory directly — CE's metadata box is private to CE.
+  final ce_cache.CacheDirectoryProvider _cacheDirectoryProvider;
 
   PlexImageCacheManager._()
     : this.forTesting(
@@ -64,7 +79,8 @@ class PlexImageCacheManager extends ce_cache.DefaultCacheManager {
     required http.Client Function() httpClientFactory,
     required ce_cache.CacheDirectoryProvider cacheDirectoryProvider,
     super.maxNrOfCacheObjects = StorageHealth.normalImageCacheMaxObjects,
-  }) : super(
+  }) : _cacheDirectoryProvider = cacheDirectoryProvider,
+       super(
          stalePeriod: const Duration(days: 14),
          httpClientFactory: httpClientFactory,
          cacheDirectoryProvider: cacheDirectoryProvider,
@@ -93,6 +109,82 @@ class PlexImageCacheManager extends ce_cache.DefaultCacheManager {
   /// manager's disk cache when storage is low.
   static Future<void> applyLowStorageCapIfLow() => instance.applyLowStorageCap();
 
+  /// Byte-cap trim (1.6.34, P-10): CE evicts by OBJECT count only, so
+  /// 3,000 large posters could be gigabytes. Lists the cache directory
+  /// directly and deletes the least-recently-used files until the
+  /// total is under the byte cap. [maxBytes] overrides the
+  /// storage-state cap (tests); production always uses the cap. Never
+  /// throws: a trim that cannot run leaves the cache alone, and the
+  /// object cap still bounds it.
+  ///
+  /// Two honest limits of the file-system approach, both bounded:
+  /// - CE's last-use stamp lives in its private Hive metadata, which
+  ///   this layer cannot read — so "least recently used" is the file's
+  ///   mtime, kept at last use by [getFileStream] below (a cache hit
+  ///   touches the file). A file never read since download keeps its
+  ///   download time, which is the right order for it.
+  /// - Deleting a file directly leaves its Hive row behind (the row is
+  ///   keyed by URL, and the filename is a one-way hash of it, so the
+  ///   trim cannot map file to row). The row self-heals: CE deletes it
+  ///   the next time the key is read and the file is missing. The trim
+  ///   only deletes until under the cap, so the orphan count stays
+  ///   small. Temp/backup files of an in-flight download are never
+  ///   touched.
+  Future<void> trimToByteCap({int? maxBytes}) async {
+    try {
+      final cap = maxBytes ?? imageDiskCacheMaxBytes(lowStorage: StorageHealth.isLowFreeSpace);
+      final cacheDir = Directory('${(await _cacheDirectoryProvider()).path}/cached_network_image_ce');
+      if (!await cacheDir.exists()) return;
+      final files = <({File file, int bytes, DateTime modified})>[];
+      await for (final entity in cacheDir.list()) {
+        if (entity is! File) continue;
+        if (entity.path.endsWith('.tmp') || entity.path.endsWith('.bak')) continue;
+        final stat = await entity.stat();
+        files.add((file: entity, bytes: stat.size, modified: stat.modified));
+      }
+      var totalBytes = 0;
+      for (final file in files) {
+        totalBytes += file.bytes;
+      }
+      if (totalBytes <= cap) return;
+      // Least-recently-used first (mtime is kept at last use — see
+      // getFileStream).
+      files.sort((a, b) => a.modified.compareTo(b.modified));
+      var removed = 0;
+      for (final file in files) {
+        if (totalBytes <= cap) break;
+        try {
+          await file.file.delete();
+          totalBytes -= file.bytes;
+          removed++;
+        } catch (_) {
+          // Best-effort per file: one undeletable file must not stop
+          // the rest of the trim.
+        }
+      }
+      if (removed > 0) {
+        appLogger.i('IPTV: image disk cache trimmed to ${totalBytes}B (cap ${cap}B, removed $removed)');
+      }
+    } catch (_) {
+      // Best-effort: a cache that cannot be trimmed is not a startup
+      // or artwork failure — the object cap still bounds regrowth.
+    }
+  }
+
+  /// Throttle for the background byte trim (1.6.34, P-10): at most one
+  /// trim per interval, so a rail scroll does not re-list the cache on
+  /// every artwork read. The trim itself never blocks the read — it
+  /// runs in the background.
+  DateTime? _lastByteTrimAt;
+  static const _byteTrimMinInterval = Duration(minutes: 10);
+
+  void _maybeTrimToByteCap() {
+    final now = DateTime.now();
+    if (_lastByteTrimAt != null && now.difference(_lastByteTrimAt!) < _byteTrimMinInterval) return;
+    _lastByteTrimAt = now;
+    unawaited(trimToByteCap());
+  }
+
   /// Artwork URLs carry the server token in their query (see
   /// [redactArtworkUrl]), and the cache persists each entry's URL — and, with
   /// no explicit key, keys the entry by it — in plaintext metadata that
@@ -105,14 +197,41 @@ class PlexImageCacheManager extends ce_cache.DefaultCacheManager {
     Map<String, String>? headers,
     bool withProgress = false,
   }) {
+    // 1.6.34 (P-10): the byte cap is enforced in the background, at
+    // most once per interval, so a long session cannot grow the cache
+    // past the cap between cold starts.
+    _maybeTrimToByteCap();
     final redacted = redactArtworkUrl(url);
-    if (redacted == url) return super.getFileStream(url, key: key, headers: headers, withProgress: withProgress);
-    return super.getFileStream(
-      redacted,
-      key: key ?? redacted,
-      headers: {...?headers, _credentialedUrlHeader: url},
-      withProgress: withProgress,
-    );
+    final stream = redacted == url
+        ? super.getFileStream(url, key: key, headers: headers, withProgress: withProgress)
+        : super.getFileStream(
+            redacted,
+            key: key ?? redacted,
+            headers: {...?headers, _credentialedUrlHeader: url},
+            withProgress: withProgress,
+          );
+    // 1.6.34 (P-10): keep the file's mtime at its last use, so the
+    // byte trim above evicts least-recently-USED, not merely oldest —
+    // CE's own last-use stamp lives in its private Hive metadata,
+    // which this layer cannot read. A cache hit touches the file
+    // (one utime, fire-and-forget — CE itself does a Hive write per
+    // hit); a fresh download already carries today's mtime.
+    return stream.map((response) {
+      if (response is FileInfo && response.source == FileSource.Cache) {
+        unawaited(_touchMtime(response.file.path));
+      }
+      return response;
+    });
+  }
+
+  /// Best-effort mtime touch for the byte trim (1.6.34, P-10): a stale
+  /// mtime only mis-orders one trim.
+  static Future<void> _touchMtime(String path) async {
+    try {
+      await File(path).setLastModified(DateTime.now());
+    } catch (_) {
+      // Best-effort.
+    }
   }
 
   @override

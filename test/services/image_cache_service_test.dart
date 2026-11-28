@@ -230,4 +230,57 @@ void main() {
       expect(persisted.join(), isNot(contains(token)));
     });
   });
+
+  group('byte cap (1.6.34, P-10)', () {
+    Future<PlexImageCacheManager> posterManager(Directory dir, {int bytesPerPoster = 100}) async {
+      final manager = PlexImageCacheManager.forTesting(
+        httpClientFactory: () => MockClient(
+          (request) async => http.Response.bytes(List.filled(bytesPerPoster, 0x61), 200),
+        ),
+        cacheDirectoryProvider: () async => dir,
+      );
+      addTearDown(() async => manager.dispose());
+      return manager;
+    }
+
+    Future<void> downloadPoster(PlexImageCacheManager manager, String name) async {
+      await manager.getFileStream('https://cdn.example/$name.jpg').firstWhere((r) => r is FileInfo);
+      // Distinct last-use times, so the LRU order is the download order.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+
+    test('trims least-recently-used posters until under the cap', () async {
+      final dir = await Directory.systemTemp.createTemp('artwork_byte_cap_test');
+      addTearDown(() => dir.delete(recursive: true));
+      final manager = await posterManager(dir);
+      await downloadPoster(manager, 'a');
+      await downloadPoster(manager, 'b');
+      await downloadPoster(manager, 'c');
+
+      await manager.trimToByteCap(maxBytes: 150);
+
+      // 300B total, cap 150B: the two oldest go, the newest stays.
+      expect(await manager.getFileFromCache('https://cdn.example/a.jpg'), isNull);
+      expect(await manager.getFileFromCache('https://cdn.example/b.jpg'), isNull);
+      expect(await manager.getFileFromCache('https://cdn.example/c.jpg'), isNotNull);
+    });
+
+    test('leaves the cache alone under the cap', () async {
+      final dir = await Directory.systemTemp.createTemp('artwork_byte_cap_test');
+      addTearDown(() => dir.delete(recursive: true));
+      final manager = await posterManager(dir);
+      await downloadPoster(manager, 'a');
+      await downloadPoster(manager, 'b');
+
+      await manager.trimToByteCap(maxBytes: 500);
+
+      expect(await manager.getFileFromCache('https://cdn.example/a.jpg'), isNotNull);
+      expect(await manager.getFileFromCache('https://cdn.example/b.jpg'), isNotNull);
+    });
+
+    test('byte cap helper picks the storage-state cap', () {
+      expect(imageDiskCacheMaxBytes(lowStorage: false), 512 << 20);
+      expect(imageDiskCacheMaxBytes(lowStorage: true), 128 << 20);
+    });
+  });
 }

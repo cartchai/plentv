@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -26,6 +27,14 @@ abstract class AppMenuEntry<T> {
 class AppMenuItem<T> extends AppMenuEntry<T> {
   final T value;
   final String? label;
+
+  /// A live label (1.6.34, P-09): when set, the tile shows this
+  /// listenable's value instead of [label] (which stays the initial
+  /// value) and rebuilds when it fires. Only the IPTV category row
+  /// uses it today — the row's name resolves after the menu is
+  /// already on screen. Every other menu passes nothing and behaves
+  /// exactly as before.
+  final ValueListenable<String>? labelListenable;
   final Widget? child;
   final String? subtitle;
   final Widget? subtitleWidget;
@@ -42,6 +51,7 @@ class AppMenuItem<T> extends AppMenuEntry<T> {
   const AppMenuItem({
     required this.value,
     this.label,
+    this.labelListenable,
     this.child,
     this.subtitle,
     this.subtitleWidget,
@@ -517,6 +527,7 @@ class _AppMenuItemTileState<T> extends State<AppMenuItemTile<T>> with FocusableT
   void initState() {
     super.initState();
     effectiveFocusNode.addListener(_updateFocusedState);
+    widget.item.labelListenable?.addListener(_onLabelChanged);
   }
 
   @override
@@ -528,12 +539,21 @@ class _AppMenuItemTileState<T> extends State<AppMenuItemTile<T>> with FocusableT
       effectiveFocusNode.addListener(_updateFocusedState);
       _isFocused = effectiveFocusNode.hasFocus;
     }
+    if (oldWidget.item.labelListenable != widget.item.labelListenable) {
+      oldWidget.item.labelListenable?.removeListener(_onLabelChanged);
+      widget.item.labelListenable?.addListener(_onLabelChanged);
+    }
   }
 
   @override
   void dispose() {
     effectiveFocusNode.removeListener(_updateFocusedState);
+    widget.item.labelListenable?.removeListener(_onLabelChanged);
     super.dispose();
+  }
+
+  void _onLabelChanged() {
+    if (mounted) setState(() {});
   }
 
   void _updateFocusedState() {
@@ -612,7 +632,9 @@ class _AppMenuItemTileState<T> extends State<AppMenuItemTile<T>> with FocusableT
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              child: item.child ?? Text(item.label!),
+                              // 1.6.34 (P-09): a live label wins over the
+                              // static one when the entry carries one.
+                              child: item.child ?? Text(item.labelListenable?.value ?? item.label!),
                             ),
                             if (subtitle != null)
                               DefaultTextStyle.merge(

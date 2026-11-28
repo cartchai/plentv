@@ -125,6 +125,7 @@ import 'video_player/playback_open_deadline.dart';
 import 'video_player/live_channel_pretune.dart';
 import 'video_player/live_stream_release_gate.dart';
 import 'video_player/live_zap_debouncer.dart';
+import 'video_player/mid_stream_stall_watchdog.dart';
 import 'video_player/playback_transition_gate.dart';
 import 'video_player/open_http_503_watchdog.dart';
 import 'video_player/open_failure_log.dart';
@@ -1308,6 +1309,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
     _playbackAttempt?.outcome.abort(reason);
     unawaited(_trackManager?.invalidatePendingSelection());
     _http503Watchdog.disarm();
+    _stallWatchdog.disarm();
   }
 
   Future<void> _playWithPlaybackIntent(Player currentPlayer) {
@@ -1362,6 +1364,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   final ValueNotifier<bool> _isBuffering = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _isStalled = ValueNotifier<bool>(false);
   final FirstFrameGate _firstFrame = FirstFrameGate();
   bool _hasFatalPlaybackError = false;
 
@@ -2632,6 +2635,8 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
     _shutdownOperation ??= _sendStoppedProgressOnce();
 
     _isBuffering.dispose();
+    _stallWatchdog.disarm();
+    _isStalled.dispose();
     _firstFrame.dispose();
     _isExiting.dispose();
     _chromeController.dispose();
@@ -2949,6 +2954,17 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
   /// otherwise never raises an error (#1830). Armed from [_onPlayerLog],
   /// disarmed on first frame, on every new-open reset, and in [dispose].
   late final OpenHttp503Watchdog _http503Watchdog = OpenHttp503Watchdog(onPersistent: _onOpenHttp503Persistent);
+
+  /// Bounds a mid-stream stall — a stream whose position stops advancing
+  /// after the first frame (1.6.34, P-11). Armed on first frame, fed by the
+  /// position listener, suspended on pause, disarmed on completion, on
+  /// every new-open reset, and in [dispose]. Its indicator is [_isStalled];
+  /// its retune re-opens the stream at the current position (VOD) or
+  /// retries the live ladder (live TV).
+  late final MidStreamStallWatchdog _stallWatchdog = MidStreamStallWatchdog(
+    onStallChanged: _onStallChanged,
+    onRetune: _onStallRetune,
+  );
 
   // OS Media Controls Integration
 

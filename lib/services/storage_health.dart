@@ -64,6 +64,19 @@ abstract final class StorageHealth {
   /// value — [PlexImageCacheManager]'s construction-time cap).
   static const int normalImageCacheMaxObjects = 3000;
 
+  /// Image disk-cache BYTE cap while storage is low (1.6.34, P-10):
+  /// 128 MB. The object cap alone cannot bound bytes — 500 large
+  /// posters could still be hundreds of megabytes on a nearly-full
+  /// flash — so the byte cap is the binding limit when posters run
+  /// large.
+  static const int lowStorageImageCacheMaxBytes = 128 << 20;
+
+  /// Image disk-cache BYTE cap on healthy storage (1.6.34, P-10):
+  /// 512 MB. The 3,000-object cap at typical poster sizes (~150 KB)
+  /// is ~450 MB, so this binds only when posters run large, and keeps
+  /// the cache well under a gigabyte on TV flash.
+  static const int normalImageCacheMaxBytes = 512 << 20;
+
   /// A persisted free-space verdict older than this is stale and reads
   /// as unknown.
   static const Duration persistedVerdictMaxAge = Duration(hours: 24);

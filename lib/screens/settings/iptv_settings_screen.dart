@@ -1008,6 +1008,9 @@ class _CatalogSyncDialogState extends State<_CatalogSyncDialog> {
   };
 
   String _phaseText(IptvSearchSyncProgress p) {
+    // 1.6.34 (P-02): a manual sync joining a sync already running
+    // renders as a waiting line, not a spinner.
+    if (p.phase == 'waiting') return t.iptv.catalogSyncWaiting;
     if (p.phase == 'done') return p.partial ? '${p.rows} · partial' : '${p.rows}';
     // 'partial-kept' reads as 'partial' on the row (v1.0.16): the type
     // kept its landed rows and the row already read "partial" on a
@@ -1018,6 +1021,9 @@ class _CatalogSyncDialogState extends State<_CatalogSyncDialog> {
       if (p.reason == 'partial-kept') return 'partial';
       if (p.reason == 'tier-skipped') return t.iptv.syncSkippedLowMemory;
       if (p.reason == 'storage-full') return t.iptv.syncSkippedStorageFull;
+      // 1.6.34 (P-15): a deferred series is coming, not skipped — the
+      // follow-up syncs it in the background after the first frame.
+      if (p.reason == 'deferred') return t.iptv.syncDeferredSeries;
       return p.reason ?? '';
     }
     // 1.6.11 (background sync): download percent while fetching, so

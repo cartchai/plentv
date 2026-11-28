@@ -910,37 +910,88 @@ class IptvSearchIndex {
     List<String> deleteCategoryIds = const [],
   }) {
     if (_closed) return;
-    _db.execute('BEGIN IMMEDIATE;');
+    beginTypeWrite();
     try {
-      _upsertRowsLocked(connectionId, type, rows);
-      _deleteRowsInCategoriesLocked(connectionId, type, deleteCategoryIds);
-      _upsertCategoriesLocked(connectionId, type, categories);
-      // A null stamp means "not synced": last_sync_ms is NOT NULL, so a
-      // partial land stores 0 on a fresh row (which [lastSync] reads
-      // back as null) and leaves the column untouched on conflict — it
-      // must never clear a stamp a complete sync set.
-      if (syncStampMs != null) {
-        _db.execute(
-          'INSERT INTO iptv_search_meta (connection_id, type, row_count, last_sync_ms) '
-          'VALUES (?, ?, ?, ?) '
-          'ON CONFLICT(connection_id, type) DO UPDATE SET row_count = excluded.row_count, last_sync_ms = excluded.last_sync_ms',
-          [connectionId, type, rows.length, syncStampMs],
-        );
-      } else {
-        _db.execute(
-          'INSERT INTO iptv_search_meta (connection_id, type, row_count, last_sync_ms) '
-          'VALUES (?, ?, ?, 0) '
-          'ON CONFLICT(connection_id, type) DO UPDATE SET row_count = excluded.row_count',
-          [connectionId, type, rows.length],
-        );
-      }
-      _db.execute('COMMIT;');
+      upsertTypeRowsBatch(connectionId: connectionId, type: type, rows: rows);
+      finishTypeWrite(
+        connectionId: connectionId,
+        type: type,
+        categories: categories,
+        syncStampMs: syncStampMs,
+        deleteCategoryIds: deleteCategoryIds,
+        rowCount: rows.length,
+      );
     } catch (e) {
-      try {
-        _db.execute('ROLLBACK;');
-      } catch (_) {}
+      abortTypeWrite();
       rethrow;
     }
+  }
+
+  /// Open the type's write transaction (1.6.34, P-03): the streaming
+  /// writer batches rows into this transaction and the guards decide
+  /// commit vs rollback at the end, so a partial list never lands half
+  /// its rows. One transaction per type (L-5) — never held across a
+  /// sync type boundary while the UI is alive.
+  void beginTypeWrite() {
+    _db.execute('BEGIN IMMEDIATE;');
+  }
+
+  /// Upsert one batch of rows inside the open type transaction — the
+  /// streaming writer's unit (see [indexWriteBatchRows]). A batch is
+  /// flushed as soon as it fills, so no stage ever holds the type's
+  /// full row list. Must run between [beginTypeWrite] and
+  /// [finishTypeWrite]/[abortTypeWrite]; an empty batch is a no-op.
+  void upsertTypeRowsBatch({
+    required String connectionId,
+    required String type,
+    required List<IptvSearchIndexRow> rows,
+  }) {
+    if (rows.isEmpty) return;
+    _upsertRowsLocked(connectionId, type, rows);
+  }
+
+  /// Finish the type's write: prune hidden categories, upsert the
+  /// category list, record the meta row (with the final [rowCount] —
+  /// the streaming writer knows it only at the end of the pass), and
+  /// commit. A null stamp means "not synced": last_sync_ms is NOT
+  /// NULL, so a partial land stores 0 on a fresh row (which [lastSync]
+  /// reads back as null) and leaves the column untouched on conflict —
+  /// it must never clear a stamp a complete sync set.
+  void finishTypeWrite({
+    required String connectionId,
+    required String type,
+    required Map<String, String> categories,
+    required int? syncStampMs,
+    required int rowCount,
+    List<String> deleteCategoryIds = const [],
+  }) {
+    _deleteRowsInCategoriesLocked(connectionId, type, deleteCategoryIds);
+    _upsertCategoriesLocked(connectionId, type, categories);
+    if (syncStampMs != null) {
+      _db.execute(
+        'INSERT INTO iptv_search_meta (connection_id, type, row_count, last_sync_ms) '
+        'VALUES (?, ?, ?, ?) '
+        'ON CONFLICT(connection_id, type) DO UPDATE SET row_count = excluded.row_count, last_sync_ms = excluded.last_sync_ms',
+        [connectionId, type, rowCount, syncStampMs],
+      );
+    } else {
+      _db.execute(
+        'INSERT INTO iptv_search_meta (connection_id, type, row_count, last_sync_ms) '
+        'VALUES (?, ?, ?, 0) '
+        'ON CONFLICT(connection_id, type) DO UPDATE SET row_count = excluded.row_count',
+        [connectionId, type, rowCount],
+      );
+    }
+    _db.execute('COMMIT;');
+  }
+
+  /// Roll back the open type transaction — the guards' refusal path.
+  /// Never throws; a failed rollback leaves the transaction to the
+  /// connection close, and the land is already refused.
+  void abortTypeWrite() {
+    try {
+      _db.execute('ROLLBACK;');
+    } catch (_) {}
   }
 
   void _deleteTypeLocked(String connectionId, String type) {
@@ -1643,6 +1694,7 @@ class IndexWriteResult {
     this.hiddenSkipped = 0,
     this.fetchedCount = 0,
     this.diskWriteFailed = false,
+    this.batches = 0,
   });
 
   final int rowCount;
@@ -1665,12 +1717,6 @@ class IndexWriteResult {
   /// land leaves last_sync_ms untouched — see [upsertType]).
   final bool partial;
 
-  /// Rows the panel returned that failed to parse (dropped by
-  /// [parseFlexibleJsonListCounted]) — the diagnostic that separates a
-  /// panel-truncated list (C1: dropped == 0) from a parse-dropped one
-  /// (C3: dropped > 0) on the next failure.
-  final int droppedRows;
-
   /// Categories the fetched rows covered, out of the fetched category
   /// list — the guard's numbers, for the same diagnostic. These count
   /// ALL categories: hidden categories are included in both numbers —
@@ -1690,11 +1736,25 @@ class IndexWriteResult {
   /// path (the seed never reports it).
   final int fetchedCount;
 
+  /// Rows the panel returned that failed to parse (dropped by
+  /// [parseFlexibleJsonListCounted]) — the diagnostic that separates a
+  /// panel-truncated list (C1: dropped == 0) from a parse-dropped one
+  /// (C3: dropped > 0) on the next failure.
+  final int droppedRows;
+
   /// True when the isolate was asked to write the visible disk file
   /// ([IndexWriteParams.diskFilePath]) and that write failed (1.2.10).
   /// The index land still stands — the caller logs it and carries on,
   /// exactly as the old main-isolate disk write never failed the sync.
   final bool diskWriteFailed;
+
+  /// Index-write batches flushed by the streaming pass (1.6.34, P-03):
+  /// one batch per [indexWriteBatchRows] visible rows. 0 when nothing
+  /// was written (a guard refused before any batch flushed, or the
+  /// catalog was empty). The batch count is the proof the write
+  /// streamed instead of collecting — and the sizing diagnostic for
+  /// the P-05 log line.
+  final int batches;
 }
 
 /// True when the category with [categoryId] and display [categoryName]
@@ -1708,6 +1768,21 @@ bool isHiddenIptvCategory(String? categoryId, String? categoryName, Set<String> 
   final initial = categoryInitial(categoryName);
   return initial != null && hiddenInitials.contains(initial);
 }
+
+/// Rows per index-write batch (1.6.34, P-03): the streaming writer
+/// flushes one batch into the type's transaction each time this many
+/// visible rows have accumulated, so no stage ever holds the type's
+/// full row list.
+///
+/// Sized from reasoned bounds, not measured data — the on-device P-05
+/// logs will confirm it after ship. An index row is a few hundred
+/// bytes as a Dart object, so 2048 rows is ~1 MB resident per batch:
+/// three orders below the ~200k-row movies peak it replaces, while
+/// still large enough that the per-batch SQLite call overhead is
+/// negligible against the per-row FTS statements. It matches the disk
+/// writer's proven 2048-row chunk (1.2.18 S-2), so the whole write
+/// path speaks one batch size.
+const int indexWriteBatchRows = 2048;
 
 /// Background-isolate index write (build #23): parse one type's catalog
 /// + category bodies and write that type's rows into the index file.
@@ -1724,6 +1799,17 @@ bool isHiddenIptvCategory(String? categoryId, String? categoryName, Set<String> 
 /// and the disk file, and only counts cross the port back to main.
 /// The seed path passes neither new param and behaves exactly as
 /// before.
+///
+/// 1.6.34 (P-03): the parse streams row by row and each visible row
+/// flows straight into a write batch — the full `rows` / `typedRows` /
+/// `visibleRows` / `visibleTypedRows` lists are gone. The guards still
+/// need the totals, so the whole type writes inside ONE transaction
+/// and the guards decide commit vs rollback at the end of the pass.
+/// The disk file is written after the commit: straight from the
+/// downloaded bytes when nothing was hidden or dropped (the 1.6.11
+/// copy fast path), else a second streaming pass re-encodes the
+/// visible rows — one extra parse, only in the hidden/dropped case,
+/// so the clean first-run case keeps its single-parse speed.
 Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) async {
   final started = DateTime.now();
   final db = sqlite3.open(params.dbPath);
@@ -1739,35 +1825,37 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
     // connection; CREATE IF NOT EXISTS is a no-op when the main
     // isolate already created it).
     IptvSearchIndex.createSchema(db);
-    // Decode once: the typed rows feed the index, the decoded list
-    // feeds the filtered body the caller writes to disk — one parse
-    // serves both stores.
+    int ms() => DateTime.now().difference(started).inMilliseconds;
     // 1.2.6 (catalog memory, item 4): when the caller passed file
     // paths, the isolate reads the files itself — the main isolate
     // never held the bodies and `compute` copied only paths. The
     // network sync keeps passing bodies.
-    //
-    // 1.4 (F2): the parse streams row by row
-    // ([_parseCatalogRowsStreaming] / [_parseCategoriesStreaming]) —
-    // the whole-file `readAsString` + `jsonDecode` held the body
-    // String (~36 MB UTF-16 for VOD) plus the decoded list of maps
-    // plus the typed rows at once (256–295 MB peak in-harness). The
-    // streaming parse holds one row's map at a time; a truncated
-    // file reports incomplete and parses as empty rows, exactly the
-    // old `_decodeJson` → `[]` outcome ('empty-response', old rows
-    // kept). One syntactically-bad row drops (counted) instead of
-    // failing the whole sync — the 1.2.17 per-row forgiveness.
-    final parsed = await _parseCatalogRowsStreaming(params);
-    final rows = parsed.rows;
-    // 1.2.10 (one-parse sync): the typed rows survive beside the index
-    // rows, so the isolate can build the visible disk file from the
-    // SAME parse — no second decode. (1.2.18 S-2: the memo publish is
-    // gone, so the visible JSON is written to disk only, never
-    // returned.)
-    final typedRows = parsed.typedRows;
     final categories = await _parseCategoriesStreaming(params);
     final hiddenIds = params.hiddenCategoryIds.toSet();
     final hiddenInitials = params.hiddenCategoryInitials.toSet();
+    // Category ids hidden by id or by initial, for the post-upsert
+    // delete of rows cached before their category was hidden.
+    final hiddenCategoryIds = <String>{
+      ...hiddenIds,
+      for (final entry in categories.entries)
+        if (hiddenInitials.contains(categoryInitial(entry.value))) entry.key,
+    };
+    final index = IptvSearchIndex._(db, isMemory: false);
+
+    // 1.6.34 (P-03): the catalog streams row by row and each visible
+    // row flows straight into a write batch — the full `rows` /
+    // `typedRows` / `visibleRows` / `visibleTypedRows` lists are gone.
+    // One row's typed object lives only until its index row is built;
+    // one batch ([indexWriteBatchRows] rows, ~1 MB) is the most the
+    // pass ever holds. The guards still need the totals, so the whole
+    // type writes inside ONE transaction and the guards decide commit
+    // vs rollback at the end of the pass — a truncated document rolls
+    // back its valid prefix exactly like the old whole-parse path
+    // reporting 'empty-response', and a refused list leaves the old
+    // index untouched. One syntactically-bad row drops (counted)
+    // instead of failing the whole sync — the 1.2.17 per-row
+    // forgiveness.
+    //
     // 1.2.4 (catalog memory, the owner's prune decision — supersedes the
     // v1.1.0 Option B "disk stays full" split, FORK §45): the index
     // holds VISIBLE rows only. Hidden rows are skipped at write time,
@@ -1779,11 +1867,49 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
     // categories screen shows a notice with a Refresh action when that
     // is the case, so the un-hide never fails silently the way the
     // v1.0.16 skip did. `rowCount` is the visible rows landed now.
+    var fetched = 0;
+    var visible = 0;
     var hiddenSkipped = 0;
-    final visibleRows = <IptvSearchIndexRow>[];
-    final visibleTypedRows = <Object>[];
-    for (var i = 0; i < rows.length; i++) {
-      final row = rows[i];
+    var dropped = 0;
+    final covered = <String?>{};
+    var batches = 0;
+    final batch = <IptvSearchIndexRow>[];
+    void flushBatch() {
+      if (batch.isEmpty) return;
+      index.upsertTypeRowsBatch(
+        connectionId: params.connectionId,
+        type: params.type,
+        rows: batch,
+      );
+      batches++;
+      batch.clear();
+    }
+
+    // Per-type row shape: the typed parse plus its index-row mapping.
+    final Object Function(Map<String, dynamic>) parseTyped;
+    final IptvSearchIndexRow Function(Object) toIndexRow;
+    switch (params.type) {
+      case IptvSearchIndex.typeLive:
+        parseTyped = XtreamLiveStream.fromJson;
+        toIndexRow = (row) => IptvSearchIndexRow.fromLive(row as XtreamLiveStream);
+      case IptvSearchIndex.typeMovie:
+        parseTyped = XtreamVodStream.fromJson;
+        toIndexRow = (row) => IptvSearchIndexRow.fromMovie(row as XtreamVodStream);
+      default:
+        parseTyped = XtreamSeries.fromJson;
+        toIndexRow = (row) => IptvSearchIndexRow.fromSeries(row as XtreamSeries);
+    }
+
+    void onObject(Map<String, dynamic> map) {
+      final IptvSearchIndexRow row;
+      try {
+        row = toIndexRow(parseTyped(map));
+      } catch (_) {
+        dropped++;
+        return;
+      }
+      fetched++;
+      covered.add(row.categoryId);
       if (isHiddenIptvCategory(
         row.categoryId,
         row.categoryId == null ? null : categories[row.categoryId],
@@ -1791,31 +1917,60 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
         hiddenInitials,
       )) {
         hiddenSkipped++;
-      } else {
-        visibleRows.add(row);
-        visibleTypedRows.add(typedRows[i]);
+        return;
       }
+      visible++;
+      batch.add(row);
+      if (batch.length >= indexWriteBatchRows) flushBatch();
     }
-    // Category ids hidden by id or by initial, for the post-upsert
-    // delete of rows cached before their category was hidden.
-    final hiddenCategoryIds = <String>{
-      ...hiddenIds,
-      for (final entry in categories.entries)
-        if (hiddenInitials.contains(categoryInitial(entry.value))) entry.key,
-    };
-    // Categories the fetched rows cover, out of the whole category
-    // list — the guard's denominator counts ALL categories now (the
-    // v1.0.16 visible-only denominator is gone with the skip): hiding
-    // most categories no longer changes what counts as complete.
-    final covered = {for (final row in rows) row.categoryId}.intersection(categories.keys.toSet());
-    int ms() => DateTime.now().difference(started).inMilliseconds;
-    if (rows.isEmpty) {
+
+    index.beginTypeWrite();
+    final JsonArrayStreamResult streamResult;
+    try {
+      streamResult = params.catalogFilePath != null
+          ? await streamJsonArrayFile(
+              params.catalogFilePath!,
+              onObject: onObject,
+              onBadObject: (_, _) => dropped++,
+            )
+          : await streamJsonArrayText(
+              params.catalogBody,
+              onObject: onObject,
+              onBadObject: (_, _) => dropped++,
+            );
+      flushBatch();
+    } catch (e) {
+      index.abortTypeWrite();
+      rethrow;
+    }
+    // A truncated file reports incomplete and parses as empty rows,
+    // exactly the old `_decodeJson` → `[]` outcome ('empty-response',
+    // old rows kept) — the valid prefix rolled back with the
+    // transaction above, and its counts are discarded with it.
+    if (!streamResult.complete) {
+      index.abortTypeWrite();
       return IndexWriteResult(
         rowCount: 0,
         ms: ms(),
         skippedReason: 'empty-response',
-        droppedRows: parsed.dropped,
-        fetchedCount: rows.length,
+        droppedRows: 0,
+        fetchedCount: 0,
+      );
+    }
+    // Categories the fetched rows cover, out of the whole category
+    // list — the guard's denominator counts ALL categories now (the
+    // v1.0.16 visible-only denominator is gone with the skip): hiding
+    // most categories no longer changes what counts as complete.
+    final coveredCount = covered.intersection(categories.keys.toSet()).length;
+    if (fetched == 0) {
+      index.abortTypeWrite();
+      return IndexWriteResult(
+        rowCount: 0,
+        ms: ms(),
+        skippedReason: 'empty-response',
+        droppedRows: dropped,
+        fetchedCount: fetched,
+        batches: batches,
       );
     }
     // 1.2.10 (one-parse sync): the row-count partial guard lives here
@@ -1826,16 +1981,18 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
     // guard did. Nothing is written on this path — index and disk
     // both untouched.
     final visibleIndexed = params.visibleIndexed;
-    if (visibleIndexed != null && visibleIndexed > 0 && visibleRows.length < visibleIndexed ~/ 2) {
+    if (visibleIndexed != null && visibleIndexed > 0 && visible < visibleIndexed ~/ 2) {
+      index.abortTypeWrite();
       return IndexWriteResult(
         rowCount: 0,
         ms: ms(),
         skippedReason: 'partial-kept',
-        droppedRows: parsed.dropped,
-        coveredCategories: covered.length,
+        droppedRows: dropped,
+        coveredCategories: coveredCount,
         totalCategories: categories.length,
         hiddenSkipped: hiddenSkipped,
-        fetchedCount: rows.length,
+        fetchedCount: fetched,
+        batches: batches,
       );
     }
     // Completeness guard (the seed's P5a): a crawl-shaped / partial
@@ -1845,16 +2002,17 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
     // (nearly) every category; a few legitimately empty categories are
     // fine at the 50% threshold.
     if (categories.isEmpty) {
+      index.abortTypeWrite();
       return IndexWriteResult(
         rowCount: 0,
         ms: ms(),
         skippedReason: 'no-categories',
-        droppedRows: parsed.dropped,
-        fetchedCount: rows.length,
+        droppedRows: dropped,
+        fetchedCount: fetched,
+        batches: batches,
       );
     }
-    final isPartial = categories.isNotEmpty && covered.length / categories.length < 0.5;
-    final index = IptvSearchIndex._(db, isMemory: false);
+    final isPartial = categories.isNotEmpty && coveredCount / categories.length < 0.5;
     if (isPartial) {
       // COLD-TYPE EXCEPTION (series fix, v1.0.16): when the index has 0
       // rows for the type, refusing the whole write makes the gap
@@ -1870,37 +2028,40 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
       // kept and searchable, so the dialog must not call it a failure.
       final existing = _metaRowCount(db, params.connectionId, params.type);
       if (existing > 0) {
+        index.abortTypeWrite();
         return IndexWriteResult(
           rowCount: 0,
           ms: ms(),
           skippedReason: 'partial-kept',
-          droppedRows: parsed.dropped,
-          coveredCategories: covered.length,
+          droppedRows: dropped,
+          coveredCategories: coveredCount,
           totalCategories: categories.length,
           hiddenSkipped: hiddenSkipped,
-          fetchedCount: rows.length,
+          fetchedCount: fetched,
+          batches: batches,
         );
       }
-      index.upsertType(
+      index.finishTypeWrite(
         connectionId: params.connectionId,
         type: params.type,
-        rows: visibleRows,
         categories: categories,
         syncStampMs: null, // Partial land: no stamp, stays due for refetch.
         deleteCategoryIds: hiddenCategoryIds.toList(),
+        rowCount: visible,
       );
       // L-29: fold the WAL back after the land, so a long sync cannot
       // grow it unbounded while the UI reads beside it.
       _checkpointWal(db);
       return IndexWriteResult(
-        rowCount: visibleRows.length,
+        rowCount: visible,
         ms: ms(),
         partial: true,
-        droppedRows: parsed.dropped,
-        coveredCategories: covered.length,
+        droppedRows: dropped,
+        coveredCategories: coveredCount,
         totalCategories: categories.length,
         hiddenSkipped: hiddenSkipped,
-        fetchedCount: rows.length,
+        fetchedCount: fetched,
+        batches: batches,
       );
     }
     // Complete list: upsert-merge (series fix, v1.0.16) — rows the fetch
@@ -1910,15 +2071,13 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
     // by the same write (see `deleteCategoryIds`), so a category hidden
     // after its rows landed does not linger in search. Un-hiding needs
     // a re-sync; the categories screen says so with a Refresh action.
-    // One transaction per type (L-5): a write transaction is never
-    // held across a sync type boundary while the UI is alive.
-    index.upsertType(
+    index.finishTypeWrite(
       connectionId: params.connectionId,
       type: params.type,
-      rows: visibleRows,
       categories: categories,
       syncStampMs: params.syncStampMs,
       deleteCategoryIds: hiddenCategoryIds.toList(),
+      rowCount: visible,
     );
     // L-29: fold the WAL back after the land (see the partial land
     // above — every landed type checkpoints, so a sync running >5 min
@@ -1926,11 +2085,9 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
     // the end).
     _checkpointWal(db);
     // 1.2.10 (one-parse sync): the visible disk file is written here,
-    // from the same parse — the caller no longer re-encodes the body
-    // in a second isolate round trip. The payload is the visible
-    // typed rows' JSON, the same payload the old encode*BodyVisible
-    // round trip produced. A failed write is flagged, never thrown:
-    // the index land stands.
+    // after the commit. The payload is the visible typed rows' JSON,
+    // the same payload the old encode*BodyVisible round trip produced.
+    // A failed write is flagged, never thrown: the index land stands.
     //
     // 1.2.18 S-2: the file is written incrementally — one row's JSON
     // at a time, through a temp file renamed into place — instead of
@@ -1956,45 +2113,64 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
         // parser, same order), so the disk reader sees an identical
         // file. Any hidden/dropped row falls through to the re-encode
         // below, which writes the visible rows only.
-        final canCopyRaw = hiddenSkipped == 0 &&
-            parsed.dropped == 0 &&
-            params.catalogFilePath != null;
+        final canCopyRaw = hiddenSkipped == 0 && dropped == 0 && params.catalogFilePath != null;
         if (canCopyRaw) {
           await File(params.catalogFilePath!).copy(tmpFile.path);
         } else {
-        final sink = tmpFile.openWrite();
-        try {
-          sink.write('[');
-          // 1.2.18 S-2: write in CHUNKS, not one sink.write per row.
-          // A per-row write enqueues ~200k separate drain entries and
-          // the sink drains them one per event-loop turn — ~33 s at
-          // Trex scale (199,762 VOD rows), a 4x sync slowdown vs the
-          // old one-shot writeAsString. A chunked write with a flush
-          // per chunk streams at ~1 s with one chunk (~300 KB) resident
-          // at a time, so the no-whole-body memory win stands.
-          const chunkRows = 2048;
-          final chunk = StringBuffer();
-          var first = true;
-          var inChunk = 0;
-          for (final row in visibleTypedRows) {
-            if (!first) chunk.write(',');
-            first = false;
-            chunk.write(jsonEncode(_typedCatalogRowToJson(params.type, row)));
-            if (++inChunk >= chunkRows) {
-              sink.write(chunk.toString());
-              chunk.clear();
-              inChunk = 0;
-              await sink.flush();
+          // 1.6.34 (P-03): second streaming pass over the same input,
+          // re-encoding the visible rows in [indexWriteBatchRows]
+          // chunks through a synchronous file handle — the scanner's
+          // callback is sync, so an async sink's flush cannot bound
+          // the buffer here. One extra parse, only in the
+          // hidden/dropped case; the clean case copies raw above.
+          final raf = tmpFile.openSync(mode: FileMode.write);
+          try {
+            raf.writeStringSync('[');
+            final chunk = StringBuffer();
+            var first = true;
+            var inChunk = 0;
+            void onDiskObject(Map<String, dynamic> map) {
+              final Object typed;
+              try {
+                typed = parseTyped(map);
+              } catch (_) {
+                return; // Dropped in the first pass too — never written.
+              }
+              final typedRow = toIndexRow(typed);
+              if (isHiddenIptvCategory(
+                typedRow.categoryId,
+                typedRow.categoryId == null ? null : categories[typedRow.categoryId],
+                hiddenIds,
+                hiddenInitials,
+              )) {
+                return;
+              }
+              if (!first) chunk.write(',');
+              first = false;
+              chunk.write(jsonEncode(_typedCatalogRowToJson(params.type, typed)));
+              if (++inChunk >= indexWriteBatchRows) {
+                raf.writeStringSync(chunk.toString());
+                chunk.clear();
+                inChunk = 0;
+              }
             }
+
+            final JsonArrayStreamResult diskResult;
+            if (params.catalogFilePath != null) {
+              diskResult = await streamJsonArrayFile(params.catalogFilePath!, onObject: onDiskObject);
+            } else {
+              diskResult = await streamJsonArrayText(params.catalogBody, onObject: onDiskObject);
+            }
+            if (!diskResult.complete) {
+              // The input changed under the second pass — never land a
+              // truncated disk file over the good one.
+              throw StateError('catalog input changed during disk write');
+            }
+            if (inChunk > 0) raf.writeStringSync(chunk.toString());
+            raf.writeStringSync(']');
+          } finally {
+            await raf.close();
           }
-          if (inChunk > 0) {
-            sink.write(chunk.toString());
-            chunk.clear();
-          }
-          sink.write(']');
-        } finally {
-          await sink.close();
-        }
         }
         final target = File(diskFilePath);
         if (await target.exists()) await target.delete();
@@ -2009,14 +2185,15 @@ Future<IndexWriteResult> writeIndexTypeInBackground(IndexWriteParams params) asy
       }
     }
     return IndexWriteResult(
-      rowCount: visibleRows.length,
+      rowCount: visible,
       ms: ms(),
-      droppedRows: parsed.dropped,
-      coveredCategories: covered.length,
+      droppedRows: dropped,
+      coveredCategories: coveredCount,
       totalCategories: categories.length,
       hiddenSkipped: hiddenSkipped,
-      fetchedCount: rows.length,
+      fetchedCount: fetched,
       diskWriteFailed: diskWriteFailed,
+      batches: batches,
     );
   } finally {
     db.close();
@@ -2056,50 +2233,6 @@ int _metaRowCount(Database db, String connectionId, String type) {
     // A meta read can only fail on a corrupt DB, in which case the write
     // below fails too and the caller keeps the old rows — treat as cold.
     return 0;
-  }
-}
-
-/// Stream one type's catalog rows for the sync/seed isolate job (1.4,
-/// F2): the typed rows plus their index rows, parsed row by row from
-/// the file path when the caller passed one, else from the body string.
-/// Same shape as the old whole-file `_rowsFromDecoded` — the caller
-/// keeps using `parsed.rows` / `parsed.typedRows` / `parsed.dropped`
-/// unchanged. An incomplete (truncated/corrupt) document parses as
-/// empty rows with 0 dropped — the old `_decodeJson` → `[]` outcome.
-Future<({List<IptvSearchIndexRow> rows, List<Object> typedRows, int dropped})>
-    _parseCatalogRowsStreaming(IndexWriteParams params) async {
-  Future<({List<T> rows, int dropped})> parseTyped<T>(
-    T Function(Map<String, dynamic> json) parse,
-  ) async {
-    final result = params.catalogFilePath != null
-        ? await parseJsonArrayFile<T>(params.catalogFilePath!, parse)
-        : await parseJsonArrayText<T>(params.catalogBody, parse);
-    if (!result.complete) return (rows: <T>[], dropped: 0);
-    return (rows: result.rows, dropped: result.dropped);
-  }
-
-  switch (params.type) {
-    case IptvSearchIndex.typeLive:
-      final parsed = await parseTyped(XtreamLiveStream.fromJson);
-      return (
-        rows: parsed.rows.map(IptvSearchIndexRow.fromLive).toList(growable: false),
-        typedRows: parsed.rows,
-        dropped: parsed.dropped,
-      );
-    case IptvSearchIndex.typeMovie:
-      final parsed = await parseTyped(XtreamVodStream.fromJson);
-      return (
-        rows: parsed.rows.map(IptvSearchIndexRow.fromMovie).toList(growable: false),
-        typedRows: parsed.rows,
-        dropped: parsed.dropped,
-      );
-    default:
-      final parsed = await parseTyped(XtreamSeries.fromJson);
-      return (
-        rows: parsed.rows.map(IptvSearchIndexRow.fromSeries).toList(growable: false),
-        typedRows: parsed.rows,
-        dropped: parsed.dropped,
-      );
   }
 }
 
@@ -2143,7 +2276,10 @@ class IptvSearchSyncProgress {
   /// 'live' | 'movie' | 'series'.
   final String type;
 
-  /// 'fetching' | 'writing' | 'done' | 'skipped'.
+  /// 'fetching' | 'writing' | 'done' | 'skipped' | 'waiting'.
+  /// 'waiting' (1.6.34, P-02): a manual sync is joining a sync
+  /// already running instead of re-downloading — the dialog renders
+  /// it as a waiting line, not a spinner.
   final String phase;
   final int rows;
 
@@ -2221,12 +2357,18 @@ class IptvSearchSyncResult {
   /// refresh footer reads "Catalog sync failed" only on this. A skipped
   /// type is a failure EXCEPT 'up-to-date' (nothing to do),
   /// 'partial-kept' (the panel returned a partial list for a warm type
-  /// and the old rows were kept — searchable, not a failure) and
+  /// and the old rows were kept — searchable, not a failure),
   /// 'tier-skipped' (1.2.19, L-14: the survival tier deliberately did
-  /// not fetch series — a policy skip, not a failure). A type
+  /// not fetch series — a policy skip, not a failure) and 'deferred'
+  /// (1.6.34, P-15: series deferred on first run for the low tiers —
+  /// it follows in the background, not a failure). A type
   /// that landed a partial list is in [rows]/[partialTypes], never in
   /// [skipped], so it never reads as a failure either.
   bool get hasFailure => skipped.values.any(
-        (reason) => reason != 'up-to-date' && reason != 'partial-kept' && reason != 'tier-skipped',
+        (reason) =>
+            reason != 'up-to-date' &&
+            reason != 'partial-kept' &&
+            reason != 'tier-skipped' &&
+            reason != 'deferred',
       );
 }

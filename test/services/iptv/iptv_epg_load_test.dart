@@ -9,6 +9,7 @@ import 'package:plezy/exceptions/media_server_exceptions.dart';
 import 'package:plezy/i18n/strings.g.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/iptv_live_tv.dart';
+import 'package:plezy/services/base_shared_preferences_service.dart';
 import 'package:plezy/services/iptv/iptv_epg_sources.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
 import 'package:plezy/services/settings_service.dart';
@@ -72,6 +73,7 @@ class _ProbeEpgApi extends XtreamApi {
   bool failShortEpg = false;
   bool failXmltv = false;
   bool failXmltvTimeout = false;
+  bool hangXmltv = false;
   bool failLiveStreams = false;
   var xmltvCalls = 0;
   var liveStreamsCalls = 0;
@@ -101,6 +103,18 @@ class _ProbeEpgApi extends XtreamApi {
   // the counter and the failXmltv / failXmltvTimeout knobs still apply.
   @override
   Future<XmltvFeedFetch> getXmltvFeed({String? etag, String? lastModified, Duration timeout = const Duration(seconds: 120), Future<void>? abortTrigger}) async {
+    if (hangXmltv) {
+      // 1.6.34 (P-07): a feed that never answers — the bytes stream
+      // neither yields nor closes, so the download stalls in flight
+      // instead of failing.
+      xmltvCalls++;
+      return (
+        bytes: StreamController<List<int>>().stream,
+        notModified: false,
+        etag: null,
+        lastModified: null,
+      );
+    }
     return (
       bytes: Stream<List<int>>.value(utf8.encode(await _cannedXmltvBody(timeout: timeout, abortTrigger: abortTrigger))),
       notModified: false,
@@ -517,6 +531,67 @@ void main() {
         const Duration(seconds: 5),
         onTimeout: () => fail('waitForFeedRefresh must return promptly when nothing is downloading'),
       );
+    });
+
+    test('1.6.34 (P-07): a stalled feed download stops holding the wait after the budget', () async {
+      // The budget is 10 minutes in production; the test shrinks it so
+      // the stall is provable without waiting 10 minutes.
+      final previousBudget = IptvLiveTvSupport.feedRefreshWaitBudget;
+      IptvLiveTvSupport.feedRefreshWaitBudget = const Duration(seconds: 5);
+      addTearDown(() => IptvLiveTvSupport.feedRefreshWaitBudget = previousBudget);
+      api.hangXmltv = true;
+
+      // Cold start: the download registers in flight, then stalls on
+      // the never-answering feed. Update now is not awaited — on a
+      // cold client it blocks on the download.
+      unawaited(support.updateEpgNow());
+      for (var i = 0; i < 50 && !support.hasInFlightFeedLoad; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+      expect(support.hasInFlightFeedLoad, isTrue, reason: 'the stalled download must be in flight');
+
+      // On 1.6.33 this never returns — the outer timeout is the
+      // failing-first guard.
+      await support.waitForFeedRefresh().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => fail('waitForFeedRefresh must give up after its budget when a feed stalls'),
+      );
+      // Only the WAIT gave up — the download is still in flight, and
+      // the guide still lands when it finishes.
+      expect(support.hasInFlightFeedLoad, isTrue);
+    });
+
+    test('1.6.34 (P-06): a feed download waits behind a running catalog sync', () async {
+      // The budget is 15 minutes in production; the test shrinks it so
+      // the queue stays fast to prove.
+      final previousBudget = IptvLiveTvSupport.catalogSyncWaitBudget;
+      IptvLiveTvSupport.catalogSyncWaitBudget = const Duration(seconds: 10);
+      addTearDown(() => IptvLiveTvSupport.catalogSyncWaitBudget = previousBudget);
+      // Pretend a catalog sync is running in another isolate: the
+      // stamp is what the gate reads, and the sync owns clearing it.
+      final prefs = await BaseSharedPreferencesService.sharedCache();
+      await prefs.setInt(IptvClient.syncRunningStampPrefsKey, DateTime.now().millisecondsSinceEpoch);
+      addTearDown(() async {
+        final p = await BaseSharedPreferencesService.sharedCache();
+        await p.remove(IptvClient.syncRunningStampPrefsKey);
+      });
+
+      // Cold start: the load queues behind the sync and fetches nothing
+      // yet. Update now is not awaited — on a cold client it blocks on
+      // the download.
+      final load = support.updateEpgNow();
+      await Future<void>.delayed(const Duration(seconds: 2));
+      expect(api.xmltvCalls, 0, reason: 'the feed download must wait behind the running sync');
+      expect(support.hasInFlightFeedLoad, isTrue);
+
+      // The sync lands — the stamp clears — and the download starts.
+      await prefs.remove(IptvClient.syncRunningStampPrefsKey);
+      final result = await load.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => fail('Update now must finish once the sync stamp clears'),
+      );
+      expect(api.xmltvCalls, 1, reason: 'the queued download must run once the sync is done');
+      expect(result.feedOutcomes.single.kind, IptvEpgFeedOutcomeKind.loaded);
     });
   });
 }

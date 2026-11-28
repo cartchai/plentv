@@ -406,6 +406,37 @@ extension _VideoPlayerErrorMethods on VideoPlayerScreenState {
     _onPlayerError(PlayerError(t.messages.serverBusyTitle, cause: PlayerError.serverHttp503));
   }
 
+  /// The mid-stream stall watchdog fired: the position has not advanced
+  /// for [midStreamStallPatience] while playing. The buffering overlay
+  /// shows the stall label until the position moves again (or the viewer
+  /// pauses). Guarded like the 503 callback: a late timer must not touch
+  /// a disposed screen.
+  void _onStallChanged(bool stalled) {
+    if (!mounted || _shuttingDown) return;
+    _isStalled.value = stalled;
+    if (stalled) {
+      appLogger.w(
+        'Stream stalled mid-play: no position advance for '
+        '${midStreamStallPatience.inSeconds}s — showing the stall indicator',
+      );
+    }
+  }
+
+  /// The stall outlasted the indicator window: retune automatically.
+  /// VOD re-opens the stream at the current position (the same seek the
+  /// network-restore path uses); live TV retries its ladder at the same
+  /// level, re-opening at the live edge. Bounded by the watchdog's
+  /// per-open budget, so a dead stream cannot retune forever.
+  void _onStallRetune() {
+    if (!mounted || _shuttingDown || player == null) return;
+    appLogger.i('Stream still stalled after the indicator window — retuning automatically');
+    if (widget.isLive) {
+      unawaited(_retryLiveStream());
+    } else {
+      _forceStreamReconnect();
+    }
+  }
+
   /// The attempt's open deadline passed: the backend started the load and
   /// then stopped moving without loading, failing, or dying. Its waiters are
   /// already aborted; synthesize the error the backend never raised so the

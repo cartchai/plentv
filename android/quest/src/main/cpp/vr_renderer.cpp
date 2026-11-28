@@ -543,6 +543,25 @@ struct VrRendererImpl {
   // GL.
   GLuint meshProgram = 0;
   GLuint colorProgram = 0;
+  // T8 (1.6.34, P-13a): uniform locations cached at program link —
+  // glGetUniformLocation is a driver string lookup and was called per
+  // draw (90 Hz on the mesh path). -1 until linked; glUniform* with
+  // -1 is a silent no-op, so a failed link stays safe. Reset in
+  // destroyGl alongside the program handles.
+  GLint meshMvpLoc = -1;
+  GLint meshUvOffsetLoc = -1;
+  GLint meshUvScaleLoc = -1;
+  GLint meshTexLoc = -1;
+  GLint colorMvpLoc = -1;
+  GLint colorColorLoc = -1;
+  // P-12 (1.6.34): one reusable FBO for all offscreen renders —
+  // acquireVideoFrame, the per-eye renders and the overlay render
+  // each created + deleted an FBO per call (up to 3x/frame at 90 Hz).
+  // The FBO is only a container: every use re-attaches its own texture
+  // before drawing, and the uses run sequentially on the render thread,
+  // so sharing it is safe. Created lazily on first use (EGL current);
+  // deleted in destroyGl.
+  GLuint sharedFbo = 0;
   int videoFrameW = 0;
   int videoFrameH = 0;
   Mesh flatMesh;
@@ -626,11 +645,19 @@ bool initGl(VrRendererImpl* impl) {
     LOGE("Mesh program failed to link");
     return false;
   }
+  // 1.6.34 (P-13a, T8): cache the uniform locations once, at link —
+  // the draw paths used to look them up by name on every draw.
+  impl->meshMvpLoc = glGetUniformLocation(impl->meshProgram, "uMvp");
+  impl->meshUvOffsetLoc = glGetUniformLocation(impl->meshProgram, "uUvOffset");
+  impl->meshUvScaleLoc = glGetUniformLocation(impl->meshProgram, "uUvScale");
+  impl->meshTexLoc = glGetUniformLocation(impl->meshProgram, "uTex");
   impl->colorProgram = linkProgram(kColorVs, kColorFs);
   if (impl->colorProgram == 0) {
     LOGE("Color program failed to link");
     return false;
   }
+  impl->colorMvpLoc = glGetUniformLocation(impl->colorProgram, "uMvp");
+  impl->colorColorLoc = glGetUniformLocation(impl->colorProgram, "uColor");
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
   return true;
@@ -1571,6 +1598,15 @@ void applyRefreshRate(VrRendererImpl* impl) {
 // ---------------------------------------------------------------------------
 // mpv frame rendering.
 // ---------------------------------------------------------------------------
+// 1.6.34 (P-12): the one reusable FBO for all offscreen renders.
+// Created lazily on first use (the render thread, EGL current). A 0
+// return means creation failed — callers bind it anyway, exactly as
+// the old per-call code did when glGenFramebuffers failed.
+GLuint reusableFbo(VrRendererImpl* impl) {
+  if (impl->sharedFbo == 0) glGenFramebuffers(1, &impl->sharedFbo);
+  return impl->sharedFbo;
+}
+
 bool renderMpvIntoFbo(VrRendererImpl* impl, GLuint fbo, int w, int h) {
   if (impl->renderCtx == nullptr) return false;
   const uint64_t flags = g_mpv.render_context_update(impl->renderCtx);
@@ -1636,12 +1672,12 @@ bool withSwapchainImage(VrRendererImpl* impl, XrSwapchain swapchain,
 void drawMeshTextured(VrRendererImpl* impl, const Mesh& mesh, const Mat4& mvp,
                       GLuint texture, const VrEyeUv& uv) {
   glUseProgram(impl->meshProgram);
-  glUniformMatrix4fv(glGetUniformLocation(impl->meshProgram, "uMvp"), 1, GL_FALSE, mvp.m);
-  glUniform2f(glGetUniformLocation(impl->meshProgram, "uUvOffset"), uv.u0, uv.v0);
-  glUniform2f(glGetUniformLocation(impl->meshProgram, "uUvScale"), uv.uScale, uv.vScale);
+  glUniformMatrix4fv(impl->meshMvpLoc, 1, GL_FALSE, mvp.m);
+  glUniform2f(impl->meshUvOffsetLoc, uv.u0, uv.v0);
+  glUniform2f(impl->meshUvScaleLoc, uv.uScale, uv.vScale);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture);
-  glUniform1i(glGetUniformLocation(impl->meshProgram, "uTex"), 0);
+  glUniform1i(impl->meshTexLoc, 0);
   glDisable(GL_CULL_FACE);
   glDisable(GL_DEPTH_TEST);
   mesh.draw();
@@ -1823,12 +1859,12 @@ void drawTextLine(VrRendererImpl* impl, const std::string& text, float x, float 
   ortho.m[12] = -1.0f;
   ortho.m[13] = 1.0f;
   ortho.m[15] = 1.0f;
-  glUniformMatrix4fv(glGetUniformLocation(impl->meshProgram, "uMvp"), 1, GL_FALSE, ortho.m);
-  glUniform2f(glGetUniformLocation(impl->meshProgram, "uUvOffset"), 0, 0);
-  glUniform2f(glGetUniformLocation(impl->meshProgram, "uUvScale"), 1, 1);
+  glUniformMatrix4fv(impl->meshMvpLoc, 1, GL_FALSE, ortho.m);
+  glUniform2f(impl->meshUvOffsetLoc, 0, 0);
+  glUniform2f(impl->meshUvScaleLoc, 1, 1);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, g_fontAtlas);
-  glUniform1i(glGetUniformLocation(impl->meshProgram, "uTex"), 0);
+  glUniform1i(impl->meshTexLoc, 0);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   float cx = x;
@@ -1897,8 +1933,9 @@ void renderOverlayStrip(VrRendererImpl* impl) {
       formatTime(impl->lastPositionSeconds) + " / " + formatTime(impl->durationSeconds);
   const bool rendered = withSwapchainImage(impl, impl->overlaySwapchain, impl->overlayImages,
                      [&](uint32_t texture) {
-                       GLuint fbo = 0;
-                       glGenFramebuffers(1, &fbo);
+                       // 1.6.34 (P-12): the shared FBO — no per-render
+                       // gen/delete.
+                       const GLuint fbo = reusableFbo(impl);
                        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
                        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                               GL_TEXTURE_2D, texture, 0);
@@ -1917,9 +1954,9 @@ void renderOverlayStrip(VrRendererImpl* impl) {
                          ortho.m[12] = -1.0f;
                          ortho.m[13] = 1.0f;
                          ortho.m[15] = 1.0f;
-                         glUniformMatrix4fv(glGetUniformLocation(impl->colorProgram, "uMvp"), 1,
+                         glUniformMatrix4fv(impl->colorMvpLoc, 1,
                                             GL_FALSE, ortho.m);
-                         glUniform4f(glGetUniformLocation(impl->colorProgram, "uColor"), 0.9f,
+                         glUniform4f(impl->colorColorLoc, 0.9f,
                                      0.75f, 0.2f, 0.35f);
                          const float x0 = b.x0 * static_cast<float>(kOverlayWidthPx),
                                      x1 = b.x1 * static_cast<float>(kOverlayWidthPx);
@@ -1955,7 +1992,6 @@ void renderOverlayStrip(VrRendererImpl* impl) {
                          drawTextLine(impl, label, tx, 110, 22);
                        }
                        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                       glDeleteFramebuffers(1, &fbo);
                        return true;
                      });
   // B20: only mark the strip clean when the render actually ran — a
@@ -2323,8 +2359,8 @@ uint32_t acquireVideoFrame(VrRendererImpl* impl) {
   const uint32_t tex = impl->videoImages[index].image;
   const int w = static_cast<int>(impl->videoWidth * impl->videoScale);
   const int h = static_cast<int>(impl->videoHeight * impl->videoScale);
-  GLuint fbo = 0;
-  glGenFramebuffers(1, &fbo);
+  // 1.6.34 (P-12): the shared FBO — no per-frame gen/delete.
+  const GLuint fbo = reusableFbo(impl);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
   glViewport(0, 0, w, h);
@@ -2332,7 +2368,6 @@ uint32_t acquireVideoFrame(VrRendererImpl* impl) {
     renderMpvIntoFbo(impl, fbo, w, h);
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glDeleteFramebuffers(1, &fbo);
   return tex;
 }
 
@@ -2546,8 +2581,9 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
           const Mat4 mvp = mat4Multiply(proj, mat4Multiply(view, model));
           withSwapchainImage(impl, impl->eyeSwapchains[eye], impl->eyeImages[eye],
                              [&](uint32_t tex) {
-                               GLuint fbo = 0;
-                               glGenFramebuffers(1, &fbo);
+                               // 1.6.34 (P-12): the shared FBO — no
+                               // per-eye gen/delete.
+                               const GLuint fbo = reusableFbo(impl);
                                glBindFramebuffer(GL_FRAMEBUFFER, fbo);
                                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                                       GL_TEXTURE_2D, tex, 0);
@@ -2559,7 +2595,6 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
                                  drawMeshTextured(impl, mesh, mvp, videoTex, uv);
                                }
                                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                               glDeleteFramebuffers(1, &fbo);
                                return true;
                              });
           projectionViews[eye].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
@@ -2645,6 +2680,11 @@ void frame(VrRendererImpl* impl, const XrFrameState& frameState) {
 void destroyGl(VrRendererImpl* impl) {
   if (impl->meshProgram != 0) glDeleteProgram(impl->meshProgram);
   if (impl->colorProgram != 0) glDeleteProgram(impl->colorProgram);
+  // 1.6.34 (P-12): the shared FBO goes with the other GL objects.
+  if (impl->sharedFbo != 0) {
+    glDeleteFramebuffers(1, &impl->sharedFbo);
+    impl->sharedFbo = 0;
+  }
   if (g_fontAtlas != 0) {
     glDeleteTextures(1, &g_fontAtlas);
     g_fontAtlas = 0;
@@ -2656,6 +2696,12 @@ void destroyGl(VrRendererImpl* impl) {
   impl->meshesBuilt = false;
   impl->meshProgram = 0;
   impl->colorProgram = 0;
+  impl->meshMvpLoc = -1;
+  impl->meshUvOffsetLoc = -1;
+  impl->meshUvScaleLoc = -1;
+  impl->meshTexLoc = -1;
+  impl->colorMvpLoc = -1;
+  impl->colorColorLoc = -1;
 }
 
 // The render loop (its own thread): EGL -> OpenXR -> actions -> mpv ->

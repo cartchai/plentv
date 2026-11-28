@@ -13,18 +13,26 @@ void main() {
   });
 
   test('records phases in order with durations and totals', () {
+    // 1.6.34 (P-16a): the example names are the marks main.dart
+    // records now (one per gate phase).
     StartupPhaseTimings.record('locale', 120, 340);
-    StartupPhaseTimings.record('platform-services', 850, 1190);
-    StartupPhaseTimings.record('database-recovery', 2100, 3290);
+    StartupPhaseTimings.record('device-capabilities', 200, 540);
+    StartupPhaseTimings.record('storage', 650, 1190);
+    StartupPhaseTimings.record('database-open', 2100, 3290);
+    StartupPhaseTimings.record('storage-health', 90, 3380);
+    StartupPhaseTimings.record('image-cache', 150, 3530);
 
-    expect(StartupPhaseTimings.phases.length, 3);
+    expect(StartupPhaseTimings.phases.length, 6);
     expect(StartupPhaseTimings.phases.first.phase, 'locale');
-    expect(StartupPhaseTimings.phases.last.totalMs, 3290);
+    expect(StartupPhaseTimings.phases.last.totalMs, 3530);
     expect(
       StartupPhaseTimings.describe(),
       'locale: 120ms (total 340ms)\n'
-      'platform-services: 850ms (total 1190ms)\n'
-      'database-recovery: 2100ms (total 3290ms)',
+      'device-capabilities: 200ms (total 540ms)\n'
+      'storage: 650ms (total 1190ms)\n'
+      'database-open: 2100ms (total 3290ms)\n'
+      'storage-health: 90ms (total 3380ms)\n'
+      'image-cache: 150ms (total 3530ms)',
     );
   });
 }

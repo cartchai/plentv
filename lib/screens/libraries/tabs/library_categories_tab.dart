@@ -77,10 +77,14 @@ class _LibraryCategoriesTabState extends BaseLibraryTabState<IptvCategory, Libra
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => HubDetailScreen(
-          hub: hub,
-          loadItems: () => client.iptvItemsForCategory(widget.library.id, category.id),
-        ),
+        // 1.6.34 (P-01): no [loadItems] — the whole-category loader
+        // materialized every title before the first tile painted. The
+        // detail screen pages through `fetchMoreHubItemsPage` instead,
+        // which reads the category in pages from the index (the hub id
+        // carries the `:category:` segment). Same tiles, faster first
+        // paint; the favorites/resume maps are already memoized per
+        // client, so no per-open reload either.
+        builder: (_) => HubDetailScreen(hub: hub),
       ),
     );
   }

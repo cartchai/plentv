@@ -111,6 +111,25 @@ class _BackgroundPlaybackActive implements Exception {
 // Object.hash can never be used here. Re-exported above so existing
 // importers keep working.
 
+/// One type's download result (1.6.34, P-04): the fetch phase runs the
+/// due types in parallel, so a fetch returns its outcome instead of
+/// writing the shared [rows]/[skipped] maps directly. A null
+/// [skipReason] means the download landed ([categories] +
+/// [catalogFilePath] are set); a set reason means the type was skipped
+/// in the fetch ('oversize' / 'failed') and the write phase records it
+/// without writing. Cancellation is never an outcome — it rethrows, so
+/// an aborted sync still aborts instead of returning a partial result
+/// with a spurious 'failed'.
+typedef _TypeFetchOutcome = ({
+  String type,
+  List<XtreamCategory>? categories,
+  String? catalogFilePath,
+  int fetchMs,
+  int requests,
+  String? skipReason,
+  bool isTransportError,
+});
+
 class IptvClient implements MediaServerClient {
   /// The connection this client serves. Replaced only via
   /// [updateConnection] (build #17): a filter toggle re-binds the same
@@ -202,12 +221,13 @@ class IptvClient implements MediaServerClient {
   /// 1.6.32: the toggle-time re-derive is where the freeze lived — the
   /// guide rebuild ran synchronously on the UI thread while the memos
   /// re-parsed in the background. The re-derive now (option 2) filters
-  /// the cached guide list in Dart on a hide-only toggle, (option 3)
-  /// skips entirely while a catalog sync is running in another
-  /// isolate, (option 7) skips entirely while memory is hot, and
+  /// the cached guide list in Dart on a hide-only toggle, and
   /// (option 9) drops the VOD/series memos instead of re-deriving
   /// them — the index path serves those reads with the new hidden
   /// sets, and the next memo-path read re-warms from disk on demand.
+  /// 1.6.34 (P-08): the live memo is re-derived even while a sync
+  /// runs elsewhere or memory is hot (the old options 3 and 7 skips
+  /// are gone) — see the note inside.
   Future<void> _rederiveMemosFromDisk({bool hideOnly = false}) async {
     // 1.6.32, option 2: a hide-only toggle filters the cached guide
     // list in Dart instead of invalidating it and re-reading 26k rows
@@ -232,21 +252,22 @@ class IptvClient implements MediaServerClient {
       // cached guide list goes with the memos.
       _invalidateGuideChannelCache();
     }
-    // 1.6.32, option 3: a catalog sync is already running in another
-    // isolate — its landing refreshes the memos/index and notifies,
-    // so re-deriving now would compete with it (parse + deserialize
-    // on the main isolate while the sync writes) for a result the
-    // sync is about to replace. Skip the re-derive; the sync's
-    // notifications reload the tabs when it lands.
-    if (await isSyncRunningElsewhere()) return;
-    // 1.6.32, option 7: memory is already hot — skip the re-derive
-    // entirely. Correctness is covered without it: the guide reads
-    // the index path (warm) with the new hidden sets, and the memo
-    // path filters with _isHiddenCategory at read time, so a stale
-    // memo can never show a hidden row; un-hidden rows come back
-    // through the index or the next sync. The memos refresh on the
-    // next cool toggle or sync.
-    if (IptvHeavyWorkGate.isMemoryHot) return;
+    // 1.6.34 (P-08): the live memo is re-derived even while a catalog
+    // sync is running in another isolate or memory is hot — the old
+    // skips left it stale after an un-hide until the next cool toggle
+    // or sync, so un-hidden rows did not come back (the guide's cold
+    // fallback reads the memo). The re-derive reads the DISK file, not
+    // the index, so it cannot fight the sync's SQLite writes; it pays
+    // a main-isolate parse at a bad time, and while memory is hot that
+    // parse may itself be evicted — the tradeoff the "build
+    // everything" pick accepts for a memo that is never stale. The
+    // sync's own landing still drops the memos (see
+    // [_refreshCatalogAfterSync]), so a re-derive racing a landing is
+    // benign either way: whichever lands last, the next read is fresh
+    // (and the memo-fresher check guards a memo older than the index).
+    // The VOD/series memos are still only DROPPED (option 9, below),
+    // never re-derived: their re-derive is the 199k-row parse the
+    // freeze came from, and the index path serves those reads anyway.
     // 1.6.32, option 9: the VOD/series memos are DROPPED on a filter
     // change instead of re-derived — the same drop-not-republish shape
     // as [_refreshCatalogAfterSync]: re-deriving them deserializes up
@@ -1375,6 +1396,47 @@ class IptvClient implements MediaServerClient {
     return seriesSyncAllowedForTier(DeviceTier.survival, onWifi: onWifi, charging: false);
   }
 
+  /// 1.6.34 (P-15): on T0/T1 a COLD series type is DEFERRED on first
+  /// run instead of synced with live + movies — series is the largest
+  /// catalog (46k rows) and the low tiers cannot afford it in the
+  /// first-run window. The follow-up syncs it in the background after
+  /// the first frame; it still lands. Warm series (already landed
+  /// once) is never deferred. Pure for tests.
+  @visibleForTesting
+  static bool shouldDeferSeriesFirstRun({required DeviceTier tier, required bool seriesCold}) {
+    if (!seriesCold) return false;
+    return tier == DeviceTier.survival || tier == DeviceTier.low;
+  }
+
+  /// Delay before the deferred-series follow-up runs (1.6.34, P-15):
+  /// long enough for the first frame to land and the UI to settle
+  /// after the first-run sync. Test-overridable.
+  @visibleForTesting
+  static Duration deferredSeriesFollowUpDelay = const Duration(seconds: 5);
+
+  /// Run the series sync deferred by P-15 (1.6.34): waits for the
+  /// first frame to land, then syncs series in the background. The
+  /// follow-up run does not defer series again, so the deferred series
+  /// actually lands instead of deferring forever. Best-effort: a
+  /// failed follow-up leaves series cold, and the next bind/manual
+  /// sync picks it up (the deferral only fires on a cold first run).
+  Future<void> _syncDeferredSeriesFollowUp() async {
+    await Future<void>.delayed(deferredSeriesFollowUpDelay);
+    try {
+      await _runIndexWrite(
+        () => _syncSearchIndex(
+          force: false,
+          retryTransportErrors: false,
+          cancelOnBackground: false,
+          deferSeriesFirstRun: false,
+          scheduleDeferredSeriesFollowUp: false,
+        ),
+      );
+    } catch (_) {
+      // Best-effort (see above).
+    }
+  }
+
   Future<IptvSearchSyncResult> syncSearchIndex({
     bool force = false,
     void Function(IptvSearchSyncProgress)? onProgress,
@@ -1387,15 +1449,86 @@ class IptvClient implements MediaServerClient {
     // 1.6.11 (background sync): a user-initiated sync is NOT cancelled
     // when the app backgrounds — locking the phone mid-load used to
     // abort the fetch and report the load "failed".
+    // 1.6.34 (P-02): a forced (manual) sync must not re-download the
+    // whole catalog while a bind sync is already running — the double
+    // download the refresh-lag paper ranked first. When a sync is in
+    // flight (same isolate, or another isolate's stamp), join it
+    // instead: wait for it to land, then re-evaluate per type
+    // non-forced, so types it just landed read up-to-date and only
+    // still-due types fetch. A manual tap while nothing is running
+    // still forces, exactly as before. The join is bounded (a stale
+    // stamp or a run longer than the bound fails open to the old
+    // forced shape) and abort-aware (Cancel stops the wait).
+    var joinedSync = false;
+    if (force) {
+      joinedSync = await _joinInFlightSync(abort: abort, onProgress: onProgress);
+    }
     return _runIndexWrite(
       () => _syncSearchIndex(
-        force: force,
+        force: force && !joinedSync,
         onProgress: onProgress,
         abort: abort,
         retryTransportErrors: force,
         cancelOnBackground: false,
       ),
     );
+  }
+
+  /// Wait for a catalog sync already in flight to land, so the caller
+  /// can re-evaluate per type instead of re-downloading (1.6.34,
+  /// P-02). Returns true when a sync was joined: a same-isolate
+  /// [_ensureSyncedInFlight] run was awaited (to completion, failure,
+  /// or the bound — the caller's non-forced re-evaluation runs behind
+  /// the index-write mutex either way, so types the run landed are
+  /// still skipped), or another isolate's running stamp cleared.
+  /// Returns false when nothing was running, or when the stamp wait
+  /// hit its bound (fail open — the caller proceeds forced). Throws
+  /// when the caller cancels mid-wait. Emits a 'waiting' progress
+  /// event per type so the manual dialog's rows say what is happening
+  /// instead of spinning silently.
+  static const Duration _joinInFlightSyncBound = Duration(minutes: 15);
+
+  Future<bool> _joinInFlightSync({
+    AbortController? abort,
+    void Function(IptvSearchSyncProgress)? onProgress,
+  }) async {
+    final inFlight = _ensureSyncedInFlight;
+    if (inFlight != null) {
+      try {
+        await Future.any([
+          inFlight,
+          Future<void>.delayed(_joinInFlightSyncBound),
+          if (abort != null) abort.trigger,
+        ]);
+        abort?.throwIfAborted();
+        return true;
+      } catch (_) {
+        // The in-flight run failed — it still ran, so the caller's
+        // non-forced re-evaluation is correct for the types it
+        // landed; the failed ones stay due. An abort rethrows below.
+        abort?.throwIfAborted();
+        return true;
+      }
+    }
+    if (!await isSyncRunningElsewhere()) return false;
+    for (final type in IptvSearchIndex.types) {
+      onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'waiting'));
+    }
+    appLogger.i('IPTV: manual sync joining the sync already running');
+    final deadline = DateTime.now().add(_joinInFlightSyncBound);
+    while (await isSyncRunningElsewhere()) {
+      if (DateTime.now().isAfter(deadline)) {
+        appLogger.w('IPTV: manual sync join timed out — proceeding forced');
+        return false;
+      }
+      abort?.throwIfAborted();
+      await Future.any([
+        Future<void>.delayed(const Duration(seconds: 1)),
+        if (abort != null) abort.trigger,
+      ]);
+      abort?.throwIfAborted();
+    }
+    return true;
   }
 
   /// Background-isolate entry point for the periodic catalog sync (build
@@ -1428,6 +1561,7 @@ class IptvClient implements MediaServerClient {
         intervalHoursOverride: intervalHours,
         skipColdTypes: true,
         backgroundPlaybackCheck: isPlaybackActive,
+        scheduleDeferredSeriesFollowUp: false,
       ),
     );
   }
@@ -1459,6 +1593,356 @@ class IptvClient implements MediaServerClient {
     }
   }
 
+  /// 1.6.34 (P-04): at most two type downloads run at once, and fetch
+  /// starts are paced 200 ms apart — the no-hammering ceiling (user,
+  /// 2026-11-20). The writes stay sequential (live, then movies, then
+  /// series) so live still lands first and the heavy-work gate never
+  /// holds two parses at once. Consts, not tunables: the cap must
+  /// never be raised by a caller or a test.
+  static const int syncFetchConcurrency = 2;
+  static const Duration syncFetchStartPacing = Duration(milliseconds: 200);
+
+  /// Download one type's catalog (1.6.34, P-04): the per-type fetch
+  /// block of [_syncSearchIndex], extracted so the fetch phase can run
+  /// it for several types at once. Categories + catalog download,
+  /// streamed straight to the type's resume file — the main isolate
+  /// never holds the body. Per-call state only (its own resume path,
+  /// its own progress closure), so concurrent fetches do not share
+  /// mutable state; the [XtreamApi] download calls take an explicit
+  /// file path and per-type fields. Returns the outcome; never throws
+  /// except on cancellation.
+  Future<_TypeFetchOutcome> _fetchTypeCatalog({
+    required String type,
+    required AbortController abort,
+    required bool retryTransportErrors,
+    void Function(IptvSearchSyncProgress)? onProgress,
+  }) async {
+    onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'fetching'));
+    // 1.6.34 (P-05): per-type fetch timing — categories + catalog
+    // download together; the write timing is measured in the write
+    // phase below.
+    final fetchSw = Stopwatch()..start();
+    // R4: panel requests attempted (categories + catalog per type
+    // that reaches the fetch). A forced sync's R2.4 retry re-fetches
+    // without incrementing.
+    var requests = 0;
+    try {
+      // R2.4: each fetch gets its own retry (categories and catalog
+      // separately) — retrying the whole per-type block would cost
+      // +2 requests instead of +1.
+      requests++;
+      final categories = await _fetchWithTransportRetry(
+        () => _fetchCategoriesFor(type, abort),
+        retry: retryTransportErrors,
+        abort: abort,
+      );
+      final tempPath = _syncResumePath(type);
+      // 1.6.11 (background sync): download byte progress, throttled
+      // to ~1 s / 5% so the dialog and the foreground-service
+      // notification move without a setState per chunk.
+      var lastByteReportMs = 0;
+      var lastByteReported = 0;
+      void reportDownloadProgress(int received, int? total) {
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        final totalKnown = total != null && total > 0;
+        final crossedPercent = totalKnown && (received * 20 ~/ total) != (lastByteReported * 20 ~/ total);
+        if (nowMs - lastByteReportMs < 1000 && !crossedPercent) return;
+        lastByteReportMs = nowMs;
+        lastByteReported = received;
+        onProgress?.call(
+          IptvSearchSyncProgress(
+            type: type,
+            phase: 'fetching',
+            receivedBytes: received,
+            totalBytes: total,
+          ),
+        );
+      }
+
+      switch (type) {
+        case IptvSearchIndex.typeLive:
+          requests++;
+          await _fetchWithTransportRetry(
+            () => _xtreamApi.getLiveStreamsToFile(
+              filePath: tempPath,
+              abortTrigger: abort.trigger,
+              resume: true,
+              onProgress: reportDownloadProgress,
+            ),
+            retry: retryTransportErrors,
+            abort: abort,
+          );
+        case IptvSearchIndex.typeMovie:
+          requests++;
+          await _fetchWithTransportRetry(
+            () => _xtreamApi.getVodStreamsToFile(
+              filePath: tempPath,
+              abortTrigger: abort.trigger,
+              resume: true,
+              onProgress: reportDownloadProgress,
+            ),
+            retry: retryTransportErrors,
+            abort: abort,
+          );
+        default:
+          requests++;
+          await _fetchWithTransportRetry(
+            () => _xtreamApi.getSeriesToFile(
+              filePath: tempPath,
+              abortTrigger: abort.trigger,
+              resume: true,
+            ),
+            retry: retryTransportErrors,
+            abort: abort,
+          );
+      }
+      fetchSw.stop();
+      return (
+        type: type,
+        categories: categories,
+        catalogFilePath: tempPath,
+        fetchMs: fetchSw.elapsedMilliseconds,
+        requests: requests,
+        skipReason: null,
+        isTransportError: false,
+      );
+    } on XtreamCatalogTooLargeException {
+      fetchSw.stop();
+      // 1.6.34 (P-05): the fetch died before any bytes landed.
+      appLogger.i('IPTV: catalog sync fetch for $type refused as oversize after ${fetchSw.elapsedMilliseconds}ms');
+      return (
+        type: type,
+        categories: null,
+        catalogFilePath: null,
+        fetchMs: fetchSw.elapsedMilliseconds,
+        requests: requests,
+        skipReason: 'oversize',
+        isTransportError: false,
+      );
+    } catch (e) {
+      fetchSw.stop();
+      // Cancellation is not a fetch failure: rethrow so the sync
+      // aborts instead of recording a spurious 'failed' and
+      // returning a partial result.
+      if (e is MediaServerHttpException && e.isCancellation) rethrow;
+      appLogger.w(
+        'IPTV: catalog sync fetch failed for $type after ${fetchSw.elapsedMilliseconds}ms',
+        error: e,
+      );
+      return (
+        type: type,
+        categories: null,
+        catalogFilePath: null,
+        fetchMs: fetchSw.elapsedMilliseconds,
+        requests: requests,
+        skipReason: 'failed',
+        isTransportError: _isTransportError(e),
+      );
+    }
+  }
+
+  /// Guard + write one fetched type (1.6.34, P-04): the per-type
+  /// write block of [_syncSearchIndex], extracted so Phase C can
+  /// chain the writes (each type's write runs when its fetch lands
+  /// AND the previous type's write finished). Never throws: a
+  /// fetch-skipped type is recorded and a write failure is recorded
+  /// as 'failed', exactly as the old inline loop did.
+  Future<void> _writeTypeOutcome({
+    required String type,
+    required _TypeFetchOutcome outcome,
+    required IptvSearchIndex index,
+    required String dbPath,
+    required int nowMs,
+    required Map<String, int> rows,
+    required Map<String, String> skipped,
+    required Set<String> partialTypes,
+    required Set<String> consumedResumePaths,
+    required Set<String> transportFailed,
+    void Function(IptvSearchSyncProgress)? onProgress,
+  }) async {
+    if (outcome.skipReason != null) {
+      if (outcome.isTransportError) transportFailed.add(type);
+      skipped[type] = outcome.skipReason!;
+      onProgress?.call(
+        IptvSearchSyncProgress(type: type, phase: 'skipped', reason: outcome.skipReason),
+      );
+      return;
+    }
+    // A landed outcome always carries both — enforced by
+    // [_fetchTypeCatalog]'s success return.
+    final categories = outcome.categories!;
+    final catalogFilePath = outcome.catalogFilePath!;
+
+    // Sync-time guards (the choke point): empty keeps the old rows;
+    // partial (< half the indexed rows, when the index has rows)
+    // keeps the old rows — a partial list must never overwrite a
+    // good index (the P5a class). 1.2.10: the partial guard runs
+    // inside the one-parse isolate job now — it parses once and
+    // compares its own visible count against the indexed visible
+    // count, so the main isolate never needs the parsed list. The
+    // main isolate keeps only the cheap pre-check: a zero-byte
+    // file is an empty response without an isolate round trip (a
+    // file that cannot be read is treated the same — the isolate
+    // would refuse it as empty anyway). 1.2.4: the comparison is
+    // VISIBLE-against-visible — the index holds visible rows only
+    // now, so comparing the full fetch against the visible land
+    // would never fire (a half-catalog fetch would pass as complete
+    // and clobber a good index). The denominator is the rows the
+    // index holds for categories visible RIGHT NOW (not the count
+    // from the last sync): when the hidden set grew since, the
+    // stored count includes rows that are hidden now, and comparing
+    // the fresh visible fetch against it would cry partial on a
+    // complete fetch and leave the type due forever.
+    final catalogPath = catalogFilePath;
+    var catalogBytes = 0;
+    try {
+      catalogBytes = await File(catalogPath).length();
+    } catch (_) {
+      catalogBytes = 0;
+    }
+    if (catalogBytes == 0) {
+      skipped[type] = 'empty-response';
+      onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'empty-response'));
+      return;
+    }
+    final visibleIndexed = index.visibleRowCount(
+      connection.id,
+      type,
+      _pruneHiddenCategoryIds,
+      _pruneHiddenCategoryInitials,
+    );
+    onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'writing'));
+    // 1.6.34 (P-05): per-type write timing — started inside the
+    // gate callback so queue time is not counted as write time.
+    final writeSw = Stopwatch();
+    try {
+      final result = await IptvHeavyWorkGate.instance.run(
+        () async {
+          writeSw.start();
+          try {
+            return await compute(
+              writeIndexTypeInBackground,
+              IndexWriteParams(
+            dbPath: dbPath,
+            connectionId: connection.id,
+            type: type,
+            // 1.2.10 (one-parse sync): the isolate reads the streamed
+            // file itself — the body is never copied across the port
+            // (the seed path has done this since 1.2.6; the sync
+            // joins it). catalogBody is ignored when the path is set.
+            catalogBody: '',
+            catalogFilePath: catalogPath,
+            categoryBody: jsonEncode(categories.map((c) => c.toJson()).toList()),
+            syncStampMs: nowMs,
+            // The row-count partial guard's denominator (see above).
+            visibleIndexed: visibleIndexed,
+            // The visible disk file's destination — the isolate
+            // writes it after a complete land.
+            diskFilePath: await _catalogCache.writeFilePath(
+              connection.id,
+              _diskDatasetFor(type),
+            ),
+            // 1.2.4 (catalog memory, the owner's prune decision): the
+            // isolate lands VISIBLE rows only and deletes the
+            // hidden rows it already holds for this connection.
+            // The sets go through the prune switch ([pruneHiddenCatalogRows]).
+            hiddenCategoryIds: _pruneHiddenCategoryIds.toList(),
+            hiddenCategoryInitials: _pruneHiddenCategoryInitials.toList(),
+              ),
+            );
+          } finally {
+            writeSw.stop();
+          }
+        },
+        // 1.2.18 S-4b: trim before the isolate job starts (at
+        // job-start time, inside the gate — not at queue time).
+        onStart: () => _trimCachesIfHot('catalog sync'),
+      );
+      // 1.2.19 (L-4): the isolate job read the file — a later run
+      // must fetch it fresh, not resume a consumed file.
+      consumedResumePaths.add(catalogPath);
+      if (result.skippedReason != null) {
+        skipped[type] = result.skippedReason!;
+        onProgress?.call(
+          IptvSearchSyncProgress(type: type, phase: 'skipped', reason: result.skippedReason),
+        );
+        // Series fix (v1.0.16): the numbers that separate a
+        // panel-truncated list (C1: dropped 0) from a parse-dropped
+        // one (C3: dropped > 0) on the next failure.
+        if (result.skippedReason == 'partial-kept') {
+          appLogger.i(
+            'IPTV: catalog sync skipped $type as partial-kept (covered ${result.coveredCategories}/${result.totalCategories} categories, ${result.droppedRows} rows dropped in parse, ${result.hiddenSkipped} in hidden categories)',
+          );
+        }
+        return;
+      }
+      rows[type] = result.rowCount;
+      // 1.6.34 (P-05): per-type timing + bytes — download ms +
+      // catalog bytes + write ms. The categories fetch is small
+      // and untracked; the catalog file is the download.
+      appLogger.i(
+        'IPTV: catalog sync $type downloaded ${catalogBytes}B in ${outcome.fetchMs}ms, wrote ${result.rowCount} rows in ${result.batches} batches in ${writeSw.elapsedMilliseconds}ms',
+      );
+      if (result.partial) {
+        partialTypes.add(type);
+        appLogger.i(
+          'IPTV: catalog sync landed $type partial (${result.rowCount} rows, ${result.coveredCategories}/${result.totalCategories} categories, ${result.droppedRows} rows dropped in parse) - the type stays due for refetch, the disk catalog is untouched',
+        );
+      } else if (result.hiddenSkipped > 0) {
+        appLogger.i(
+          'IPTV: catalog sync landed $type (${result.rowCount} rows, ${result.hiddenSkipped} in hidden categories — pruned at write time, not stored)',
+        );
+      }
+      // Build #23 (startup rule): the sync is the ONLY catalog
+      // fetcher, so it also refreshes the disk catalog the browse
+      // screens and the warm-ups read from (raw body + category
+      // list), and drops the memoized futures so the session sees
+      // the fresh rows without a restart (1.2.18 S-2: the memo is
+      // re-derived from the fresh disk file on demand, not
+      // republished from the isolate). A guarded-out sync leaves
+      // both the disk file and the index untouched. A disk-write
+      // failure never fails the sync — the index is the primary
+      // store.
+      //
+      // Series fix (v1.0.16): a partial land is INDEX-ONLY — it
+      // never overwrites the disk catalog and never publishes into
+      // the memoized catalog (P5a: a 635-row partial list must not
+      // clobber a 46,527-row good disk file). The disk file only
+      // ever gets complete lists; the next sync (the type stays
+      // due) refreshes it when the panel answers in full.
+      if (!result.partial) {
+        // 1.2.10 (one-parse sync): the visible disk file was already
+        // written by the isolate job (complete lands only) — the
+        // main isolate only writes the small category file and
+        // drops the memo so the next consumer re-derives it from
+        // the fresh disk file (1.2.18 S-2). The listing consumers
+        // still filter hidden categories at read time (defence for
+        // a stale full memo), and a direct id resolve
+        // (favourite/resume) falls back to the index. A disk-write
+        // failure is flagged on the result and never fails the
+        // sync — the index is the primary store.
+        if (result.diskWriteFailed) {
+          appLogger.w('IPTV: catalog sync disk write failed for $type (index land stands)');
+        }
+        try {
+          await _catalogCache.write(
+            connection.id,
+            _diskCategoryDatasetFor(type),
+            jsonEncode(categories.map((c) => c.toJson()).toList()),
+          );
+        } catch (e) {
+          appLogger.w('IPTV: catalog sync category write failed for $type', error: e);
+        }
+        _refreshCatalogAfterSync(type, categories);
+      }
+      onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'done', rows: result.rowCount, partial: result.partial));
+    } catch (e) {
+      appLogger.w('IPTV: catalog sync write failed for $type', error: e);
+      skipped[type] = 'failed';
+      onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'failed'));
+    }
+  }
+
   Future<IptvSearchSyncResult> _syncSearchIndex({
     required bool force,
     void Function(IptvSearchSyncProgress)? onProgress,
@@ -1474,6 +1958,15 @@ class IptvClient implements MediaServerClient {
     // the WorkManager path is governed by the platform's onTaskStopped
     // instead, and any future opportunistic caller keeps the old shape.
     bool cancelOnBackground = true,
+    // 1.6.34 (P-15): when false, a cold series type syncs in this run
+    // instead of deferring — the deferred-series follow-up's escape
+    // hatch, so the follow-up actually lands series. Defaults true.
+    bool deferSeriesFirstRun = true,
+    // 1.6.34 (P-15): when false, this run never schedules the
+    // deferred-series follow-up — the background sync entry point
+    // opts out (a background job must not pay for a first sync).
+    // Defaults true: the bind and manual paths schedule it.
+    bool scheduleDeferredSeriesFollowUp = true,
   }) async {
     // L-20: refuse the sync outright below 200 MB free, before any
     // fetch, temp dir, or index touch — a sync that fails mid-write
@@ -1505,12 +1998,21 @@ class IptvClient implements MediaServerClient {
         IptvSearchIndex.typeSeries: 'failed',
       });
     }
+    // 1.6.34 (P-05): per-type timing + bytes for the sync path — the
+    // data every other sync decision needs (P-03 vs P-04, batch sizes,
+    // tunnel vs write bottleneck). Logged per type below and summed in
+    // the run summary; the Streamer refresh log alone cannot separate
+    // download time from write time.
+    final runSw = Stopwatch()..start();
     final rows = <String, int>{};
     final skipped = <String, String>{};
     final transportFailed = <String>{};
     // Series fix (v1.0.16): types that landed a partial list on a cold
     // index — searchable now, still due for refetch. Not a failure.
     final partialTypes = <String>{};
+    // 1.6.34 (P-15): set when the loop defers series on first run —
+    // the follow-up is scheduled after the loop.
+    var seriesDeferred = false;
     // R4: panel requests attempted (categories + catalog per type that
     // reaches the fetch). Exact on the background path (no retries); a
     // forced sync's R2.4 retry re-fetches without incrementing.
@@ -1600,6 +2102,15 @@ class IptvClient implements MediaServerClient {
     // the finally below; a crash leaves a stamp that ages out in 30 min.
     await _writeSyncRunningStamp();
     try {
+      // 1.6.34 (P-04): the three type downloads run in parallel (hard
+      // cap 2, 200 ms pacing between starts) while the writes stay
+      // sequential in live -> movies -> series order, so live still
+      // lands first (P-14). Phase A decides which types are due (the
+      // checks are cheap and read state this run does not change
+      // before the writes, so deciding up front is equivalent to
+      // deciding per type); Phase B downloads the due types; Phase C
+      // guards + writes + refreshes in order.
+      final dueTypes = <String>[];
       for (final type in IptvSearchIndex.types) {
         abort.throwIfAborted();
         final lastSync = index.lastSync(connection.id)[type];
@@ -1644,6 +2155,25 @@ class IptvClient implements MediaServerClient {
           onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'tier-skipped'));
           continue;
         }
+        // 1.6.34 (P-15): on T0/T1 a cold series type is DEFERRED on
+        // first run — live + movies land now, series follows in the
+        // background after the first frame. A deferral, not a failure:
+        // 'deferred' is excluded from
+        // [IptvSearchSyncResult.hasFailure], and the dialog maps it to
+        // plain words. The check runs only when series is actually due
+        // (the up-to-date/cold skips above already continued) and the
+        // tier rule above allowed it.
+        if (deferSeriesFirstRun &&
+            type == IptvSearchIndex.typeSeries &&
+            shouldDeferSeriesFirstRun(
+              tier: DevicePerformance.currentTier,
+              seriesCold: indexedCount == 0 && lastSync == null,
+            )) {
+          skipped[type] = 'deferred';
+          onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'deferred'));
+          seriesDeferred = true;
+          continue;
+        }
         // 1.2.19 (L-4/L-42): metered guard — a large type is deferred
         // on a metered link when the user turned on Wi-Fi-only large
         // downloads. A forced (manual) refresh is the user asking
@@ -1655,253 +2185,122 @@ class IptvClient implements MediaServerClient {
           onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'metered-deferred'));
           continue;
         }
-        // Build #28: background work waits while a stream is playing.
-        // A forced (manual) refresh is the user asking explicitly, so
-        // it is not gated. Otherwise the sync pauses between types and
-        // resumes when playback stops — it is not abandoned. The abort
-        // races the wait, so a background cancel still stops a sync
-        // that is parked on playback.
-        if (!force) await _waitForIdleUnlessAborted(abort, backgroundPlaybackCheck: backgroundPlaybackCheck);
-        onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'fetching'));
-        List<XtreamCategory> categories;
-        // 1.2.10 (one-parse sync): the catalog streams straight to a
-        // temp file — the main isolate never holds the body String or
-        // the parsed list. The file path is what the isolate job gets;
-        // the guards and the lands all run inside that one job.
-        String? catalogFilePath;
+        dueTypes.add(type);
+      }
+      // Phase B — download the due types in parallel (1.6.34, P-04):
+      // at most [syncFetchConcurrency] fetches run at once, starts are
+      // paced [syncFetchStartPacing] apart, and the playback park runs
+      // before each fetch START — the same park the old per-type loop
+      // ran before each type's fetch, so a fetch still never starts
+      // while a stream is playing. The starter drains every launched
+      // fetch before an abort/bail propagates, so no un-awaited fetch
+      // can error later.
+      // The fetch futures, index-aligned with [dueTypes] (the starter
+      // appends in due order): Phase C awaits each type's own future.
+      final fetchFutures = <Future<_TypeFetchOutcome>>[];
+      if (dueTypes.isNotEmpty) {
         try {
-          // R2.4: each fetch gets its own retry (categories and catalog
-          // separately) — retrying the whole per-type block would cost
-          // +2 requests instead of +1.
-          attempts++;
-          categories = await _fetchWithTransportRetry(
-            () => _fetchCategoriesFor(type, abort),
-            retry: retryTransportErrors,
-            abort: abort,
-          );
-          final tempPath = _syncResumePath(type);
-          // 1.6.11 (background sync): download byte progress, throttled
-          // to ~1 s / 5% so the dialog and the foreground-service
-          // notification move without a setState per chunk.
-          var lastByteReportMs = 0;
-          var lastByteReported = 0;
-          void reportDownloadProgress(int received, int? total) {
-            final nowMs = DateTime.now().millisecondsSinceEpoch;
-            final totalKnown = total != null && total > 0;
-            final crossedPercent = totalKnown && (received * 20 ~/ total) != (lastByteReported * 20 ~/ total);
-            if (nowMs - lastByteReportMs < 1000 && !crossedPercent) return;
-            lastByteReportMs = nowMs;
-            lastByteReported = received;
-            onProgress?.call(
-              IptvSearchSyncProgress(
-                type: type,
-                phase: 'fetching',
-                receivedBytes: received,
-                totalBytes: total,
+          final active = <Future<_TypeFetchOutcome>>{};
+          DateTime? lastFetchStart;
+          for (final type in dueTypes) {
+            // Build #28: background work waits while a stream is
+            // playing. A forced (manual) refresh is the user asking
+            // explicitly, so it is not gated. Otherwise the sync
+            // pauses before a fetch starts and resumes when playback
+            // stops — it is not abandoned. The abort races the wait,
+            // so a background cancel still stops a sync that is
+            // parked on playback.
+            if (!force) {
+              await _waitForIdleUnlessAborted(abort, backgroundPlaybackCheck: backgroundPlaybackCheck);
+            }
+            while (active.length >= syncFetchConcurrency) {
+              await Future.any(active.map((f) => f.then((_) {}).catchError((_) {})));
+            }
+            if (lastFetchStart != null) {
+              final sinceLastStart = DateTime.now().difference(lastFetchStart);
+              if (sinceLastStart < syncFetchStartPacing) {
+                final remaining = syncFetchStartPacing - sinceLastStart;
+                await Future.any([
+                  Future<void>.delayed(remaining),
+                  abort.trigger,
+                ]);
+                abort.throwIfAborted();
+              }
+            }
+            lastFetchStart = DateTime.now();
+            final fetchFuture = _fetchTypeCatalog(
+              type: type,
+              abort: abort,
+              retryTransportErrors: retryTransportErrors,
+              onProgress: onProgress,
+            );
+            active.add(fetchFuture);
+            // Both paths remove the slot — and the derived future
+            // never errors (both callbacks swallow), so `unawaited`
+            // cannot surface a late fetch error as unhandled.
+            unawaited(
+              fetchFuture.then<void>(
+                (_) => active.remove(fetchFuture),
+                onError: (_) => active.remove(fetchFuture),
               ),
             );
+            fetchFutures.add(fetchFuture);
           }
-
-          switch (type) {
-            case IptvSearchIndex.typeLive:
-              attempts++;
-              await _fetchWithTransportRetry(
-                () => _xtreamApi.getLiveStreamsToFile(
-                  filePath: tempPath,
-                  abortTrigger: abort?.trigger,
-                  resume: true,
-                  onProgress: reportDownloadProgress,
-                ),
-                retry: retryTransportErrors,
-                abort: abort,
-              );
-            case IptvSearchIndex.typeMovie:
-              attempts++;
-              await _fetchWithTransportRetry(
-                () => _xtreamApi.getVodStreamsToFile(
-                  filePath: tempPath,
-                  abortTrigger: abort?.trigger,
-                  resume: true,
-                  onProgress: reportDownloadProgress,
-                ),
-                retry: retryTransportErrors,
-                abort: abort,
-              );
-            default:
-              attempts++;
-              await _fetchWithTransportRetry(
-                () => _xtreamApi.getSeriesToFile(
-                  filePath: tempPath,
-                  abortTrigger: abort?.trigger,
-                  resume: true,
-                ),
-                retry: retryTransportErrors,
-                abort: abort,
-              );
-          }
-          catalogFilePath = tempPath;
-        } on XtreamCatalogTooLargeException {
-          skipped[type] = 'oversize';
-          onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'oversize'));
-          continue;
+          // The fetches settle in Phase C: each type's write step
+          // awaits its own fetch future, so a slow type never holds
+          // back an earlier type's landing (P-14).
         } catch (e) {
-          appLogger.w('IPTV: catalog sync fetch failed for $type', error: e);
-          if (_isTransportError(e)) transportFailed.add(type);
-          skipped[type] = 'failed';
-          onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'failed'));
-          continue;
+          // Every launched fetch must settle before the abort/bail
+          // propagates — a late fetch error after this point would
+          // surface as an unhandled async error.
+          await Future.wait(fetchFutures.map((f) => f.then((_) {}).catchError((_) {})));
+          rethrow;
         }
-        // Sync-time guards (the choke point): empty keeps the old rows;
-        // partial (< half the indexed rows, when the index has rows)
-        // keeps the old rows — a partial list must never overwrite a
-        // good index (the P5a class). 1.2.10: the partial guard runs
-        // inside the one-parse isolate job now — it parses once and
-        // compares its own visible count against the indexed visible
-        // count, so the main isolate never needs the parsed list. The
-        // main isolate keeps only the cheap pre-check: a zero-byte
-        // file is an empty response without an isolate round trip (a
-        // file that cannot be read is treated the same — the isolate
-        // would refuse it as empty anyway). 1.2.4: the comparison is
-        // VISIBLE-against-visible — the index holds visible rows only
-        // now, so comparing the full fetch against the visible land
-        // would never fire (a half-catalog fetch would pass as complete
-        // and clobber a good index). The denominator is the rows the
-        // index holds for categories visible RIGHT NOW (not the count
-        // from the last sync): when the hidden set grew since, the
-        // stored count includes rows that are hidden now, and comparing
-        // the fresh visible fetch against it would cry partial on a
-        // complete fetch and leave the type due forever.
-        final catalogPath = catalogFilePath;
-        var catalogBytes = 0;
+      }
+      // Phase C — guard + write, chained in live -> movies ->
+      // series order (1.6.34, P-04): a type's write runs as soon as
+      // its fetch lands AND the previous type's write finished, so
+      // live still lands first (P-14) even though the fetches
+      // overlap — the writes stay sequential and the heavy-work gate
+      // never holds two parses at once.
+      if (dueTypes.isNotEmpty) {
+        final writeFutures = <Future<void>>[];
+        // The step closure cannot use the promoted `abort` (promotion
+        // does not survive a closure capture) — capture the non-null
+        // controller once.
+        final abortController = abort;
         try {
-          catalogBytes = await File(catalogPath).length();
-        } catch (_) {
-          catalogBytes = 0;
-        }
-        if (catalogBytes == 0) {
-          skipped[type] = 'empty-response';
-          onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'empty-response'));
-          continue;
-        }
-        final visibleIndexed = index.visibleRowCount(
-          connection.id,
-          type,
-          _pruneHiddenCategoryIds,
-          _pruneHiddenCategoryInitials,
-        );
-        onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'writing'));
-        try {
-          final result = await IptvHeavyWorkGate.instance.run(
-            () async => compute(
-              writeIndexTypeInBackground,
-              IndexWriteParams(
+          for (var i = 0; i < dueTypes.length; i++) {
+            final type = dueTypes[i];
+            final fetchFuture = fetchFutures[i];
+            Future<void> step() async {
+              final outcome = await fetchFuture;
+              attempts += outcome.requests;
+              if (i > 0) await writeFutures[i - 1];
+              abortController.throwIfAborted();
+              await _writeTypeOutcome(
+                type: type,
+                outcome: outcome,
+                index: index,
                 dbPath: dbPath,
-                connectionId: connection.id,
-                type: type,
-                // 1.2.10 (one-parse sync): the isolate reads the streamed
-                // file itself — the body is never copied across the port
-                // (the seed path has done this since 1.2.6; the sync
-                // joins it). catalogBody is ignored when the path is set.
-                catalogBody: '',
-                catalogFilePath: catalogPath,
-                categoryBody: jsonEncode(categories.map((c) => c.toJson()).toList()),
-                syncStampMs: nowMs,
-                // The row-count partial guard's denominator (see above).
-                visibleIndexed: visibleIndexed,
-                // The visible disk file's destination — the isolate
-                // writes it after a complete land.
-                diskFilePath: await _catalogCache.writeFilePath(
-                  connection.id,
-                  _diskDatasetFor(type),
-                ),
-                // 1.2.4 (catalog memory, the owner's prune decision): the
-                // isolate lands VISIBLE rows only and deletes the
-                // hidden rows it already holds for this connection.
-                // The sets go through the prune switch ([pruneHiddenCatalogRows]).
-                hiddenCategoryIds: _pruneHiddenCategoryIds.toList(),
-                hiddenCategoryInitials: _pruneHiddenCategoryInitials.toList(),
-              ),
-            ),
-            // 1.2.18 S-4b: trim before the isolate job starts (at
-            // job-start time, inside the gate — not at queue time).
-            onStart: () => _trimCachesIfHot('catalog sync'),
-          );
-          // 1.2.19 (L-4): the isolate job read the file — a later run
-          // must fetch it fresh, not resume a consumed file.
-          consumedResumePaths.add(catalogPath);
-          if (result.skippedReason != null) {
-            skipped[type] = result.skippedReason!;
-            onProgress?.call(
-              IptvSearchSyncProgress(type: type, phase: 'skipped', reason: result.skippedReason),
-            );
-            // Series fix (v1.0.16): the numbers that separate a
-            // panel-truncated list (C1: dropped 0) from a parse-dropped
-            // one (C3: dropped > 0) on the next failure.
-            if (result.skippedReason == 'partial-kept') {
-              appLogger.i(
-                'IPTV: catalog sync skipped $type as partial-kept (covered ${result.coveredCategories}/${result.totalCategories} categories, ${result.droppedRows} rows dropped in parse, ${result.hiddenSkipped} in hidden categories)',
+                nowMs: nowMs,
+                rows: rows,
+                skipped: skipped,
+                partialTypes: partialTypes,
+                consumedResumePaths: consumedResumePaths,
+                transportFailed: transportFailed,
+                onProgress: onProgress,
               );
             }
-            continue;
+            writeFutures.add(step());
           }
-          rows[type] = result.rowCount;
-          if (result.partial) {
-            partialTypes.add(type);
-            appLogger.i(
-              'IPTV: catalog sync landed $type partial (${result.rowCount} rows, ${result.coveredCategories}/${result.totalCategories} categories, ${result.droppedRows} rows dropped in parse) - the type stays due for refetch, the disk catalog is untouched',
-            );
-          } else if (result.hiddenSkipped > 0) {
-            appLogger.i(
-              'IPTV: catalog sync landed $type (${result.rowCount} rows, ${result.hiddenSkipped} in hidden categories — pruned at write time, not stored)',
-            );
-          }
-          // Build #23 (startup rule): the sync is the ONLY catalog
-          // fetcher, so it also refreshes the disk catalog the browse
-          // screens and the warm-ups read from (raw body + category
-          // list), and drops the memoized futures so the session sees
-          // the fresh rows without a restart (1.2.18 S-2: the memo is
-          // re-derived from the fresh disk file on demand, not
-          // republished from the isolate). A guarded-out sync leaves
-          // both the disk file and the index untouched. A disk-write
-          // failure never fails the sync — the index is the primary
-          // store.
-          //
-          // Series fix (v1.0.16): a partial land is INDEX-ONLY — it
-          // never overwrites the disk catalog and never publishes into
-          // the memoized catalog (P5a: a 635-row partial list must not
-          // clobber a 46,527-row good disk file). The disk file only
-          // ever gets complete lists; the next sync (the type stays
-          // due) refreshes it when the panel answers in full.
-          if (!result.partial) {
-            // 1.2.10 (one-parse sync): the visible disk file was already
-            // written by the isolate job (complete lands only) — the
-            // main isolate only writes the small category file and
-            // drops the memo so the next consumer re-derives it from
-            // the fresh disk file (1.2.18 S-2). The listing consumers
-            // still filter hidden categories at read time (defence for
-            // a stale full memo), and a direct id resolve
-            // (favourite/resume) falls back to the index. A disk-write
-            // failure is flagged on the result and never fails the
-            // sync — the index is the primary store.
-            if (result.diskWriteFailed) {
-              appLogger.w('IPTV: catalog sync disk write failed for $type (index land stands)');
-            }
-            try {
-              await _catalogCache.write(
-                connection.id,
-                _diskCategoryDatasetFor(type),
-                jsonEncode(categories.map((c) => c.toJson()).toList()),
-              );
-            } catch (e) {
-              appLogger.w('IPTV: catalog sync category write failed for $type', error: e);
-            }
-            _refreshCatalogAfterSync(type, categories);
-          }
-          onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'done', rows: result.rowCount, partial: result.partial));
+          await Future.wait(writeFutures);
         } catch (e) {
-          appLogger.w('IPTV: catalog sync write failed for $type', error: e);
-          skipped[type] = 'failed';
-          onProgress?.call(IptvSearchSyncProgress(type: type, phase: 'skipped', reason: 'failed'));
+          // A step that threw early (abort, or the previous step's
+          // abort) never awaited its fetch — drain every launched
+          // fetch so a late fetch error cannot surface as unhandled.
+          await Future.wait(fetchFutures.map((f) => f.then((_) {}).catchError((_) {})));
+          rethrow;
         }
       }
       // v1.1.0 (Option B, D1 rule carried over): stamp the catalog
@@ -1934,11 +2333,29 @@ class IptvClient implements MediaServerClient {
           'IPTV: catalog sync did not complete cleanly (skipped=$skipped transportFailed=$transportFailed) - the catalog schema version is not updated, so the next sync retries the repair',
         );
       }
+      // 1.6.34 (P-05): run summary — total wall-clock + per-type
+      // rows/skips, so the first-run sync has one line to quote.
+      runSw.stop();
+      appLogger.i(
+        'IPTV: catalog sync finished in ${runSw.elapsedMilliseconds}ms (rows=$rows skipped=$skipped requests=$attempts)',
+      );
+      if (seriesDeferred && scheduleDeferredSeriesFollowUp) {
+        // 1.6.34 (P-15): the deferred series still lands — in the
+        // background, after the first frame, without competing with
+        // the UI the first run just painted. Scheduled here, after
+        // the loop completed normally: an aborted run never reaches
+        // this line, so a cancelled sync never schedules a follow-up.
+        unawaited(_syncDeferredSeriesFollowUp());
+      }
       return IptvSearchSyncResult(rows: rows, skipped: skipped, transportFailedTypes: transportFailed, requests: attempts, partialTypes: partialTypes);
     } on _BackgroundPlaybackActive {
       // R4 (D4): playback started mid-run — bail with the partial
       // result; the caller maps it to a retry, and the types already
       // synced stay synced.
+      runSw.stop();
+      appLogger.i(
+        'IPTV: catalog sync aborted by playback after ${runSw.elapsedMilliseconds}ms (rows=$rows skipped=$skipped)',
+      );
       return IptvSearchSyncResult(
         rows: rows,
         skipped: skipped,
@@ -6749,8 +7166,13 @@ class IptvClient implements MediaServerClient {
     size ??= defaultListPageSize;
     final offset = start ?? 0;
     if (hubId.contains(_moviesLibraryId)) {
+      // 1.6.34 (P-01): a category hub (`iptv:<library id>:category:<id>`,
+      // built by the categories tab) pages only that category — the
+      // whole-library hub has no segment and keeps the old shape.
+      final categoryId = _categoryIdFromHubId(hubId);
       final page = await _indexBrowsePage(
         IptvSearchIndex.typeMovie,
+        categoryId: categoryId,
         offset: offset,
         limit: size,
       );
@@ -6763,12 +7185,16 @@ class IptvClient implements MediaServerClient {
         return LibraryPage(items: items, totalCount: page.total, offset: offset.clamp(0, page.total));
       }
       final rows = await _filteredVodRows();
-      final items = await _vodPageItems(rows, offset, size);
-      return LibraryPage(items: items, totalCount: rows.length, offset: offset.clamp(0, rows.length));
+      final categoryRows =
+          categoryId == null ? rows : rows.where((s) => s.categoryId == categoryId).toList();
+      final items = await _vodPageItems(categoryRows, offset, size);
+      return LibraryPage(items: items, totalCount: categoryRows.length, offset: offset.clamp(0, categoryRows.length));
     }
     if (hubId.contains(_seriesLibraryId)) {
+      final categoryId = _categoryIdFromHubId(hubId);
       final page = await _indexBrowsePage(
         IptvSearchIndex.typeSeries,
+        categoryId: categoryId,
         offset: offset,
         limit: size,
       );
@@ -6781,10 +7207,25 @@ class IptvClient implements MediaServerClient {
         return LibraryPage(items: items, totalCount: page.total, offset: offset.clamp(0, page.total));
       }
       final rows = await _filteredSeriesRows();
-      final items = await _seriesPageItems(rows, offset, size);
-      return LibraryPage(items: items, totalCount: rows.length, offset: offset.clamp(0, rows.length));
+      final categoryRows =
+          categoryId == null ? rows : rows.where((s) => s.categoryId == categoryId).toList();
+      final items = await _seriesPageItems(categoryRows, offset, size);
+      return LibraryPage(items: items, totalCount: categoryRows.length, offset: offset.clamp(0, categoryRows.length));
     }
     return const LibraryPage(items: [], totalCount: 0);
+  }
+
+  /// The category id encoded in a category hub id
+  /// (`iptv:<library id>:category:<category id>`, built by the
+  /// categories tab), or null for whole-library hubs (1.6.34, P-01).
+  /// A trailing empty segment reads as no category, never as an
+  /// empty-string category id.
+  static String? _categoryIdFromHubId(String hubId) {
+    const marker = ':category:';
+    final at = hubId.indexOf(marker);
+    if (at < 0) return null;
+    final id = hubId.substring(at + marker.length);
+    return id.isEmpty ? null : id;
   }
 
   // Watch state is local-only for IPTV (no server API). markWatched

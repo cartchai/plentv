@@ -78,14 +78,15 @@ void main() {
         hiddenCategoryIds: hiddenCategoryIds,
       );
 
-  IptvClient trexClient() {
+  IptvClient trexClient({XtreamApi? api}) {
     final client = IptvClient.xtream(xtreamConnection: trexConnection());
-    client.testXtreamApi = _VodCategoryFakeApi();
+    client.testXtreamApi = api ?? _VodCategoryFakeApi();
     return client;
   }
 
   Future<({AppDatabase db, ConnectionRegistry registry, MultiServerManager manager, MultiServerProvider provider})> harness({
     List<String> hiddenCategoryIds = const [],
+    XtreamApi? api,
   }) async {
     // ONE database per test: the registry and the profile stack share it
     // (two AppDatabase instances on one executor race — drift warns).
@@ -94,7 +95,7 @@ void main() {
     final registry = ConnectionRegistry(db);
     await registry.upsert(trexConnection(hiddenCategoryIds: hiddenCategoryIds));
     final manager = MultiServerManager();
-    manager.debugRegisterClientForTesting(trexClient());
+    manager.debugRegisterClientForTesting(trexClient(api: api));
     final provider = testMultiServerProvider(manager);
     addTearDown(() {
       provider.dispose();
@@ -312,6 +313,34 @@ void main() {
     expect(storedTrex.hiddenCategoryIds, isEmpty);
   });
 
+  testWidgets('1.6.34 (P-09): the menu opens at once with the provider id, then the name fills in', (tester) async {
+    // A cold panel's category list can take up to 2 s — the menu must
+    // not wait for it. The row opens naming the group by its provider
+    // id (the honest label while the name is unknown) and fills in
+    // with the resolved name when the list lands. On 1.6.33 this test
+    // fails: the menu waits on the list, so after two pumps it is not
+    // on screen at all.
+    final categoriesCompleter = Completer<List<XtreamCategory>>();
+    final api = _VodCategoryFakeApi(vodCategoriesCompleter: categoriesCompleter);
+    final h = await harness(api: api);
+    final menuKey = await pumpIptvMenu(tester, h.provider, h.registry, xtreamMovie(), db: h.db);
+
+    menuKey.currentState!.showContextMenu(tester.element(find.text('picker target')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Category: 2'), findsOneWidget);
+    expect(find.text(t.mediaMenu.fileInfo), findsNothing);
+
+    categoriesCompleter.complete(const [
+      XtreamCategory(id: '1', name: 'EN - Films 1'),
+      XtreamCategory(id: '2', name: 'NF'),
+      XtreamCategory(id: '9', name: 'Boutique'),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('Category: NF'), findsOneWidget);
+    expect(find.text('Category: 2'), findsNothing);
+  });
+
   testWidgets('other menu entries are untouched on an IPTV movie', (tester) async {
     final h = await harness();
     final menuKey = await pumpIptvMenu(tester, h.provider, h.registry, xtreamMovie(), db: h.db);
@@ -371,8 +400,13 @@ void main() {
 }
 
 class _VodCategoryFakeApi extends XtreamApi {
-  _VodCategoryFakeApi()
+  _VodCategoryFakeApi({this.vodCategoriesCompleter})
       : super(serverUrl: 'https://panel.example.com:8080', username: 'user', password: _testPassword);
+
+  /// When set, the VOD category list hangs on this completer instead of
+  /// answering at once (1.6.34, P-09): it stands in for a cold panel
+  /// whose list takes seconds to arrive.
+  final Completer<List<XtreamCategory>>? vodCategoriesCompleter;
 
   @override
   Future<Map<String, dynamic>?> getUserInfo() async => const {'username': 'user', 'status': 'Active'};
@@ -384,11 +418,15 @@ class _VodCategoryFakeApi extends XtreamApi {
       ];
 
   @override
-  Future<List<XtreamCategory>> getVodCategories({Future<void>? abortTrigger}) async => const [
-        XtreamCategory(id: '1', name: 'EN - Films 1'),
-        XtreamCategory(id: '2', name: 'NF'),
-        XtreamCategory(id: '9', name: 'Boutique'),
-      ];
+  Future<List<XtreamCategory>> getVodCategories({Future<void>? abortTrigger}) async {
+    final completer = vodCategoriesCompleter;
+    if (completer != null) return completer.future;
+    return const [
+      XtreamCategory(id: '1', name: 'EN - Films 1'),
+      XtreamCategory(id: '2', name: 'NF'),
+      XtreamCategory(id: '9', name: 'Boutique'),
+    ];
+  }
 
   @override
   Future<List<XtreamCategory>> getSeriesCategories({Future<void>? abortTrigger}) async => const [

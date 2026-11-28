@@ -1069,13 +1069,18 @@ Future<_StartupDependencies> _initializeStartup(SettingsService settings) async 
         DevicePerformance.getInstance(override: settings.read(SettingsService.visualEffects)),
       ).wait;
     });
+    // 1.6.34 (P-16a): time the device-capabilities phase on its own —
+    // the old 'platform-services' mark lumped it with the window
+    // manager, certificate trust and storage, so a slow TV-detection
+    // or tier probe could not be told apart from a slow storage open.
+    markStartupPhase('device-capabilities');
 
     if (userAuthorities != null) {
       await _optionalGatePhase(StartupPhase.certificateTrust, () => userAuthorities);
     }
 
     final storage = await _gatePhase(StartupPhase.storage, StorageService.getInstance);
-    markStartupPhase('platform-services');
+    markStartupPhase('storage');
 
     AndroidExitDiagnostics.markStartupPhase(AndroidStartupPhase.databaseOpenStarted);
     final databaseBootstrap = await _gatePhase(
@@ -1088,7 +1093,12 @@ Future<_StartupDependencies> _initializeStartup(SettingsService settings) async 
     );
     openedDatabase = databaseBootstrap.database;
     AndroidExitDiagnostics.markStartupPhase(AndroidStartupPhase.databaseReady);
-    markStartupPhase('database-recovery');
+    // 1.6.34 (P-16a): this mark is the database OPEN on the normal
+    // path — the download recovery does not run in this gate (1.2.19,
+    // L-13a: it runs post-first-frame, and only on the storage-full
+    // retry path). The old 'database-recovery' name misattributed the
+    // open's time to the recovery.
+    markStartupPhase('database-open');
 
     await _optionalGatePhase(StartupPhase.imageCache, () async {
       DevicePerformance.applyImageCacheBudget();
@@ -1097,7 +1107,16 @@ Future<_StartupDependencies> _initializeStartup(SettingsService settings) async 
       // the disk is nearly full, and the verdict is persisted for the
       // background sync isolate (which has no platform channel).
       await StorageHealth.refresh();
+      // 1.6.34 (P-16a): time the free-space refresh on its own — the
+      // old 'image-cache' mark lumped it with the budget + cap + trim,
+      // so a slow storage probe could not be told apart from a slow
+      // cache trim.
+      markStartupPhase('storage-health');
       await PlexImageCacheManager.applyLowStorageCapIfLow();
+      // 1.6.34 (P-10): enforce the byte cap at startup too, so a cache
+      // that grew past it in a previous session is trimmed before any
+      // artwork loads.
+      await PlexImageCacheManager.instance.trimToByteCap();
     });
 
     markStartupPhase('image-cache');

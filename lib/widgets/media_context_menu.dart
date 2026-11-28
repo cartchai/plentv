@@ -1,4 +1,7 @@
 import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
 import '../media/ids.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -70,9 +73,51 @@ class _MenuAction {
   final String value;
   final IconData icon;
   final String label;
+
+  /// A live label (1.6.34, P-09): when set, the tile shows this
+  /// listenable's value instead of [label] and rebuilds when it fires.
+  /// Only the IPTV category row uses it.
+  final ValueListenable<String>? labelListenable;
   final bool destructive;
 
-  _MenuAction({required this.value, required this.icon, required this.label, this.destructive = false});
+  _MenuAction({
+    required this.value,
+    required this.icon,
+    required this.label,
+    this.labelListenable,
+    this.destructive = false,
+  });
+}
+
+/// A [ValueListenable] that maps another listenable's value (1.6.34,
+/// P-09): the menu row's label follows the category NAME notifier,
+/// formatted as `Category: <name>`. The forward stops when the source
+/// is disposed (the menu closing disposes the name notifier, which
+/// drops this forward); the tile removes its own listener when it
+/// disposes, so no explicit dispose is needed here.
+class _MappedValueListenable implements ValueListenable<String> {
+  _MappedValueListenable(this._source, this._map) {
+    _source.addListener(_notify);
+  }
+
+  final ValueListenable<String> _source;
+  final String Function(String value) _map;
+  final _listeners = <VoidCallback>{};
+
+  void _notify() {
+    for (final listener in _listeners.toList()) {
+      listener();
+    }
+  }
+
+  @override
+  String get value => _map(_source.value);
+
+  @override
+  void addListener(VoidCallback listener) => _listeners.add(listener);
+
+  @override
+  void removeListener(VoidCallback listener) => _listeners.remove(listener);
 }
 
 /// What [MediaContextMenuState] resolves before it can build an entry list:
@@ -98,14 +143,20 @@ class _MenuContext {
   final bool isDownloadsFolder;
 
   /// The item's own IPTV provider category (1.6.33): the provider
-  /// category id as labelled, plus the display name resolved from the
-  /// item's own per-kind category list — never the initials
-  /// (whole-groups) aggregation, which misses one-off groups like NF.
-  /// Both null when the item is not an IPTV movie/show/episode or
-  /// carries no category at all; the name falls back to the id when
-  /// the list cannot be read, so the row still names the group.
+  /// category id as labelled, plus the display name — never the
+  /// initials (whole-groups) aggregation, which misses one-off groups
+  /// like NF. Both null when the item is not an IPTV movie/show/
+  /// episode or carries no category at all.
+  ///
+  /// 1.6.34 (P-09): the name is a [ValueNotifier], seeded with the id
+  /// the moment the menu opens — the id IS the provider's own
+  /// identifier for the group, never an invented label — and filled in
+  /// with the resolved display name when the per-kind category list
+  /// lands in the background. The menu no longer waits up to 2 s for
+  /// a cold panel's list before it appears; the row's label follows
+  /// the notifier. The hide still works by id either way.
   final String? iptvCategoryId;
-  final String? iptvCategoryName;
+  final ValueNotifier<String>? iptvCategoryNameNotifier;
 
   const _MenuContext({
     required this.mediaItem,
@@ -121,7 +172,7 @@ class _MenuContext {
     required this.watchlistRemoveOffered,
     required this.canDeleteFromServer,
     this.iptvCategoryId,
-    this.iptvCategoryName,
+    this.iptvCategoryNameNotifier,
   }) : isDownloadsFolder = false;
 
   /// A downloads folder's entries act on local downloads, so none of the
@@ -139,7 +190,7 @@ class _MenuContext {
       watchlistRemoveOffered = false,
       canDeleteFromServer = false,
       iptvCategoryId = null,
-      iptvCategoryName = null,
+      iptvCategoryNameNotifier = null,
       isDownloadsFolder = true;
 
   bool get isPlaylist => playlist != null;
@@ -299,6 +350,24 @@ class MediaContextMenuState extends State<MediaContextMenu> {
   bool _openedFromKeyboard = false;
   bool _isContextMenuOpen = false;
 
+  /// The live category-name notifier for the open menu (1.6.34, P-09):
+  /// seeded with the provider id, filled in with the resolved display
+  /// name when the background lookup lands. Disposed when the menu
+  /// closes (or the widget goes away first); the background lookup
+  /// only writes while this still points at its notifier.
+  ValueNotifier<String>? _iptvCategoryNameNotifier;
+
+  void _disposeIptvCategoryNameNotifier() {
+    _iptvCategoryNameNotifier?.dispose();
+    _iptvCategoryNameNotifier = null;
+  }
+
+  @override
+  void dispose() {
+    _disposeIptvCategoryNameNotifier();
+    super.dispose();
+  }
+
   bool get isContextMenuOpen => _isContextMenuOpen;
 
   void _notifyRefresh(MediaItem source) {
@@ -426,6 +495,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       // The awaited probe outlived the widget; the try/finally that normally
       // clears this flag only starts once the menu is on screen.
       _isContextMenuOpen = false;
+      _disposeIptvCategoryNameNotifier();
       return;
     }
 
@@ -480,6 +550,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       }
     } finally {
       _isContextMenuOpen = false;
+      _disposeIptvCategoryNameNotifier();
 
       // Restore focus to the previously focused item after the menu closes,
       // but only if no navigation occurred and the focus node is still valid
@@ -579,15 +650,38 @@ class MediaContextMenuState extends State<MediaContextMenu> {
           isAdminActionAllowed: isAdmin,
         );
     // IPTV VOD category (1.6.33): the item's own provider category, for
-    // the menu's category row. Resolved from the item's per-kind
-    // category list — never the initials (whole-groups) aggregation,
-    // which misses one-off groups like NF. Bounded so a cold panel
-    // never freezes the long-press; on failure the row falls back to
-    // the provider id, and the hide still works by id.
-    final iptvCategory = await _resolveIptvVodCategory(
-      mediaClient: mediaClient,
-      mediaItem: mediaItem,
-    );
+    // the menu's category row — never the initials (whole-groups)
+    // aggregation, which misses one-off groups like NF. 1.6.34 (P-09):
+    // the id comes off the item synchronously and the menu opens at
+    // once; the display name resolves in the background and fills the
+    // row in when it lands. The row is honest from the first frame —
+    // the id is the provider's own identifier for the group — and the
+    // hide works by id either way. M3U needs no lookup: the group
+    // title IS the name, so the notifier is seeded with it and stays.
+    final iptvCategoryId = _iptvVodCategoryId(mediaClient: mediaClient, mediaItem: mediaItem);
+    ValueNotifier<String>? iptvCategoryNameNotifier;
+    final item = mediaItem;
+    if (iptvCategoryId != null && mediaClient is IptvClient && item != null) {
+      iptvCategoryNameNotifier = ValueNotifier<String>(iptvCategoryId);
+      _iptvCategoryNameNotifier = iptvCategoryNameNotifier;
+      if (mediaClient.connection is XtreamConnection) {
+        final notifier = iptvCategoryNameNotifier;
+        unawaited(
+          _resolveIptvVodCategoryName(
+            client: mediaClient,
+            kind: item.kind,
+            categoryId: iptvCategoryId,
+          ).then((name) {
+            // Only the still-open menu's row takes the name — a later
+            // open owns its own notifier, and a closed menu's is
+            // disposed (writing it would throw).
+            if (identical(_iptvCategoryNameNotifier, notifier) && name != iptvCategoryId) {
+              notifier.value = name;
+            }
+          }),
+        );
+      }
+    }
     return _MenuContext(
       mediaItem: mediaItem,
       playlist: playlist,
@@ -601,23 +695,19 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       showWatchlistEntry: showWatchlistEntry,
       watchlistRemoveOffered: watchlistRemoveOffered,
       canDeleteFromServer: canDeleteFromServer,
-      iptvCategoryId: iptvCategory?.id,
-      iptvCategoryName: iptvCategory?.name,
+      iptvCategoryId: iptvCategoryId,
+      iptvCategoryNameNotifier: iptvCategoryNameNotifier,
     );
   }
 
-  /// The item's own IPTV provider category (1.6.33): the provider id
-  /// plus the display name resolved from the item's per-kind category
-  /// list. M3U groups ARE the name — the group title is both id and
-  /// name. Null when the item is not an IPTV movie/show/episode or
-  /// carries no category at all. The name falls back to the id when
-  /// the list cannot be read — the hide works by id either way, and
-  /// the id is the provider's own identifier for the group, never an
-  /// invented label.
-  Future<({String id, String name})?> _resolveIptvVodCategory({
+  /// The item's own IPTV provider category id (1.6.33, split in
+  /// 1.6.34 P-09): read straight off the item — no I/O, so the menu
+  /// never waits for it. Null when the item is not an IPTV
+  /// movie/show/episode or carries no category at all.
+  String? _iptvVodCategoryId({
     required MediaServerClient? mediaClient,
     required MediaItem? mediaItem,
-  }) async {
+  }) {
     final client = mediaClient;
     if (client is! IptvClient) return null;
     final mediaKind = mediaItem?.kind;
@@ -634,14 +724,28 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       _ => null,
     };
     if (categoryId == null || categoryId.isEmpty) return null;
-    if (client.connection is! XtreamConnection) return (id: categoryId, name: categoryId);
+    return categoryId;
+  }
+
+  /// The display name for an IPTV VOD category id (1.6.33): resolved
+  /// from the item's per-kind category list. M3U groups ARE the name —
+  /// the group title is both id and name — so M3U never fetches. The
+  /// list read is bounded (2 s); on failure the id is returned, so the
+  /// row still names the group and the hide still works by id. Called
+  /// in the BACKGROUND after the menu is already on screen (1.6.34,
+  /// P-09) — never awaited before the menu builds.
+  Future<String> _resolveIptvVodCategoryName({
+    required IptvClient client,
+    required MediaKind kind,
+    required String categoryId,
+  }) async {
+    if (client.connection is! XtreamConnection) return categoryId;
     try {
-      final categories = await (mediaKind == MediaKind.movie ? client.vodCategories() : client.seriesCategories())
+      final categories = await (kind == MediaKind.movie ? client.vodCategories() : client.seriesCategories())
           .timeout(const Duration(seconds: 2));
-      final name = categories.where((c) => c.id == categoryId).firstOrNull?.name ?? categoryId;
-      return (id: categoryId, name: name);
+      return categories.where((c) => c.id == categoryId).firstOrNull?.name ?? categoryId;
     } catch (_) {
-      return (id: categoryId, name: categoryId);
+      return categoryId;
     }
   }
 
@@ -842,7 +946,15 @@ class MediaContextMenuState extends State<MediaContextMenu> {
           icon: Symbols.category_rounded,
           label: menu.iptvCategoryId == null
               ? t.mediaMenu.iptvCategoryUnknown
-              : t.liveTv.channelCategory(name: menu.iptvCategoryName ?? menu.iptvCategoryId!),
+              : t.liveTv.channelCategory(name: menu.iptvCategoryNameNotifier?.value ?? menu.iptvCategoryId!),
+          // 1.6.34 (P-09): the row's label follows the name notifier —
+          // it fills in when the background resolution lands.
+          labelListenable: menu.iptvCategoryNameNotifier == null
+              ? null
+              : _MappedValueListenable(
+                  menu.iptvCategoryNameNotifier!,
+                  (name) => t.liveTv.channelCategory(name: name),
+                ),
         )
       else if (menu.itemBackend != null && mediaKind.hasFileInfo)
         _MenuAction(value: 'fileinfo', icon: Symbols.info_rounded, label: t.mediaMenu.fileInfo),
@@ -1208,6 +1320,7 @@ class MediaContextMenuState extends State<MediaContextMenu> {
           value: action.value,
           icon: action.icon,
           label: action.label,
+          labelListenable: action.labelListenable,
           destructive: action.destructive,
         ),
     ];
@@ -1362,7 +1475,10 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       if (context.mounted) showAppSnackBar(context, t.mediaMenu.iptvCategoryUnknownDetail);
       return;
     }
-    final name = menu.iptvCategoryName ?? categoryId;
+    // 1.6.34 (P-09): the name is whatever the notifier holds right now
+    // — the resolved display name when the background lookup has
+    // landed, the provider id before that. Either names the group.
+    final name = menu.iptvCategoryNameNotifier?.value ?? categoryId;
     final confirmed = await showConfirmDialog(
       context,
       title: t.mediaMenu.hideIptvCategoryTitle,

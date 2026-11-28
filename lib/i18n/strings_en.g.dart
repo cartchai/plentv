@@ -2645,6 +2645,9 @@ class Translations$videoControls$en {
 	/// en: 'Playing'
 	String get playbackResumed => 'Playing';
 
+	/// en: 'Stream stalled'
+	String get streamStalled => 'Stream stalled';
+
 	/// en: 'Loading video'
 	String get loadingVideo => 'Loading video';
 
@@ -4284,6 +4287,9 @@ class Translations$about$en {
 	];
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+	];
+	List<String> get changelog2352 => [
+		'Faster all round: opening a movie or series category now shows the first titles straight away instead of loading the whole category first; the first catalog sync is quicker — it no longer downloads everything twice if you tap refresh while it is still running, and the guide can use fresh live channels before the whole sync finishes; long-pressing a movie or series now opens its menu straight away, with the category filling in a moment later; and a stream that stalls now tells you it has stalled and tries reconnecting on its own instead of sitting on a frozen picture',
 	];
 	List<String> get changelog2351 => [
 		'New: long-pressing a movie or series from IPTV now shows the category it belongs to — for example NF — instead of File Info, which never worked for a stream. Tapping it turns that whole category off, so its movies and series stop showing up; turn it back on in IPTV settings. Categories that never showed up in the whole-groups list can now be turned off this way too',
@@ -7738,6 +7744,9 @@ class Translations$iptv$en {
 	/// en: 'skipped — low-memory device'
 	String get syncSkippedLowMemory => 'skipped — low-memory device';
 
+	/// en: 'Series follows shortly'
+	String get syncDeferredSeries => 'Series follows shortly';
+
 	/// en: 'Storage full'
 	String get syncSkippedStorageFull => 'Storage full';
 
@@ -7794,6 +7803,9 @@ class Translations$iptv$en {
 
 	/// en: 'Catalog sync failed'
 	String get catalogSyncFailed => 'Catalog sync failed';
+
+	/// en: 'Waiting for the sync already running…'
+	String get catalogSyncWaiting => 'Waiting for the sync already running…';
 
 	/// en: '${received} of ${total}'
 	String catalogSyncProgressOf({required Object received, required Object total}) => '${received} of ${total}';
@@ -11476,6 +11488,7 @@ extension on Translations {
 			'videoControls.pauseButton' => 'Pause',
 			'videoControls.playbackPaused' => 'Paused',
 			'videoControls.playbackResumed' => 'Playing',
+			'videoControls.streamStalled' => 'Stream stalled',
 			'videoControls.loadingVideo' => 'Loading video',
 			'videoControls.showPlaybackControls' => 'Show playback controls',
 			'videoControls.hidePlaybackControls' => 'Hide playback controls',
@@ -11628,9 +11641,9 @@ extension on Translations {
 			'messages.streamInterrupted' => 'The stream was interrupted. Press play or seek to retry.',
 			'messages.liveStreamInterrupted' => 'The live stream was interrupted. Press play to retry.',
 			'messages.fileInfoNotAvailable' => 'File information not available',
-			'messages.playbackAuthenticationRequired' => 'Sign in to the media server again to play this item.',
 			_ => null,
 		} ?? switch (path) {
+			'messages.playbackAuthenticationRequired' => 'Sign in to the media server again to play this item.',
 			'messages.playbackServerUnavailable' => 'The media server is unavailable. Try again later.',
 			'messages.playbackDataInvalid' => 'The server returned invalid playback information.',
 			'messages.playbackCancelled' => 'Playback was canceled.',
@@ -12142,9 +12155,10 @@ extension on Translations {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
-			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
 			_ => null,
 		} ?? switch (path) {
+			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			'about.changelog2352.0' => 'Faster all round: opening a movie or series category now shows the first titles straight away instead of loading the whole category first; the first catalog sync is quicker — it no longer downloads everything twice if you tap refresh while it is still running, and the guide can use fresh live channels before the whole sync finishes; long-pressing a movie or series now opens its menu straight away, with the category filling in a moment later; and a stream that stalls now tells you it has stalled and tries reconnecting on its own instead of sitting on a frozen picture',
 			'about.changelog2351.0' => 'New: long-pressing a movie or series from IPTV now shows the category it belongs to — for example NF — instead of File Info, which never worked for a stream. Tapping it turns that whole category off, so its movies and series stop showing up; turn it back on in IPTV settings. Categories that never showed up in the whole-groups list can now be turned off this way too',
 			'about.changelog2350.0' => 'Fixed: turning a whole group of channels off no longer freezes the app — the TV guide list is now rebuilt in the background instead of on the screen\'s own thread, so the remote keeps answering while it works; the same fix covers Reload TV details. Turned-off categories now sit at the bottom of their list, in alphabetical order, with the ones still on at the top. The download dialog now shows a real progress bar with how much has arrived and how fast it is coming, and the Update now dialog now shows live progress while the guide downloads in the background, plus how many of your channels matched. The guide settings screen now also shows how many channels and programmes the loaded guide holds',
 			'about.changelog2349.0' => 'Fixed: on a Meta Quest headset the 2D panel window now stays the size you drag it to — the app no longer snaps it back to the size it had before when the panel comes back into focus. The panel still reopens at the size you left it. The 3D movie screen is unchanged: its size, distance, curvature and depth are still set from the 3D sheet',
@@ -12655,10 +12669,10 @@ extension on Translations {
 			'explore.season.withYear' => ({required Object season, required Object year}) => '${season} ${year}',
 			'explore.format.tv' => 'TV',
 			'explore.format.tvShort' => 'TV Short',
-			'explore.format.movie' => 'Movie',
-			'explore.format.special' => 'Special',
 			_ => null,
 		} ?? switch (path) {
+			'explore.format.movie' => 'Movie',
+			'explore.format.special' => 'Special',
 			'explore.format.ova' => 'OVA',
 			'explore.format.ona' => 'ONA',
 			'explore.format.music' => 'Music',
@@ -13169,10 +13183,10 @@ extension on Translations {
 			'downloads.backgroundWarning.dialogTitle' => 'Downloads may not finish',
 			'downloads.backgroundWarning.dialogDownloadAnyway' => 'Download anyway',
 			'downloads.backgroundWarning.dialogFixFirst' => 'Fix this first',
-			'downloads.backgroundWarning.statusTile' => 'Background downloads',
-			'downloads.backgroundWarning.statusOk' => 'Allowed to run in the background',
 			_ => null,
 		} ?? switch (path) {
+			'downloads.backgroundWarning.statusTile' => 'Background downloads',
+			'downloads.backgroundWarning.statusOk' => 'Allowed to run in the background',
 			'downloads.backgroundWarning.statusBlocked' => 'Blocked by system settings',
 			'downloads.backgroundWarning.statusDegraded' => 'Limited by system settings',
 			'downloads.backgroundWarning.statusUnknown' => 'Not checked yet',
@@ -13677,16 +13691,17 @@ extension on Translations {
 			'iptv.lastSyncFailedError' => 'Last sync failed — the panel returned an error.',
 			'iptv.survivalSyncNote' => 'On this low-memory device the catalog only syncs when you tap Sync now, so it can be out of date.',
 			'iptv.syncSkippedLowMemory' => 'skipped — low-memory device',
+			'iptv.syncDeferredSeries' => 'Series follows shortly',
 			'iptv.syncSkippedStorageFull' => 'Storage full',
 			'iptv.syncSkippedStorageFullDetail' => 'Sync skipped — storage almost full. Free some space and it will run at the next scheduled time.',
 			'iptv.backgroundSyncMeteredDeferred' => 'Sync incomplete — will finish on Wi-Fi',
 			'iptv.largeDownloadsWifiOnly' => 'Wi-Fi only for large downloads',
 			'iptv.largeDownloadsWifiOnlyDescription' => 'Large downloads (guide feed, catalog sync) wait for Wi-Fi instead of using mobile data',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.pauseDownloadsWhileWatching' => 'Pause downloads while watching',
 			'iptv.pauseDownloadsWhileWatchingDescription' => 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch',
 			'iptv.downloadRunTimeout' => 'Download run timeout',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.downloadRunTimeoutDescription' => ({required Object minutes}) => 'One download run may transfer for ${minutes} minutes before it pauses and picks up where it left off. Longer runs need fewer pauses on slow connections; a change applies to downloads started after it',
 			'iptv.downloadRunTimeoutMinutes' => ({required Object minutes}) => '${minutes} minutes',
 			'iptv.backgroundSyncNoConnections' => 'No IPTV connections',
@@ -13698,6 +13713,7 @@ extension on Translations {
 			'iptv.catalogSyncSeries' => 'TV / Series',
 			'iptv.catalogSyncDone' => 'Catalog synced',
 			'iptv.catalogSyncFailed' => 'Catalog sync failed',
+			'iptv.catalogSyncWaiting' => 'Waiting for the sync already running…',
 			'iptv.catalogSyncProgressOf' => ({required Object received, required Object total}) => '${received} of ${total}',
 			'iptv.catalogSyncProgressUnknown' => ({required Object received}) => '${received} received',
 			'iptv.catalogMode' => 'Catalog mode',

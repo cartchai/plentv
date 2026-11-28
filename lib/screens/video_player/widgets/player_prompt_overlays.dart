@@ -85,15 +85,28 @@ class VideoPlayerBufferingOverlay extends StatelessWidget {
   final ValueListenable<bool> hasFirstFrame;
   final ValueListenable<bool> isExiting;
 
+  /// 1.6.34 (P-11): true while the mid-stream stall watchdog has fired —
+  /// the position has not advanced for [midStreamStallPatience] while
+  /// playing. The overlay then names the stall under the spinner, so a
+  /// frozen picture is never just a spinner with no explanation.
+  final ValueListenable<bool>? isStalled;
+
   const VideoPlayerBufferingOverlay({
     super.key,
     required this.isBuffering,
     required this.hasFirstFrame,
     required this.isExiting,
+    this.isStalled,
   });
 
   @override
   Widget build(BuildContext context) {
+    // The stall label must show even when mpv reports no buffering at all —
+    // a stall with no `paused-for-cache` is the case this overlay exists
+    // to name — so the stall state joins the visibility gate, not just
+    // the label. When no stall listenable is passed (older call sites,
+    // tests), the gate is exactly the old one.
+    final stalledListenable = isStalled;
     return ValueListenableBuilder<bool>(
       valueListenable: PipService().isPipActive,
       builder: (context, isInPip, child) {
@@ -104,23 +117,58 @@ class VideoPlayerBufferingOverlay extends StatelessWidget {
             return ValueListenableBuilder<bool>(
               valueListenable: hasFirstFrame,
               builder: (context, hasFrame, child) {
-                if ((!buffering && hasFrame) || isExiting.value) return const SizedBox.shrink();
-                return Positioned.fill(
-                  child: IgnorePointer(
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), shape: BoxShape.circle),
-                        child: const PlayerLoadingIndicator(strokeWidth: 3),
-                      ),
-                    ),
-                  ),
+                if (stalledListenable == null) {
+                  if ((!buffering && hasFrame) || isExiting.value) return const SizedBox.shrink();
+                  return _overlay(stalled: false);
+                }
+                return ValueListenableBuilder<bool>(
+                  valueListenable: stalledListenable,
+                  builder: (context, stalled, child) {
+                    if ((!buffering && hasFrame && !stalled) || isExiting.value) {
+                      return const SizedBox.shrink();
+                    }
+                    return _overlay(stalled: stalled);
+                  },
                 );
               },
             );
           },
         );
       },
+    );
+  }
+
+  Widget _overlay({required bool stalled}) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), shape: BoxShape.circle),
+                child: const PlayerLoadingIndicator(strokeWidth: 3),
+              ),
+              if (stalled)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      t.videoControls.streamStalled,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

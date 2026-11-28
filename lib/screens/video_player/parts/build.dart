@@ -408,11 +408,14 @@ extension _VideoPlayerBuildMethods on VideoPlayerScreenState {
                 onContinue: _onStillWatchingContinue,
               ),
               // Buffering indicator (also shows during initial load, but not when exiting)
-              // Hidden in PiP mode
+              // Hidden in PiP mode. The stall label (1.6.34, P-11) shows
+              // through the same overlay when the position stops advancing
+              // mid-stream, even with no buffering signal from mpv.
               VideoPlayerBufferingOverlay(
                 isBuffering: _isBuffering,
                 hasFirstFrame: _firstFrame.uiReady,
                 isExiting: _isExiting,
+                isStalled: _isStalled,
               ),
               // Watch Together overlays (isolated from video surface repaints)
               const VideoPlayerWatchTogetherOverlays(),

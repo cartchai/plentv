@@ -1420,6 +1420,25 @@ class IptvLiveTvSupport implements LiveTvSupport {
   @visibleForTesting
   static Duration xmltvNegativeCacheTtl = const Duration(minutes: 5);
 
+  /// Total budget for waiting behind a running catalog sync before a
+  /// feed download starts (1.6.34, P-06): the ~150 MB feed must not
+  /// download concurrently with the sync's downloads + FTS writes on
+  /// a low-end TV. Past the budget the download starts anyway, so a
+  /// crashed sync (whose stamp ages out in 30 min) never blocks the
+  /// guide forever. Test-overridable so the queue stays fast to prove.
+  @visibleForTesting
+  static Duration catalogSyncWaitBudget = const Duration(minutes: 15);
+
+  /// Total budget for [waitForFeedRefresh] (1.6.34, P-07): a stalled
+  /// feed download must not hold the Update-now tile spinner forever.
+  /// Ten minutes covers the slowest realistic feed (~150 MB on a slow
+  /// link) with room; past it the wait gives up and the tile stops
+  /// spinning. The download itself is NOT cancelled — the guide still
+  /// lands when it finishes, and the dialog keeps polling it.
+  /// Test-overridable so the stall path stays fast to prove.
+  @visibleForTesting
+  static Duration feedRefreshWaitBudget = const Duration(minutes: 10);
+
   /// True after "Clear guide" until something refreshes the guide
   /// ([refreshEpgCache] or the one start-up refresh). While set, the guide
   /// shows "No information available" hour blocks instead of refetching —
@@ -2212,6 +2231,14 @@ class IptvLiveTvSupport implements LiveTvSupport {
   }
 
   Future<void> _deletePersistedEpg() async {
+    // 1.6.34: no-op when the persisted side is disabled — same seam
+    // as the read/write/prune paths above. When the flag is on nothing
+    // is ever persisted, so there is nothing to delete; and the real
+    // async file check below never completes in `testWidgets`' fake
+    // async zone (the wall the read path's comment at
+    // [_readPersistedEpg] already documents), so an ungated delete
+    // would park `clearEpgCache` forever in a widget test.
+    if (debugDisablePersistedEpg) return;
     try {
       final dir = await _epgCacheDir();
       if (await dir.exists()) await dir.delete(recursive: true);
@@ -4485,6 +4512,45 @@ class IptvLiveTvSupport implements LiveTvSupport {
   ///
   /// Build #15, item 6 — the feed is persisted, not just held in memory:
   /// a warm start parses the feed FILE instead of re-downloading it, a
+  /// Wait for a running catalog sync to settle before a feed download
+  /// starts (1.6.34, P-06): the ~150 MB feed must not download
+  /// concurrently with the sync's downloads + FTS writes on a low-end
+  /// TV. Polls the sync stamp every second, bounded by
+  /// [catalogSyncWaitBudget] — past it the download starts anyway, so
+  /// a crashed sync (whose stamp ages out in 30 min) never blocks the
+  /// guide forever. Throws a cancellation when the download is aborted
+  /// while queued, so the caller treats it like any other cancelled
+  /// load (no negative-cache poisoning).
+  Future<void> _waitForCatalogSyncToSettle(Future<void> abortTrigger) async {
+    final deadline = DateTime.now().add(catalogSyncWaitBudget);
+    var logged = false;
+    while (await IptvClient.isSyncRunningElsewhere()) {
+      if (DateTime.now().isAfter(deadline)) {
+        appLogger.w(
+          'IPTV: starting the EPG download while a catalog sync is still running '
+          'after ${catalogSyncWaitBudget.inMinutes} min — the guide cannot wait forever',
+        );
+        return;
+      }
+      if (!logged) {
+        appLogger.i('IPTV: EPG download queued behind the running catalog sync');
+        logged = true;
+      }
+      // Race one poll slice against the abort: backgrounding while
+      // queued cancels the download like a mid-download abort.
+      final aborted = await Future.any<bool>([
+        Future<void>.delayed(const Duration(seconds: 1)).then((_) => false),
+        abortTrigger.then((_) => true),
+      ]);
+      if (aborted) {
+        throw MediaServerHttpException(
+          type: MediaServerHttpErrorType.cancelled,
+          message: 'EPG feed download cancelled while waiting for the catalog sync',
+        );
+      }
+    }
+  }
+
   /// stale guide is served immediately while the refresh runs in the
   /// background (stale-while-revalidate), and a failed download is
   /// remembered briefly instead of retried channel by channel.
@@ -4499,7 +4565,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
     String cacheKey,
     XmltvFeedFetcher fetchFeed, {
     Set<String> retainIds = const {},
-  }) {
+  }) async {
     final abort = AbortController();
     _activeEpgAborts.add(abort);
     // 1.3.24 §67 F2: count the job so clearEpgCache can defer the
@@ -4512,32 +4578,31 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // download manager defers STARTING new downloads until the last
     // job settles.
     IptvFeedRefreshActivity.instance.markActive();
-    final future = _loadXmltvGuide(
-      cacheKey,
-      ({bool useValidators = true}) => fetchFeed(abort.trigger, useValidators: useValidators),
-      retainIds: retainIds,
-      // 1.2.19 (L-3): the resume download aborts on the same trigger
-      // the fetch closure carries (build #28).
-      abortTrigger: abort.trigger,
-    );
-    unawaited(
-      future
-          .then<void>((_) {
-            if (_epgDeleteDeferred) _epgDeleteDeferredLanded = true;
-          })
-          .catchError((_) {})
-          .whenComplete(() {
-            _activeEpgAborts.remove(abort);
-            _feedJobsInFlight--;
-            if (_feedJobsInFlight == 0) {
-              _drainDeferredEpgDelete();
-              // 1.4.4 guide-first: the last feed job settled — downloads
-              // deferred while the guide refreshed can start now.
-              IptvFeedRefreshActivity.instance.markIdle();
-            }
-          }),
-    );
-    return future;
+    try {
+      // 1.6.34 (P-06): serialize against the catalog sync — the feed
+      // download waits behind a running sync instead of competing
+      // with it for bandwidth and memory.
+      await _waitForCatalogSyncToSettle(abort.trigger);
+      final guide = await _loadXmltvGuide(
+        cacheKey,
+        ({bool useValidators = true}) => fetchFeed(abort.trigger, useValidators: useValidators),
+        retainIds: retainIds,
+        // 1.2.19 (L-3): the resume download aborts on the same trigger
+        // the fetch closure carries (build #28).
+        abortTrigger: abort.trigger,
+      );
+      if (_epgDeleteDeferred) _epgDeleteDeferredLanded = true;
+      return guide;
+    } finally {
+      _activeEpgAborts.remove(abort);
+      _feedJobsInFlight--;
+      if (_feedJobsInFlight == 0) {
+        _drainDeferredEpgDelete();
+        // 1.4.4 guide-first: the last feed job settled — downloads
+        // deferred while the guide refreshed can start now.
+        IptvFeedRefreshActivity.instance.markIdle();
+      }
+    }
   }
 
   /// Run a persisted-EPG clear deferred while a feed job was in flight
@@ -5870,11 +5935,13 @@ class IptvLiveTvSupport implements LiveTvSupport {
   /// finishes instead of clearing it when the dialog appears.
   /// Snapshots the in-flight loads; a load that starts after the
   /// snapshot is not waited on. Never throws — a failed load settles
-  /// the wait like a finished one.
+  /// the wait like a finished one. 1.6.34 (P-07): bounded by
+  /// [feedRefreshWaitBudget] — a stalled download stops holding the
+  /// wait after the budget, and the download itself keeps running.
   Future<void> waitForFeedRefresh() async {
     final inFlight = List<Future<_CachedXmltvGuide>>.of(_xmltvGuideFutures.values);
     if (inFlight.isEmpty) return;
-    await Future.wait(
+    final Future<List<void>> wait = Future.wait<void>(
       inFlight.map((f) async {
         try {
           await f;
@@ -5882,6 +5949,16 @@ class IptvLiveTvSupport implements LiveTvSupport {
           // A failed load settles the wait like a finished one.
         }
       }),
+    );
+    await wait.timeout(
+      feedRefreshWaitBudget,
+      onTimeout: () {
+        appLogger.w(
+          'IPTV: feed refresh wait gave up after ${feedRefreshWaitBudget.inMinutes} min — '
+          'the download continues in the background',
+        );
+        return <void>[];
+      },
     );
   }
 

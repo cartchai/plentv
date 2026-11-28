@@ -739,6 +739,9 @@ extension _VideoPlayerReloadMethods on VideoPlayerScreenState {
             _firstFrame.resetRenderedForAttempt();
             // 503s observed from here on belong to the replacement open.
             _http503Watchdog.disarm();
+            // 1.6.34 (P-11): the stall window belongs to the replacement
+            // open too — its first frame re-arms the watchdog.
+            _stallWatchdog.disarm();
           },
           onOpened: () {
             // The player now owns the new file — publish the session at the

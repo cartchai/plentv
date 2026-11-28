@@ -726,7 +726,13 @@ void main() {
     await tester.pump();
     expect(aggregation.onDeckCalls, 2);
     expect(aggregation.hubCalls, 2);
-    expect(provider.onDeck.single.id, 'replacement');
+    // 1.6.34 (P-17): the push reconciles through a per-server delta
+    // refresh, not a full pass — server_2 was never refetched, so its
+    // episode stays (a production full pass would return it too; the old
+    // single-'replacement' expectation only held because the fake's
+    // global result omitted it). server_1's rows are replaced by the
+    // fresh fetch, so 'survivor' leaves and 'replacement' lands.
+    expect(provider.onDeck.map((item) => item.id), ['episode', 'replacement']);
     expect(provider.hubs.single.id, 'reconciled');
     await tester.pump(const Duration(minutes: 3));
     expect(aggregation.onDeckCalls, 2, reason: 'one coalesced reconciliation, not a second deletion follow-up');
@@ -1581,6 +1587,29 @@ void main() {
         aggregation.lastHubsServerIds,
         {'trex'},
         reason: 'only the changed server is refetched — Plex hubs are untouched',
+      );
+      expect(aggregation.lastOnDeckServerIds, {'trex'});
+    });
+
+    test('a server push refreshes only that server, never the others (1.6.34, P-17)', () async {
+      aggregation.onDeckResult = () => [_item('a')];
+      aggregation.hubsResult = () => [_hub('hub-1')];
+      final scoped = pushProvider();
+      await scoped.load();
+      expect(aggregation.hubCalls, 1);
+
+      // A server push (not the user's own change): the Home refresh
+      // must still re-fetch only the pushed server's hubs — on 1.6.33
+      // a push ran the full pass, re-fetching every server's hubs.
+      LibraryContentNotifier().notifyChanged(
+        LibraryChangeEvent(serverId: ServerId('trex'), itemsAdded: true),
+      );
+      await settle();
+      expect(aggregation.hubCalls, 2, reason: 'the push still refreshes');
+      expect(
+        aggregation.lastHubsServerIds,
+        {'trex'},
+        reason: 'only the pushed server is refetched — the other servers are untouched',
       );
       expect(aggregation.lastOnDeckServerIds, {'trex'});
     });

@@ -38,6 +38,7 @@ import 'package:http/http.dart' as http;
 import 'package:plezy/connection/connection.dart';
 import 'package:plezy/media/iptv_client.dart';
 import 'package:plezy/media/library_query.dart';
+import 'package:plezy/services/device_performance.dart';
 import 'package:plezy/services/iptv/iptv_catalog_cache.dart';
 import 'package:plezy/services/iptv/iptv_search_index.dart';
 import 'package:plezy/services/iptv/xtream_api.dart';
@@ -165,6 +166,11 @@ class _CountingPanel extends http.BaseClient {
   String? trexVodBody;
   List<XtreamCategory>? trexVodCategories;
 
+  /// 1.6.34 (P-14): stall one panel action until the given future
+  /// completes — opens a deterministic mid-sync window (live landed,
+  /// movies still downloading) for the live-first test.
+  final Map<String, Future<void>> stalls = {};
+
   void reset() => requests.clear();
   int get totalRequests => requests.values.fold(0, (a, b) => a + b);
 
@@ -172,6 +178,8 @@ class _CountingPanel extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final action = request.url.queryParameters['action'] ?? 'user_info';
     requests[action] = (requests[action] ?? 0) + 1;
+    final stall = stalls[action];
+    if (stall != null) await stall;
     return http.StreamedResponse(
       Stream.value(utf8.encode(_bodyFor(action))),
       200,
@@ -857,6 +865,180 @@ void main() {
       final coldChannels = await cold.iptvChannels();
       final memoChannels = await client.iptvChannels();
       expect(coldChannels.map((c) => c.key).toList(), memoChannels.map((c) => c.key).toList());
+    });
+
+    test('C1 (1.6.34 P-01): fetchMoreHubItemsPage with a :category: hub id pages only that category', () async {
+      final panel = _CountingPanel();
+      final client = await _warmIndexColdMemosClient(panel);
+      final (moviesId, seriesId) = await _libraryIds(client);
+
+      // mov1 holds 4 of the 7 movies (Zulu, Game Of Thrones, apple,
+      // Banana); the whole library holds 7. On the base the category
+      // segment is ignored and the whole library comes back paged, so
+      // the totalCount assertion is the failing arm.
+      final page1 = await client.fetchMoreHubItemsPage('iptv:$moviesId:category:mov1', start: 0, size: 2);
+      expect(page1.totalCount, 4);
+      expect(page1.items, hasLength(2));
+      final page2 = await client.fetchMoreHubItemsPage('iptv:$moviesId:category:mov1', start: 2, size: 2);
+      expect(page2.totalCount, 4);
+      expect(page2.items, hasLength(2));
+      // Pages stitch with no gaps or dupes, identical to the
+      // whole-category read.
+      final stitched = [...page1.items, ...page2.items];
+      final whole = await client.iptvItemsForCategory(moviesId, 'mov1');
+      expect(stitched.map((i) => i.id).toList(), whole.map((i) => i.id).toList());
+      expect(panel.totalRequests, 0, reason: 'requests=${panel.requests}');
+
+      // Series category too: ser1 holds 3 of the 4 series.
+      final seriesPage = await client.fetchMoreHubItemsPage('iptv:$seriesId:category:ser1', start: 0, size: 50);
+      expect(seriesPage.totalCount, 3);
+      expect(seriesPage.items, hasLength(3));
+    });
+
+    test('C2 (1.6.34 P-01): a hub id with no :category: segment still pages the whole library', () async {
+      final panel = _CountingPanel();
+      final client = await _warmIndexColdMemosClient(panel);
+      final (moviesId, _) = await _libraryIds(client);
+      final page = await client.fetchMoreHubItemsPage('iptv:$moviesId:recommended', start: 0, size: 50);
+      expect(page.totalCount, 7);
+      expect(page.items, hasLength(7));
+    });
+
+    test('D1 (1.6.34 P-15): on the low tier a cold series defers, then still lands in the background', () async {
+      // The Hisense tier: series is the largest catalog, so the first
+      // run lands live + movies and defers series to the background.
+      // On 1.6.33 the first sync lands all three types, so the
+      // 'deferred' assertion is the failing arm.
+      DevicePerformance.debugReset(tier: DeviceTier.low);
+      addTearDown(() => DevicePerformance.debugReset());
+      final previousDelay = IptvClient.deferredSeriesFollowUpDelay;
+      IptvClient.deferredSeriesFollowUpDelay = Duration.zero;
+      addTearDown(() => IptvClient.deferredSeriesFollowUpDelay = previousDelay);
+
+      final panel = _CountingPanel();
+      final client = _clientWith(panel).client;
+
+      final result = await client.syncSearchIndex(force: true);
+      expect(result.rows[IptvSearchIndex.typeLive], 3);
+      expect(result.rows[IptvSearchIndex.typeMovie], 7);
+      expect(result.skipped[IptvSearchIndex.typeSeries], 'deferred');
+      expect(result.hasFailure, isFalse, reason: 'a deferral is not a failure');
+
+      final index = await IptvSearchIndex.open();
+      addTearDown(index.close);
+      expect(
+        index.rowCounts(_connId)[IptvSearchIndex.typeSeries],
+        0,
+        reason: 'series has not landed yet',
+      );
+
+      // The follow-up runs in the background after the (zero) delay —
+      // series still lands, without another sync call.
+      var seriesRows = 0;
+      for (var i = 0; i < 50 && seriesRows != 4; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        seriesRows = index.rowCounts(_connId)[IptvSearchIndex.typeSeries] ?? -1;
+      }
+      expect(seriesRows, 4, reason: 'the deferred series must still land, in the background');
+
+      // And a later sync no longer defers it: it is warm now.
+      final again = await client.syncSearchIndex(force: false);
+      expect(again.skipped[IptvSearchIndex.typeSeries], 'up-to-date');
+    });
+
+    test('D2 (1.6.34 P-14): the guide re-reads fresh live rows while movies/series are still syncing', () async {
+      // Regression guard for the live-first behaviour (P-14): the
+      // first-run sync lands live first, and the guide must show the
+      // fresh live rows before the whole sync finishes — not wait for
+      // movies + series. The movies download is stalled, so the sync
+      // sits in the movies fetch with live already landed. Verified
+      // against 1.6.33: this already works there (the per-type
+      // refresh fires after live lands and the guide re-reads the
+      // fresh index rows), so the test pins the behaviour rather
+      // than proving a fix.
+      final panel = _CountingPanel();
+      final stallMovies = Completer<void>();
+      addTearDown(() {
+        if (!stallMovies.isCompleted) stallMovies.complete();
+      });
+      panel.stalls['get_vod_streams'] = stallMovies.future;
+      final client = _clientWith(panel).client;
+
+      final syncFuture = client.syncSearchIndex(force: true);
+
+      final index = await IptvSearchIndex.open();
+      addTearDown(index.close);
+      var liveRows = 0;
+      for (var i = 0; i < 100 && liveRows == 0; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        liveRows = index.rowCounts(_connId)[IptvSearchIndex.typeLive] ?? 0;
+      }
+      expect(liveRows, 3, reason: 'live must land first');
+      expect(
+        index.rowCounts(_connId)[IptvSearchIndex.typeMovie],
+        0,
+        reason: 'movies must still be stalled',
+      );
+
+      // The guide re-reads NOW, mid-sync: fresh live rows, not the
+      // stale memo.
+      final channels = await client.iptvChannels();
+      expect(channels, hasLength(3));
+
+      stallMovies.complete();
+      final result = await syncFuture;
+      expect(result.rows[IptvSearchIndex.typeMovie], 7);
+      expect(result.rows[IptvSearchIndex.typeSeries], 4);
+    });
+
+    test('D3 (1.6.34 P-04): type downloads overlap — the third fetch starts while the second is still stalled', () async {
+      // Cap 2: live + movies start together; when live finishes, series
+      // starts even though movies is still downloading. On 1.6.33 the
+      // fetches run strictly one after another, so the series request
+      // never appears while movies is stalled — the series assertion
+      // is the failing arm.
+      final panel = _CountingPanel();
+      final stallLive = Completer<void>();
+      final stallMovies = Completer<void>();
+      addTearDown(() {
+        if (!stallLive.isCompleted) stallLive.complete();
+        if (!stallMovies.isCompleted) stallMovies.complete();
+      });
+      panel.stalls['get_live_streams'] = stallLive.future;
+      panel.stalls['get_vod_streams'] = stallMovies.future;
+      final client = _clientWith(panel).client;
+
+      final syncFuture = client.syncSearchIndex(force: true);
+
+      // Both live and movies fetches must be in flight (both stalled)
+      // before releasing either — that is the overlap itself.
+      var bothStalled = false;
+      for (var i = 0; i < 100 && !bothStalled; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bothStalled =
+            (panel.requests['get_live_streams'] ?? 0) >= 1 &&
+            (panel.requests['get_vod_streams'] ?? 0) >= 1;
+      }
+      expect(bothStalled, isTrue, reason: 'live + movies must start together (cap 2)');
+
+      // Release live only: a slot frees, so series starts while movies
+      // is still stalled.
+      stallLive.complete();
+      var seriesStarted = false;
+      for (var i = 0; i < 100 && !seriesStarted; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        seriesStarted = (panel.requests['get_series'] ?? 0) >= 1;
+      }
+      expect(seriesStarted, isTrue, reason: 'series must start while movies is still downloading');
+      expect(panel.requests['get_vod_streams'], 1);
+
+      stallMovies.complete();
+      final result = await syncFuture;
+      expect(result.rows, {
+        IptvSearchIndex.typeLive: 3,
+        IptvSearchIndex.typeMovie: 7,
+        IptvSearchIndex.typeSeries: 4,
+      });
     });
   });
 }

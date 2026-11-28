@@ -198,6 +198,46 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('the stall label shows mid-stream with no buffering signal, and clears on recovery', (tester) async {
+    PipService().isPipActive.value = false;
+    final isBuffering = ValueNotifier<bool>(false);
+    final hasFirstFrame = ValueNotifier<bool>(true);
+    final isExiting = ValueNotifier<bool>(false);
+    final isStalled = ValueNotifier<bool>(false);
+    addTearDown(isBuffering.dispose);
+    addTearDown(hasFirstFrame.dispose);
+    addTearDown(isExiting.dispose);
+    addTearDown(isStalled.dispose);
+
+    await tester.pumpWidget(
+      _wrapPrompt(
+        VideoPlayerBufferingOverlay(
+          isBuffering: isBuffering,
+          hasFirstFrame: hasFirstFrame,
+          isExiting: isExiting,
+          isStalled: isStalled,
+        ),
+      ),
+    );
+
+    // Playing, framed, not buffering: nothing shows.
+    expect(find.text('Stream stalled'), findsNothing);
+    expect(find.bySemanticsLabel('Loading video'), findsNothing);
+
+    // The watchdog fired with no `paused-for-cache` from mpv: the overlay
+    // still appears, and it names the stall instead of spinning silently.
+    isStalled.value = true;
+    await tester.pump();
+    expect(find.text('Stream stalled'), findsOneWidget);
+    expect(find.bySemanticsLabel('Loading video'), findsOneWidget);
+
+    // Position advanced again: the label clears and the overlay goes away.
+    isStalled.value = false;
+    await tester.pump();
+    expect(find.text('Stream stalled'), findsNothing);
+    expect(find.bySemanticsLabel('Loading video'), findsNothing);
+  });
+
   // The whole point of moving the countdown to a ValueListenable: the digit
   // updates without the parent being rebuilt. Previously a 1 Hz timer called a
   // root setState on the player screen, which re-created PlexVideoControls
