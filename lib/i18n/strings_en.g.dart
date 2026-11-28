@@ -2309,6 +2309,21 @@ class Translations$mediaMenu$en {
 	/// en: 'File Info'
 	String get fileInfo => 'File Info';
 
+	/// en: 'Category unknown'
+	String get iptvCategoryUnknown => 'Category unknown';
+
+	/// en: 'This item has no provider category, so there is nothing to turn off.'
+	String get iptvCategoryUnknownDetail => 'This item has no provider category, so there is nothing to turn off.';
+
+	/// en: 'Hide this category?'
+	String get hideIptvCategoryTitle => 'Hide this category?';
+
+	/// en: 'Movies and series in ${name} will be hidden. You can turn this category back on in IPTV settings.'
+	String hideIptvCategoryMessage({required Object name}) => 'Movies and series in ${name} will be hidden. You can turn this category back on in IPTV settings.';
+
+	/// en: 'Category ${name} hidden'
+	String iptvCategoryHidden({required Object name}) => 'Category ${name} hidden';
+
 	/// en: 'Delete episode from server'
 	String get deleteEpisodeFromServer => 'Delete episode from server';
 
@@ -4269,6 +4284,9 @@ class Translations$about$en {
 	];
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+	];
+	List<String> get changelog2351 => [
+		'New: long-pressing a movie or series from IPTV now shows the category it belongs to — for example NF — instead of File Info, which never worked for a stream. Tapping it turns that whole category off, so its movies and series stop showing up; turn it back on in IPTV settings. Categories that never showed up in the whole-groups list can now be turned off this way too',
 	];
 	List<String> get changelog2350 => [
 		'Fixed: turning a whole group of channels off no longer freezes the app — the TV guide list is now rebuilt in the background instead of on the screen\'s own thread, so the remote keeps answering while it works; the same fix covers Reload TV details. Turned-off categories now sit at the bottom of their list, in alphabetical order, with the ones still on at the top. The download dialog now shows a real progress bar with how much has arrived and how fast it is coming, and the Update now dialog now shows live progress while the guide downloads in the background, plus how many of your channels matched. The guide settings screen now also shows how many channels and programmes the loaded guide holds',
@@ -11364,6 +11382,11 @@ extension on Translations {
 			'mediaMenu.shufflePlay' => 'Shuffle Play',
 			'mediaMenu.shuffleNotAvailableOffline' => 'Shuffle not available offline',
 			'mediaMenu.fileInfo' => 'File Info',
+			'mediaMenu.iptvCategoryUnknown' => 'Category unknown',
+			'mediaMenu.iptvCategoryUnknownDetail' => 'This item has no provider category, so there is nothing to turn off.',
+			'mediaMenu.hideIptvCategoryTitle' => 'Hide this category?',
+			'mediaMenu.hideIptvCategoryMessage' => ({required Object name}) => 'Movies and series in ${name} will be hidden. You can turn this category back on in IPTV settings.',
+			'mediaMenu.iptvCategoryHidden' => ({required Object name}) => 'Category ${name} hidden',
 			'mediaMenu.deleteEpisodeFromServer' => 'Delete episode from server',
 			'mediaMenu.deleteSeasonFromServer' => 'Delete season from server',
 			'mediaMenu.deleteShowFromServer' => 'Delete show from server',
@@ -11606,13 +11629,13 @@ extension on Translations {
 			'messages.liveStreamInterrupted' => 'The live stream was interrupted. Press play to retry.',
 			'messages.fileInfoNotAvailable' => 'File information not available',
 			'messages.playbackAuthenticationRequired' => 'Sign in to the media server again to play this item.',
+			_ => null,
+		} ?? switch (path) {
 			'messages.playbackServerUnavailable' => 'The media server is unavailable. Try again later.',
 			'messages.playbackDataInvalid' => 'The server returned invalid playback information.',
 			'messages.playbackCancelled' => 'Playback was canceled.',
 			'messages.playbackFailed' => 'Playback could not be started.',
 			'messages.playbackFailedDetail' => ({required Object error}) => 'Playback could not be started: ${error}',
-			_ => null,
-		} ?? switch (path) {
 			'messages.playbackFailedViaTunnel' => 'Playback could not be started. The tunnel was on but the stream did not load — check the tunnel is still connected and try again.',
 			'messages.audioOutputFailed' => 'The audio output stopped responding. Check the TV or receiver\'s audio connection; if other apps have no sound either, restart the device.',
 			'messages.mediaUnavailable' => 'This content is no longer available.',
@@ -12120,13 +12143,14 @@ extension on Translations {
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			_ => null,
+		} ?? switch (path) {
+			'about.changelog2351.0' => 'New: long-pressing a movie or series from IPTV now shows the category it belongs to — for example NF — instead of File Info, which never worked for a stream. Tapping it turns that whole category off, so its movies and series stop showing up; turn it back on in IPTV settings. Categories that never showed up in the whole-groups list can now be turned off this way too',
 			'about.changelog2350.0' => 'Fixed: turning a whole group of channels off no longer freezes the app — the TV guide list is now rebuilt in the background instead of on the screen\'s own thread, so the remote keeps answering while it works; the same fix covers Reload TV details. Turned-off categories now sit at the bottom of their list, in alphabetical order, with the ones still on at the top. The download dialog now shows a real progress bar with how much has arrived and how fast it is coming, and the Update now dialog now shows live progress while the guide downloads in the background, plus how many of your channels matched. The guide settings screen now also shows how many channels and programmes the loaded guide holds',
 			'about.changelog2349.0' => 'Fixed: on a Meta Quest headset the 2D panel window now stays the size you drag it to — the app no longer snaps it back to the size it had before when the panel comes back into focus. The panel still reopens at the size you left it. The 3D movie screen is unchanged: its size, distance, curvature and depth are still set from the 3D sheet',
 			'about.changelog2348.0' => 'Cleanup and Quest 3D fixes: error messages are now consistent wherever something fails to load, a pop-out player attempt that fails now shows you a message instead of failing silently, and a handful of small fixes behind the scenes. On a Meta Quest headset the 3D depth slider now really changes the depth, and 3D detection now also reads the video file\'s own stereo mode, so a 3D file with no tag in its filename is still recognised as 3D. Signing in and the first checks also now wait for the VPN tunnel to finish starting instead of going out direct while it is still coming up',
 			'about.changelog2347.0' => 'New: on a Meta Quest headset, 3D movies (side-by-side and over-under, half and full) now play in real 3D — one picture per eye — on a screen floating over the real room, with a brightness slider for the room and the full set of 3D settings. The app still opens as a 2D panel you can launch while a game is running, like YouTube. VR180 and VR360 videos play wrapped around you, and the VR player has hand tracking, a controls panel over the movie, screen presets, subtitle depth, playback speed, chapters and a sleep timer. On phones and TVs nothing changes — 3D files still play flat, showing both eyes, so you can tell it is a 3D file',
 			'about.changelog2346.0' => 'Fixed: signing in now waits for the VPN tunnel to finish starting instead of going out direct while it is still coming up; the background catalog sync no longer runs direct on a schedule while the VPN is on — it waits for the next foreground sync, which rides the tunnel; and the M3U playlist check, the M3U health check, the guide-source check and the live-channel check now all go through the tunnel too',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2345.0' => 'Fixed: signing in to an Xtream connection now goes through the VPN tunnel when it is on, so a TV that could not log in while the tunnel was up can sign in now; and the sign-in attempt is now written to the debug log, so a failed login shows up there instead of failing silently',
 			'about.changelog2344.0' => 'New: on phones the Live TV categories are now a menu beside Guide instead of a row of chips, Favourites has its own button to the left of Guide, and Settings → Live TV has a Default tab choice so Live TV can open on Favourites; the six network settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) now live only on the Super Spoof page instead of in Advanced too; and long-pressing a title in Explore and tapping Search this title now opens Search and runs it — it did nothing before',
 			'about.changelog2342.0' => 'New: all the Super Spoof settings moved to their own page — Settings → Advanced → Super Spoof opens it, with the master switch on top and the name, network stack and extra headers underneath it. Nothing about what they do changed',
@@ -12633,14 +12657,14 @@ extension on Translations {
 			'explore.format.tvShort' => 'TV Short',
 			'explore.format.movie' => 'Movie',
 			'explore.format.special' => 'Special',
+			_ => null,
+		} ?? switch (path) {
 			'explore.format.ova' => 'OVA',
 			'explore.format.ona' => 'ONA',
 			'explore.format.music' => 'Music',
 			'explore.format.other' => 'Other',
 			'explore.sourceMaterial.original' => 'Original',
 			'explore.sourceMaterial.manga' => 'Manga',
-			_ => null,
-		} ?? switch (path) {
 			'explore.sourceMaterial.lightNovel' => 'Light novel',
 			'explore.sourceMaterial.novel' => 'Novel',
 			'explore.sourceMaterial.visualNovel' => 'Visual novel',
@@ -13147,14 +13171,14 @@ extension on Translations {
 			'downloads.backgroundWarning.dialogFixFirst' => 'Fix this first',
 			'downloads.backgroundWarning.statusTile' => 'Background downloads',
 			'downloads.backgroundWarning.statusOk' => 'Allowed to run in the background',
+			_ => null,
+		} ?? switch (path) {
 			'downloads.backgroundWarning.statusBlocked' => 'Blocked by system settings',
 			'downloads.backgroundWarning.statusDegraded' => 'Limited by system settings',
 			'downloads.backgroundWarning.statusUnknown' => 'Not checked yet',
 			'downloads.backgroundWarning.settingsUnavailable' => 'Couldn\'t open system settings on this device',
 			'downloads.backgroundWarning.linkUnavailable' => 'Couldn\'t open dontkillmyapp.com on this device',
 			'downloads.options' => 'Downloads options',
-			_ => null,
-		} ?? switch (path) {
 			'downloads.groupings.library' => 'Library',
 			'downloads.groupings.collections' => 'Collections',
 			'downloads.unknownLibrary' => 'Unknown library',
@@ -13661,14 +13685,14 @@ extension on Translations {
 			'iptv.pauseDownloadsWhileWatching' => 'Pause downloads while watching',
 			'iptv.pauseDownloadsWhileWatchingDescription' => 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch',
 			'iptv.downloadRunTimeout' => 'Download run timeout',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.downloadRunTimeoutDescription' => ({required Object minutes}) => 'One download run may transfer for ${minutes} minutes before it pauses and picks up where it left off. Longer runs need fewer pauses on slow connections; a change applies to downloads started after it',
 			'iptv.downloadRunTimeoutMinutes' => ({required Object minutes}) => '${minutes} minutes',
 			'iptv.backgroundSyncNoConnections' => 'No IPTV connections',
 			'iptv.catalogSyncNow' => 'Sync catalog now',
 			'iptv.catalogSyncNowDescription' => 'Download all titles for movies, TV and channels now',
 			'iptv.catalogSyncTitle' => 'Refreshing Trex details',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.catalogSyncLive' => 'Live TV',
 			'iptv.catalogSyncMovies' => 'Movies',
 			'iptv.catalogSyncSeries' => 'TV / Series',

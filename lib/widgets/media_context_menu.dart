@@ -5,6 +5,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/watch_state_store.dart';
+import '../connection/connection.dart';
+import '../connection/connection_registry.dart';
 import '../media/media_backend.dart';
 import '../media/media_item.dart';
 import '../media/media_item_labels.dart';
@@ -95,6 +97,16 @@ class _MenuContext {
   /// A downloads folder (see [MediaContextMenu.isOffline]).
   final bool isDownloadsFolder;
 
+  /// The item's own IPTV provider category (1.6.33): the provider
+  /// category id as labelled, plus the display name resolved from the
+  /// item's own per-kind category list — never the initials
+  /// (whole-groups) aggregation, which misses one-off groups like NF.
+  /// Both null when the item is not an IPTV movie/show/episode or
+  /// carries no category at all; the name falls back to the id when
+  /// the list cannot be read, so the row still names the group.
+  final String? iptvCategoryId;
+  final String? iptvCategoryName;
+
   const _MenuContext({
     required this.mediaItem,
     required this.playlist,
@@ -108,6 +120,8 @@ class _MenuContext {
     required this.showWatchlistEntry,
     required this.watchlistRemoveOffered,
     required this.canDeleteFromServer,
+    this.iptvCategoryId,
+    this.iptvCategoryName,
   }) : isDownloadsFolder = false;
 
   /// A downloads folder's entries act on local downloads, so none of the
@@ -124,6 +138,8 @@ class _MenuContext {
       showWatchlistEntry = false,
       watchlistRemoveOffered = false,
       canDeleteFromServer = false,
+      iptvCategoryId = null,
+      iptvCategoryName = null,
       isDownloadsFolder = true;
 
   bool get isPlaylist => playlist != null;
@@ -562,6 +578,16 @@ class MediaContextMenuState extends State<MediaContextMenu> {
           ),
           isAdminActionAllowed: isAdmin,
         );
+    // IPTV VOD category (1.6.33): the item's own provider category, for
+    // the menu's category row. Resolved from the item's per-kind
+    // category list — never the initials (whole-groups) aggregation,
+    // which misses one-off groups like NF. Bounded so a cold panel
+    // never freezes the long-press; on failure the row falls back to
+    // the provider id, and the hide still works by id.
+    final iptvCategory = await _resolveIptvVodCategory(
+      mediaClient: mediaClient,
+      mediaItem: mediaItem,
+    );
     return _MenuContext(
       mediaItem: mediaItem,
       playlist: playlist,
@@ -575,7 +601,48 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       showWatchlistEntry: showWatchlistEntry,
       watchlistRemoveOffered: watchlistRemoveOffered,
       canDeleteFromServer: canDeleteFromServer,
+      iptvCategoryId: iptvCategory?.id,
+      iptvCategoryName: iptvCategory?.name,
     );
+  }
+
+  /// The item's own IPTV provider category (1.6.33): the provider id
+  /// plus the display name resolved from the item's per-kind category
+  /// list. M3U groups ARE the name — the group title is both id and
+  /// name. Null when the item is not an IPTV movie/show/episode or
+  /// carries no category at all. The name falls back to the id when
+  /// the list cannot be read — the hide works by id either way, and
+  /// the id is the provider's own identifier for the group, never an
+  /// invented label.
+  Future<({String id, String name})?> _resolveIptvVodCategory({
+    required MediaServerClient? mediaClient,
+    required MediaItem? mediaItem,
+  }) async {
+    final client = mediaClient;
+    if (client is! IptvClient) return null;
+    final mediaKind = mediaItem?.kind;
+    if (mediaItem == null ||
+        (mediaKind != MediaKind.movie && mediaKind != MediaKind.show && mediaKind != MediaKind.episode)) {
+      return null;
+    }
+    final categoryId = switch (mediaItem) {
+      // Only the IPTV variants carry a category id — Plex/Jellyfin
+      // items have no provider category, so the union exposes no
+      // neutral getter for it.
+      M3uMediaItem(:final categoryId) => categoryId,
+      XtreamMediaItem(:final categoryId) => categoryId,
+      _ => null,
+    };
+    if (categoryId == null || categoryId.isEmpty) return null;
+    if (client.connection is! XtreamConnection) return (id: categoryId, name: categoryId);
+    try {
+      final categories = await (mediaKind == MediaKind.movie ? client.vodCategories() : client.seriesCategories())
+          .timeout(const Duration(seconds: 2));
+      final name = categories.where((c) => c.id == categoryId).firstOrNull?.name ?? categoryId;
+      return (id: categoryId, name: name);
+    } catch (_) {
+      return (id: categoryId, name: categoryId);
+    }
   }
 
   /// Entries for a downloads folder (see [MediaContextMenu.isOffline]).
@@ -757,15 +824,27 @@ class MediaContextMenuState extends State<MediaContextMenu> {
     return [
       if (isMovieOrEpisode && (hasVersionChoice || menu.canTranscode) && menu.itemServerOnline)
         _MenuAction(value: 'play_version', icon: Symbols.video_file_rounded, label: t.mediaMenu.playVersion),
-      // File Info — every file-backed leaf kind (movies, episodes, tracks,
-      // clips). Backend-neutral: both PlexClient and JellyfinClient implement
-      // [MediaServerClient.getFileInfo], reading codec/stream metadata from
-      // `Media`/`MediaSources` respectively. Container kinds are excluded by
-      // [MediaKind.hasFileInfo] because neither backend attaches media sources
-      // to them — a show/season/album/artist entry would only ever produce the
-      // "not available" snackbar. Hidden when the item has no backend marker
-      // so we don't fan out to an arbitrary client.
-      if (menu.itemBackend != null && mediaKind.hasFileInfo)
+      // IPTV VOD (1.6.33): File Info is swapped for the item's own
+      // provider category — there is no local file for a stream
+      // (IptvClient.getFileInfo throws UnsupportedError), and the
+      // category is what the owner needs to see and switch off. The
+      // category id comes from the item itself, the name from its
+      // per-kind category list (resolved in [_resolveMenuContext]) —
+      // never the initials (whole-groups) aggregation, which misses
+      // one-off groups like NF. Shows never had File Info
+      // (MediaKind.hasFileInfo excludes containers) but get the
+      // category row here too, so a series can be switched off from
+      // its own menu. Plex/local items keep real File Info, untouched.
+      if (menu.mediaClient is IptvClient &&
+          (mediaKind == MediaKind.movie || mediaKind == MediaKind.show || mediaKind == MediaKind.episode))
+        _MenuAction(
+          value: 'iptv_category',
+          icon: Symbols.category_rounded,
+          label: menu.iptvCategoryId == null
+              ? t.mediaMenu.iptvCategoryUnknown
+              : t.liveTv.channelCategory(name: menu.iptvCategoryName ?? menu.iptvCategoryId!),
+        )
+      else if (menu.itemBackend != null && mediaKind.hasFileInfo)
         _MenuAction(value: 'fileinfo', icon: Symbols.info_rounded, label: t.mediaMenu.fileInfo),
       if (PlatformDetector.supportsExternalPlayers() && isMovieOrEpisode)
         _MenuAction(
@@ -959,6 +1038,9 @@ class MediaContextMenuState extends State<MediaContextMenu> {
         break;
       case 'fileinfo':
         await _showFileInfo(context);
+        break;
+      case 'iptv_category':
+        await _handleIptvVodCategory(context, menu);
         break;
       case 'play_external':
         await _handlePlayExternal(context);
@@ -1263,6 +1345,55 @@ class MediaContextMenuState extends State<MediaContextMenu> {
       if (context.mounted) {
         showErrorSnackBar(context, '$errorPrefix: ${localizedErrorReason(e)}');
       }
+    }
+  }
+
+  /// IPTV VOD category hide (1.6.33): confirm, then hide the item's own
+  /// provider category — the same persist the categories screen and the
+  /// guide toggle use (per-category id + client swap in place). The
+  /// category is hidden by its provider id exactly as labelled: no
+  /// stripping, no normalizing, no re-keying through the region prefix —
+  /// and the hide works even for a category the initials (whole-groups)
+  /// list never showed, because the store takes any id. The category
+  /// comes back from IPTV settings (its row appears there once hidden).
+  Future<void> _handleIptvVodCategory(BuildContext context, _MenuContext menu) async {
+    final categoryId = menu.iptvCategoryId;
+    if (categoryId == null || categoryId.isEmpty) {
+      if (context.mounted) showAppSnackBar(context, t.mediaMenu.iptvCategoryUnknownDetail);
+      return;
+    }
+    final name = menu.iptvCategoryName ?? categoryId;
+    final confirmed = await showConfirmDialog(
+      context,
+      title: t.mediaMenu.hideIptvCategoryTitle,
+      message: t.mediaMenu.hideIptvCategoryMessage(name: name),
+      confirmText: t.liveTv.hideCategory,
+      isDestructive: true,
+    );
+    if (!confirmed || !context.mounted) return;
+    final client = menu.mediaClient;
+    if (client is! IptvClient) return;
+    final connection = client.connection;
+    final hiddenIds = switch (connection) {
+      M3uConnection(:final hiddenCategoryIds) => hiddenCategoryIds.toSet(),
+      XtreamConnection(:final hiddenCategoryIds) => hiddenCategoryIds.toSet(),
+      _ => null,
+    };
+    if (hiddenIds == null) return;
+    hiddenIds.add(categoryId);
+    final updated = switch (connection) {
+      final M3uConnection c => c.copyWith(hiddenCategoryIds: hiddenIds.toList()),
+      final XtreamConnection c => c.copyWith(hiddenCategoryIds: hiddenIds.toList()),
+      _ => null,
+    };
+    if (updated == null) return;
+    try {
+      await context.read<ConnectionRegistry>().upsert(updated);
+      if (!context.mounted) return;
+      unawaited(context.read<MultiServerProvider>().refreshIptvConnection(updated));
+      if (context.mounted) showSuccessSnackBar(context, t.mediaMenu.iptvCategoryHidden(name: name));
+    } catch (e) {
+      if (context.mounted) showErrorSnackBar(context, t.iptvCategories.persistFailed);
     }
   }
 

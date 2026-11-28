@@ -173,6 +173,34 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
     return IptvClient.forConnection(widget.connection);
   }
 
+  /// Hidden categories the loaded lists never showed (1.6.33): a
+  /// category disabled from an item's own menu — e.g. NF, which the
+  /// initials (whole-groups) aggregation misses — must still appear
+  /// here once disabled, or it could never be turned back on. A real
+  /// provider category is in its per-kind list already, so this only
+  /// fires for a ghost: an id no loaded list names (renamed or removed
+  /// on the panel after hiding). It is appended once, under Movies
+  /// (Groups for M3U) with the id itself as the label — the section
+  /// is unknowable for a ghost, but the toggle works by id whatever
+  /// section holds it, and one row keeps the counts honest.
+  void _appendHiddenUnlisted() {
+    if (!mounted) return;
+    final known = <String>{
+      for (final row in <_CategoryRow>[...?_live, ...?_movies, ...?_series, ...?_groups]) row.id,
+    };
+    final missing = _hiddenIds.where((id) => !known.contains(id)).toList();
+    if (missing.isEmpty) return;
+    final target = _isXtream ? _movies : _groups;
+    if (target == null) return;
+    setState(() {
+      for (final id in missing) {
+        target.add((id: id, name: id));
+      }
+      _sortVisibleFirst(target);
+      _recomputeCounts();
+    });
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -234,6 +262,7 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
         _loading = false;
         _recomputeCounts();
       });
+      _appendHiddenUnlisted();
     } else {
       List<_CategoryRow>? groups;
       var groupsFailed = false;
@@ -252,6 +281,7 @@ class _IptvCategoriesScreenState extends State<IptvCategoriesScreen> {
         _loading = false;
         _recomputeCounts();
       });
+      _appendHiddenUnlisted();
     }
 
     // Initials load separately from the category lists, so a slow initials

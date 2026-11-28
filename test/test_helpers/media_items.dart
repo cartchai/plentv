@@ -66,6 +66,7 @@ MediaItem testMediaItem({
   String? serverId,
   String? serverName,
   String? backendFolderKey,
+  String? categoryId,
   Map<String, Object?>? raw,
 }) {
   // Dispatch straight to the concrete variants: the fixture keeps the full
@@ -250,6 +251,7 @@ MediaItem testMediaItem({
       libraryTitle: libraryTitle,
       serverId: serverId,
       serverName: serverName,
+      categoryId: categoryId,
       backendFolderKey: backendFolderKey,
       raw: raw,
     ),
@@ -308,6 +310,7 @@ MediaItem testMediaItem({
       libraryTitle: libraryTitle,
       serverId: serverId,
       serverName: serverName,
+      categoryId: categoryId,
       backendFolderKey: backendFolderKey,
       raw: raw,
     ),

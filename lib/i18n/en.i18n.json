@@ -827,6 +827,11 @@
     "shufflePlay": "Shuffle Play",
     "shuffleNotAvailableOffline": "Shuffle not available offline",
     "fileInfo": "File Info",
+    "iptvCategoryUnknown": "Category unknown",
+    "iptvCategoryUnknownDetail": "This item has no provider category, so there is nothing to turn off.",
+    "hideIptvCategoryTitle": "Hide this category?",
+    "hideIptvCategoryMessage": "Movies and series in ${name} will be hidden. You can turn this category back on in IPTV settings.",
+    "iptvCategoryHidden": "Category ${name} hidden",
     "deleteEpisodeFromServer": "Delete episode from server",
     "deleteSeasonFromServer": "Delete season from server",
     "deleteShowFromServer": "Delete show from server",
@@ -1683,6 +1688,9 @@
     ],
     "changelog2343": [
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
+    ],
+    "changelog2351": [
+      "New: long-pressing a movie or series from IPTV now shows the category it belongs to — for example NF — instead of File Info, which never worked for a stream. Tapping it turns that whole category off, so its movies and series stop showing up; turn it back on in IPTV settings. Categories that never showed up in the whole-groups list can now be turned off this way too"
     ],
     "changelog2350": [
       "Fixed: turning a whole group of channels off no longer freezes the app — the TV guide list is now rebuilt in the background instead of on the screen's own thread, so the remote keeps answering while it works; the same fix covers Reload TV details. Turned-off categories now sit at the bottom of their list, in alphabetical order, with the ones still on at the top. The download dialog now shows a real progress bar with how much has arrived and how fast it is coming, and the Update now dialog now shows live progress while the guide downloads in the background, plus how many of your channels matched. The guide settings screen now also shows how many channels and programmes the loaded guide holds"
