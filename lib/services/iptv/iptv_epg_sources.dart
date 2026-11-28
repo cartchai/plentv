@@ -498,6 +498,26 @@ class IptvEpgSourcesStore {
   String get _fingerprintKey => 'iptv_epg_channel_fingerprint_v2:$connectionId';
   String get _fingerprintKeyV1 => 'iptv_epg_channel_fingerprint:$connectionId';
 
+  /// Delete every stored key for this connection (1.6.35, issue #11):
+  /// added sources, precedence, mappings, source status and both
+  /// channel-fingerprint keys. The connection is gone, so nothing here
+  /// can be re-read; a later re-add starts from the provider feed.
+  /// Best effort, never throws.
+  Future<void> clearAll() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_sourcesKey);
+      await prefs.remove(_precedenceKey);
+      await prefs.remove(_mappingKey);
+      await prefs.remove(_statusKey);
+      await prefs.remove(_fingerprintKey);
+      await prefs.remove(_fingerprintKeyV1);
+    } catch (_) {
+      // A prefs failure must not fail a removal whose registry row is
+      // already gone; stale keys read as absent on the next add.
+    }
+  }
+
   Future<List<IptvEpgSourceConfig>> loadUserSources() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_sourcesKey);

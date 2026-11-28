@@ -57,6 +57,8 @@ class SessionTeardownScope {
     connections: connections,
     storage: storage,
     serverManager: serverManager,
+    profileRegistry: profileRegistry,
+    releaseDownloadsForServers: downloads.releaseDownloadsForProfileServers,
   );
 
   SessionTeardownScope.of(BuildContext context)

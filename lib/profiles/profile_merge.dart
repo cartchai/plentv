@@ -26,6 +26,48 @@ List<ProfileConnection> visibleProfileConnections(Profile profile, List<ProfileC
   return pcs.where((pc) => pc.connectionId != parentId).toList();
 }
 
+/// Whether [profile] is an anchor a first-run IPTV add invented (1.6.35),
+/// not a user account.
+///
+/// The first-run add path ([persistAndExitIptvConnection]) creates a local
+/// profile named after the connection when there are no profiles at all,
+/// because the boot guard requires at least one profile before MainScreen.
+/// That profile is load-bearing only until a real profile exists: it is
+/// never a person, so the Accounts menu hides it ([ActiveProfileProvider.
+/// iptvAnchorProfileIds]) and the boot migration
+/// ([migrateIptvAnchorProfiles]) removes it once another profile exists.
+///
+/// Detection is deliberately strict — a real profile the user made must
+/// never be mistaken for one: local, no PIN, named exactly after an IPTV
+/// connection, created within 10 minutes of that connection (the add
+/// creates both in the same breath), holding only IPTV join rows, not the
+/// active profile, while at least one other profile exists. A profile with
+/// no join rows at all is not an anchor: the invented one always holds
+/// the row to its connection.
+bool isIptvAnchorProfile({
+  required Profile profile,
+  required Map<String, Connection> connectionsById,
+  required List<ProfileConnection> joinRows,
+  required String? activeProfileId,
+  required bool hasOtherProfile,
+}) {
+  if (!profile.isLocal) return false;
+  if (profile.isPinProtected) return false;
+  if (profile.id == activeProfileId) return false;
+  if (!hasOtherProfile) return false;
+  if (joinRows.isEmpty) return false;
+  for (final row in joinRows) {
+    final connection = connectionsById[row.connectionId];
+    if (connection == null || (connection is! M3uConnection && connection is! XtreamConnection)) return false;
+  }
+  return connectionsById.values.any(
+    (connection) =>
+        (connection is M3uConnection || connection is XtreamConnection) &&
+        connection.displayName == profile.displayName &&
+        profile.createdAt.difference(connection.createdAt).abs() <= const Duration(minutes: 10),
+  );
+}
+
 /// Merge local profiles with virtual Plex Home profiles. Each Plex Home
 /// user becomes a virtual profile attached to its `connectionId`. Home
 /// users whose connection isn't registered are dropped — their profile

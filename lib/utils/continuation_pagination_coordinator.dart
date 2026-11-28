@@ -11,7 +11,15 @@ class ContinuationPage<T> {
   final int consumedCount;
 }
 
-enum ContinuationLoadStatus { completed, failed, stale, idle }
+enum ContinuationLoadStatus {
+  completed,
+  failed,
+  stale,
+  idle,
+
+  /// One page landed and more remain ([ContinuationPaginationCoordinator.loadNextPage]).
+  pageLoaded,
+}
 
 typedef ContinuationPageLoader<T> = Future<ContinuationPage<T>> Function(int startIndex);
 typedef ContinuationPageHandler<T> = void Function(ContinuationPage<T> page);
@@ -82,6 +90,28 @@ class ContinuationPaginationCoordinator<T> {
     onStateChanged?.call();
   }
 
+  /// Loads exactly one page from the current cursor — the on-demand step
+  /// a screen calls when the user scrolls or focuses near the end, instead
+  /// of prefetching the whole list with [loadRemaining]. Calls made while
+  /// a page is in flight share that page and do not issue a duplicate
+  /// backend request; a [loadRemaining] already in flight is shared the
+  /// same way. Returns [ContinuationLoadStatus.pageLoaded] when more
+  /// pages remain, [ContinuationLoadStatus.completed] when that page
+  /// exhausted the list.
+  Future<ContinuationLoadStatus> loadNextPage() {
+    final existing = _inFlight;
+    if (existing != null) return existing;
+    if (_disposed || _nextStartIndex == null) {
+      return Future.value(ContinuationLoadStatus.idle);
+    }
+
+    final generation = _generation;
+    _inFlightGeneration = generation;
+    final operation = _runLoad(generation, () => _loadOnePageStep(generation));
+    _inFlight = operation;
+    return operation;
+  }
+
   /// Loads all remaining pages. Calls made while this generation is loading
   /// share the same operation and do not issue duplicate backend requests.
   Future<ContinuationLoadStatus> loadRemaining() {
@@ -129,32 +159,58 @@ class ContinuationPaginationCoordinator<T> {
   bool _isCurrent(int generation) => !_disposed && generation == _generation;
 
   Future<ContinuationLoadStatus> _loadRemaining(int generation) async {
+    return _runLoad(generation, () async {
+      while (_isCurrent(generation)) {
+        final status = await _loadOnePageStep(generation);
+        if (status != ContinuationLoadStatus.pageLoaded) return status;
+      }
+      return ContinuationLoadStatus.stale;
+    });
+  }
+
+  /// One page of [_loadRemaining]'s loop, as its own step: loads the page
+  /// at the cursor, hands it to [onPage], advances the cursor. Returns
+  /// [ContinuationLoadStatus.pageLoaded] when more pages remain,
+  /// [ContinuationLoadStatus.completed] when the cursor is exhausted or
+  /// the page came back empty.
+  Future<ContinuationLoadStatus> _loadOnePageStep(int generation) async {
+    final startIndex = _nextStartIndex;
+    if (startIndex == null) return ContinuationLoadStatus.completed;
+    if (!_isCurrent(generation)) return ContinuationLoadStatus.stale;
+
+    final page = await loadPage(startIndex);
+    if (!_isCurrent(generation)) return ContinuationLoadStatus.stale;
+
+    if (page.consumedCount <= 0) {
+      _totalCount = page.totalCount;
+      _nextStartIndex = null;
+      onStateChanged?.call();
+      return ContinuationLoadStatus.completed;
+    }
+
+    onPage(page);
+    _totalCount = page.totalCount;
+    final nextStartIndex = startIndex + page.consumedCount;
+    final hasMore = nextStartIndex < page.totalCount;
+    _nextStartIndex = hasMore ? nextStartIndex : null;
+    onStateChanged?.call();
+    return hasMore ? ContinuationLoadStatus.pageLoaded : ContinuationLoadStatus.completed;
+  }
+
+  /// Runs one load operation ([_loadRemaining] or one [_loadOnePageStep])
+  /// with the shared loading/error/in-flight bookkeeping. A failure sets
+  /// [_error] and reports through [onError]; a generation change mid-load
+  /// reports [ContinuationLoadStatus.stale] instead.
+  Future<ContinuationLoadStatus> _runLoad(
+    int generation,
+    Future<ContinuationLoadStatus> Function() body,
+  ) async {
     _isLoading = true;
     _error = null;
     onStateChanged?.call();
 
     try {
-      while (_isCurrent(generation)) {
-        final startIndex = _nextStartIndex;
-        if (startIndex == null) return ContinuationLoadStatus.completed;
-
-        final page = await loadPage(startIndex);
-        if (!_isCurrent(generation)) return ContinuationLoadStatus.stale;
-
-        if (page.consumedCount <= 0) {
-          _totalCount = page.totalCount;
-          _nextStartIndex = null;
-          onStateChanged?.call();
-          return ContinuationLoadStatus.completed;
-        }
-
-        onPage(page);
-        _totalCount = page.totalCount;
-        final nextStartIndex = startIndex + page.consumedCount;
-        _nextStartIndex = nextStartIndex < page.totalCount ? nextStartIndex : null;
-        onStateChanged?.call();
-      }
-      return ContinuationLoadStatus.stale;
+      return await body();
     } catch (exception, stackTrace) {
       if (!_isCurrent(generation)) return ContinuationLoadStatus.stale;
       _error = exception;

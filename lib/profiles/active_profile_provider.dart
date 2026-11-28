@@ -70,6 +70,27 @@ class ActiveProfileProvider extends ChangeNotifier with DisposableChangeNotifier
   String? get activeId => _active?.id;
   List<Profile> get profiles => _profiles;
 
+  /// Ids of the local profiles a first-run IPTV add invented (1.6.35,
+  /// [isIptvAnchorProfile]): anchors, not user accounts. The Accounts menu
+  /// ([userMenuEntriesForContext]) hides them, and the boot migration
+  /// removes them once a real profile exists. Empty on an IPTV-only
+  /// install, where the anchor is the only profile and stays load-bearing.
+  Set<String> get iptvAnchorProfileIds {
+    final ids = <String>{};
+    for (final profile in _profiles) {
+      if (isIptvAnchorProfile(
+        profile: profile,
+        connectionsById: _connectionsById,
+        joinRows: _connectionsByProfile[profile.id] ?? const [],
+        activeProfileId: _active?.id,
+        hasOtherProfile: _profiles.length > 1,
+      )) {
+        ids.add(profile.id);
+      }
+    }
+    return ids;
+  }
+
   /// Derived picture URL for [profileId], or null when initials should render.
   String? avatarUrlFor(String profileId) => _avatarUrls[profileId];
 

@@ -1121,6 +1121,18 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Move a removed profile's queued watch actions to [toProfileId]
+  /// (1.6.35 anchor migration): the rows keep their ids and keys, only
+  /// the owning profile is re-keyed, so the drain still replays them.
+  Future<void> transferWatchActionsForProfile(String fromProfileId, String toProfileId) async {
+    if (fromProfileId.isEmpty || toProfileId.isEmpty || fromProfileId == toProfileId) return;
+    await _runPendingMutation(() async {
+      await (update(offlineWatchProgress)..where((t) => t.profileId.equals(fromProfileId))).write(
+        OfflineWatchProgressCompanion(profileId: Value(toProfileId)),
+      );
+    });
+  }
+
   /// Drop a removed profile's queued watch actions (profile teardown).
   Future<void> deleteWatchActionsForProfile(String profileId) async {
     await _runPendingMutation(() async {
@@ -1370,6 +1382,20 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteSyncRule(String globalKey) async {
     await (delete(syncRules)..where((t) => t.globalKey.equals(globalKey))).go();
+  }
+
+  /// Move a removed profile's sync rules to [toProfileId] (1.6.35 anchor
+  /// migration). The rule ids and global keys do not change, so the rule
+  /// downloads linked by rule id move with them — only their profile
+  /// column is re-keyed.
+  Future<void> transferSyncRulesForProfile(String fromProfileId, String toProfileId) async {
+    if (fromProfileId.isEmpty || toProfileId.isEmpty || fromProfileId == toProfileId) return;
+    await (update(syncRules)..where((t) => t.profileId.equals(fromProfileId))).write(
+      SyncRulesCompanion(profileId: Value(toProfileId)),
+    );
+    await (update(syncRuleDownloads)..where((t) => t.profileId.equals(fromProfileId))).write(
+      SyncRuleDownloadsCompanion(profileId: Value(toProfileId)),
+    );
   }
 
   /// Drop a removed profile's sync rules (profile teardown).

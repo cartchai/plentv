@@ -219,7 +219,7 @@ class _AddXtreamScreenState extends State<AddXtreamScreen> with AsyncFormStateMi
           setErrorText(t.addServer.invalidCredentials);
           return;
         }
-        final connection = XtreamConnection(
+        final candidate = XtreamConnection(
           id: const Uuid().v4(),
           name: name,
           serverUrl: serverUrl,
@@ -227,6 +227,11 @@ class _AddXtreamScreenState extends State<AddXtreamScreen> with AsyncFormStateMi
           password: password,
           createdAt: DateTime.now(),
         );
+        // 1.6.35 (issue #11): re-signing in used to mint a fresh id every
+        // time and leave a second row behind. A same host + username row
+        // already in the registry offers to update instead.
+        final connection = await resolveDuplicateIptvConnection(context: context, candidate: candidate);
+        if (!mounted || connection == null) return;
         final ok = await persistAndExitIptvConnection(
           context: context,
           connection: connection,

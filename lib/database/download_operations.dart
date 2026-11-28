@@ -117,6 +117,28 @@ extension DownloadDatabaseOperations on AppDatabase {
     });
   }
 
+  /// Move a removed profile's download ownership to [toProfileId]
+  /// (1.6.35 anchor migration): the physical files stay put — only the
+  /// owner rows are re-keyed, so the target profile keeps the downloads.
+  /// When the target already owns the same download, its row wins and the
+  /// source row is dropped: both rows describe the same file, and the
+  /// target's row is the live one.
+  Future<void> transferDownloadOwnersForProfile(String fromProfileId, String toProfileId) async {
+    if (fromProfileId.isEmpty || toProfileId.isEmpty || fromProfileId == toProfileId) return;
+    await transaction(() async {
+      final sourceKeys = await getDownloadOwnerKeysForProfile(fromProfileId);
+      if (sourceKeys.isEmpty) return;
+      final targetKeys = await getDownloadOwnerKeysForProfile(toProfileId);
+      for (final key in sourceKeys.intersection(targetKeys)) {
+        await (delete(downloadOwners)..where((t) => t.profileId.equals(fromProfileId) & t.globalKey.equals(key)))
+            .go();
+      }
+      await (update(downloadOwners)..where((t) => t.profileId.equals(fromProfileId))).write(
+        DownloadOwnersCompanion(profileId: Value(toProfileId)),
+      );
+    });
+  }
+
   Future<Set<String>> getDownloadOwnerKeysForProfile(String profileId) async {
     if (profileId.isEmpty) return const {};
     final rows = await (select(downloadOwners)..where((t) => t.profileId.equals(profileId))).get();

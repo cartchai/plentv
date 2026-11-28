@@ -159,5 +159,60 @@ void main() {
       expect(coordinator.totalCount, 1);
       expect(coordinator.hasMore, isFalse);
     });
+    test('loadNextPage loads exactly one page and leaves the rest for later', () async {
+      final starts = <int>[];
+      final loaded = <int>[];
+      final coordinator = ContinuationPaginationCoordinator<int>(
+        loadPage: (start) async {
+          starts.add(start);
+          final items = start == 0 ? [0, 1] : [2, 3];
+          return ContinuationPage(items: items, totalCount: 4, consumedCount: items.length);
+        },
+        onPage: (page) => loaded.addAll(page.items),
+      );
+
+      coordinator.setContinuation(startIndex: 0, totalCount: 4);
+      expect(await coordinator.loadNextPage(), ContinuationLoadStatus.pageLoaded);
+      expect(starts, [0]);
+      expect(loaded, [0, 1]);
+      expect(coordinator.nextStartIndex, 2);
+      expect(coordinator.hasMore, isTrue);
+
+      // The next on-demand step picks up where the first left off.
+      expect(await coordinator.loadNextPage(), ContinuationLoadStatus.completed);
+      expect(starts, [0, 2]);
+      expect(loaded, [0, 1, 2, 3]);
+      expect(coordinator.hasMore, isFalse);
+    });
+
+    test('loadNextPage shares an in-flight page instead of duplicating it', () async {
+      var calls = 0;
+      final gate = Completer<ContinuationPage<int>>();
+      final coordinator = ContinuationPaginationCoordinator<int>(
+        loadPage: (_) {
+          calls++;
+          return gate.future;
+        },
+        onPage: (_) {},
+      );
+
+      coordinator.setContinuation(startIndex: 0, totalCount: 2);
+      final first = coordinator.loadNextPage();
+      final duplicate = coordinator.loadNextPage();
+      gate.complete(const ContinuationPage(items: [0], totalCount: 2, consumedCount: 1));
+
+      expect(await first, ContinuationLoadStatus.pageLoaded);
+      expect(await duplicate, ContinuationLoadStatus.pageLoaded);
+      expect(calls, 1);
+    });
+
+    test('loadNextPage is idle with no cursor', () async {
+      final coordinator = ContinuationPaginationCoordinator<int>(
+        loadPage: (_) async => const ContinuationPage(items: [0], totalCount: 1, consumedCount: 1),
+        onPage: (_) {},
+      );
+
+      expect(await coordinator.loadNextPage(), ContinuationLoadStatus.idle);
+    });
   });
 }

@@ -352,10 +352,22 @@ class _HubDetailScreenState extends State<HubDetailScreen>
             !client.backend.usesMediaBrowserApi && !_isIptvBackend(client.backend);
         if (_replaceContinuationItems) {
           _continuation.setContinuation(startIndex: 0, totalCount: 1);
+          // Plex hubs are small: the whole-hub replace fetch stays eager.
+          unawaited(_continuation.loadRemaining());
         } else {
+          // 1.6.35 (issue #12): the append path must NOT prefetch the
+          // whole hub. Show more on a home Trex row opens a
+          // whole-library hub (tens of thousands of rows); the eager
+          // loadRemaining() spun thousands of pages through
+          // already-completed futures, so the loop never yielded to the
+          // event loop and key events could not dispatch — the remote
+          // froze and Android killed the app (ANR). The cursor is set
+          // here; pages load one at a time, only when the user scrolls
+          // or focuses near the end ([_maybeLoadNextHubPage],
+          // [_handleGridItemFocusChange]).
           _continuation.setContinuation(startIndex: loadedCount, totalCount: totalCount);
+          _scheduleNextHubPageCheck();
         }
-        unawaited(_continuation.loadRemaining());
       } else if (_usesPaginatedLoader && loadedCount < totalCount) {
         _scheduleNextHubPageCheck();
       }
@@ -395,6 +407,10 @@ class _HubDetailScreenState extends State<HubDetailScreen>
   void _applyContinuationPage(ContinuationPage<MediaItem> page) {
     if (!mounted) return;
     _replaceItems(_replaceContinuationItems ? List.of(page.items) : (List.of(_items)..addAll(page.items)));
+    // A page that still leaves the viewport unfilled (a short first
+    // page) must fetch the next one without waiting for a scroll that
+    // can never happen — same post-frame check the paged loader uses.
+    if (!_replaceContinuationItems) _scheduleNextHubPageCheck();
   }
 
   /// Swap in the merged item list and re-derive the sorted view from it.
@@ -424,11 +440,29 @@ class _HubDetailScreenState extends State<HubDetailScreen>
   bool get _canRequestNextHubPage =>
       _usesPaginatedLoader && loadedItems.length < totalSize && !isPaginationLoading && paginationError == null;
 
+  /// Whether the append-path continuation has another page to request:
+  /// the cursor is set, nothing is in flight, and the last page did not
+  /// fail (a failure waits for the retry affordance instead). The
+  /// replace path never takes this — its whole-hub fetch stays eager.
+  bool get _canRequestNextContinuationPage =>
+      !_usesPaginatedLoader &&
+      !_replaceContinuationItems &&
+      _continuation.hasMore &&
+      !_continuation.isLoading &&
+      _continuation.error == null;
+
+  void _requestNextContinuationPage() {
+    if (!_canRequestNextContinuationPage) return;
+    unawaited(_continuation.loadNextPage());
+  }
+
   void _maybeLoadNextHubPage() {
-    if (!_canRequestNextHubPage || !scrollController.hasClients) return;
+    if (!_canRequestNextHubPage && !_canRequestNextContinuationPage) return;
+    if (!scrollController.hasClients) return;
     final position = scrollController.position;
     if (position.extentAfter <= position.viewportDimension) {
       _requestNextHubPage();
+      _requestNextContinuationPage();
     }
   }
 
@@ -439,7 +473,10 @@ class _HubDetailScreenState extends State<HubDetailScreen>
 
   void _handleGridItemFocusChange(int index, bool hasFocus, {required bool isLastRow}) {
     trackGridItemFocus(index, hasFocus);
-    if (hasFocus && isLastRow) _requestNextHubPage();
+    if (hasFocus && isLastRow) {
+      _requestNextHubPage();
+      _requestNextContinuationPage();
+    }
   }
 
   /// Reconcile all realized items, including references captured under a cover.
@@ -457,8 +494,13 @@ class _HubDetailScreenState extends State<HubDetailScreen>
   void _retryHubContinuation() {
     if (_usesPaginatedLoader) {
       ensureIndexLoaded(loadedItems.length, pageSize: defaultListPageSize);
-    } else {
+    } else if (_replaceContinuationItems) {
       unawaited(_continuation.retry());
+    } else {
+      // 1.6.35 (issue #12): the append path retries one page, not the
+      // whole hub — retrying through loadRemaining() would prefetch
+      // every remaining page again.
+      unawaited(_continuation.loadNextPage());
     }
   }
 

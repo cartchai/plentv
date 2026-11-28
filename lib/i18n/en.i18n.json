@@ -1421,7 +1421,10 @@
     "noPermissionNeeded": "No special permission is needed — choose where to save the file, or save it in the app folder.",
     "savedTo": "Saved to:",
     "restartPlezTv": "Restart PlenTV",
-    "saveFailed": "Could not save the debug log — try saving it in the app folder instead."
+    "saveFailed": "Could not save the debug log — try saving it in the app folder instead.",
+    "submitDebugLog": "Submit debug log to GitHub",
+    "submitDebugLogFailed": "Couldn't submit the log — check your connection and try again, or save it instead.",
+    "submitDebugLogSubmitted": "Log submitted to GitHub:"
   },
   "errors": {
     "searchFailed": "Search failed: ${error}",
@@ -1689,6 +1692,9 @@
     ],
     "changelog2343": [
       "New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you"
+    ],
+    "changelog2353": [
+      "New: signing in to a TV service you already added now asks whether to update that connection instead of adding a second copy of it. Each TV service in IPTV settings now has its own Remove button underneath it, showing when it was added, so two services with the same name can be told apart and just one removed; removing a service from a profile now really removes it everywhere once no profile is using it any more. A TV service no longer shows up as a person in the Accounts menu, and the extra 'trex' profile that came with it is gone — the service itself, its channels, guide, favourites and settings are all still there. If the app crashes several times, the emergency log screen now has a button to send the log straight to us. And tapping Show more on a home-page category no longer freezes the TV — the list now loads a page at a time instead of all at once"
     ],
     "changelog2352": [
       "Faster all round: opening a movie or series category now shows the first titles straight away instead of loading the whole category first; the first catalog sync is quicker — it no longer downloads everything twice if you tap refresh while it is still running, and the guide can use fresh live channels before the whole sync finishes; long-pressing a movie or series now opens its menu straight away, with the category filling in a moment later; and a stream that stalls now tells you it has stalled and tries reconnecting on its own instead of sitting on a frozen picture"
@@ -3456,6 +3462,10 @@
     "m3uPlaylistEmpty": "That playlist has no channels.",
     "m3uInvalidUrl": "Enter a valid playlist URL starting with http:// or https://.",
     "xtreamProbeFailed": "Could not sign in to that Xtream server. Check the server URL, username, and password.",
+    "duplicateConnectionTitle": "Connection already exists",
+    "duplicateConnectionMessage": "You already have a connection to this server ('${name}', added ${addedDate}). Update it with these details, or add a separate one?",
+    "duplicateUpdateExisting": "Update existing",
+    "duplicateAddSeparate": "Add separate",
    "tunnelStillStarting": "The VPN tunnel is still starting. Please wait a moment and try again.",
     "addIptv": "Add"
   },
@@ -3496,6 +3506,15 @@
     "addConnectionDescription": "Add an M3U playlist or Xtream Codes account",
     "noConnections": "No IPTV connections yet",
     "noConnectionsHint": "Add an M3U playlist or Xtream Codes account to watch live TV.",
+    "removeConnectionTitle": "Remove this connection?",
+    "removeConnectionMessage": "Remove '${name}' (added ${addedDate})? Its Live TV channels, movies, series and guide will be gone from every profile, and its downloads will be removed.",
+    "removeConnectionOtherKeepsWorking": "The other '${name}' connection will keep working.",
+    "removeConnectionLastIptv": "Live TV will be empty until you add a service again.",
+    "removeConnectionButton": "Remove connection",
+    "removeConnectionBlockedPlaying": "Stop playback before removing this connection.",
+    "removeConnectionRemoved": "'${name}' removed.",
+    "removeConnectionFailed": "Couldn't remove '${name}' — try again.",
+    "sessionExpired": "Session expired",
     "categoriesOff": "${count} categories off",
     "categoriesAllOn": "All categories on",
     "playlist": "Playlist",

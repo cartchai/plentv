@@ -5,6 +5,8 @@ import '../i18n/strings.g.dart';
 import '../services/app_exit_service.dart';
 import '../services/auto_dump_service.dart';
 import '../services/last_crash_store.dart';
+import '../services/log_submit_service.dart';
+import '../utils/media_server_http_client.dart';
 import '../utils/snackbar_helper.dart';
 
 /// Emergency debug log saver (1.2.13, the owner 2026-11-14 ~17:21 EST): after
@@ -34,11 +36,18 @@ import '../utils/snackbar_helper.dart';
 /// Restart PlenTV / Close. (b) MOVE FORWARD with the startup as usual —
 /// "Continue startup" resets the counter and proceeds to normal startup.
 ///
-/// Counter behavior: saving (either location) or skipping resets the
-/// counter to 0. Closing the screen without saving or skipping leaves
-/// the counter at the threshold — this screen never installs the
-/// clean-exit observer, so a close here never writes a clean exit and
-/// the next launch shows the screen again.
+/// 1.6.35 adds a third path: SUBMIT the dump straight to our GitHub repo
+/// via the log-submit Worker ([submitDiagnosticLog] — redacted on-device
+/// first, same as the Logs screen). The TV path: saving + sharing a file
+/// is awkward on a TV, submitting is one button. It needs no saved file
+/// — it builds the same dump text the save path writes — and it is
+/// offered both before and after a save. A submit does NOT reset the
+/// failed-start counter (only saving or continuing does); a failed submit
+/// never traps the user: the hint shows and every other button stays live.
+/// Closing the screen without saving or skipping leaves the counter at
+/// the threshold — this screen never installs the clean-exit observer,
+/// so a close here never writes a clean exit and the next launch shows
+/// the screen again.
 class EmergencyDebugLogSaverScreen extends StatefulWidget {
   const EmergencyDebugLogSaverScreen({
     super.key,
@@ -50,6 +59,12 @@ class EmergencyDebugLogSaverScreen extends StatefulWidget {
     // 1.2.22 §63.6: the early-read evidence for the dump (from main()).
     this.previousExitReport,
     this.watchdogRing,
+    // 1.6.35: test seams for the submit path (same pattern as the Logs
+    // screen's `logSubmitEndpoint` / `httpClient`). Production passes
+    // neither: the endpoint comes from the build-time
+    // [logSubmitEndpoint] constant and the shared [httpClient] is used.
+    this.logSubmitEndpointOverride,
+    this.logSubmitClient,
   });
 
   /// Abnormal exits (cumulative — any 3 crashes, ever) that brought the app here (3+).
@@ -81,6 +96,14 @@ class EmergencyDebugLogSaverScreen extends StatefulWidget {
   /// observed from a widget test, so the exit call is injectable.
   final Future<bool> Function({AppExitApplication? exitApplicationForTesting}) requestExit;
 
+  /// Test seam for the submit path: overrides the build-time submit
+  /// endpoint ([logSubmitEndpoint]). Production passes null.
+  final String? logSubmitEndpointOverride;
+
+  /// Test seam for the submit path: the HTTP client the submit posts
+  /// with. Production passes null and the shared [httpClient] is used.
+  final MediaServerHttpClient? logSubmitClient;
+
   @override
   State<EmergencyDebugLogSaverScreen> createState() => _EmergencyDebugLogSaverScreenState();
 }
@@ -101,6 +124,15 @@ class _EmergencyDebugLogSaverScreenState extends State<EmergencyDebugLogSaverScr
 
   /// "Continue startup" is in flight — the button is disabled.
   bool _continuing = false;
+
+  /// A submit is in flight — the submit + save + continue buttons are disabled.
+  bool _submitting = false;
+
+  /// The last submit failed: show the hint, keep every button live.
+  bool _submitFailed = false;
+
+  /// The created GitHub issue URL, once a submit succeeds.
+  String? _submittedIssueUrl;
 
   Future<void> _saveViaPicker() async {
     if (_saving) return;
@@ -211,10 +243,97 @@ class _EmergencyDebugLogSaverScreenState extends State<EmergencyDebugLogSaverScr
     widget.onContinueWithoutIptv?.call();
   }
 
+  /// 1.6.35: submit the same dump text the save path writes, straight
+  /// to our GitHub repo via the log-submit Worker. No saved file needed,
+  /// no database opened: this screen runs in minimal startup with no
+  /// database in scope, and opening one here would break the "cannot
+  /// crash the same way" guarantee — so the submit runs on pattern
+  /// redaction alone (the dump text is already redacted by
+  /// [DebugLogExportService], and [submitDiagnosticLog] applies the
+  /// pattern rules on top). A submit never resets the failed-start
+  /// counter and never navigates anywhere: on success the issue link
+  /// shows inline and the user still saves or continues as usual; on
+  /// failure the hint shows and every button stays live.
+  Future<void> _submitLog() async {
+    if (_submitting || _submittedIssueUrl != null) return;
+    final endpoint = widget.logSubmitEndpointOverride ?? logSubmitEndpoint;
+    if (endpoint.isEmpty) return;
+    setState(() {
+      _submitting = true;
+      _submitFailed = false;
+    });
+    try {
+      final dumpText = await AutoDumpService.buildDumpText(
+        failedStarts: widget.failedStarts,
+        dumpReason: 'emergency debug log saver after ${widget.failedStarts} failed starts',
+        previousExitReport: widget.previousExitReport,
+        watchdogRing: widget.watchdogRing,
+      );
+      final issue = await submitDiagnosticLog(
+        title: 'PlenTV emergency debug log ${DateTime.now().toUtc().toIso8601String().substring(0, 10)}',
+        logText: dumpText,
+        client: widget.logSubmitClient,
+        endpointOverride: endpoint,
+      );
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _submittedIssueUrl = issue.url;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _submitFailed = true;
+      });
+    }
+  }
+
+  /// The submit action + its status, shared by both branches: the
+  /// pre-save button list and the post-save Share / Restart / Close
+  /// list. Hidden entirely when no submit endpoint is configured in
+  /// this build (local dev builds) — saving always works.
+  List<Widget> _submitWidgets(ThemeData theme) {
+    final endpoint = widget.logSubmitEndpointOverride ?? logSubmitEndpoint;
+    if (endpoint.isEmpty) return const [];
+    final busy = _saving || _continuing || _submitting;
+    final submitted = _submittedIssueUrl != null;
+    final strings = t.emergencyDebugLogSaver;
+    return [
+      OutlinedButton(
+        onPressed: (busy || submitted) ? null : _submitLog,
+        child: Text(strings.submitDebugLog),
+      ),
+      if (submitted) ...[
+        const SizedBox(height: 12),
+        Text(
+          strings.submitDebugLogSubmitted,
+          style: theme.textTheme.titleSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        SelectableText(
+          _submittedIssueUrl!,
+          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          textAlign: TextAlign.center,
+        ),
+      ],
+      if (_submitFailed) ...[
+        const SizedBox(height: 12),
+        Text(
+          strings.submitDebugLogFailed,
+          style: TextStyle(color: theme.colorScheme.error),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = t.emergencyDebugLogSaver;
     final theme = Theme.of(context);
+    final submitWidgets = _submitWidgets(theme);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -244,25 +363,29 @@ class _EmergencyDebugLogSaverScreenState extends State<EmergencyDebugLogSaverScr
                   const SizedBox(height: 24),
                   if (_savedPath == null) ...[
                     FilledButton(
-                      onPressed: _saving ? null : (widget.showSavePicker ? _saveViaPicker : _saveToDownloadsOrAppFolder),
+                      onPressed: (_saving || _submitting) ? null : (widget.showSavePicker ? _saveViaPicker : _saveToDownloadsOrAppFolder),
                       child: Text(strings.saveDebugLog),
                     ),
                     if (widget.showSavePicker) ...[
                       const SizedBox(height: 12),
                       OutlinedButton(
-                        onPressed: _saving ? null : _saveToAppFolder,
+                        onPressed: (_saving || _submitting) ? null : _saveToAppFolder,
                         child: Text(strings.saveInAppFolder),
                       ),
                     ],
+                    if (submitWidgets.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ...submitWidgets,
+                    ],
                     const SizedBox(height: 12),
                     TextButton(
-                      onPressed: (_saving || _continuing) ? null : _continueStartup,
+                      onPressed: (_saving || _continuing || _submitting) ? null : _continueStartup,
                       child: Text(strings.continueStartup),
                     ),
                     if (widget.onContinueWithoutIptv != null) ...[
                       const SizedBox(height: 12),
                       TextButton(
-                        onPressed: (_saving || _continuing) ? null : _continueWithoutIptv,
+                        onPressed: (_saving || _continuing || _submitting) ? null : _continueWithoutIptv,
                         child: Text(strings.continueWithoutIptv),
                       ),
                     ],
@@ -282,7 +405,7 @@ class _EmergencyDebugLogSaverScreenState extends State<EmergencyDebugLogSaverScr
                         textAlign: TextAlign.center,
                       ),
                     ],
-                    if (_saving) ...[
+                    if (_saving || _submitting) ...[
                       const SizedBox(height: 16),
                       const Center(child: CircularProgressIndicator()),
                     ],
@@ -299,6 +422,10 @@ class _EmergencyDebugLogSaverScreenState extends State<EmergencyDebugLogSaverScr
                       icon: const Icon(Icons.share),
                       label: Text(t.logs.shareAutoDump),
                     ),
+                    if (submitWidgets.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ...submitWidgets,
+                    ],
                     const SizedBox(height: 12),
                     FilledButton.tonal(
                       onPressed: widget.onContinueStartup,

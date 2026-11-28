@@ -74,12 +74,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(harness.client.requestedStarts, [0, 200]);
+    expect(harness.client.requestedStarts, [0]);
     expect(harness.client.fullHubRequests, 0);
     expect(find.text(t.common.retry), findsNothing);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -30000));
     await tester.pumpAndSettle();
+    expect(harness.client.requestedStarts, [0, 200]);
     expect(find.text('Item 204'), findsOneWidget);
     expect(find.text('Item 203'), findsNothing);
   });
@@ -263,13 +264,58 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(harness.client.requestedStarts, [0, 200]);
+    // 1.6.35 (issue #12): the first page only — the rest loads as the
+    // user reaches the end, never prefetched.
+    expect(harness.client.requestedStarts, [0]);
     expect(harness.client.fullHubRequests, 0);
     expect(find.text(t.common.retry), findsNothing);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -30000));
     await tester.pumpAndSettle();
+    expect(harness.client.requestedStarts, [0, 200]);
     expect(find.text('Item 204'), findsOneWidget);
+  });
+
+  testWidgets('1.6.35 (issue #12): Xtream hub loads only the first page until the user scrolls', (tester) async {
+    // Show more on a home Trex row opens a whole-library Recommended hub
+    // (tens of thousands of rows). The screen used to prefetch every page
+    // of it through already-completed futures, so the loop never yielded
+    // to the event loop and key events could not dispatch — the remote
+    // froze and Android killed the app (ANR). Pages must load one at a
+    // time, only as the user reaches the end. Failing-first: on 1.6.34
+    // requestedStarts is [0, 200, 400, 600, 800] after settle.
+    final items = List.generate(1000, (index) => _xtreamItem(index));
+    final harness = await _createHarness(items, backend: MediaBackend.xtream);
+
+    await tester.pumpWidget(
+      harness.wrap(
+        HubDetailScreen(
+          hub: MediaHub(
+            id: 'iptv:server_1:movies:recommended',
+            title: 'Recommended',
+            type: 'movie',
+            items: items.take(5).toList(),
+            size: items.length,
+            more: true,
+            libraryId: 'iptv:server_1:movies',
+            serverId: 'server_1',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(harness.client.requestedStarts, [0]);
+    expect(harness.client.fullHubRequests, 0);
+    expect(find.text('Item 0'), findsOneWidget);
+
+    // Walk to the end: each drag fetches the next page, in provider order.
+    for (var i = 0; i < 6; i++) {
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -50000));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Item 999'), findsOneWidget);
+    expect(harness.client.requestedStarts, [0, 200, 400, 600, 800]);
   });
 
   testWidgets('hub detail grid packs the same columns as a library grid at equal width and density', (tester) async {

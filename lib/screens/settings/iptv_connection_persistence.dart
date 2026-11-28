@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../connection/connection.dart';
+import '../../connection/connection_registry.dart';
+import '../../i18n/app_locale_utils.dart';
+import '../../i18n/strings.g.dart';
 import '../../media/ids.dart';
 import '../../media/iptv_client.dart';
 import '../../profiles/active_profile_binder.dart';
@@ -10,6 +14,8 @@ import '../../profiles/active_profile_provider.dart';
 import '../../profiles/profile.dart';
 import '../../profiles/profile_connection.dart';
 import '../../providers/multi_server_provider.dart';
+import '../../utils/dialogs.dart';
+import '../../utils/url_utils.dart';
 import '../profile/profile_switch_screen.dart';
 import 'connection_persistence.dart';
 
@@ -27,6 +33,134 @@ IptvClient? boundIptvClient(BuildContext context, String connectionId) {
     // No provider above us, or the connection is not bound.
   }
   return null;
+}
+
+/// The user's answer when the connection they are adding duplicates one
+/// that already exists (1.6.35, issue #11).
+enum DuplicateConnectionChoice {
+  /// Update the existing row with the new details (same id).
+  updateExisting,
+
+  /// Add the candidate as a second, separate connection.
+  addSeparate,
+
+  /// Stay on the form; nothing is persisted.
+  cancel,
+}
+
+/// Finds the existing IPTV connection [candidate] would duplicate, or null
+/// when there is none. Pure function — unit-tested.
+///
+/// - Xtream Codes matches on the canonical server URL
+///   ([canonicalizeBaseUrl]: trailing slash and scheme case ignored) plus
+///   the exact username. Two rows for the same account on the same panel
+///   are the same connection, however many times the user re-signed in.
+/// - M3U matches on the trimmed playlist URL.
+/// - An Xtream row never matches an M3U row (and vice versa), and a
+///   non-IPTV connection never matches.
+Connection? findDuplicateIptvConnection({
+  required List<Connection> existing,
+  required Connection candidate,
+}) {
+  for (final connection in existing) {
+    if (connection is XtreamConnection && candidate is XtreamConnection) {
+      if (canonicalizeBaseUrl(connection.serverUrl) == canonicalizeBaseUrl(candidate.serverUrl) &&
+          connection.username == candidate.username) {
+        return connection;
+      }
+    } else if (connection is M3uConnection && candidate is M3uConnection) {
+      if (connection.playlistUrl.trim() == candidate.playlistUrl.trim()) {
+        return connection;
+      }
+    }
+  }
+  return null;
+}
+
+/// Asks the user what to do when [candidate] duplicates an existing
+/// connection, and returns the connection to persist — or null when the
+/// user cancels. Returns [candidate] untouched when there is no
+/// duplicate, with no dialog shown.
+///
+/// "Update existing" reuses the existing row's id (so its catalog, guide
+/// data, favorites, resume and hidden-category prefs stay attached),
+/// keeps its [Connection.createdAt] and hidden categories, and takes the
+/// new name, server details and password from [candidate], stamping
+/// [Connection.lastAuthenticatedAt] now. An M3U update keeps the existing
+/// EPG URL when the new form left it blank — a blank field must never
+/// silently drop the guide.
+Future<Connection?> resolveDuplicateIptvConnection({
+  required BuildContext context,
+  required Connection candidate,
+}) async {
+  final existing = await context.read<ConnectionRegistry>().list();
+  final duplicate = findDuplicateIptvConnection(existing: existing, candidate: candidate);
+  if (duplicate == null) return candidate;
+  if (!context.mounted) return null;
+  final choice = await _showDuplicateConnectionDialog(context, duplicate: duplicate);
+  return switch (choice) {
+    DuplicateConnectionChoice.updateExisting => _updatedDuplicate(duplicate, candidate),
+    DuplicateConnectionChoice.addSeparate => candidate,
+    DuplicateConnectionChoice.cancel => null,
+  };
+}
+
+Connection _updatedDuplicate(Connection existing, Connection candidate) {
+  final now = DateTime.now();
+  return switch ((existing, candidate)) {
+    (final XtreamConnection existingXtream, final XtreamConnection candidateXtream) => existingXtream.copyWith(
+      name: candidateXtream.name,
+      serverUrl: candidateXtream.serverUrl,
+      username: candidateXtream.username,
+      password: candidateXtream.password,
+      lastAuthenticatedAt: now,
+    ),
+    (final M3uConnection existingM3u, final M3uConnection candidateM3u) => existingM3u.copyWith(
+      name: candidateM3u.name,
+      playlistUrl: candidateM3u.playlistUrl,
+      // A null epgUrl keeps the existing one (see copyWith): only an
+      // explicitly provided URL replaces it.
+      epgUrl: candidateM3u.epgUrl,
+      lastAuthenticatedAt: now,
+    ),
+    // Unreachable: the matcher only pairs same-type rows.
+    _ => candidate,
+  };
+}
+
+Future<DuplicateConnectionChoice> _showDuplicateConnectionDialog(
+  BuildContext context, {
+  required Connection duplicate,
+}) async {
+  final result = await showScopedDialog<DuplicateConnectionChoice>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(t.addServer.duplicateConnectionTitle),
+      content: Text(
+        t.addServer.duplicateConnectionMessage(
+          name: duplicate.displayName,
+          addedDate: DateFormat.yMMMd(LocaleSettings.currentLocale.intlLocaleName)
+              .format(duplicate.createdAt.toLocal()),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(DuplicateConnectionChoice.cancel),
+          child: Text(t.common.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(DuplicateConnectionChoice.addSeparate),
+          child: Text(t.addServer.duplicateAddSeparate),
+        ),
+        FilledButton(
+          autofocus: true,
+          onPressed: () => Navigator.of(context).pop(DuplicateConnectionChoice.updateExisting),
+          child: Text(t.addServer.duplicateUpdateExisting),
+        ),
+      ],
+    ),
+  );
+  return result ?? DuplicateConnectionChoice.cancel;
 }
 
 /// Shared persistence path for the IPTV add screens (M3U + Xtream Codes):

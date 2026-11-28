@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../connection/connection.dart';
 import '../../connection/connection_registry.dart';
+import '../../profiles/profile_connection_cleanup.dart';
 import 'iptv_connection_persistence.dart';
 import '../../i18n/app_locale_utils.dart';
 import '../../i18n/strings.g.dart';
@@ -27,8 +28,11 @@ import '../../services/iptv/xtream_api.dart';
 import '../../profiles/active_profile_provider.dart';
 import '../../providers/multi_server_provider.dart';
 import '../../screens/livetv/live_tv_mini_player.dart';
+import '../../screens/profile/profile_teardown.dart';
 import '../../services/settings_service.dart' as settings;
+import '../../utils/app_logger.dart';
 import '../../utils/connectivity_link_type.dart';
+import '../../utils/dialogs.dart';
 import '../../utils/formatters.dart';
 import '../../utils/media_server_http_client.dart' show AbortController;
 import '../../utils/snackbar_helper.dart';
@@ -1781,6 +1785,11 @@ class _IptvConnectionsList extends StatelessWidget {
           children: [
             for (final connection in connections) ...[
               _IptvConnectionTile(connection: connection),
+              // 1.6.35 (issue #11): the delete button lives UNDERNEATH
+              // each connection — the only way to remove an IPTV
+              // connection. A three-dot menu would hide it; the tile
+              // above keeps opening Categories.
+              _IptvConnectionRemoveButton(connection: connection, connections: connections),
               if (connection is XtreamConnection || connection is M3uConnection)
                 _HiddenChannelsTile(connection: connection),
               if (connection is XtreamConnection)
@@ -1858,7 +1867,21 @@ class _IptvConnectionTile extends StatelessWidget {
       (0, _) => t.iptv.groupsOff(count: initials),
       (_, _) => '${t.iptv.categoriesOff(count: ids)} · ${t.iptv.groupsOff(count: initials)}',
     };
-    return '$_sourceLabel · $filter';
+    // 1.6.35 (issue #11): two connections can share a name, a username
+    // and a URL, so the subtitle names the added date — the one field
+    // that tells the twins apart — and the expired state. The manager's
+    // unfiltered auth-error set, not the provider's visibility-filtered
+    // one: a hidden connection is still expired.
+    final addedDate = DateFormat.yMMMd(
+      LocaleSettings.currentLocale.intlLocaleName,
+    ).format(connection.createdAt.toLocal());
+    final expired = context.select<MultiServerProvider, bool>(
+      (p) => p.serverManager.authErrorServerIds.contains(connection.id),
+    );
+    final parts = ['$_sourceLabel · ${t.explore.detail.addedOn(date: addedDate)}'];
+    if (expired) parts.add(t.iptv.sessionExpired);
+    parts.add(filter);
+    return parts.join(' · ');
   }
 
   @override
@@ -1875,6 +1898,97 @@ class _IptvConnectionTile extends StatelessWidget {
           context,
         ).push(MaterialPageRoute(builder: (_) => IptvCategoriesScreen(connection: connection)));
       },
+    );
+  }
+}
+
+/// Delete button underneath one IPTV connection (1.6.35, issue #11):
+/// the only way to remove an IPTV connection. Runs the shared
+/// [removeIptvConnectionEverywhere] routine — registry row, runtime
+/// client, catalog, guide, favorites and downloads — then settles the
+/// session so the Live TV tab re-derives (gone when the last IPTV
+/// connection goes) or the active profile rebinds. The invented local
+/// profile named after the connection is NOT touched here: deleting it
+/// is the user's choice in Profiles, not a consequence of removing a
+/// connection.
+class _IptvConnectionRemoveButton extends StatefulWidget {
+  final Connection connection;
+
+  /// Every IPTV connection in the list, for the confirmation tail: a
+  /// same-name twin still working, or the last IPTV connection.
+  final List<Connection> connections;
+
+  const _IptvConnectionRemoveButton({required this.connection, required this.connections});
+
+  @override
+  State<_IptvConnectionRemoveButton> createState() => _IptvConnectionRemoveButtonState();
+}
+
+class _IptvConnectionRemoveButtonState extends State<_IptvConnectionRemoveButton> {
+  var _busy = false;
+
+  Future<void> _remove() async {
+    if (_busy) return;
+    final connection = widget.connection;
+    final hasSameNameTwin = widget.connections.any(
+      (c) => c.id != connection.id && c.displayName == connection.displayName,
+    );
+    final isLastIptv = widget.connections.length == 1;
+    final addedDate = DateFormat.yMMMd(
+      LocaleSettings.currentLocale.intlLocaleName,
+    ).format(connection.createdAt.toLocal());
+    final base = t.iptv.removeConnectionMessage(name: connection.displayName, addedDate: addedDate);
+    final tail = hasSameNameTwin
+        ? t.iptv.removeConnectionOtherKeepsWorking(name: connection.displayName)
+        : isLastIptv
+        ? t.iptv.removeConnectionLastIptv
+        : '';
+    final confirmed = await showDeleteConfirmation(
+      context,
+      title: t.iptv.removeConnectionTitle,
+      message: tail.isEmpty ? base : '$base $tail',
+      confirmText: t.profiles.removeConnection,
+    );
+    if (!confirmed || !mounted) return;
+    setState(() => _busy = true);
+    final scope = SessionTeardownScope.of(context);
+    try {
+      final result = await scope.cleanup.removeIptvConnectionEverywhere(connection);
+      if (result == IptvConnectionRemoval.blockedWhilePlaying) {
+        // The row stays (nothing was removed), but the feedback goes
+        // through the root messenger like the other outcomes — the
+        // button may unmount under a later removal.
+        showGlobalErrorSnackBar(t.iptv.removeConnectionBlockedPlaying);
+        return;
+      }
+      final navigatedAway = await settleSessionAfterRemoval(scope, rebindIfActiveKept: true);
+      if (!navigatedAway) {
+        // Global, not local: this button unmounts the moment its row
+        // disappears from the list, so a context-bound snackbar would
+        // never show.
+        showGlobalSuccessSnackBar(t.iptv.removeConnectionRemoved(name: connection.displayName));
+      }
+    } catch (e, st) {
+      appLogger.w('Failed to remove IPTV connection ${connection.id}', error: e, stackTrace: st);
+      showGlobalErrorSnackBar(t.iptv.removeConnectionFailed(name: connection.displayName));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+        child: TextButton.icon(
+          onPressed: _busy ? null : _remove,
+          icon: const AppIcon(Symbols.delete_rounded),
+          label: Text(t.iptv.removeConnectionButton),
+          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+        ),
+      ),
     );
   }
 }

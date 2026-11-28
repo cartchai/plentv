@@ -19,6 +19,7 @@ import 'navigation/profile_navigation_scope.dart';
 import 'navigation/profile_session_screen.dart';
 import 'profiles/active_profile_binder.dart';
 import 'profiles/active_profile_provider.dart';
+import 'profiles/iptv_anchor_migration.dart';
 import 'profiles/profile.dart';
 import 'profiles/profile_connection_cleanup.dart';
 import 'profiles/profile_connection_registry.dart';
@@ -2783,6 +2784,36 @@ class _SetupScreenState extends State<SetupScreen> with MountedSetStateMixin {
       appLogger.w('Setup: stored connections exist but no profiles resolved after bootstrap; returning to auth');
       unawaited(Navigator.pushReplacement(context, fadeRoute(const AuthScreen())));
       return;
+    }
+
+    // 1.6.35: remove the local profiles a first-run IPTV add invented
+    // once a real profile exists — they are not user accounts, so they
+    // must never show in the Accounts menu or linger as a "trex" person.
+    // The migration moves their data to the active profile and never
+    // touches the connections themselves. It runs on every cold start
+    // (idempotent) and never throws: a failure only leaves the anchor
+    // hidden in the menu until the next start.
+    try {
+      final removedAnchors = await migrateIptvAnchorProfiles(
+        profiles: activeProfile.profiles,
+        activeProfileId: activeProfile.activeId,
+        connectionsById: activeProfile.connectionsById,
+        connectionsByProfile: activeProfile.connectionsByProfile,
+        profileConnections: context.read<ProfileConnectionRegistry>(),
+        profileRegistry: context.read<ProfileRegistry>(),
+        database: context.read<AppDatabase>(),
+        storage: storage,
+      );
+      if (removedAnchors.isNotEmpty) {
+        // The provider cached the anchor's rows; re-read so the menu and
+        // the binder see the new state, then re-read the active profile's
+        // scoped downloads/rules, which the migration moved underneath
+        // the DownloadProvider.
+        await activeProfile.reloadFromStorage();
+        await downloadProvider.reloadProfileScopedState();
+      }
+    } catch (e, st) {
+      appLogger.w('Setup: IPTV anchor migration failed', error: e, stackTrace: st);
     }
 
     // Wire the per-server status listener before either branch so the splash

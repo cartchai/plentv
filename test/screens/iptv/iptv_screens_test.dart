@@ -1045,6 +1045,10 @@ void main() {
       // plain words.
       expect(strings.about.changelog2352, hasLength(1));
       expect(strings.about.changelog2352.first, contains('Faster all round'));
+      // 1.6.35: the remove-IPTV update's entry exists and reads in
+      // plain words.
+      expect(strings.about.changelog2353, hasLength(1));
+      expect(strings.about.changelog2353.first, contains('Remove button underneath it'));
     });
 
     testWidgets('About screen shows PlenTV and the changelog, newest first', (tester) async {

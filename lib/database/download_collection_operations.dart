@@ -73,6 +73,54 @@ extension DownloadCollectionDatabaseOperations on AppDatabase {
     });
   }
 
+  /// Move a removed profile's collection membership to [toProfileId]
+  /// (1.6.35 anchor migration). When the target already holds the same
+  /// collection, its row wins and the source row is dropped: both rows
+  /// describe the same collection, and the target's member list is the
+  /// live one. The per-server sync rows move the same way.
+  Future<void> transferDownloadCollectionsForProfile(String fromProfileId, String toProfileId) async {
+    if (fromProfileId.isEmpty || toProfileId.isEmpty || fromProfileId == toProfileId) return;
+    await transaction(() async {
+      final sourceCollections =
+          await (select(downloadCollections)..where((t) => t.profileId.equals(fromProfileId))).get();
+      if (sourceCollections.isNotEmpty) {
+        final targetCollections =
+            await (select(downloadCollections)..where((t) => t.profileId.equals(toProfileId))).get();
+        final targetKeys = {for (final row in targetCollections) (row.serverId, row.collectionId)};
+        for (final row in sourceCollections) {
+          if (!targetKeys.contains((row.serverId, row.collectionId))) continue;
+          await (delete(downloadCollections)
+                ..where(
+                  (t) =>
+                      t.profileId.equals(fromProfileId) &
+                      t.serverId.equals(row.serverId) &
+                      t.collectionId.equals(row.collectionId),
+                ))
+              .go();
+        }
+        await (update(downloadCollections)..where((t) => t.profileId.equals(fromProfileId))).write(
+          DownloadCollectionsCompanion(profileId: Value(toProfileId)),
+        );
+      }
+      final sourceSyncs =
+          await (select(downloadCollectionSyncs)..where((t) => t.profileId.equals(fromProfileId))).get();
+      if (sourceSyncs.isNotEmpty) {
+        final targetSyncs =
+            await (select(downloadCollectionSyncs)..where((t) => t.profileId.equals(toProfileId))).get();
+        final targetServers = {for (final row in targetSyncs) row.serverId};
+        for (final row in sourceSyncs) {
+          if (!targetServers.contains(row.serverId)) continue;
+          await (delete(downloadCollectionSyncs)
+                ..where((t) => t.profileId.equals(fromProfileId) & t.serverId.equals(row.serverId)))
+              .go();
+        }
+        await (update(downloadCollectionSyncs)..where((t) => t.profileId.equals(fromProfileId))).write(
+          DownloadCollectionSyncsCompanion(profileId: Value(toProfileId)),
+        );
+      }
+    });
+  }
+
   /// Drop a removed profile's collection membership (profile teardown).
   Future<void> deleteDownloadCollectionsForProfile(String profileId) {
     return transaction(() async {

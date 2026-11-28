@@ -116,13 +116,18 @@ class _AddM3uScreenState extends State<AddM3uScreen> with AsyncFormStateMixin, C
       () async {
         await _probePlaylist(playlistUrl);
         if (!mounted) return;
-        final connection = M3uConnection(
+        final candidate = M3uConnection(
           id: const Uuid().v4(),
           name: name,
           playlistUrl: playlistUrl,
           epgUrl: epgUrl.isEmpty ? null : epgUrl,
           createdAt: DateTime.now(),
         );
+        // 1.6.35 (issue #11): same as the Xtream screen — a playlist URL
+        // already in the registry offers to update instead of adding a
+        // second row for the same playlist.
+        final connection = await resolveDuplicateIptvConnection(context: context, candidate: candidate);
+        if (!mounted || connection == null) return;
         final ok = await persistAndExitIptvConnection(
           context: context,
           connection: connection,

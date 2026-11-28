@@ -2230,6 +2230,23 @@ class IptvLiveTvSupport implements LiveTvSupport {
     }
   }
 
+  /// Delete the persisted EPG directory for one connection
+  /// (`iptv_epg/<b64(id)>`) — the per-connection half of
+  /// `removeIptvConnectionEverywhere`. Static so the removal routine can
+  /// run without a live client for the connection. Same seams as the
+  /// instance path: no-op when [debugDisablePersistedEpg], honors
+  /// [debugEpgCacheDirectoryProvider]. Never throws.
+  static Future<void> deletePersistedEpgForConnection(String connectionId) async {
+    if (debugDisablePersistedEpg) return;
+    try {
+      final base = await (debugEpgCacheDirectoryProvider ?? getApplicationCacheDirectory)();
+      final dir = Directory('${base.path}/iptv_epg/${_fileSafe(connectionId)}');
+      if (await dir.exists()) await dir.delete(recursive: true);
+    } catch (e) {
+      appLogger.w('IPTV EPG cache delete failed', error: e);
+    }
+  }
+
   Future<void> _deletePersistedEpg() async {
     // 1.6.34: no-op when the persisted side is disabled — same seam
     // as the read/write/prune paths above. When the flag is on nothing
@@ -2238,13 +2255,7 @@ class IptvLiveTvSupport implements LiveTvSupport {
     // async zone (the wall the read path's comment at
     // [_readPersistedEpg] already documents), so an ungated delete
     // would park `clearEpgCache` forever in a widget test.
-    if (debugDisablePersistedEpg) return;
-    try {
-      final dir = await _epgCacheDir();
-      if (await dir.exists()) await dir.delete(recursive: true);
-    } catch (e) {
-      appLogger.w('IPTV EPG cache delete failed', error: e);
-    }
+    await deletePersistedEpgForConnection(_client.connection.id);
   }
 
   /// Delete per-channel EPG files older than [ttl] (build #26, 26.6):

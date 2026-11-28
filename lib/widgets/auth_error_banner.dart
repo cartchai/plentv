@@ -16,9 +16,12 @@ import 'app_icon.dart';
 ///
 /// Two refusals, two rows. A rejected token (HTTP 401,
 /// [MultiServerProvider.authErrorServers]) gets a CTA that opens
-/// [AddConnectionScreen]; the user picks the right backend and the resulting
-/// token replaces the stale row in the registry, which clears the auth-error
-/// state on the next health sweep. A refused account (HTTP 403,
+/// [AddConnectionScreen]; the user picks the right backend and signs in
+/// again. 1.6.35 (issue #11): the add screen now offers to UPDATE the
+/// existing connection when the same host + username is already in the
+/// registry, instead of minting a second row — updating reuses the stale
+/// row's id with the new credentials, which clears the auth-error state
+/// on the next health sweep. A refused account (HTTP 403,
 /// [MultiServerProvider.accessDeniedServers]) gets a CTA that opens the
 /// Connection refusals screen — a new sign-in gets the same refusal, so
 /// there is no re-sign-in button; the refusals screen shows what the

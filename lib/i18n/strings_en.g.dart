@@ -3947,6 +3947,15 @@ class Translations$emergencyDebugLogSaver$en {
 
 	/// en: 'Could not save the debug log — try saving it in the app folder instead.'
 	String get saveFailed => 'Could not save the debug log — try saving it in the app folder instead.';
+
+	/// en: 'Submit debug log to GitHub'
+	String get submitDebugLog => 'Submit debug log to GitHub';
+
+	/// en: 'Couldn't submit the log — check your connection and try again, or save it instead.'
+	String get submitDebugLogFailed => 'Couldn\'t submit the log — check your connection and try again, or save it instead.';
+
+	/// en: 'Log submitted to GitHub:'
+	String get submitDebugLogSubmitted => 'Log submitted to GitHub:';
 }
 
 // Path: errors
@@ -4287,6 +4296,9 @@ class Translations$about$en {
 	];
 	List<String> get changelog2343 => [
 		'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+	];
+	List<String> get changelog2353 => [
+		'New: signing in to a TV service you already added now asks whether to update that connection instead of adding a second copy of it. Each TV service in IPTV settings now has its own Remove button underneath it, showing when it was added, so two services with the same name can be told apart and just one removed; removing a service from a profile now really removes it everywhere once no profile is using it any more. A TV service no longer shows up as a person in the Accounts menu, and the extra \'trex\' profile that came with it is gone — the service itself, its channels, guide, favourites and settings are all still there. If the app crashes several times, the emergency log screen now has a button to send the log straight to us. And tapping Show more on a home-page category no longer freezes the TV — the list now loads a page at a time instead of all at once',
 	];
 	List<String> get changelog2352 => [
 		'Faster all round: opening a movie or series category now shows the first titles straight away instead of loading the whole category first; the first catalog sync is quicker — it no longer downloads everything twice if you tap refresh while it is still running, and the guide can use fresh live channels before the whole sync finishes; long-pressing a movie or series now opens its menu straight away, with the category filling in a moment later; and a stream that stalls now tells you it has stalled and tries reconnecting on its own instead of sitting on a frozen picture',
@@ -7547,6 +7559,18 @@ class Translations$addServer$en {
 	/// en: 'Could not sign in to that Xtream server. Check the server URL, username, and password.'
 	String get xtreamProbeFailed => 'Could not sign in to that Xtream server. Check the server URL, username, and password.';
 
+	/// en: 'Connection already exists'
+	String get duplicateConnectionTitle => 'Connection already exists';
+
+	/// en: 'You already have a connection to this server ('${name}', added ${addedDate}). Update it with these details, or add a separate one?'
+	String duplicateConnectionMessage({required Object name, required Object addedDate}) => 'You already have a connection to this server (\'${name}\', added ${addedDate}). Update it with these details, or add a separate one?';
+
+	/// en: 'Update existing'
+	String get duplicateUpdateExisting => 'Update existing';
+
+	/// en: 'Add separate'
+	String get duplicateAddSeparate => 'Add separate';
+
 	/// en: 'The VPN tunnel is still starting. Please wait a moment and try again.'
 	String get tunnelStillStarting => 'The VPN tunnel is still starting. Please wait a moment and try again.';
 
@@ -7647,6 +7671,33 @@ class Translations$iptv$en {
 
 	/// en: 'Add an M3U playlist or Xtream Codes account to watch live TV.'
 	String get noConnectionsHint => 'Add an M3U playlist or Xtream Codes account to watch live TV.';
+
+	/// en: 'Remove this connection?'
+	String get removeConnectionTitle => 'Remove this connection?';
+
+	/// en: 'Remove '${name}' (added ${addedDate})? Its Live TV channels, movies, series and guide will be gone from every profile, and its downloads will be removed.'
+	String removeConnectionMessage({required Object name, required Object addedDate}) => 'Remove \'${name}\' (added ${addedDate})? Its Live TV channels, movies, series and guide will be gone from every profile, and its downloads will be removed.';
+
+	/// en: 'The other '${name}' connection will keep working.'
+	String removeConnectionOtherKeepsWorking({required Object name}) => 'The other \'${name}\' connection will keep working.';
+
+	/// en: 'Live TV will be empty until you add a service again.'
+	String get removeConnectionLastIptv => 'Live TV will be empty until you add a service again.';
+
+	/// en: 'Remove connection'
+	String get removeConnectionButton => 'Remove connection';
+
+	/// en: 'Stop playback before removing this connection.'
+	String get removeConnectionBlockedPlaying => 'Stop playback before removing this connection.';
+
+	/// en: ''${name}' removed.'
+	String removeConnectionRemoved({required Object name}) => '\'${name}\' removed.';
+
+	/// en: 'Couldn't remove '${name}' — try again.'
+	String removeConnectionFailed({required Object name}) => 'Couldn\'t remove \'${name}\' — try again.';
+
+	/// en: 'Session expired'
+	String get sessionExpired => 'Session expired';
 
 	/// en: '${count} categories off'
 	String categoriesOff({required Object count}) => '${count} categories off';
@@ -11929,6 +11980,9 @@ extension on Translations {
 			'emergencyDebugLogSaver.savedTo' => 'Saved to:',
 			'emergencyDebugLogSaver.restartPlezTv' => 'Restart PlenTV',
 			'emergencyDebugLogSaver.saveFailed' => 'Could not save the debug log — try saving it in the app folder instead.',
+			'emergencyDebugLogSaver.submitDebugLog' => 'Submit debug log to GitHub',
+			'emergencyDebugLogSaver.submitDebugLogFailed' => 'Couldn\'t submit the log — check your connection and try again, or save it instead.',
+			'emergencyDebugLogSaver.submitDebugLogSubmitted' => 'Log submitted to GitHub:',
 			'errors.searchFailed' => ({required Object error}) => 'Search failed: ${error}',
 			'errors.searchUnavailable' => 'Search could not reach any media server.',
 			'errors.connectionTimeout' => ({required Object context}) => 'Connection timeout while loading ${context}',
@@ -12152,12 +12206,13 @@ extension on Translations {
 			'about.changelog2328.6' => 'Cleanup: the unused crash-reporting code is gone',
 			'about.changelog2329.0' => 'Fixed: TV show pages now show the details your TV service already sends — poster art, genres, cast, director, year and episode length — instead of a bare title and a star score',
 			'about.changelog2329.1' => 'Fixed: episode rows now show their own still image, and fall back to the show\'s poster when a still is missing, instead of a black placeholder',
+			_ => null,
+		} ?? switch (path) {
 			'about.changelog2329.2' => 'Fixed: movie pages now show an Overview with plot, cast, director, genres, year and runtime',
 			'about.changelog2329.3' => 'New: movie pages now show Rotten Tomatoes, IMDb, TMDB, Metacritic and Letterboxd scores, like Plex does',
 			'about.changelog2329.4' => 'Fixed: the Discover banner and Continue Watching cards now show the show\'s art instead of a black panel',
-			_ => null,
-		} ?? switch (path) {
 			'about.changelog2343.0' => 'New: the Super Spoof page now also holds the six Advanced settings (MPEG-TS, Prefer IPv4, VPN, tunnel and MASQUE transport, Reset) so they are all in one place; Backup and Restore now cover every setting including IPTV; Favourites is the first tab in IPTV libraries and shows on the home page; closing a video now stops its stream straight away, a show left playing in the background stops after a short while unless it is in the pop-out player, and a stalled live channel now fails instead of spinning forever; and long-pressing a title in Explore now has a Search this title option that opens Search and runs it for you',
+			'about.changelog2353.0' => 'New: signing in to a TV service you already added now asks whether to update that connection instead of adding a second copy of it. Each TV service in IPTV settings now has its own Remove button underneath it, showing when it was added, so two services with the same name can be told apart and just one removed; removing a service from a profile now really removes it everywhere once no profile is using it any more. A TV service no longer shows up as a person in the Accounts menu, and the extra \'trex\' profile that came with it is gone — the service itself, its channels, guide, favourites and settings are all still there. If the app crashes several times, the emergency log screen now has a button to send the log straight to us. And tapping Show more on a home-page category no longer freezes the TV — the list now loads a page at a time instead of all at once',
 			'about.changelog2352.0' => 'Faster all round: opening a movie or series category now shows the first titles straight away instead of loading the whole category first; the first catalog sync is quicker — it no longer downloads everything twice if you tap refresh while it is still running, and the guide can use fresh live channels before the whole sync finishes; long-pressing a movie or series now opens its menu straight away, with the category filling in a moment later; and a stream that stalls now tells you it has stalled and tries reconnecting on its own instead of sitting on a frozen picture',
 			'about.changelog2351.0' => 'New: long-pressing a movie or series from IPTV now shows the category it belongs to — for example NF — instead of File Info, which never worked for a stream. Tapping it turns that whole category off, so its movies and series stop showing up; turn it back on in IPTV settings. Categories that never showed up in the whole-groups list can now be turned off this way too',
 			'about.changelog2350.0' => 'Fixed: turning a whole group of channels off no longer freezes the app — the TV guide list is now rebuilt in the background instead of on the screen\'s own thread, so the remote keeps answering while it works; the same fix covers Reload TV details. Turned-off categories now sit at the bottom of their list, in alphabetical order, with the ones still on at the top. The download dialog now shows a real progress bar with how much has arrived and how fast it is coming, and the Update now dialog now shows live progress while the guide downloads in the background, plus how many of your channels matched. The guide settings screen now also shows how many channels and programmes the loaded guide holds',
@@ -12665,12 +12720,12 @@ extension on Translations {
 			'explore.season.winter' => 'Winter',
 			'explore.season.spring' => 'Spring',
 			'explore.season.summer' => 'Summer',
+			_ => null,
+		} ?? switch (path) {
 			'explore.season.fall' => 'Fall',
 			'explore.season.withYear' => ({required Object season, required Object year}) => '${season} ${year}',
 			'explore.format.tv' => 'TV',
 			'explore.format.tvShort' => 'TV Short',
-			_ => null,
-		} ?? switch (path) {
 			'explore.format.movie' => 'Movie',
 			'explore.format.special' => 'Special',
 			'explore.format.ova' => 'OVA',
@@ -13179,12 +13234,12 @@ extension on Translations {
 			'downloads.backgroundWarning.reasonOemUnknown' => 'Downloads repeatedly stopped while PlenTV was in the background. Check PlenTV\'s battery or background usage settings.',
 			'downloads.backgroundWarning.openSettings' => 'Open settings',
 			'downloads.backgroundWarning.stillNotWorking' => 'Device-specific help',
+			_ => null,
+		} ?? switch (path) {
 			'downloads.backgroundWarning.stillNotWorkingDescription' => 'See steps for your device, or send a log from Settings › View Logs if the issue continues.',
 			'downloads.backgroundWarning.dialogTitle' => 'Downloads may not finish',
 			'downloads.backgroundWarning.dialogDownloadAnyway' => 'Download anyway',
 			'downloads.backgroundWarning.dialogFixFirst' => 'Fix this first',
-			_ => null,
-		} ?? switch (path) {
 			'downloads.backgroundWarning.statusTile' => 'Background downloads',
 			'downloads.backgroundWarning.statusOk' => 'Allowed to run in the background',
 			'downloads.backgroundWarning.statusBlocked' => 'Blocked by system settings',
@@ -13625,6 +13680,10 @@ extension on Translations {
 			'addServer.m3uPlaylistEmpty' => 'That playlist has no channels.',
 			'addServer.m3uInvalidUrl' => 'Enter a valid playlist URL starting with http:// or https://.',
 			'addServer.xtreamProbeFailed' => 'Could not sign in to that Xtream server. Check the server URL, username, and password.',
+			'addServer.duplicateConnectionTitle' => 'Connection already exists',
+			'addServer.duplicateConnectionMessage' => ({required Object name, required Object addedDate}) => 'You already have a connection to this server (\'${name}\', added ${addedDate}). Update it with these details, or add a separate one?',
+			'addServer.duplicateUpdateExisting' => 'Update existing',
+			'addServer.duplicateAddSeparate' => 'Add separate',
 			'addServer.tunnelStillStarting' => 'The VPN tunnel is still starting. Please wait a moment and try again.',
 			'addServer.addIptv' => 'Add',
 			'deepLinks.invalid' => 'This PlenTV link isn\'t valid.',
@@ -13659,6 +13718,15 @@ extension on Translations {
 			'iptv.addConnectionDescription' => 'Add an M3U playlist or Xtream Codes account',
 			'iptv.noConnections' => 'No IPTV connections yet',
 			'iptv.noConnectionsHint' => 'Add an M3U playlist or Xtream Codes account to watch live TV.',
+			'iptv.removeConnectionTitle' => 'Remove this connection?',
+			'iptv.removeConnectionMessage' => ({required Object name, required Object addedDate}) => 'Remove \'${name}\' (added ${addedDate})? Its Live TV channels, movies, series and guide will be gone from every profile, and its downloads will be removed.',
+			'iptv.removeConnectionOtherKeepsWorking' => ({required Object name}) => 'The other \'${name}\' connection will keep working.',
+			'iptv.removeConnectionLastIptv' => 'Live TV will be empty until you add a service again.',
+			'iptv.removeConnectionButton' => 'Remove connection',
+			'iptv.removeConnectionBlockedPlaying' => 'Stop playback before removing this connection.',
+			'iptv.removeConnectionRemoved' => ({required Object name}) => '\'${name}\' removed.',
+			'iptv.removeConnectionFailed' => ({required Object name}) => 'Couldn\'t remove \'${name}\' — try again.',
+			'iptv.sessionExpired' => 'Session expired',
 			'iptv.categoriesOff' => ({required Object count}) => '${count} categories off',
 			'iptv.categoriesAllOn' => 'All categories on',
 			'iptv.playlist' => 'Playlist',
@@ -13680,6 +13748,8 @@ extension on Translations {
 			'iptv.epgFeedProgressWithTotal' => ({required Object received, required Object total, required Object percent}) => 'Downloading feed — ${received} of ${total} (${percent}%)',
 			'iptv.catalogRedownloadConfirmTitle' => 'Re-download the whole catalog?',
 			'iptv.catalogRedownloadConfirmCellular' => 'Switching catalog mode downloads the full catalog again — about 1.5 GB on mobile data. You will see progress for each part, and you can cancel.',
+			_ => null,
+		} ?? switch (path) {
 			'iptv.catalogRedownloadConfirm' => 'Switching catalog mode downloads the full catalog again — about 1.5 GB. You will see progress for each part, and you can cancel.',
 			'iptv.catalogRedownloadConfirmAction' => 'Re-download',
 			'iptv.panelUnreachableTitle' => ({required Object name}) => '${name}: panel unreachable on this network',
@@ -13697,8 +13767,6 @@ extension on Translations {
 			'iptv.backgroundSyncMeteredDeferred' => 'Sync incomplete — will finish on Wi-Fi',
 			'iptv.largeDownloadsWifiOnly' => 'Wi-Fi only for large downloads',
 			'iptv.largeDownloadsWifiOnlyDescription' => 'Large downloads (guide feed, catalog sync) wait for Wi-Fi instead of using mobile data',
-			_ => null,
-		} ?? switch (path) {
 			'iptv.pauseDownloadsWhileWatching' => 'Pause downloads while watching',
 			'iptv.pauseDownloadsWhileWatchingDescription' => 'IPTV downloads pause while a stream is playing and carry on when it stops. Off means downloads keep running while you watch',
 			'iptv.downloadRunTimeout' => 'Download run timeout',

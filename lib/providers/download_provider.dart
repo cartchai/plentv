@@ -216,6 +216,18 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
     return _downloadManager.resetDownloadLocation(checkCurrent: checkCurrent);
   }
 
+  /// Re-read the active profile's scoped state (owners, sync rules) from
+  /// the database, even when the active profile did not change. The 1.6.35
+  /// anchor-profile migration calls this after moving rows between
+  /// profiles underneath the provider. Bumps the profile generation first
+  /// so any in-flight load started before the move discards its stale
+  /// snapshot instead of overwriting this one — the same invalidation
+  /// [detachDownloadsForLogout] performs.
+  Future<void> reloadProfileScopedState() {
+    _profileGeneration++;
+    return _reloadProfileScopedStateForActiveProfile();
+  }
+
   /// Switch the visible sync-rule scope to [profileId]. Physical downloads are
   /// intentionally not reloaded because they are shared across profiles.
   void setActiveProfileId(String? profileId) {
@@ -3345,14 +3357,15 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   Future<void> _loadSyncRules() async {
     try {
       final profileId = _activeProfileId;
+      final generation = _profileGeneration;
       if (profileId == null || profileId.isEmpty) {
         _syncRules.clear();
         return;
       }
       await _database.adoptLegacySyncRulesForProfile(profileId);
-      if (_activeProfileId != profileId) return;
+      if (_activeProfileId != profileId || _profileGeneration != generation) return;
       final rules = await _database.getSyncRules(profileId: profileId);
-      if (_activeProfileId != profileId) return;
+      if (_activeProfileId != profileId || _profileGeneration != generation) return;
       _syncRules
         ..clear()
         ..addEntries(rules.map((rule) => MapEntry(rule.globalKey, rule)));

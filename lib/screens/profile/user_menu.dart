@@ -80,11 +80,21 @@ List<AppMenuEntry<String>> buildUserMenuEntries({
 
 /// Entries for the caller's context: reads the live profile state and
 /// delegates to [buildUserMenuEntries].
+///
+/// 1.6.35: invented IPTV anchor profiles are filtered out first — an IPTV
+/// service is not a user account, so it never appears as a switchable row
+/// here. The Profiles management screen is deliberately unfiltered: that
+/// is where profiles are managed, and the anchor stays visible there
+/// until the boot migration removes it.
 List<AppMenuEntry<String>> userMenuEntriesForContext(BuildContext context) {
   final activeProvider = context.read<ActiveProfileProvider>();
+  final anchors = activeProvider.iptvAnchorProfileIds;
+  final profiles = anchors.isEmpty
+      ? activeProvider.profiles
+      : activeProvider.profiles.where((p) => !anchors.contains(p.id)).toList();
   return buildUserMenuEntries(
     activeProfile: activeProvider.active,
-    profiles: activeProvider.profiles,
+    profiles: profiles,
     connections: activeProvider.connectionsById.values,
     avatarUrlFor: activeProvider.avatarUrlFor,
     lockIconColor: Theme.of(context).colorScheme.onSurfaceVariant,
